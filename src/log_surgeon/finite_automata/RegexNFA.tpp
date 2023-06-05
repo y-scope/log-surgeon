@@ -1,5 +1,5 @@
-#ifndef FINITE_AUTOMATA_REGEX_NFA_TPP
-#define FINITE_AUTOMATA_REGEX_NFA_TPP
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_TPP
+#define LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_TPP
 
 // C++ standard libraries
 #include <algorithm>
@@ -178,4 +178,4 @@ auto RegexNFA<NFAStateType>::new_state() -> NFAStateType* {
 }
 } // namespace log_surgeon::finite_automata
 
-#endif // FINITE_AUTOMATA_REGEX_NFA_TPP
+#endif // LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_TPP

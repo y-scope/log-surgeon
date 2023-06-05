@@ -19,20 +19,6 @@ auto Token::assign_with_ids_vector(uint32_t start_pos,
     m_type_ids_ptr = type_ids_ptr;
 }
 
-auto Token::assign_with_ids_set(uint32_t start_pos,
-                                uint32_t end_pos,
-                                char const* buffer,
-                                uint32_t buffer_size,
-                                uint32_t line,
-                                std::set<int> const& /* type_ids_set */) -> void {
-    m_start_pos = start_pos;
-    m_end_pos = end_pos;
-    m_buffer = buffer;
-    m_buffer_size = buffer_size;
-    m_line = line;
-    //m_type_ids_set = std::move(type_ids_set);
-}
-
 auto Token::to_string() -> std::string {
     if (m_start_pos <= m_end_pos) {
         return {m_buffer + m_start_pos, m_buffer + m_end_pos};

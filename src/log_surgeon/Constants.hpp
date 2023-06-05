@@ -1,5 +1,5 @@
-#ifndef CONSTANTS_HPP
-#define CONSTANTS_HPP
+#ifndef LOG_SURGEON_CONSTANTS_HPP
+#define LOG_SURGEON_CONSTANTS_HPP
 
 // C++ standard libraries
 #include <cstdint>
@@ -27,7 +27,7 @@ enum class SymbolID {
     TokenEndID,
     TokenUncaughtStringID,
     TokenIntId,
-    TokenDoubleId,
+    TokenFloatId,
     TokenHexId,
     TokenFirstTimestampId,
     TokenNewlineTimestampId,
@@ -37,7 +37,7 @@ enum class SymbolID {
 constexpr char cTokenEnd[] = "$end";
 constexpr char cTokenUncaughtString[] = "$UncaughtString";
 constexpr char cTokenInt[] = "int";
-constexpr char cTokenDouble[] = "double";
+constexpr char cTokenFloat[] = "float";
 constexpr char cTokenHex[] = "hex";
 constexpr char cTokenFirstTimestamp[] = "firstTimestamp";
 constexpr char cTokenNewlineTimestamp[] = "newLineTimestamp";
@@ -52,4 +52,4 @@ namespace utf8 {
 } // namespace utf8
 } // namespace log_surgeon
 
-#endif // CONSTANTS_HPP
+#endif // LOG_SURGEON_CONSTANTS_HPP

@@ -1,5 +1,5 @@
-#ifndef LOG_EVENT_HPP
-#define LOG_EVENT_HPP
+#ifndef LOG_SURGEON_LOG_EVENT_HPP
+#define LOG_SURGEON_LOG_EVENT_HPP
 
 #include <memory>
 #include <string>
@@ -145,4 +145,4 @@ private:
 };
 } // namespace log_surgeon
 
-#endif // LOG_EVENT_HPP
+#endif // LOG_SURGEON_LOG_EVENT_HPP

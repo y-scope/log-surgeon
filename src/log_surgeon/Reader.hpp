@@ -1,5 +1,5 @@
-#ifndef LIBRARY_READER_HPP
-#define LIBRARY_READER_HPP
+#ifndef LOG_SURGEON_LIBRARY_READER_HPP
+#define LOG_SURGEON_LIBRARY_READER_HPP
 
 #include <functional>
 
@@ -28,4 +28,4 @@ public:
 
 } // namespace log_surgeon
 
-#endif // LIBRARY_READER_HPP
+#endif // LOG_SURGEON_LIBRARY_READER_HPP

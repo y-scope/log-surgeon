@@ -1,5 +1,5 @@
-#ifndef PARSER_HPP
-#define PARSER_HPP
+#ifndef LOG_SURGEON_PARSER_HPP
+#define LOG_SURGEON_PARSER_HPP
 
 // Project headers
 #include "Lexer.hpp"
@@ -22,4 +22,4 @@ public:
 
 #include "Parser.tpp"
 
-#endif //PARSER_HPP
+#endif // LOG_SURGEON_PARSER_HPP

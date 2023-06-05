@@ -1,5 +1,5 @@
-#ifndef FINITE_AUTOMATA_REGEX_AST_HPP
-#define FINITE_AUTOMATA_REGEX_AST_HPP
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
+#define LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
 
 // C++ standard libraries
 #include <algorithm>
@@ -443,4 +443,4 @@ private:
 
 #include "RegexAST.tpp"
 
-#endif // FINITE_AUTOMATA_REGEX_AST_HPP
+#endif // LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP

@@ -1,5 +1,5 @@
-#ifndef LEXER_HPP
-#define LEXER_HPP
+#ifndef LOG_SURGEON_LEXER_HPP
+#define LOG_SURGEON_LEXER_HPP
 
 // C++ standard libraries
 #include <bitset>
@@ -109,7 +109,8 @@ public:
      * @return Token
      * @throw runtime_error("Input buffer about to overflow")
      */
-    auto scan_with_wildcard(ParserInputBuffer& input_buffer, char wildcard) -> Token;
+    auto scan_with_wildcard(ParserInputBuffer& input_buffer, char wildcard, Token& token) 
+            -> ErrorCode;
 
     [[nodiscard]] auto get_has_delimiters() const -> bool const& { return m_has_delimiters; }
 
@@ -171,4 +172,4 @@ namespace lexers {
 
 #include "Lexer.tpp"
 
-#endif // LEXER_HPP
+#endif // LOG_SURGEON_LEXER_HPP

@@ -1,5 +1,5 @@
-#ifndef FINITE_AUTOMATA_REGEX_DFA_TPP
-#define FINITE_AUTOMATA_REGEX_DFA_TPP
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_TPP
+#define LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_TPP
 
 namespace log_surgeon::finite_automata {
 
@@ -36,4 +36,4 @@ auto RegexDFA<DFAStateType>::new_state(std::set<NFAStateType*> const& set) -> DF
 }
 } // namespace log_surgeon::finite_automata
 
-#endif // FINITE_AUTOMATA_REGEX_DFA_TPP
+#endif // LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_TPP

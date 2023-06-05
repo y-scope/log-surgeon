@@ -1,5 +1,5 @@
-#ifndef LOGPARSER_HPP
-#define LOGPARSER_HPP
+#ifndef LOG_SURGEON_LOG_PARSER_HPP
+#define LOG_SURGEON_LOG_PARSER_HPP
 
 // C++ standard libraries
 #include <cassert>
@@ -153,11 +153,10 @@ private:
      */
     auto add_rules(SchemaAST const* schema_ast) -> void;
 
-    std::string m_schema_file_path;
     ParserInputBuffer m_input_buffer;
     bool m_has_start_of_log;
     Token m_start_of_log_message{};
 };
 } // namespace log_surgeon
 
-#endif // LOGPARSER_HPP
+#endif // LOG_SURGEON_LOG_PARSER_HPP

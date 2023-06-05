@@ -1,5 +1,5 @@
-#ifndef FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_TPP
-#define FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_TPP
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_TPP
+#define LOG_SURGEON_FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_TPP
 
 // C++ standard libraries
 #include <cassert>
@@ -235,4 +235,4 @@ auto UnicodeIntervalTree<T>::Node::overlaps(Interval i) -> bool {
 }
 } // namespace log_surgeon::finite_automata
 
-#endif // FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_TPP
+#endif // LOG_SURGEON_FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_TPP

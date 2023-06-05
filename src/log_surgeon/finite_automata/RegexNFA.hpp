@@ -1,5 +1,5 @@
-#ifndef FINITE_AUTOMATA_REGEX_NFA_HPP
-#define FINITE_AUTOMATA_REGEX_NFA_HPP
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP
+#define LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP
 
 // C++ standard libraries
 #include <algorithm>
@@ -121,4 +121,4 @@ private:
 
 #include "RegexNFA.tpp"
 
-#endif // FINITE_AUTOMATA_REGEX_NFA_HPP
+#endif // LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP

@@ -8,7 +8,7 @@
 namespace log_surgeon {
 BufferParser::BufferParser(Schema& schema) : m_log_parser(schema.get_schema_ast_ptr()) {}
 
-BufferParser::BufferParser(std::string& schema_file_path)
+BufferParser::BufferParser(std::string const& schema_file_path)
     : m_log_parser(LogParser(schema_file_path)) {}
 
 auto BufferParser::reset() -> void {

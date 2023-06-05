@@ -1,5 +1,5 @@
-#ifndef LALR1_PARSER_TPP
-#define LALR1_PARSER_TPP
+#ifndef LOG_SURGEON_LALR1_PARSER_TPP
+#define LOG_SURGEON_LALR1_PARSER_TPP
 
 #include <cstddef>
 
@@ -18,7 +18,7 @@ LALR1Parser<NFAStateType, DFAStateType>::LALR1Parser() {
     m_terminals.insert((int)SymbolID::TokenEndID);
     m_terminals.insert((int)SymbolID::TokenUncaughtStringID);
     m_terminals.insert((int)SymbolID::TokenIntId);
-    m_terminals.insert((int)SymbolID::TokenDoubleId);
+    m_terminals.insert((int)SymbolID::TokenFloatId);
     m_terminals.insert((int)SymbolID::TokenHexId);
     m_terminals.insert((int)SymbolID::TokenFirstTimestampId);
     m_terminals.insert((int)SymbolID::TokenNewlineTimestampId);
@@ -711,4 +711,4 @@ auto LALR1Parser<NFAStateType, DFAStateType>::parse_symbol(uint32_t const& type_
 }
 } // namespace log_surgeon
 
-#endif // LALR1_PARSER_TPP
+#endif // LOG_SURGEON_LALR1_PARSER_TPP

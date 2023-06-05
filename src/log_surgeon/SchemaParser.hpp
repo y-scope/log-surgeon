@@ -1,5 +1,5 @@
-#ifndef SCHEMAPARSER_HPP
-#define SCHEMAPARSER_HPP
+#ifndef LOG_SURGEON_SCHEMA_PARSER_HPP
+#define LOG_SURGEON_SCHEMA_PARSER_HPP
 
 #include <utility>
 
@@ -111,4 +111,4 @@ private:
 };
 } // namespace log_surgeon
 
-#endif // SCHEMAPARSER_HPP
+#endif // LOG_SURGEON_SCHEMA_PARSER_HPP
