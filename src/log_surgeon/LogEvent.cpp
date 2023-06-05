@@ -79,12 +79,12 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
             m_buffer[curr_pos] = c;
             curr_pos++;
         }
-        Token copied_token{};
-        copied_token.assign_with_ids_vector(start_pos, 
-                                            curr_pos, 
-                                            m_buffer.data(), 
-                                            buffer_size, 0, 
-                                            token.m_type_ids_ptr);
+        Token copied_token{start_pos,
+                           curr_pos,
+                           m_buffer.data(), 
+                           buffer_size, 
+                           0, 
+                           token.m_type_ids_ptr};
         m_log_output_buffer->set_curr_token(copied_token);
         m_log_output_buffer->advance_to_next_token();
     }

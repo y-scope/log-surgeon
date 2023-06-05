@@ -11,22 +11,6 @@ namespace log_surgeon {
 class Token {
 public:
     /**
-     * Sets a token from parsing
-     * @param start_pos
-     * @param end_pos
-     * @param buffer
-     * @param buffer_size
-     * @param line
-     * @param type_ids_ptr
-     */
-    auto assign_with_ids_vector(uint32_t start_pos,
-                                uint32_t end_pos,
-                                char const* buffer,
-                                uint32_t buffer_size,
-                                uint32_t line,
-                                std::vector<int> const* type_ids_ptr) -> void;
-
-    /**
      * @return The token's value as a string
      */
     [[nodiscard]] auto to_string() -> std::string;
