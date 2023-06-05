@@ -59,17 +59,6 @@ set(SOURCE_FILES
     src/log_surgeon/finite_automata/UnicodeIntervalTree.tpp
     )
 
-set(UNIT_TEST_FILES
-    submodules/Catch2/single_include/catch2/catch.hpp
-    unit-tests/test-buffer-parser.cpp
-    unit-tests/test-buffer.cpp
-    unit-tests/test-log-parser-output-buffer.cpp
-    unit-tests/test-main.cpp
-    unit-tests/test-parser-input-buffer
-    unit-tests/test-reader-parser.cpp
-    unit-tests/test-token.cpp
-    )
-
 set(LCHIP_INSTALL_CONFIG_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/log_surgeon)
 set(LCHIP_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 
@@ -171,9 +160,3 @@ set(SOURCE_FILES_unitTest
 # target_compile_features(unitTest
 # 	PRIVATE cxx_std_17
 # 	)
-
-add_executable(unitTest ${SOURCE_FILES} ${UNIT_TEST_FILES} )
-
-target_compile_features(unitTest
-                        PRIVATE cxx_std_17
-                        )
