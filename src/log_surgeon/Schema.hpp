@@ -1,5 +1,5 @@
-#ifndef SCHEMA_HPP
-#define SCHEMA_HPP
+#ifndef LOG_SURGEON_SCHEMA_HPP
+#define LOG_SURGEON_SCHEMA_HPP
 
 #include <memory>
 #include <string>
@@ -56,4 +56,4 @@ private:
 };
 } // namespace log_surgeon
 
-#endif // SCHEMA_HPP
+#endif // LOG_SURGEON_SCHEMA_HPP

@@ -1,5 +1,5 @@
-#ifndef LALR1_PARSER_HPP
-#define LALR1_PARSER_HPP
+#ifndef LOG_SURGEON_LALR1_PARSER_HPP
+#define LOG_SURGEON_LALR1_PARSER_HPP
 
 // C++ standard libraries
 #include <cassert>
@@ -411,4 +411,4 @@ private:
 
 #include "LALR1Parser.tpp"
 
-#endif // LALR1_PARSER_HPP
+#endif // LOG_SURGEON_LALR1_PARSER_HPP

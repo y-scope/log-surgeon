@@ -7,7 +7,7 @@
 
 namespace log_surgeon {
 ReaderParser::ReaderParser(Schema& schema) : m_log_parser(schema.get_schema_ast_ptr()) {}
-ReaderParser::ReaderParser(std::string& schema_file_path) : m_log_parser(schema_file_path) {}
+ReaderParser::ReaderParser(std::string const& schema_file_path) : m_log_parser(schema_file_path) {}
 
 auto ReaderParser::reset_and_set_reader(Reader& reader) -> void {
     m_done = false;

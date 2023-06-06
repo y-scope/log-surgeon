@@ -1,5 +1,5 @@
-#ifndef UTILS_HPP
-#define UTILS_HPP
+#ifndef LOG_SURGEON_UTILS_HPP
+#define LOG_SURGEON_UTILS_HPP
 
 #include <memory>
 #include <stdexcept>
@@ -21,4 +21,4 @@ auto strfmt(std::string const& fmt, Args... args) -> std::string {
     return {buf.data(), buf.data() + size};
 }
 
-#endif // UTILS_HPP
+#endif // LOG_SURGEON_UTILS_HPP

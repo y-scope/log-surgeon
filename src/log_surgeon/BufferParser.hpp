@@ -1,5 +1,5 @@
-#ifndef BUFFER_PARSER_HPP
-#define BUFFER_PARSER_HPP
+#ifndef LOG_SURGEON_BUFFER_PARSER_HPP
+#define LOG_SURGEON_BUFFER_PARSER_HPP
 
 #include <optional>
 #include <string>
@@ -24,7 +24,7 @@ public:
      * describing the failure parsing the schema file or processing the schema
      * AST.
      */
-    explicit BufferParser(std::string& schema_file_path);
+    explicit BufferParser(std::string const& schema_file_path);
 
     /**
      * Constructs the parser using the given schema object.
@@ -102,4 +102,4 @@ private:
 };
 } // namespace log_surgeon
 
-#endif // BUFFER_PARSER_HPP
+#endif // LOG_SURGEON_BUFFER_PARSER_HPP

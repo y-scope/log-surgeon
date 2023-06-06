@@ -1,5 +1,5 @@
-#ifndef TOKEN_HPP
-#define TOKEN_HPP
+#ifndef LOG_SURGEON_TOKEN_HPP
+#define LOG_SURGEON_TOKEN_HPP
 
 // C++ standard libraries
 #include <set>
@@ -10,53 +10,6 @@
 namespace log_surgeon {
 class Token {
 public:
-    Token() = default;
-
-    Token(uint32_t start_pos,
-          uint32_t end_pos,
-          char const* buffer,
-          uint32_t buffer_size,
-          uint32_t line,
-          std::vector<int> const* type_ids_ptr)
-        : m_start_pos(start_pos),
-          m_end_pos(end_pos),
-          m_buffer(buffer),
-          m_buffer_size(buffer_size),
-          m_line(line),
-          m_type_ids_ptr(type_ids_ptr) {}
-
-    /**
-     * Sets a token from parsing
-     * @param start_pos
-     * @param end_pos
-     * @param buffer
-     * @param buffer_size
-     * @param line
-     * @param type_ids_ptr
-     */
-    auto assign_with_ids_vector(uint32_t start_pos,
-                                uint32_t end_pos,
-                                char const* buffer,
-                                uint32_t buffer_size,
-                                uint32_t line,
-                                std::vector<int> const* type_ids_ptr) -> void;
-
-    /**
-     * Sets a token for search
-     * @param start_pos
-     * @param end_pos
-     * @param buffer
-     * @param buffer_size
-     * @param line
-     * @param type_ids_set
-     */
-    auto assign_with_ids_set(uint32_t start_pos,
-                             uint32_t end_pos,
-                             char const* buffer,
-                             uint32_t buffer_size,
-                             uint32_t line,
-                             std::set<int> const& type_ids_set) -> void;
-
     /**
      * @return The token's value as a string
      */
@@ -93,4 +46,4 @@ public:
 };
 } // namespace log_surgeon
 
-#endif // TOKEN_HPP
+#endif // LOG_SURGEON_TOKEN_HPP

@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.5.1)
 
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
-
 project(log_surgeon
     VERSION 0.0.1
     DESCRIPTION "log-surgeon: A performant log parsing library"
     HOMEPAGE_URL https://github.com/y-scope/log-surgeon
     LANGUAGES CXX
     )
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
@@ -144,19 +144,3 @@ install(
     DESTINATION
     ${LCHIP_INSTALL_CONFIG_DIR}
     )
-
-# Unit testing
-# find_package(Catch2 3 REQUIRED)
-set(SOURCE_FILES_unitTest
-    ${SOURCE_FILES}
-    tests/test-SchemaValidation.cpp
-    # tests/test-LogParser.cpp
-    )
-# add_executable(unitTest ${SOURCE_FILES_unitTest})
-# target_link_libraries(unitTest
-# 	PRIVATE
-# 	Catch2::Catch2WithMain
-# 	)
-# target_compile_features(unitTest
-# 	PRIVATE cxx_std_17
-# 	)

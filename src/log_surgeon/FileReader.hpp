@@ -1,5 +1,5 @@
-#ifndef FILE_READER_HPP
-#define FILE_READER_HPP
+#ifndef LOG_SURGEON_FILE_READER_HPP
+#define LOG_SURGEON_FILE_READER_HPP
 
 // C++ libraries
 #include <cstdio>
@@ -60,4 +60,4 @@ private:
 };
 } // namespace log_surgeon
 
-#endif // FILE_READER_HPP
+#endif // LOG_SURGEON_FILE_READER_HPP

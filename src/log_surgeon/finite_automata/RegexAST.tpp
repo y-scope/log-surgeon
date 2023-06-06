@@ -1,5 +1,5 @@
-#ifndef FINITE_AUTOMATA_REGEX_AST_TPP
-#define FINITE_AUTOMATA_REGEX_AST_TPP
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_TPP
+#define LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_TPP
 
 // C++ standard libraries
 #include <algorithm>
@@ -232,4 +232,4 @@ void RegexASTGroup<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType*
 }
 } // namespace log_surgeon::finite_automata
 
-#endif // FINITE_AUTOMATA_REGEX_AST_TPP
+#endif // LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_TPP

@@ -1,5 +1,5 @@
-#ifndef PARSER_INPUT_BUFFER_HPP
-#define PARSER_INPUT_BUFFER_HPP
+#ifndef LOG_SURGEON_PARSER_INPUT_BUFFER_HPP
+#define LOG_SURGEON_PARSER_INPUT_BUFFER_HPP
 
 // Project Headers
 #include "Buffer.hpp"
@@ -31,12 +31,6 @@ public:
      * @return bool
      */
     auto read_is_safe() -> bool;
-
-    /**
-     * Reads into the half of the buffer currently available.
-     * @param reader to use for IO.
-     */
-    auto read(Reader& reader) -> ErrorCode;
 
     /**
      * Reads if only consumed data will be overwritten.
@@ -123,6 +117,13 @@ public:
     [[nodiscard]] auto storage() const -> Buffer<char> const& { return m_storage; }
 
 private:
+    /**
+     * Reads into the half of the buffer currently available.
+     * @param reader to use for IO.
+     */
+    auto read(Reader& reader) -> ErrorCode;
+    
+private:
     // the position of the last character read into the buffer
     uint32_t m_pos_last_read_char{0};
     bool m_last_read_first_half{false};
@@ -137,4 +138,4 @@ private:
 };
 } // namespace log_surgeon
 
-#endif // PARSER_INPUT_BUFFER_HPP
+#endif // LOG_SURGEON_PARSER_INPUT_BUFFER_HPP

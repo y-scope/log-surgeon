@@ -1,5 +1,5 @@
-#ifndef FINITE_AUTOMATA_REGEX_DFA_HPP
-#define FINITE_AUTOMATA_REGEX_DFA_HPP
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_HPP
+#define LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_HPP
 
 // C++ standard libraries
 #include <algorithm>
@@ -70,4 +70,4 @@ private:
 
 #include "RegexDFA.tpp"
 
-#endif // FINITE_AUTOMATA_REGEX_DFA_HPP
+#endif // LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_HPP

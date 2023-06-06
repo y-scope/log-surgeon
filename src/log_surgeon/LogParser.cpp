@@ -30,8 +30,7 @@ using finite_automata::RegexDFAByteState;
 using finite_automata::RegexNFAByteState;
 
 LogParser::LogParser(string const& schema_file_path)
-    : m_schema_file_path(schema_file_path),
-      m_has_start_of_log(false) {
+    : m_has_start_of_log(false) {
     std::unique_ptr<SchemaAST> schema_ast = SchemaParser::try_schema_file(schema_file_path);
     add_delimiters(schema_ast->m_delimiters);
     add_rules(schema_ast.get());

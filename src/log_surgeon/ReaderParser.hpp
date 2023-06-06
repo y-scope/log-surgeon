@@ -1,5 +1,5 @@
-#ifndef READER_PARSER_HPP
-#define READER_PARSER_HPP
+#ifndef LOG_SURGEON_READER_PARSER_HPP
+#define LOG_SURGEON_READER_PARSER_HPP
 
 #include <optional>
 #include <string>
@@ -23,7 +23,7 @@ public:
      * describing the failure parsing the schema file or processing the schema
      * AST.
      */
-    explicit ReaderParser(std::string& schema_file_path);
+    explicit ReaderParser(std::string const& schema_file_path);
 
     /**
      * Constructs the parser using the given schema object.
@@ -86,4 +86,4 @@ private:
 };
 } // namespace log_surgeon
 
-#endif // READER_PARSER_HPP
+#endif // LOG_SURGEON_READER_PARSER_HPP

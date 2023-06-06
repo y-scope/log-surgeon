@@ -1,5 +1,5 @@
-#ifndef BUFFER_HPP
-#define BUFFER_HPP
+#ifndef LOG_SURGEON_BUFFER_HPP
+#define LOG_SURGEON_BUFFER_HPP
 
 // C++ libraries
 #include <cstdint>
@@ -27,9 +27,11 @@ namespace log_surgeon {
 template <typename Item>
 class Buffer {
 public:
-    auto increment_pos() -> void { m_pos++; }
+    auto set_curr_value(Item const& value) -> void { m_active_storage[m_pos] = value; }
 
-    auto set_value(uint32_t pos, Item& value) -> void { m_active_storage[pos] = value; }
+    [[nodiscard]] auto get_curr_value() const -> Item const& { return m_active_storage[m_pos]; }
+
+    auto set_value(uint32_t pos, Item const& value) -> void { m_active_storage[pos] = value; }
 
     [[nodiscard]] auto get_value(uint32_t pos) const -> Item const& {
         return m_active_storage[pos];
@@ -39,13 +41,28 @@ public:
         return m_active_storage[pos];
     }
 
-    auto set_curr_value(Item& value) -> void { m_active_storage[m_pos] = value; }
+    auto increment_pos() -> void { m_pos++; }
 
     auto set_pos(uint32_t curr_pos) -> void { m_pos = curr_pos; }
 
     [[nodiscard]] auto pos() const -> uint32_t { return m_pos; }
 
-    [[nodiscard]] auto get_curr_value() const -> Item const& { return m_active_storage[m_pos]; }
+    auto double_size() -> void {
+        std::vector<Item>& new_buffer = m_dynamic_storages.emplace_back(2 * m_active_size);
+        m_active_storage = new_buffer.data();
+        m_active_size *= 2;
+    }
+
+    [[nodiscard]] auto static_size() const -> uint32_t { return cStaticByteBuffSize; }
+
+    [[nodiscard]] auto size() const -> uint32_t { return m_active_size; }
+
+    auto reset() -> void {
+        m_pos = 0;
+        m_dynamic_storages.clear();
+        m_active_storage = m_static_storage;
+        m_active_size = cStaticByteBuffSize;
+    }
 
     auto set_active_buffer(Item* storage, uint32_t size, uint32_t pos) -> void {
         m_active_storage = storage;
@@ -57,23 +74,6 @@ public:
 
     // Currently needed for compression
     [[nodiscard]] auto get_mutable_active_buffer() -> Item* { return m_active_storage; }
-
-    [[nodiscard]] auto size() const -> uint32_t { return m_active_size; }
-
-    [[nodiscard]] auto static_size() const -> uint32_t { return cStaticByteBuffSize; }
-
-    auto reset() -> void {
-        m_pos = 0;
-        m_dynamic_storages.clear();
-        m_active_storage = m_static_storage;
-        m_active_size = cStaticByteBuffSize;
-    }
-
-    auto double_size() -> void {
-        std::vector<Item>& new_buffer = m_dynamic_storages.emplace_back(2 * m_active_size);
-        m_active_storage = new_buffer.data();
-        m_active_size *= 2;
-    }
 
     void
     copy(Item const* storage_to_copy_first, Item const* storage_to_copy_last, uint32_t offset) {
@@ -96,4 +96,4 @@ private:
 };
 } // namespace log_surgeon
 
-#endif // BUFFER_HPP
+#endif // LOG_SURGEON_BUFFER_HPP
