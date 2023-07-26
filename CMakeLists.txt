@@ -66,10 +66,10 @@ add_library(log_surgeon ${SOURCE_FILES})
 add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
 target_include_directories(log_surgeon
     PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/log_surgeon>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/log_surgeon
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
     )
 
 target_compile_features(log_surgeon
