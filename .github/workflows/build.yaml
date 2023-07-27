@@ -10,8 +10,9 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
-        type: [Release, Debug]
+        build_type: [Release, Debug]
+    runs-on: ${{ matrix.os }}
     steps:
-      - run: cmake -B ./build -DCMAKE_BUILD_TYPE=${{inputs.build_type}}
-      - run: cmake --build ./build --config ${{inputs.build_type}}
+      - run: cmake -B ./build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      - run: cmake --build ./build --config ${{ matrix.build_type }}
       - run: cmake --install ./build --prefix ./install
