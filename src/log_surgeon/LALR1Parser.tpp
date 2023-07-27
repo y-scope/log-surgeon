@@ -12,7 +12,7 @@
 namespace log_surgeon {
 
 namespace {
-    auto get_line_num(MatchedSymbol& top_symbol) -> uint32_t {
+    [[maybe_unused]] auto get_line_num(MatchedSymbol& top_symbol) -> uint32_t {
         std::optional<uint32_t> line_num{std::nullopt};
         std::stack<MatchedSymbol> symbols;
         symbols.push(std::move(top_symbol));
@@ -36,7 +36,7 @@ namespace {
         return *line_num;
     }
 
-    auto unescape(char const& c) -> std::string {
+    [[maybe_unused]] auto unescape(char const& c) -> std::string {
         switch (c) {
             case '\t':
                 return "\\t";
