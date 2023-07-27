@@ -1,0 +1,17 @@
+name: Build
+
+on:
+  pull_request:
+  push:
+  workflow_call:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        type: [Release, Debug]
+    steps:
+      - run: cmake -B ./build -DCMAKE_BUILD_TYPE=${{inputs.build_type}}
+      - run: cmake --build ./build --config ${{inputs.build_type}}
+      - run: cmake --install ./build --prefix ./install
