@@ -11,6 +11,49 @@
 
 namespace log_surgeon {
 
+namespace {
+    auto get_line_num(MatchedSymbol& top_symbol) -> uint32_t {
+        std::optional<uint32_t> line_num{std::nullopt};
+        std::stack<MatchedSymbol> symbols;
+        symbols.push(std::move(top_symbol));
+        while (std::nullopt == line_num) {
+            assert(!symbols.empty());
+            MatchedSymbol& curr_symbol = symbols.top();
+            std::visit(
+                    Overloaded{
+                            [&line_num](Token& token) { line_num = token.m_line; },
+                            [&symbols](NonTerminal& m) {
+                                for (size_t i = 0; i < m.m_production->m_body.size(); i++) {
+                                    symbols.push(std::move(
+                                            NonTerminal::m_all_children[m.m_children_start + i]
+                                    ));
+                                }
+                            }},
+                    curr_symbol
+            );
+            symbols.pop();
+        }
+        return *line_num;
+    }
+
+    auto unescape(char const& c) -> std::string {
+        switch (c) {
+            case '\t':
+                return "\\t";
+            case '\r':
+                return "\\r";
+            case '\n':
+                return "\\n";
+            case '\v':
+                return "\\v";
+            case '\f':
+                return "\\f";
+            default:
+                return {c};
+        }
+    }
+}  // namespace
+
 template <typename NFAStateType, typename DFAStateType>
 LALR1Parser<NFAStateType, DFAStateType>::LALR1Parser() {
     m_terminals.insert((int)SymbolID::TokenEndID);
@@ -475,30 +518,6 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lalr1_action() {
     }
 }
 
-static auto get_line_num(MatchedSymbol& top_symbol) -> uint32_t {
-    std::optional<uint32_t> line_num{std::nullopt};
-    std::stack<MatchedSymbol> symbols;
-    symbols.push(std::move(top_symbol));
-    while (std::nullopt == line_num) {
-        assert(!symbols.empty());
-        MatchedSymbol& curr_symbol = symbols.top();
-        std::visit(
-                Overloaded{
-                        [&line_num](Token& token) { line_num = token.m_line; },
-                        [&symbols](NonTerminal& m) {
-                            for (size_t i = 0; i < m.m_production->m_body.size(); i++) {
-                                symbols.push(std::move(
-                                        NonTerminal::m_all_children[m.m_children_start + i]
-                                ));
-                            }
-                        }},
-                curr_symbol
-        );
-        symbols.pop();
-    }
-    return *line_num;
-}
-
 template <typename NFAStateType, typename DFAStateType>
 auto LALR1Parser<NFAStateType, DFAStateType>::get_input_after_last_newline(
         std::stack<MatchedSymbol>& parse_stack_matches
@@ -555,23 +574,6 @@ auto LALR1Parser<NFAStateType, DFAStateType>::get_input_until_next_newline(Token
     }
     rest_of_line += "\n";
     return rest_of_line;
-}
-
-static auto unescape(char const& c) -> std::string {
-    switch (c) {
-        case '\t':
-            return "\\t";
-        case '\r':
-            return "\\r";
-        case '\n':
-            return "\\n";
-        case '\v':
-            return "\\v";
-        case '\f':
-            return "\\f";
-        default:
-            return {c};
-    }
 }
 
 template <typename NFAStateType, typename DFAStateType>

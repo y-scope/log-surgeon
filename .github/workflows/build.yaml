@@ -17,6 +17,7 @@ jobs:
 
       - if: ${{ 'macos-latest' == matrix.os }}
         run: brew update
+          brew install llvm
 
       - run: cmake -B ./build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
 
