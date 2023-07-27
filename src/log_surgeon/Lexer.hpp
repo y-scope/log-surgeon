@@ -2,6 +2,7 @@
 #define LOG_SURGEON_LEXER_HPP
 
 // C++ standard libraries
+#include <array>
 #include <bitset>
 #include <cstdint>
 #include <memory>
