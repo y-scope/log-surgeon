@@ -1,7 +1,6 @@
 #ifndef LOG_SURGEON_TOKEN_HPP
 #define LOG_SURGEON_TOKEN_HPP
 
-// C++ standard libraries
 #include <set>
 #include <string>
 #include <string_view>
@@ -44,6 +43,6 @@ public:
     std::vector<int> const* m_type_ids_ptr{nullptr};
     std::string m_wrap_around_string{};
 };
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_TOKEN_HPP
+#endif  // LOG_SURGEON_TOKEN_HPP

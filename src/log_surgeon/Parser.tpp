@@ -1,11 +1,9 @@
 #ifndef LOG_SURGEON_PARSER_TPP
 #define LOG_SURGEON_PARSER_TPP
 
-// C++ standard libraries
 #include <memory>
 
-// Project headers
-#include "finite_automata/RegexAST.hpp"
+#include <log_surgeon/finite_automata/RegexAST.hpp>
 
 namespace log_surgeon {
 
@@ -33,7 +31,9 @@ Parser<NFAStateType, DFAStateType>::Parser() {
 
 template <typename NFAStateType, typename DFAStateType>
 void Parser<NFAStateType, DFAStateType>::add_rule(
-        std::string const& name, std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule) {
+        std::string const& name,
+        std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule
+) {
     if (m_lexer.m_symbol_id.find(name) == m_lexer.m_symbol_id.end()) {
         m_lexer.m_symbol_id[name] = m_lexer.m_symbol_id.size();
         m_lexer.m_id_symbol[m_lexer.m_symbol_id[name]] = name;
@@ -45,6 +45,6 @@ template <typename NFAStateType, typename DFAStateType>
 void Parser<NFAStateType, DFAStateType>::add_token(std::string const& name, char rule_char) {
     add_rule(name, std::make_unique<finite_automata::RegexASTLiteral<NFAStateType>>(rule_char));
 }
-} //namespace log_surgeon
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_PARSER_TPP
+#endif  // LOG_SURGEON_PARSER_TPP

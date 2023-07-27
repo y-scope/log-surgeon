@@ -21,4 +21,4 @@ auto strfmt(std::string const& fmt, Args... args) -> std::string {
     return {buf.data(), buf.data() + size};
 }
 
-#endif // LOG_SURGEON_UTILS_HPP
+#endif  // LOG_SURGEON_UTILS_HPP

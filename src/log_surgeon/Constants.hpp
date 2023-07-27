@@ -1,15 +1,14 @@
 #ifndef LOG_SURGEON_CONSTANTS_HPP
 #define LOG_SURGEON_CONSTANTS_HPP
 
-// C++ standard libraries
 #include <cstdint>
 #include <utility>
 
 namespace log_surgeon {
-constexpr uint32_t cUnicodeMax = 0x10FFFF;
+constexpr uint32_t cUnicodeMax = 0x10'FFFF;
 constexpr uint32_t cSizeOfByte = 256;
-constexpr uint32_t cSizeOfAllChildren = 10000;
-constexpr uint32_t cNullSymbol = 10000000;
+constexpr uint32_t cSizeOfAllChildren = 10'000;
+constexpr uint32_t cNullSymbol = 10'000'000;
 
 enum class ErrorCode {
     Success,
@@ -42,14 +41,14 @@ constexpr char cTokenHex[] = "hex";
 constexpr char cTokenFirstTimestamp[] = "firstTimestamp";
 constexpr char cTokenNewlineTimestamp[] = "newLineTimestamp";
 constexpr char cTokenNewline[] = "newLine";
-constexpr uint32_t cStaticByteBuffSize = 48000;
+constexpr uint32_t cStaticByteBuffSize = 48'000;
 
 namespace utf8 {
-    // 0xC0, 0xC1, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF are invalid
-    // UTF-8 code units
+    // 0xC0, 0xC1, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE,
+    // 0xFF are invalid UTF-8 code units
     static unsigned char const cCharEOF = 0xFF;
     static unsigned char const cCharErr = 0xFE;
-} // namespace utf8
-} // namespace log_surgeon
+}  // namespace utf8
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_CONSTANTS_HPP
+#endif  // LOG_SURGEON_CONSTANTS_HPP

@@ -10,8 +10,8 @@ auto Token::to_string() -> std::string {
         return {m_buffer + m_start_pos, m_buffer + m_end_pos};
     }
     if (m_wrap_around_string.empty()) {
-        m_wrap_around_string = std::string{m_buffer + m_start_pos, m_buffer + m_buffer_size} +
-                               std::string{m_buffer, m_buffer + m_end_pos};
+        m_wrap_around_string = std::string{m_buffer + m_start_pos, m_buffer + m_buffer_size}
+                               + std::string{m_buffer, m_buffer + m_end_pos};
     }
     return {m_wrap_around_string};
 }
@@ -21,8 +21,8 @@ auto Token::to_string_view() -> std::string_view {
         return {m_buffer + m_start_pos, m_end_pos - m_start_pos};
     }
     if (m_wrap_around_string.empty()) {
-        m_wrap_around_string = std::string{m_buffer + m_start_pos, m_buffer + m_buffer_size} +
-                               std::string{m_buffer, m_buffer + m_end_pos};
+        m_wrap_around_string = std::string{m_buffer + m_start_pos, m_buffer + m_buffer_size}
+                               + std::string{m_buffer, m_buffer + m_end_pos};
     }
     return {m_wrap_around_string};
 }
@@ -44,4 +44,4 @@ auto Token::get_length() const -> uint32_t {
     }
     return m_buffer_size - m_start_pos + m_end_pos;
 }
-} // namespace log_surgeon
+}  // namespace log_surgeon

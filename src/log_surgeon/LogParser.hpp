@@ -1,25 +1,27 @@
 #ifndef LOG_SURGEON_LOG_PARSER_HPP
 #define LOG_SURGEON_LOG_PARSER_HPP
 
-// C++ standard libraries
 #include <cassert>
 #include <iostream>
 #include <memory>
 
-// Project headers
-#include "Constants.hpp"
-#include "LALR1Parser.hpp"
-#include "LogParserOutputBuffer.hpp"
-#include "Parser.hpp"
-#include "ParserInputBuffer.hpp"
-#include "SchemaParser.hpp"
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/LALR1Parser.hpp>
+#include <log_surgeon/LogParserOutputBuffer.hpp>
+#include <log_surgeon/Parser.hpp>
+#include <log_surgeon/ParserInputBuffer.hpp>
+#include <log_surgeon/SchemaParser.hpp>
 
 namespace log_surgeon {
 /// TODO: Compare c-array vs. vectors (its underlying array) for buffers
 class LogParser
-    : public Parser<finite_automata::RegexNFAByteState, finite_automata::RegexDFAByteState> {
+        : public Parser<finite_automata::RegexNFAByteState, finite_automata::RegexDFAByteState> {
 public:
-    enum class ParsingAction { None, Compress, CompressAndFinish };
+    enum class ParsingAction {
+        None,
+        Compress,
+        CompressAndFinish
+    };
 
     /**
      * Constructs the parser using the given schema file.
@@ -49,7 +51,8 @@ public:
      * its tokens are stored into output_buffer.
      * @param output_buffer Buffer to write Token objects to as they are parsed.
      * @param parsing_action Returns the action for CLP to take by reference.
-     * @return ErrorCode::Success if successfully parsed to the start of a new log event.
+     * @return ErrorCode::Success if successfully parsed to the start of a new
+     * log event.
      * @return ErrorCode from LogParser::get_next_symbol.
      */
     auto parse(std::unique_ptr<LogParserOutputBuffer>& output_buffer, ParsingAction& parsing_action)
@@ -157,6 +160,6 @@ private:
     bool m_has_start_of_log;
     Token m_start_of_log_message{};
 };
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_LOG_PARSER_HPP
+#endif  // LOG_SURGEON_LOG_PARSER_HPP

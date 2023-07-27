@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 
-#include "SchemaParser.hpp"
+#include <log_surgeon/SchemaParser.hpp>
 
 namespace log_surgeon {
 /**
@@ -47,13 +47,11 @@ public:
     auto clear ();
     */
 
-    [[nodiscard]] auto get_schema_ast_ptr() const -> SchemaAST const* {
-        return m_schema_ast.get();
-    }
+    [[nodiscard]] auto get_schema_ast_ptr() const -> SchemaAST const* { return m_schema_ast.get(); }
 
 private:
     std::unique_ptr<SchemaAST> m_schema_ast;
 };
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_SCHEMA_HPP
+#endif  // LOG_SURGEON_SCHEMA_HPP

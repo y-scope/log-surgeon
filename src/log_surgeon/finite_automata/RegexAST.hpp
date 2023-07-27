@@ -1,7 +1,6 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
 
-// C++ standard libraries
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -9,17 +8,15 @@
 #include <utility>
 #include <vector>
 
-// Project headers
-#include "../Constants.hpp"
-#include "RegexNFA.hpp"
-#include "UnicodeIntervalTree.hpp"
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/RegexNFA.hpp>
+#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
 
 template <typename NFAStateType>
 class RegexAST {
 public:
-    // Destructor
     virtual ~RegexAST() = default;
 
     /**
@@ -29,7 +26,8 @@ public:
     [[nodiscard]] virtual auto clone() const -> RegexAST* = 0;
 
     /**
-     * Sets is_possible_input to specify which utf8 characters are allowed in a lexer rule
+     * Sets is_possible_input to specify which utf8 characters are allowed in a
+     * lexer rule
      * @param is_possible_input
      */
     virtual auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void = 0;
@@ -41,19 +39,17 @@ public:
     virtual auto remove_delimiters_from_wildcard(std::vector<uint32_t>& delimiters) -> void = 0;
 
     /**
-     * Add the needed RegexNFA::states to the passed in nfa to handle the current node before
-     * transitioning to a pre-tagged end_state
+     * Add the needed RegexNFA::states to the passed in nfa to handle the
+     * current node before transitioning to a pre-tagged end_state
      * @param nfa
      * @param end_state
      */
     virtual auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void = 0;
 };
 
-// Leaf node
 template <typename NFAStateType>
 class RegexASTLiteral : public RegexAST<NFAStateType> {
 public:
-    // Constructor
     explicit RegexASTLiteral(uint32_t character);
 
     /**
@@ -65,8 +61,8 @@ public:
     }
 
     /**
-     * Sets is_possible_input to specify which utf8 characters are allowed in a lexer rule
-     * containing RegexASTLiteral at a leaf node in its AST
+     * Sets is_possible_input to specify which utf8 characters are allowed in a
+     * lexer rule containing RegexASTLiteral at a leaf node in its AST
      * @param is_possible_input
      */
     auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
@@ -74,8 +70,8 @@ public:
     }
 
     /**
-     * Transforms '.' to to be any non-delimiter in a lexer rule, which does nothing as
-     * RegexASTLiteral is a leaf node that is not a RegexASTGroup
+     * Transforms '.' to to be any non-delimiter in a lexer rule, which does
+     * nothing as RegexASTLiteral is a leaf node that is not a RegexASTGroup
      * @param delimiters
      */
     auto remove_delimiters_from_wildcard(std::vector<uint32_t>& /* delimiters */) -> void override {
@@ -83,8 +79,8 @@ public:
     }
 
     /**
-     * Add the needed RegexNFA::states to the passed in nfa to handle a RegexASTLiteral before
-     * transitioning to a pre-tagged end_state
+     * Add the needed RegexNFA::states to the passed in nfa to handle a
+     * RegexASTLiteral before transitioning to a pre-tagged end_state
      * @param nfa
      * @param end_state
      */
@@ -96,14 +92,11 @@ private:
     uint32_t m_character;
 };
 
-// Leaf node
 template <typename NFAStateType>
 class RegexASTInteger : public RegexAST<NFAStateType> {
 public:
-    // Constructor
     explicit RegexASTInteger(uint32_t digit);
 
-    // Constructor
     RegexASTInteger(RegexASTInteger* left, uint32_t digit);
 
     /**
@@ -115,8 +108,8 @@ public:
     }
 
     /**
-     * Sets is_possible_input to specify which utf8 characters are allowed in a lexer rule
-     * containing RegexASTInteger at a leaf node in its AST
+     * Sets is_possible_input to specify which utf8 characters are allowed in a
+     * lexer rule containing RegexASTInteger at a leaf node in its AST
      * @param is_possible_input
      */
     auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
@@ -126,8 +119,8 @@ public:
     }
 
     /**
-     * Transforms '.' to to be any non-delimiter in a lexer rule, which does nothing as
-     * RegexASTInteger is a leaf node that is not a RegexASTGroup
+     * Transforms '.' to to be any non-delimiter in a lexer rule, which does
+     * nothing as RegexASTInteger is a leaf node that is not a RegexASTGroup
      * @param delimiters
      */
     auto remove_delimiters_from_wildcard(std::vector<uint32_t>& /* delimiters */) -> void override {
@@ -135,8 +128,8 @@ public:
     }
 
     /**
-     * Add the needed RegexNFA::states to the passed in nfa to handle a RegexASTInteger before
-     * transitioning to a pre-tagged end_state
+     * Add the needed RegexNFA::states to the passed in nfa to handle a
+     * RegexASTInteger before transitioning to a pre-tagged end_state
      * @param nfa
      * @param end_state
      */
@@ -150,34 +143,25 @@ private:
     std::vector<uint32_t> m_digits;
 };
 
-// Lead node
 template <typename NFAStateType>
 class RegexASTGroup : public RegexAST<NFAStateType> {
 public:
     using Range = std::pair<uint32_t, uint32_t>;
 
-    // constructor
     RegexASTGroup();
 
-    // constructor
     RegexASTGroup(RegexASTGroup* left, RegexASTLiteral<NFAStateType>* right);
 
-    // constructor
     RegexASTGroup(RegexASTGroup* left, RegexASTGroup* right);
 
-    // constructor
     explicit RegexASTGroup(RegexASTLiteral<NFAStateType>* right);
 
-    // constructor
     explicit RegexASTGroup(RegexASTGroup* right);
 
-    // constructor
     RegexASTGroup(RegexASTLiteral<NFAStateType>* left, RegexASTLiteral<NFAStateType>* right);
 
-    // constructor
     RegexASTGroup(uint32_t min, uint32_t max);
 
-    // constructor
     explicit RegexASTGroup(std::vector<uint32_t> const& literals);
 
     /**
@@ -187,8 +171,8 @@ public:
     [[nodiscard]] auto clone() const -> RegexASTGroup* override { return new RegexASTGroup(*this); }
 
     /**
-     * Sets is_possible_input to specify which utf8 characters are allowed in a lexer rule
-     * containing RegexASTGroup at a leaf node in its AST
+     * Sets is_possible_input to specify which utf8 characters are allowed in a
+     * lexer rule containing RegexASTGroup at a leaf node in its AST
      * @param is_possible_input
      */
     auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
@@ -214,8 +198,8 @@ public:
     }
 
     /**
-     * Transforms '.' to to be any non-delimiter in a lexer rule if this RegexASTGroup node contains
-     * `.` (is a wildcard group)
+     * Transforms '.' to to be any non-delimiter in a lexer rule if this
+     * RegexASTGroup node contains `.` (is a wildcard group)
      * @param delimiters
      */
     auto remove_delimiters_from_wildcard(std::vector<uint32_t>& delimiters) -> void override {
@@ -244,8 +228,8 @@ public:
     }
 
     /**
-     * Add the needed RegexNFA::states to the passed in nfa to handle a RegexASTGroup before
-     * transitioning to a pre-tagged end_state
+     * Add the needed RegexNFA::states to the passed in nfa to handle a
+     * RegexASTGroup before transitioning to a pre-tagged end_state
      * @param nfa
      * @param end_state
      */
@@ -259,15 +243,15 @@ public:
 
 private:
     /**
-     * Merges multiple ranges such that the resulting m_ranges is sorted and non-overlapping
-     * @param ranges
+     * Merges multiple ranges such that the resulting m_ranges is sorted and
+     * non-overlapping @param ranges
      * @return std::vector<Range>
      */
     static auto merge(std::vector<Range> const& ranges) -> std::vector<Range>;
 
     /**
-     * Takes the compliment (in the cast of regex `^` at the start of a group) of multiple ranges
-     * such that m_ranges is sorted and non-overlapping
+     * Takes the compliment (in the cast of regex `^` at the start of a group)
+     * of multiple ranges such that m_ranges is sorted and non-overlapping
      * @param ranges
      * @return std::vector<Range>
      */
@@ -278,19 +262,17 @@ private:
     std::vector<Range> m_ranges;
 };
 
-// Intermediate node
-
 template <typename NFAStateType>
 class RegexASTOr : public RegexAST<NFAStateType> {
 public:
-    // Constructor
-    RegexASTOr(std::unique_ptr<RegexAST<NFAStateType>> /*left*/,
-               std::unique_ptr<RegexAST<NFAStateType>> /*right*/);
+    RegexASTOr(
+            std::unique_ptr<RegexAST<NFAStateType>> /*left*/,
+            std::unique_ptr<RegexAST<NFAStateType>> /*right*/
+    );
 
-    // Constructor
     RegexASTOr(RegexASTOr const& rhs)
-        : m_left(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone())),
-          m_right(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone())) {}
+            : m_left(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone())),
+              m_right(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone())) {}
 
     /**
      * Used for cloning a unique_pointer of type RegexASTOr
@@ -299,8 +281,8 @@ public:
     [[nodiscard]] auto clone() const -> RegexASTOr* override { return new RegexASTOr(*this); }
 
     /**
-     * Sets is_possible_input to specify which utf8 characters are allowed in a lexer rule
-     * containing RegexASTOr at a leaf node in its AST
+     * Sets is_possible_input to specify which utf8 characters are allowed in a
+     * lexer rule containing RegexASTOr at a leaf node in its AST
      * @param is_possible_input
      */
     auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
@@ -309,8 +291,8 @@ public:
     }
 
     /**
-     * Transforms '.' to to be any non-delimiter in a lexer rule if RegexASTGroup with `.` is a
-     * descendant of this RegexASTOr node
+     * Transforms '.' to to be any non-delimiter in a lexer rule if
+     * RegexASTGroup with `.` is a descendant of this RegexASTOr node
      * @param delimiters
      */
     auto remove_delimiters_from_wildcard(std::vector<uint32_t>& delimiters) -> void override {
@@ -319,8 +301,8 @@ public:
     }
 
     /**
-     * Add the needed RegexNFA::states to the passed in nfa to handle a RegexASTOr before
-     * transitioning to a pre-tagged end_state
+     * Add the needed RegexNFA::states to the passed in nfa to handle a
+     * RegexASTOr before transitioning to a pre-tagged end_state
      * @param nfa
      * @param end_state
      */
@@ -331,18 +313,17 @@ private:
     std::unique_ptr<RegexAST<NFAStateType>> m_right;
 };
 
-// Intermediate node
 template <typename NFAStateType>
 class RegexASTCat : public RegexAST<NFAStateType> {
 public:
-    // Constructor
-    RegexASTCat(std::unique_ptr<RegexAST<NFAStateType>> /*left*/,
-                std::unique_ptr<RegexAST<NFAStateType>> /*right*/);
+    RegexASTCat(
+            std::unique_ptr<RegexAST<NFAStateType>> /*left*/,
+            std::unique_ptr<RegexAST<NFAStateType>> /*right*/
+    );
 
-    // Constructor
     RegexASTCat(RegexASTCat const& rhs)
-        : m_left(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone())),
-          m_right(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone())) {}
+            : m_left(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone())),
+              m_right(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone())) {}
 
     /**
      * Used for cloning a unique_pointer of type RegexASTCat
@@ -351,8 +332,8 @@ public:
     [[nodiscard]] auto clone() const -> RegexASTCat* override { return new RegexASTCat(*this); }
 
     /**
-     * Sets is_possible_input to specify which utf8 characters are allowed in a lexer rule
-     * containing RegexASTCat at a leaf node in its AST
+     * Sets is_possible_input to specify which utf8 characters are allowed in a
+     * lexer rule containing RegexASTCat at a leaf node in its AST
      * @param is_possible_input
      */
     auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
@@ -361,8 +342,8 @@ public:
     }
 
     /**
-     * Transforms '.' to to be any non-delimiter in a lexer rule if RegexASTGroup with `.` is a
-     * descendant of this RegexASTCat node
+     * Transforms '.' to to be any non-delimiter in a lexer rule if
+     * RegexASTGroup with `.` is a descendant of this RegexASTCat node
      * @param delimiters
      */
     auto remove_delimiters_from_wildcard(std::vector<uint32_t>& delimiters) -> void override {
@@ -371,8 +352,8 @@ public:
     }
 
     /**
-     * Add the needed RegexNFA::states to the passed in nfa to handle a RegexASTCat before
-     * transitioning to a pre-tagged end_state
+     * Add the needed RegexNFA::states to the passed in nfa to handle a
+     * RegexASTCat before transitioning to a pre-tagged end_state
      * @param nfa
      * @param end_state
      */
@@ -383,20 +364,19 @@ private:
     std::unique_ptr<RegexAST<NFAStateType>> m_right;
 };
 
-// Intermediate node
 template <typename NFAStateType>
 class RegexASTMultiplication : public RegexAST<NFAStateType> {
 public:
-    // Constructor
-    RegexASTMultiplication(std::unique_ptr<RegexAST<NFAStateType>> operand,
-                           uint32_t min,
-                           uint32_t max);
+    RegexASTMultiplication(
+            std::unique_ptr<RegexAST<NFAStateType>> operand,
+            uint32_t min,
+            uint32_t max
+    );
 
-    // Constructor
     RegexASTMultiplication(RegexASTMultiplication const& rhs)
-        : m_operand(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_operand->clone())),
-          m_min(rhs.m_min),
-          m_max(rhs.m_max) {}
+            : m_operand(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_operand->clone())),
+              m_min(rhs.m_min),
+              m_max(rhs.m_max) {}
 
     /**
      * Used for cloning a unique_pointer of type RegexASTMultiplication
@@ -407,8 +387,8 @@ public:
     }
 
     /**
-     * Sets is_possible_input to specify which utf8 characters are allowed in a lexer rule
-     * containing RegexASTMultiplication at a leaf node in its AST
+     * Sets is_possible_input to specify which utf8 characters are allowed in a
+     * lexer rule containing RegexASTMultiplication at a leaf node in its AST
      * @param is_possible_input
      */
     auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
@@ -416,8 +396,9 @@ public:
     }
 
     /**
-     * Transforms '.' to to be any non-delimiter in a lexer rule if RegexASTGroup with `.` is a
-     * descendant of this RegexASTMultiplication node
+     * Transforms '.' to to be any non-delimiter in a lexer rule if
+     * RegexASTGroup with `.` is a descendant of this RegexASTMultiplication
+     * node
      * @param delimiters
      */
     auto remove_delimiters_from_wildcard(std::vector<uint32_t>& delimiters) -> void override {
@@ -425,8 +406,8 @@ public:
     }
 
     /**
-     * Add the needed RegexNFA::states to the passed in nfa to handle a RegexASTMultiplication
-     * before transitioning to a pre-tagged end_state
+     * Add the needed RegexNFA::states to the passed in nfa to handle a
+     * RegexASTMultiplication before transitioning to a pre-tagged end_state
      * @param nfa
      * @param end_state
      */
@@ -439,8 +420,8 @@ private:
     uint32_t m_min;
     uint32_t m_max;
 };
-} // namespace log_surgeon::finite_automata
+}  // namespace log_surgeon::finite_automata
 
 #include "RegexAST.tpp"
 
-#endif // LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP

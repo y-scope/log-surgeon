@@ -1,21 +1,24 @@
+#include "LogEvent.hpp"
+
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "Constants.hpp"
-#include "LogEvent.hpp"
-#include "LogParser.hpp"
-#include "LogParserOutputBuffer.hpp"
-#include "Token.hpp"
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/LogParser.hpp>
+#include <log_surgeon/LogParserOutputBuffer.hpp>
+#include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
 LogEventView::LogEventView(LogParser const* log_parser)
-    : m_log_parser{log_parser},
-      m_log_var_occurrences{log_parser->m_lexer.m_id_symbol.size()} {
+        : m_log_parser{log_parser},
+          m_log_var_occurrences{log_parser->m_lexer.m_id_symbol.size()} {
     m_log_output_buffer = std::make_unique<LogParserOutputBuffer>();
 }
 
-auto LogEventView::deep_copy() const -> LogEvent { return {*this}; }
+auto LogEventView::deep_copy() const -> LogEvent {
+    return {*this};
+}
 
 auto LogEventView::reset() -> void {
     for (std::vector<Token*>& log_var_occ : m_log_var_occurrences) {
@@ -79,12 +82,13 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
             m_buffer[curr_pos] = c;
             curr_pos++;
         }
-        Token copied_token{start_pos,
-                           curr_pos,
-                           m_buffer.data(), 
-                           buffer_size, 
-                           0, 
-                           token.m_type_ids_ptr};
+        Token copied_token{
+                start_pos,
+                curr_pos,
+                m_buffer.data(),
+                buffer_size,
+                0,
+                token.m_type_ids_ptr};
         m_log_output_buffer->set_curr_token(copied_token);
         m_log_output_buffer->advance_to_next_token();
     }
@@ -94,4 +98,4 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
         add_token(token_types[0], &token);
     }
 }
-} // namespace log_surgeon
+}  // namespace log_surgeon

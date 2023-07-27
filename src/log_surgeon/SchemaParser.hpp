@@ -3,8 +3,7 @@
 
 #include <utility>
 
-// Project headers
-#include "LALR1Parser.hpp"
+#include <log_surgeon/LALR1Parser.hpp>
 
 namespace log_surgeon {
 // ASTs used in SchemaParser AST
@@ -40,13 +39,15 @@ public:
 class SchemaVarAST : public ParserAST {
 public:
     // Constructor
-    SchemaVarAST(std::string name,
-                 std::unique_ptr<finite_automata::RegexAST<finite_automata::RegexNFAByteState>>
-                         regex_ptr,
-                 uint32_t line_num)
-        : m_line_num(line_num),
-          m_name(std::move(name)),
-          m_regex_ptr(std::move(regex_ptr)) {}
+    SchemaVarAST(
+            std::string name,
+            std::unique_ptr<finite_automata::RegexAST<finite_automata::RegexNFAByteState>>
+                    regex_ptr,
+            uint32_t line_num
+    )
+            : m_line_num(line_num),
+              m_name(std::move(name)),
+              m_regex_ptr(std::move(regex_ptr)) {}
 
     uint32_t m_line_num;
     std::string m_name;
@@ -63,8 +64,9 @@ public:
     std::vector<uint32_t> m_delimiters;
 };
 
-class SchemaParser
-    : public LALR1Parser<finite_automata::RegexNFAByteState, finite_automata::RegexDFAByteState> {
+class SchemaParser : public LALR1Parser<
+                             finite_automata::RegexNFAByteState,
+                             finite_automata::RegexDFAByteState> {
 public:
     // Constructor
     SchemaParser();
@@ -77,7 +79,8 @@ public:
     auto existing_schema_rule(NonTerminal* m) -> std::unique_ptr<SchemaAST>;
 
     /**
-     * Parse a user defined schema to generate a schema AST used for generating the log lexer
+     * Parse a user defined schema to generate a schema AST used for generating
+     * the log lexer
      * @param reader
      * @return std::unique_ptr<SchemaAST>
      */
@@ -88,13 +91,12 @@ public:
      * @param schema_file_path
      * @return std::unique_ptr<SchemaAST>
      */
-    static auto try_schema_file(std::string const& schema_file_path)
-            -> std::unique_ptr<SchemaAST>;
+    static auto try_schema_file(std::string const& schema_file_path) -> std::unique_ptr<SchemaAST>;
 
 private:
     /**
-     * After lexing half of the buffer, reads into that half of the buffer and changes variables
-     * accordingly
+     * After lexing half of the buffer, reads into that half of the buffer and
+     * changes variables accordingly
      * @param next_children_start
      */
     auto soft_reset(uint32_t& next_children_start) -> void;
@@ -109,6 +111,6 @@ private:
      */
     auto add_productions() -> void;
 };
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_SCHEMA_PARSER_HPP
+#endif  // LOG_SURGEON_SCHEMA_PARSER_HPP

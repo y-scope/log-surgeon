@@ -1,20 +1,20 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_TPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_TPP
 
-// C++ standard libraries
 #include <algorithm>
 #include <cassert>
 #include <map>
 #include <stack>
 
-// Project headers
-#include "../Constants.hpp"
-#include "UnicodeIntervalTree.hpp"
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
 template <RegexNFAStateType stateType>
-void RegexNFAState<stateType>::add_interval(Interval interval,
-                                            RegexNFAState<stateType>* dest_state) {
+void RegexNFAState<stateType>::add_interval(
+        Interval interval,
+        RegexNFAState<stateType>* dest_state
+) {
     if (interval.first < cSizeOfByte) {
         uint32_t bound = std::min(interval.second, cSizeOfByte - 1);
         for (uint32_t i = interval.first; i <= bound; i++) {
@@ -26,8 +26,8 @@ void RegexNFAState<stateType>::add_interval(Interval interval,
         if (interval.second < cSizeOfByte) {
             return;
         }
-        std::unique_ptr<std::vector<typename Tree::Data>> overlaps =
-                m_tree_transitions.pop(interval);
+        std::unique_ptr<std::vector<typename Tree::Data>> overlaps
+                = m_tree_transitions.pop(interval);
         for (typename Tree::Data const& data : *overlaps) {
             uint32_t overlap_low = std::max(data.m_interval.first, interval.first);
             uint32_t overlap_high = std::min(data.m_interval.second, interval.second);
@@ -36,15 +36,21 @@ void RegexNFAState<stateType>::add_interval(Interval interval,
             tree_states.push_back(dest_state);
             m_tree_transitions.insert(Interval(overlap_low, overlap_high), tree_states);
             if (data.m_interval.first < interval.first) {
-                m_tree_transitions.insert(Interval(data.m_interval.first, interval.first - 1),
-                                          data.m_value);
+                m_tree_transitions.insert(
+                        Interval(data.m_interval.first, interval.first - 1),
+                        data.m_value
+                );
             } else if (data.m_interval.first > interval.first) {
-                m_tree_transitions.insert(Interval(interval.first, data.m_interval.first - 1),
-                                          {dest_state});
+                m_tree_transitions.insert(
+                        Interval(interval.first, data.m_interval.first - 1),
+                        {dest_state}
+                );
             }
             if (data.m_interval.second > interval.second) {
-                m_tree_transitions.insert(Interval(interval.second + 1, data.m_interval.second),
-                                          data.m_value);
+                m_tree_transitions.insert(
+                        Interval(interval.second + 1, data.m_interval.second),
+                        data.m_value
+                );
             }
             interval.first = data.m_interval.second + 1;
         }
@@ -68,8 +74,8 @@ void RegexNFA<NFAStateType>::reverse() {
     std::map<std::pair<NFAStateType*, NFAStateType*>, std::vector<uint8_t>> byte_edges;
     std::map<std::pair<NFAStateType*, NFAStateType*>, bool> epsilon_edges;
     for (std::unique_ptr<NFAStateType>& src_state_ptr : m_states) {
-        // TODO: handle utf8 case with if constexpr (RegexNFAUTF8State == NFAStateType) ~ don't
-        // really need this though
+        // TODO: handle utf8 case with if constexpr (RegexNFAUTF8State ==
+        // NFAStateType) ~ don't really need this though
         for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
             for (NFAStateType* dest_state_ptr : src_state_ptr->get_byte_transitions(byte)) {
                 std::pair<NFAStateType*, NFAStateType*> edge{src_state_ptr.get(), dest_state_ptr};
@@ -78,8 +84,9 @@ void RegexNFA<NFAStateType>::reverse() {
             src_state_ptr->clear_byte_transitions(byte);
         }
         for (NFAStateType* dest_state_ptr : src_state_ptr->get_epsilon_transitions()) {
-            epsilon_edges[std::pair<NFAStateType*, NFAStateType*>(src_state_ptr.get(),
-                                                                  dest_state_ptr)] = true;
+            epsilon_edges
+                    [std::pair<NFAStateType*, NFAStateType*>(src_state_ptr.get(), dest_state_ptr)]
+                    = true;
         }
         src_state_ptr->clear_epsilon_transitions();
     }
@@ -113,8 +120,8 @@ void RegexNFA<NFAStateType>::reverse() {
             unvisited_states.pop();
             visited_states.insert(current_state);
             for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
-                std::vector<NFAStateType*> byte_transitions =
-                        current_state->get_byte_transitions(byte);
+                std::vector<NFAStateType*> byte_transitions
+                        = current_state->get_byte_transitions(byte);
                 for (NFAStateType* next_state : byte_transitions) {
                     if (visited_states.find(next_state) == visited_states.end()) {
                         unvisited_states.push(next_state);
@@ -176,6 +183,6 @@ auto RegexNFA<NFAStateType>::new_state() -> NFAStateType* {
     m_states.push_back(std::move(ptr));
     return state;
 }
-} // namespace log_surgeon::finite_automata
+}  // namespace log_surgeon::finite_automata
 
-#endif // LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_TPP
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_TPP

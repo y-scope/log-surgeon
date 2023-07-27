@@ -1,6 +1,5 @@
 #include "LogParserOutputBuffer.hpp"
 
-// C++ standard libraries
 #include <string>
 
 using std::string;
@@ -15,4 +14,4 @@ auto LogParserOutputBuffer::advance_to_next_token() -> void {
         m_storage.copy(old_storage, old_storage + old_size, 0);
     }
 }
-} // namespace log_surgeon
+}  // namespace log_surgeon

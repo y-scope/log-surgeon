@@ -1,7 +1,6 @@
 #ifndef LOG_SURGEON_LALR1_PARSER_HPP
 #define LOG_SURGEON_LALR1_PARSER_HPP
 
-// C++ standard libraries
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -17,10 +16,9 @@
 #include <variant>
 #include <vector>
 
-// Project headers
-#include "Constants.hpp"
-#include "Lexer.hpp"
-#include "Parser.hpp"
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/Parser.hpp>
 
 namespace log_surgeon {
 
@@ -39,7 +37,6 @@ using Action = std::variant<bool, ItemSet*, Production*>;
 
 class ParserAST {
 public:
-    // Constructor
     virtual ~ParserAST() = 0;
 
     template <typename T>
@@ -61,21 +58,20 @@ using MatchedSymbol = std::variant<Token, NonTerminal>;
 template <class... Ts>
 struct Overloaded : Ts... {
     using Ts::operator()...;
-}; // (1)
+};
 template <class... Ts>
-Overloaded(Ts...) -> Overloaded<Ts...>; // (2)
+Overloaded(Ts...) -> Overloaded<Ts...>;
 
 class NonTerminal {
 public:
-    // Constructor
     NonTerminal() : m_children_start(0), m_production(nullptr), m_ast(nullptr) {}
 
-    // Constructor
     explicit NonTerminal(Production*);
 
     /**
      * Return the ith child's (body of production) MatchedSymbol as a Token.
-     * Note: only children are needed (and stored) for performing semantic actions (for the AST)
+     * Note: only children are needed (and stored) for performing semantic
+     * actions (for the AST)
      * @param i
      * @return Token*
      */
@@ -85,8 +81,9 @@ public:
     }
 
     /**
-     * Return the ith child's (body of production) MatchedSymbol as a NonTerminal.
-     * Note: only children are needed (and stored) for performing semantic actions (for the AST)
+     * Return the ith child's (body of production) MatchedSymbol as a
+     * NonTerminal. Note: only children are needed (and stored) for performing
+     * semantic actions (for the AST)
      * @param i
      * @return NonTerminal*
      */
@@ -96,8 +93,8 @@ public:
     }
 
     /**
-     * Return the AST that relates this non_terminal's children together (based on the
-     * production/syntax-rule that was determined to have generated them)
+     * Return the AST that relates this non_terminal's children together (based
+     * on the production/syntax-rule that was determined to have generated them)
      * @return std::unique_ptr<ParserAST>
      */
     auto get_parser_ast() -> std::unique_ptr<ParserAST>& { return m_ast; }
@@ -111,15 +108,16 @@ public:
 
 /**
  * Structure representing a production of the form "m_head -> {m_body}".
- * The code fragment to execute upon reducing "{m_body} -> m_head" is m_semantic_rule, which is
- * purely a function of the MatchedSymbols for {m_body}. m_index is the productions position in the
- * parsers production vector.
+ * The code fragment to execute upon reducing "{m_body} -> m_head" is
+ * m_semantic_rule, which is purely a function of the MatchedSymbols for
+ * {m_body}. m_index is the productions position in the parsers production
+ * vector.
  */
 struct Production {
 public:
     /**
-     * Returns if the production is an epsilon production. An epsilon production has nothing on its
-     * LHS (i.e., HEAD -> {})
+     * Returns if the production is an epsilon production. An epsilon production
+     * has nothing on its LHS (i.e., HEAD -> {})
      * @return bool
      */
     [[nodiscard]] auto is_epsilon() const -> bool { return this->m_body.empty(); }
@@ -132,16 +130,15 @@ public:
 
 /**
  * Structure representing an item in a LALR1 state.
- * An item (1) is associated with a m_production and a single m_lookahead which is an input symbol
- * (character) that can follow the m_production, and (2) tracks the current matching progress of its
- * associated m_production, where everything exclusively to the left of m_dot is already matched.
+ * An item (1) is associated with a m_production and a single m_lookahead which
+ * is an input symbol (character) that can follow the m_production, and (2)
+ * tracks the current matching progress of its associated m_production, where
+ * everything exclusively to the left of m_dot is already matched.
  */
 struct Item {
 public:
-    // Constructor
     Item() = default;
 
-    // Constructor
     Item(Production* p, uint32_t d, uint32_t t) : m_production(p), m_dot(d), m_lookahead(t) {}
 
     /**
@@ -151,13 +148,13 @@ public:
      * @return bool
      */
     friend auto operator<(Item const& lhs, Item const& rhs) -> bool {
-        return std::tie(lhs.m_production->m_index, lhs.m_dot, lhs.m_lookahead) <
-               std::tie(rhs.m_production->m_index, rhs.m_dot, rhs.m_lookahead);
+        return std::tie(lhs.m_production->m_index, lhs.m_dot, lhs.m_lookahead)
+               < std::tie(rhs.m_production->m_index, rhs.m_dot, rhs.m_lookahead);
     }
 
     /**
-     * Returns if the item has a dot at the end. This indicates the production associated with the
-     * item has already been fully matched.
+     * Returns if the item has a dot at the end. This indicates the production
+     * associated with the item has already been fully matched.
      * @return bool
      */
     [[nodiscard]] auto has_dot_at_end() const -> bool {
@@ -174,14 +171,15 @@ public:
 
     Production* m_production;
     uint32_t m_dot;
-    uint32_t m_lookahead; // for LR0 items, `m_lookahead` is unused
+    uint32_t m_lookahead;  // for LR0 items, `m_lookahead` is unused
 };
 
 /**
  * Structure representing an LALR1 state, a collection of items.
- * The m_kernel is sufficient for fully representing the state, but m_closure is useful for
- * computations. m_next indicates what state (ItemSet) to transition to based on the symbol received
- * from the lexer m_actions is the action to perform based on the symbol received from the lexer.
+ * The m_kernel is sufficient for fully representing the state, but m_closure is
+ * useful for computations. m_next indicates what state (ItemSet) to transition
+ * to based on the symbol received from the lexer m_actions is the action to
+ * perform based on the symbol received from the lexer.
  */
 struct ItemSet {
 public:
@@ -207,26 +205,26 @@ public:
 template <typename NFAStateType, typename DFAStateType>
 class LALR1Parser : public Parser<NFAStateType, DFAStateType> {
 public:
-    // Constructor
     LALR1Parser();
 
-    /// TODO: combine all the add_* into add_rule
     /**
      * Add a lexical rule to m_lexer
      * @param name
      * @param rule
      */
-    auto add_rule(std::string const& name,
-                  std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule) -> void override;
+    auto
+    add_rule(std::string const& name, std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule)
+            -> void override;
 
     /**
      * Calls add_rule with the given RegexASTGroup
      * @param name
      * @param rule_char
      */
-    auto add_token_group(std::string const& name,
-                         std::unique_ptr<finite_automata::RegexASTGroup<NFAStateType>> rule_group)
-            -> void;
+    auto add_token_group(
+            std::string const& name,
+            std::unique_ptr<finite_automata::RegexASTGroup<NFAStateType>> rule_group
+    ) -> void;
 
     /**
      * Constructs a RegexASTCat and calls add_rule
@@ -242,16 +240,19 @@ public:
      * @param semantic_rule
      * @return uint32_t
      */
-    auto add_production(std::string const& head,
-                        std::vector<std::string> const& body,
-                        SemanticRule semantic_rule) -> uint32_t;
+    auto add_production(
+            std::string const& head,
+            std::vector<std::string> const& body,
+            SemanticRule semantic_rule
+    ) -> uint32_t;
 
     /**
-     * Generate the LALR1 parser (use after all the lexical rules and productions have been added)
+     * Generate the LALR1 parser (use after all the lexical rules and
+     * productions have been added)
      */
     auto generate() -> void;
 
-    /// TODO: add throws to function headers
+    // TODO: add throws to function headers
     /**
      * Parse an input (e.g. file)
      * @param reader
@@ -261,14 +262,14 @@ public:
 
 protected:
     /**
-     * Reset the parser to start a new parsing (set state to root, reset buffers, reset vars
-     * tracking positions)
+     * Reset the parser to start a new parsing (set state to root, reset
+     * buffers, reset vars tracking positions)
      */
     auto reset() -> void;
 
     /**
-     * Return an error string based on the current error state, matched_stack, and next_symbol in
-     * the parser
+     * Return an error string based on the current error state, matched_stack,
+     * and next_symbol in the parser
      * @param reader
      * @return std::string
      */
@@ -287,8 +288,6 @@ protected:
     ParserInputBuffer m_input_buffer;
 
 private:
-    // Parser generation
-
     /**
      * Generate LR0 kernels based on the productions in m_productions
      */
@@ -310,13 +309,14 @@ private:
     auto lr_closure_helper(ItemSet* item_set_ptr, Item const* item, uint32_t* next_symbol) -> bool;
 
     /**
-     * Return the next state (ItemSet) based on the current state (ItemSet) and input symbol
+     * Return the next state (ItemSet) based on the current state (ItemSet) and
+     * input symbol
      * @return ItemSet*
      */
     auto go_to(ItemSet* /*from_item_set*/, uint32_t const& /*next_symbol*/) -> ItemSet*;
 
     /**
-     * Generate m_firsts, which specify for each symbol, all possible prefixes (I think?)
+     * Generate m_firsts, which specify for each symbol, all possible prefixes
      */
     auto generate_first_sets() -> void;
 
@@ -332,35 +332,34 @@ private:
     auto generate_lr1_closure(ItemSet* item_set_ptr) -> void;
 
     /**
-     * Generating parsing table and goto table for LALR1 parser based on state-symbol pair
-     * generate_lalr1_goto() + generate_lalr1_action()
+     * Generating parsing table and goto table for LALR1 parser based on
+     * state-symbol pair generate_lalr1_goto() + generate_lalr1_action()
      */
     auto generate_lalr1_parsing_table() -> void;
 
     /**
-     *  Generating the goto table for LARL1 parser specifying which state (ItemSet) to transition to
-     * based on state-symbol pair Does nothing (its already done in an earlier step)
+     * Generating the goto table for LARL1 parser specifying which state
+     * (ItemSet) to transition to based on state-symbol pair Does nothing (its
+     * already done in an earlier step)
      */
     auto generate_lalr1_goto() -> void;
 
     /**
-     *  Generating the action table for LARL1 parser specifying which action to perform based on
-     * state-symbol pair
+     *  Generating the action table for LARL1 parser specifying which action to
+     *  perform based on state-symbol pair
      */
     auto generate_lalr1_action() -> void;
 
-    // Parser utilization
-
     /**
-     * Use the previous symbol from the lexer if unused, otherwise request the next symbol from the
-     * lexer
+     * Use the previous symbol from the lexer if unused, otherwise request the
+     * next symbol from the lexer
      * @return Token
      */
     auto get_next_symbol() -> Token;
 
     /**
-     * Tries all symbols in the language that the next token may be until the first non-error symbol
-     * is tried
+     * Tries all symbols in the language that the next token may be until the
+     * first non-error symbol is tried
      * @param next_token
      * @param accept
      * @return bool
@@ -368,16 +367,15 @@ private:
     auto parse_advance(Token& next_token, bool* accept) -> bool;
 
     /**
-     * Perform an action and state transition based on the current state (ItemSet) and the type_id
-     * (current symbol interpretation of the next_token)
+     * Perform an action and state transition based on the current state
+     * (ItemSet) and the type_id (current symbol interpretation of the
+     * next_token)
      * @param type_id
      * @param next_token
      * @param accept
      * @return bool
      */
     auto parse_symbol(uint32_t const& type_id, Token& next_token, bool* accept) -> bool;
-
-    // Error handling
 
     /**
      * Get the current line up to the error symbol
@@ -397,7 +395,6 @@ private:
 
     auto symbol_is_token(uint32_t s) -> bool { return m_terminals.find(s) != m_terminals.end(); }
 
-    // Variables
     std::set<uint32_t> m_terminals;
     std::set<uint32_t> m_nullable;
     std::map<std::set<Item>, std::unique_ptr<ItemSet>> m_lr0_item_sets;
@@ -407,8 +404,8 @@ private:
     std::map<Item, std::set<Item>> m_propagate_map;
     std::unordered_map<uint32_t, std::map<uint32_t, uint32_t>> m_go_to_table;
 };
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
 #include "LALR1Parser.tpp"
 
-#endif // LOG_SURGEON_LALR1_PARSER_HPP
+#endif  // LOG_SURGEON_LALR1_PARSER_HPP

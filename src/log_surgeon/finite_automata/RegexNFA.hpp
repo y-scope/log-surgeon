@@ -1,7 +1,6 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP
 
-// C++ standard libraries
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -10,12 +9,14 @@
 #include <utility>
 #include <vector>
 
-// Project headers
-#include "../Constants.hpp"
-#include "UnicodeIntervalTree.hpp"
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-enum class RegexNFAStateType { Byte, UTF8 };
+enum class RegexNFAStateType {
+    Byte,
+    UTF8
+};
 
 template <RegexNFAStateType stateType>
 class RegexNFAState {
@@ -46,8 +47,9 @@ public:
         return m_epsilon_transitions;
     }
 
-    auto set_byte_transitions(uint8_t byte,
-                              std::vector<RegexNFAState<stateType>*>& byte_transitions) -> void {
+    auto
+    set_byte_transitions(uint8_t byte, std::vector<RegexNFAState<stateType>*>& byte_transitions)
+            -> void {
         m_bytes_transitions[byte] = byte_transitions;
     }
 
@@ -79,8 +81,9 @@ private:
     int m_tag;
     std::vector<RegexNFAState<stateType>*> m_epsilon_transitions;
     std::vector<RegexNFAState<stateType>*> m_bytes_transitions[cSizeOfByte];
-    // NOTE: We don't need m_tree_transitions for the `stateType == RegexDFAStateType::Byte` case,
-    // so we use an empty class (`std::tuple<>`) in that case.
+    // NOTE: We don't need m_tree_transitions for the `stateType ==
+    // RegexDFAStateType::Byte` case, so we use an empty class (`std::tuple<>`)
+    // in that case.
     std::conditional_t<stateType == RegexNFAStateType::UTF8, Tree, std::tuple<>> m_tree_transitions;
 };
 
@@ -117,8 +120,8 @@ private:
     std::vector<std::unique_ptr<NFAStateType>> m_states;
     NFAStateType* m_root;
 };
-} // namespace log_surgeon::finite_automata
+}  // namespace log_surgeon::finite_automata
 
 #include "RegexNFA.tpp"
 
-#endif // LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP

@@ -170,8 +170,8 @@ private:
 
     std::unique_ptr<Node> m_root;
 };
-} // namespace log_surgeon::finite_automata
+}  // namespace log_surgeon::finite_automata
 
 #include "UnicodeIntervalTree.tpp"
 
-#endif // LOG_SURGEON_FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_HPP
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_HPP

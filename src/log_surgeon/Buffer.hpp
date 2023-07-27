@@ -1,28 +1,25 @@
 #ifndef LOG_SURGEON_BUFFER_HPP
 #define LOG_SURGEON_BUFFER_HPP
 
-// C++ libraries
 #include <cstdint>
 #include <vector>
 
-// Project Headers
-#include "Constants.hpp"
-#include "Reader.hpp"
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/Reader.hpp>
 
 namespace log_surgeon {
 /**
  * A base class for the efficient implementation of a single growing buffer.
  * Under the hood it keeps track of one static buffer and multiple dynamic
  * buffers. The buffer object uses the underlying static buffer whenever
- * possible, as the static buffer is on the stack and results in faster
- * reads and writes. In outlier cases, where the static buffer is not large
- * enough to fit all the needed data, the buffer object switches to using
- * the underlying dynamic buffers. A new dynamic buffer is used each time
- * the size must be grown to preserve any pointers to the buffer. All
- * pointers to the buffer are valid until reset() is called and the
- * buffer returns to using the underlying static buffer. The base class does
- * not grow the buffer itself, the child class is responsible for doing
- * this.
+ * possible, as the static buffer is on the stack and results in faster reads
+ * and writes. In outlier cases, where the static buffer is not large enough to
+ * fit all the needed data, the buffer object switches to using the underlying
+ * dynamic buffers. A new dynamic buffer is used each time the size must be
+ * grown to preserve any pointers to the buffer. All pointers to the buffer are
+ * valid until reset() is called and the buffer returns to using the underlying
+ * static buffer. The base class does not grow the buffer itself, the child
+ * class is responsible for doing this.
  */
 template <typename Item>
 class Buffer {
@@ -94,6 +91,6 @@ private:
     Item m_static_storage[cStaticByteBuffSize];
     Item* m_active_storage{m_static_storage};
 };
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_BUFFER_HPP
+#endif  // LOG_SURGEON_BUFFER_HPP

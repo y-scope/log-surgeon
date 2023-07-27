@@ -5,9 +5,9 @@
 #include <string>
 #include <vector>
 
-#include "LogParser.hpp"
-#include "LogParserOutputBuffer.hpp"
-#include "Token.hpp"
+#include <log_surgeon/LogParser.hpp>
+#include <log_surgeon/LogParserOutputBuffer.hpp>
+#include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
 class LogEvent;
@@ -143,6 +143,6 @@ public:
 private:
     std::vector<char> m_buffer;
 };
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_LOG_EVENT_HPP
+#endif  // LOG_SURGEON_LOG_EVENT_HPP

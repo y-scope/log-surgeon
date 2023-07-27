@@ -1,8 +1,7 @@
 #ifndef LOG_SURGEON_PARSER_HPP
 #define LOG_SURGEON_PARSER_HPP
 
-// Project headers
-#include "Lexer.hpp"
+#include <log_surgeon/Lexer.hpp>
 
 namespace log_surgeon {
 
@@ -11,15 +10,16 @@ class Parser {
 public:
     Parser();
 
-    virtual auto add_rule(std::string const& name,
-                          std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule) -> void;
+    virtual auto
+    add_rule(std::string const& name, std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule)
+            -> void;
 
     auto add_token(std::string const& name, char rule_char) -> void;
 
     Lexer<NFAStateType, DFAStateType> m_lexer;
 };
-} //namespace log_surgeon
+}  // namespace log_surgeon
 
 #include "Parser.tpp"
 
-#endif // LOG_SURGEON_PARSER_HPP
+#endif  // LOG_SURGEON_PARSER_HPP
