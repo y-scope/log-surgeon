@@ -24,7 +24,7 @@ void Lexer<NFAStateType, DFAStateType>::flip_states(uint32_t old_storage_size) {
         m_match_pos += old_storage_size / 2;
     }
     // TODO when m_start_pos == old_storage_size / 2, theres two possible cases
-    // currently so both / options are potentially wrong
+    // currently so both options are potentially wrong
     if (m_start_pos > old_storage_size / 2) {
         m_start_pos -= old_storage_size / 2;
     } else {

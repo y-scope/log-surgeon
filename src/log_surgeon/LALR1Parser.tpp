@@ -7,7 +7,6 @@
 #include <optional>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/LALR1Parser.hpp>
 
 namespace log_surgeon {
 

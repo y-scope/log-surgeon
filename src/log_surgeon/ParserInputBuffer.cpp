@@ -1,7 +1,6 @@
 #include "ParserInputBuffer.hpp"
 
-#include <memory.h>
-
+#include <memory>
 #include <string>
 
 #include <log_surgeon/Constants.hpp>
