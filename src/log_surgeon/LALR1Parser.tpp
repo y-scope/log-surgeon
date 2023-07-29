@@ -454,8 +454,8 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lalr1_action() {
                     conflict_msg += "For symbol ";
                     conflict_msg += this->m_lexer.m_id_symbol[item.next_symbol()];
                     conflict_msg += ", adding shift to ";
-                    conflict_msg
-                            += std::to_string(item_set_ptr->m_next[item.next_symbol()]->m_index);
+                    conflict_msg += std::to_string(item_set_ptr->m_next[item.next_symbol()]->m_index
+                    );
                     conflict_msg += " causes ";
                     if (std::holds_alternative<ItemSet*>(action)) {
                         conflict_msg += "shift-shift conflict with shift to ";

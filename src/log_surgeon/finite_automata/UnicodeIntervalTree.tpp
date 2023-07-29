@@ -174,8 +174,8 @@ auto UnicodeIntervalTree<T>::Node::balance(std::unique_ptr<Node> node)
     if (factor * factor <= 1) {
         return node;
     }
-    int sub_factor
-            = (factor < 0) ? node->m_left->balance_factor() : node->m_right->balance_factor();
+    int sub_factor = (factor < 0) ? node->m_left->balance_factor()
+                                  : node->m_right->balance_factor();
     if (factor * sub_factor > 0) {
         return Node::rotate(std::move(node), factor);
     }

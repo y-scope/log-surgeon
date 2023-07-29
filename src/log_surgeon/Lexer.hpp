@@ -23,8 +23,8 @@ class Lexer {
 public:
     // std::vector<int> can be declared as constexpr in c++20
     static inline std::vector<int> const cTokenEndTypes = {(int)SymbolID::TokenEndID};
-    static inline std::vector<int> const cTokenUncaughtStringTypes
-            = {(int)SymbolID::TokenUncaughtStringID};
+    static inline std::vector<int> const cTokenUncaughtStringTypes = {
+            (int)SymbolID::TokenUncaughtStringID};
 
     /**
      * A lexical rule has a name and regex pattern

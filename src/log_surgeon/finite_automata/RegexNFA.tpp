@@ -26,8 +26,8 @@ void RegexNFAState<stateType>::add_interval(
         if (interval.second < cSizeOfByte) {
             return;
         }
-        std::unique_ptr<std::vector<typename Tree::Data>> overlaps
-                = m_tree_transitions.pop(interval);
+        std::unique_ptr<std::vector<typename Tree::Data>> overlaps = m_tree_transitions.pop(interval
+        );
         for (typename Tree::Data const& data : *overlaps) {
             uint32_t overlap_low = std::max(data.m_interval.first, interval.first);
             uint32_t overlap_high = std::min(data.m_interval.second, interval.second);

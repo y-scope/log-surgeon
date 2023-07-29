@@ -1,7 +1,6 @@
 #include "SchemaParser.hpp"
 
 #include <cmath>
-
 #include <memory>
 #include <stdexcept>
 
@@ -343,9 +342,9 @@ static auto regex_newline_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
 }
 
 static auto regex_white_space_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
-    unique_ptr<RegexASTGroupByte> regex_ast_group
-            = make_unique<RegexASTGroupByte>(RegexASTGroupByte({' ', '\t', '\r', '\n', '\v', '\f'})
-            );
+    unique_ptr<RegexASTGroupByte> regex_ast_group = make_unique<RegexASTGroupByte>(
+            RegexASTGroupByte({' ', '\t', '\r', '\n', '\v', '\f'})
+    );
     return unique_ptr<ParserAST>(
             new ParserValueRegex(unique_ptr<RegexASTByte>(std::move(regex_ast_group)))
     );
