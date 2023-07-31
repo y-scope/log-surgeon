@@ -1,10 +1,9 @@
-// C++ libraries
-#include <memory.h>
+#include "ParserInputBuffer.hpp"
+
+#include <memory>
 #include <string>
 
-// Project Headers
-#include "Constants.hpp"
-#include "ParserInputBuffer.hpp"
+#include <log_surgeon/Constants.hpp>
 
 using std::string;
 using std::to_string;
@@ -25,8 +24,9 @@ auto ParserInputBuffer::read_is_safe() -> bool {
     }
     // Check if the last log message ends in the buffer half last read.
     // This means the other half of the buffer has already been fully used.
-    if ((!m_last_read_first_half && m_consumed_pos > m_storage.size() / 2) ||
-        (m_last_read_first_half && m_consumed_pos < m_storage.size() / 2 && m_consumed_pos > 0)) {
+    if ((!m_last_read_first_half && m_consumed_pos > m_storage.size() / 2)
+        || (m_last_read_first_half && m_consumed_pos < m_storage.size() / 2 && m_consumed_pos > 0))
+    {
         return true;
     }
     return false;
@@ -40,7 +40,8 @@ auto ParserInputBuffer::read(Reader& reader) -> ErrorCode {
         read_offset = m_storage.size() / 2;
     }
     if (ErrorCode err = m_storage.read(reader, read_offset, m_storage.size() / 2, bytes_read);
-        ErrorCode::Success != err) {
+        ErrorCode::Success != err)
+    {
         if (ErrorCode::EndOfFile == err) {
             m_finished_reading_input = true;
         }
@@ -48,7 +49,8 @@ auto ParserInputBuffer::read(Reader& reader) -> ErrorCode {
     }
     m_last_read_first_half = !m_last_read_first_half;
     // TODO: This is not a portable check for certain forms of IO
-    // A method from Reader should be used to check if the input source is finished
+    // A method from Reader should be used to check if the input source is
+    // finished
     if (bytes_read < m_storage.size() / 2) {
         m_finished_reading_input = true;
     }
@@ -88,8 +90,9 @@ auto ParserInputBuffer::get_next_character(unsigned char& next_char) -> ErrorCod
         next_char = utf8::cCharEOF;
         return ErrorCode::Success;
     }
-    if ((m_last_read_first_half && m_storage.pos() == m_storage.size() / 2) ||
-        (!m_last_read_first_half && m_storage.pos() == 0)) {
+    if ((m_last_read_first_half && m_storage.pos() == m_storage.size() / 2)
+        || (!m_last_read_first_half && m_storage.pos() == 0))
+    {
         return ErrorCode::BufferOutOfBounds;
     }
     char character = m_storage.get_curr_value();
@@ -105,14 +108,16 @@ auto ParserInputBuffer::get_next_character(unsigned char& next_char) -> ErrorCod
 // the user to wrap their input buffer. It tricks the LogParser and
 // ParserInputBuffer into thinking it never reaches the wrap, while still
 // respecting the actual size of the buffer the user passed in.
-void ParserInputBuffer::set_storage(char* storage,
-                                    uint32_t size,
-                                    uint32_t pos,
-                                    bool finished_reading_input) {
+void ParserInputBuffer::set_storage(
+        char* storage,
+        uint32_t size,
+        uint32_t pos,
+        bool finished_reading_input
+) {
     reset();
     m_storage.set_active_buffer(storage, size * 2, pos);
     m_finished_reading_input = finished_reading_input;
     m_pos_last_read_char = size;
     m_last_read_first_half = true;
 }
-} // namespace log_surgeon
+}  // namespace log_surgeon

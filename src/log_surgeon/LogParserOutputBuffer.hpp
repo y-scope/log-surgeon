@@ -1,9 +1,8 @@
 #ifndef LOG_SURGEON_LOG_PARSER_OUTPUT_BUFFER_HPP
 #define LOG_SURGEON_LOG_PARSER_OUTPUT_BUFFER_HPP
 
-// Project Headers
-#include "Buffer.hpp"
-#include "Token.hpp"
+#include <log_surgeon/Buffer.hpp>
+#include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
 /**
@@ -64,6 +63,6 @@ private:
     // contains the static and dynamic Token buffers
     Buffer<Token> m_storage{};
 };
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_LOG_PARSER_OUTPUT_BUFFER_HPP
+#endif  // LOG_SURGEON_LOG_PARSER_OUTPUT_BUFFER_HPP

@@ -122,7 +122,7 @@ private:
      * @param reader to use for IO.
      */
     auto read(Reader& reader) -> ErrorCode;
-    
+
 private:
     // the position of the last character read into the buffer
     uint32_t m_pos_last_read_char{0};
@@ -136,6 +136,6 @@ private:
     // the position last used by the caller (no longer needed in storage)
     uint32_t m_consumed_pos{m_storage.size() - 1};
 };
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_PARSER_INPUT_BUFFER_HPP
+#endif  // LOG_SURGEON_PARSER_INPUT_BUFFER_HPP

@@ -11,8 +11,8 @@ auto RegexDFAState<stateType>::next(uint32_t character) -> RegexDFAState<stateTy
         if (character < cSizeOfByte) {
             return m_bytes_transition[character];
         }
-        std::unique_ptr<std::vector<typename Tree::Data>> result =
-                m_tree_transitions.find(Interval(character, character));
+        std::unique_ptr<std::vector<typename Tree::Data>> result
+                = m_tree_transitions.find(Interval(character, character));
         assert(result->size() <= 1);
         if (!result->empty()) {
             return result->front().m_value;
@@ -34,6 +34,6 @@ auto RegexDFA<DFAStateType>::new_state(std::set<NFAStateType*> const& set) -> DF
     }
     return state;
 }
-} // namespace log_surgeon::finite_automata
+}  // namespace log_surgeon::finite_automata
 
-#endif // LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_TPP
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_TPP

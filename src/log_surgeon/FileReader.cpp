@@ -1,13 +1,11 @@
 #include "FileReader.hpp"
 
-// C standard libraries
 #include <unistd.h>
 
-// C++ libraries
 #include <cassert>
 #include <cerrno>
 
-#include "Constants.hpp"
+#include <log_surgeon/Constants.hpp>
 
 using std::string;
 
@@ -53,8 +51,8 @@ auto FileReader::try_open(string const& path) -> ErrorCode {
 
 auto FileReader::close() -> void {
     if (m_file != nullptr) {
-        // NOTE: We don't check errors for fclose since it seems the only reason it could fail is if
-        // it was interrupted by a signal
+        // NOTE: We don't check errors for fclose since it seems the only reason
+        // it could fail is if it was interrupted by a signal
         fclose(m_file);
         m_file = nullptr;
     }
@@ -81,4 +79,4 @@ auto FileReader::try_read_to_delimiter(char delim, bool keep_delimiter, bool app
     str.append(m_get_delim_buf, num_bytes_read);
     return ErrorCode::Success;
 }
-} // namespace log_surgeon
+}  // namespace log_surgeon

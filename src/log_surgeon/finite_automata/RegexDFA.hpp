@@ -1,7 +1,6 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_HPP
 
-// C++ standard libraries
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -9,13 +8,15 @@
 #include <utility>
 #include <vector>
 
-// Project headers
-#include "../Constants.hpp"
-#include "RegexNFA.hpp"
-#include "UnicodeIntervalTree.hpp"
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/RegexNFA.hpp>
+#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-enum class RegexDFAStateType { Byte, UTF8 };
+enum class RegexDFAStateType {
+    Byte,
+    UTF8
+};
 
 template <RegexDFAStateType stateType>
 class RegexDFAState {
@@ -33,7 +34,8 @@ public:
     }
 
     /**
-     * Returns the next state the DFA transitions to on input character (byte or utf8)
+     * Returns the next state the DFA transitions to on input character (byte or
+     * utf8)
      * @param character
      * @return RegexDFAState<stateType>*
      */
@@ -42,8 +44,9 @@ public:
 private:
     std::vector<int> m_tags;
     RegexDFAState<stateType>* m_bytes_transition[cSizeOfByte];
-    // NOTE: We don't need m_tree_transitions for the `stateType == RegexDFAStateType::Byte` case,
-    // so we use an empty class (`std::tuple<>`) in that case.
+    // NOTE: We don't need m_tree_transitions for the `stateType ==
+    // RegexDFAStateType::Byte` case, so we use an empty class (`std::tuple<>`)
+    // in that case.
     std::conditional_t<stateType == RegexDFAStateType::UTF8, Tree, std::tuple<>> m_tree_transitions;
 };
 
@@ -54,7 +57,8 @@ template <typename DFAStateType>
 class RegexDFA {
 public:
     /**
-     * Creates a new DFA state based on a set of NFA states and adds it to m_states
+     * Creates a new DFA state based on a set of NFA states and adds it to
+     * m_states
      * @param set
      * @return DFAStateType*
      */
@@ -66,8 +70,8 @@ public:
 private:
     std::vector<std::unique_ptr<DFAStateType>> m_states;
 };
-} // namespace log_surgeon::finite_automata
+}  // namespace log_surgeon::finite_automata
 
 #include "RegexDFA.tpp"
 
-#endif // LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_HPP
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_HPP

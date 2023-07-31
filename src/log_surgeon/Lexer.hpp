@@ -1,7 +1,7 @@
 #ifndef LOG_SURGEON_LEXER_HPP
 #define LOG_SURGEON_LEXER_HPP
 
-// C++ standard libraries
+#include <array>
 #include <bitset>
 #include <cstdint>
 #include <memory>
@@ -10,21 +10,20 @@
 #include <unordered_set>
 #include <vector>
 
-// Project headers
-#include "Constants.hpp"
-#include "ParserInputBuffer.hpp"
-#include "Token.hpp"
-#include "finite_automata/RegexAST.hpp"
-#include "finite_automata/RegexDFA.hpp"
-#include "finite_automata/RegexNFA.hpp"
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/RegexAST.hpp>
+#include <log_surgeon/finite_automata/RegexDFA.hpp>
+#include <log_surgeon/finite_automata/RegexNFA.hpp>
+#include <log_surgeon/ParserInputBuffer.hpp>
+#include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
 template <typename NFAStateType, typename DFAStateType>
 class Lexer {
 public:
     // std::vector<int> can be declared as constexpr in c++20
-    inline static std::vector<int> const cTokenEndTypes = {(int)SymbolID::TokenEndID};
-    inline static std::vector<int> const cTokenUncaughtStringTypes = {
+    static inline std::vector<int> const cTokenEndTypes = {(int)SymbolID::TokenEndID};
+    static inline std::vector<int> const cTokenUncaughtStringTypes = {
             (int)SymbolID::TokenUncaughtStringID};
 
     /**
@@ -33,8 +32,8 @@ public:
     struct Rule {
         // Constructor
         Rule(uint32_t n, std::unique_ptr<finite_automata::RegexAST<NFAStateType>> r)
-            : m_name(n),
-              m_regex(std::move(r)) {}
+                : m_name(n),
+                  m_regex(std::move(r)) {}
 
         /**
          * Adds AST representing the lexical rule to the NFA
@@ -73,12 +72,14 @@ public:
     auto generate() -> void;
 
     /**
-     * Generate DFA for a reverse lexer matching the reverse of the words in the original language
+     * Generate DFA for a reverse lexer matching the reverse of the words in the
+     * original language
      */
     auto generate_reverse() -> void;
 
     /**
-     * Reset the lexer to start a new lexing (reset buffers, reset vars tracking positions)
+     * Reset the lexer to start a new lexing (reset buffers, reset vars tracking
+     * positions)
      */
     auto reset() -> void;
 
@@ -91,8 +92,8 @@ public:
 
     /**
      * Gets next token from the input string
-     * If next token is an uncaught string, the next variable token is already prepped to be
-     * returned on the next call
+     * If next token is an uncaught string, the next variable token is already
+     * prepped to be returned on the next call
      * @param input_buffer
      * @param Token&
      * @return ErrorCode::Success
@@ -109,7 +110,7 @@ public:
      * @return Token
      * @throw runtime_error("Input buffer about to overflow")
      */
-    auto scan_with_wildcard(ParserInputBuffer& input_buffer, char wildcard, Token& token) 
+    auto scan_with_wildcard(ParserInputBuffer& input_buffer, char wildcard, Token& token)
             -> ErrorCode;
 
     [[nodiscard]] auto get_has_delimiters() const -> bool const& { return m_has_delimiters; }
@@ -167,9 +168,9 @@ private:
 namespace lexers {
     using ByteLexer = Lexer<finite_automata::RegexNFAByteState, finite_automata::RegexDFAByteState>;
     using UTF8Lexer = Lexer<finite_automata::RegexNFAUTF8State, finite_automata::RegexDFAUTF8State>;
-} // namespace lexers
-} // namespace log_surgeon
+}  // namespace lexers
+}  // namespace log_surgeon
 
 #include "Lexer.tpp"
 
-#endif // LOG_SURGEON_LEXER_HPP
+#endif  // LOG_SURGEON_LEXER_HPP

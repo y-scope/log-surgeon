@@ -1,7 +1,6 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_TPP
 #define LOG_SURGEON_FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_TPP
 
-// C++ standard libraries
 #include <cassert>
 #include <set>
 
@@ -29,6 +28,7 @@ auto UnicodeIntervalTree<T>::Node::insert(std::unique_ptr<Node> node, Interval i
     }
     node->update();
     return Node::balance(std::move(node));
+
 }
 
 template <typename T>
@@ -91,10 +91,11 @@ auto UnicodeIntervalTree<T>::pop(Interval interval)
 }
 
 template <class T>
-auto UnicodeIntervalTree<T>::Node::pop(std::unique_ptr<Node> node,
-                                       Interval interval,
-                                       std::unique_ptr<Node>* ret)
-        -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
+auto UnicodeIntervalTree<T>::Node::pop(
+        std::unique_ptr<Node> node,
+        Interval interval,
+        std::unique_ptr<Node>* ret
+) -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
     if (node == nullptr) {
         return nullptr;
     }
@@ -173,8 +174,8 @@ auto UnicodeIntervalTree<T>::Node::balance(std::unique_ptr<Node> node)
     if (factor * factor <= 1) {
         return node;
     }
-    int sub_factor =
-            (factor < 0) ? node->m_left->balance_factor() : node->m_right->balance_factor();
+    int sub_factor = (factor < 0) ? node->m_left->balance_factor()
+                                  : node->m_right->balance_factor();
     if (factor * sub_factor > 0) {
         return Node::rotate(std::move(node), factor);
     }
@@ -222,17 +223,17 @@ auto UnicodeIntervalTree<T>::Node::rotate_ccw(std::unique_ptr<Node> node)
 
 template <class T>
 auto UnicodeIntervalTree<T>::Node::overlaps_recursive(Interval i) -> bool {
-    return ((m_lower <= i.first) && (i.first <= m_upper)) ||
-           ((m_lower <= i.second) && (i.second <= m_upper)) ||
-           ((i.first <= m_lower) && (m_lower <= i.second));
+    return ((m_lower <= i.first) && (i.first <= m_upper))
+           || ((m_lower <= i.second) && (i.second <= m_upper))
+           || ((i.first <= m_lower) && (m_lower <= i.second));
 }
 
 template <class T>
 auto UnicodeIntervalTree<T>::Node::overlaps(Interval i) -> bool {
-    return ((m_interval.first <= i.first) && (i.first <= m_interval.second)) ||
-           ((m_interval.first <= i.second) && (i.second <= m_interval.second)) ||
-           ((i.first <= m_interval.first) && (m_interval.first <= i.second));
+    return ((m_interval.first <= i.first) && (i.first <= m_interval.second))
+           || ((m_interval.first <= i.second) && (i.second <= m_interval.second))
+           || ((i.first <= m_interval.first) && (m_interval.first <= i.second));
 }
-} // namespace log_surgeon::finite_automata
+}  // namespace log_surgeon::finite_automata
 
-#endif // LOG_SURGEON_FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_TPP
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_TPP

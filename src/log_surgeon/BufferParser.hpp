@@ -4,9 +4,9 @@
 #include <optional>
 #include <string>
 
-#include "LogEvent.hpp"
-#include "LogParser.hpp"
-#include "Schema.hpp"
+#include <log_surgeon/LogEvent.hpp>
+#include <log_surgeon/LogParser.hpp>
+#include <log_surgeon/Schema.hpp>
 
 namespace log_surgeon {
 /**
@@ -67,11 +67,13 @@ public:
      * internally before this method returns.
      * @return ErrorCode from LogParser::parse.
      */
-    auto get_next_event_view(char* buf,
-                             size_t size,
-                             size_t& offset,
-                             LogEventView& event_view,
-                             bool finished_reading_input = false) -> ErrorCode;
+    auto get_next_event_view(
+            char* buf,
+            size_t size,
+            size_t& offset,
+            LogEventView& event_view,
+            bool finished_reading_input = false
+    ) -> ErrorCode;
 
     /**
      * @return The underlying LogParser.
@@ -100,6 +102,6 @@ private:
     LogParser m_log_parser;
     bool m_done{false};
 };
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_BUFFER_PARSER_HPP
+#endif  // LOG_SURGEON_BUFFER_PARSER_HPP

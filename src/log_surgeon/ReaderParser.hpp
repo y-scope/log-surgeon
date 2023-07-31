@@ -4,10 +4,10 @@
 #include <optional>
 #include <string>
 
-#include "LogEvent.hpp"
-#include "LogParser.hpp"
-#include "Reader.hpp"
-#include "Schema.hpp"
+#include <log_surgeon/LogEvent.hpp>
+#include <log_surgeon/LogParser.hpp>
+#include <log_surgeon/Reader.hpp>
+#include <log_surgeon/Schema.hpp>
 
 namespace log_surgeon {
 /**
@@ -84,6 +84,6 @@ private:
     LogParser m_log_parser;
     bool m_done{false};
 };
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_READER_PARSER_HPP
+#endif  // LOG_SURGEON_READER_PARSER_HPP

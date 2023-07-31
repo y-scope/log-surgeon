@@ -2,16 +2,56 @@
 #define LOG_SURGEON_LALR1_PARSER_TPP
 
 #include <cstddef>
-
-// C++ standard libraries
 #include <functional>
 #include <iostream>
 #include <optional>
 
-// Project headers
-#include "Constants.hpp"
+#include <log_surgeon/Constants.hpp>
 
 namespace log_surgeon {
+
+namespace {
+    [[maybe_unused]] auto get_line_num(MatchedSymbol& top_symbol) -> uint32_t {
+        std::optional<uint32_t> line_num{std::nullopt};
+        std::stack<MatchedSymbol> symbols;
+        symbols.push(std::move(top_symbol));
+        while (std::nullopt == line_num) {
+            assert(!symbols.empty());
+            MatchedSymbol& curr_symbol = symbols.top();
+            std::visit(
+                    Overloaded{
+                            [&line_num](Token& token) { line_num = token.m_line; },
+                            [&symbols](NonTerminal& m) {
+                                for (size_t i = 0; i < m.m_production->m_body.size(); i++) {
+                                    symbols.push(std::move(
+                                            NonTerminal::m_all_children[m.m_children_start + i]
+                                    ));
+                                }
+                            }},
+                    curr_symbol
+            );
+            symbols.pop();
+        }
+        return *line_num;
+    }
+
+    [[maybe_unused]] auto unescape(char const& c) -> std::string {
+        switch (c) {
+            case '\t':
+                return "\\t";
+            case '\r':
+                return "\\r";
+            case '\n':
+                return "\\n";
+            case '\v':
+                return "\\v";
+            case '\f':
+                return "\\f";
+            default:
+                return {c};
+        }
+    }
+}  // namespace
 
 template <typename NFAStateType, typename DFAStateType>
 LALR1Parser<NFAStateType, DFAStateType>::LALR1Parser() {
@@ -27,7 +67,9 @@ LALR1Parser<NFAStateType, DFAStateType>::LALR1Parser() {
 
 template <typename NFAStateType, typename DFAStateType>
 void LALR1Parser<NFAStateType, DFAStateType>::add_rule(
-        std::string const& name, std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule) {
+        std::string const& name,
+        std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule
+) {
     Parser<NFAStateType, DFAStateType>::add_rule(name, std::move(rule));
     m_terminals.insert(this->m_lexer.m_symbol_id[name]);
 }
@@ -35,36 +77,44 @@ void LALR1Parser<NFAStateType, DFAStateType>::add_rule(
 template <typename NFAStateType, typename DFAStateType>
 void LALR1Parser<NFAStateType, DFAStateType>::add_token_group(
         std::string const& name,
-        std::unique_ptr<finite_automata::RegexASTGroup<NFAStateType>> rule_group) {
+        std::unique_ptr<finite_automata::RegexASTGroup<NFAStateType>> rule_group
+) {
     add_rule(name, std::move(rule_group));
 }
 
 template <typename NFAStateType, typename DFAStateType>
-void LALR1Parser<NFAStateType, DFAStateType>::add_token_chain(std::string const& name,
-                                                              std::string const& chain) {
+void LALR1Parser<NFAStateType, DFAStateType>::add_token_chain(
+        std::string const& name,
+        std::string const& chain
+) {
     assert(chain.size() > 1);
-    std::unique_ptr<finite_automata::RegexASTLiteral<NFAStateType>> first_char_rule =
-            std::make_unique<finite_automata::RegexASTLiteral<NFAStateType>>(chain[0]);
-    std::unique_ptr<finite_automata::RegexASTLiteral<NFAStateType>> second_char_rule =
-            std::make_unique<finite_automata::RegexASTLiteral<NFAStateType>>(chain[1]);
-    std::unique_ptr<finite_automata::RegexASTCat<NFAStateType>> rule_chain =
-            std::make_unique<finite_automata::RegexASTCat<NFAStateType>>(
-                    std::move(first_char_rule), std::move(second_char_rule));
+    std::unique_ptr<finite_automata::RegexASTLiteral<NFAStateType>> first_char_rule
+            = std::make_unique<finite_automata::RegexASTLiteral<NFAStateType>>(chain[0]);
+    std::unique_ptr<finite_automata::RegexASTLiteral<NFAStateType>> second_char_rule
+            = std::make_unique<finite_automata::RegexASTLiteral<NFAStateType>>(chain[1]);
+    std::unique_ptr<finite_automata::RegexASTCat<NFAStateType>> rule_chain
+            = std::make_unique<finite_automata::RegexASTCat<NFAStateType>>(
+                    std::move(first_char_rule),
+                    std::move(second_char_rule)
+            );
     for (uint32_t i = 2; i < chain.size(); i++) {
         char next_char = chain[i];
-        std::unique_ptr<finite_automata::RegexASTLiteral<NFAStateType>> next_char_rule =
-                std::make_unique<finite_automata::RegexASTLiteral<NFAStateType>>(next_char);
+        std::unique_ptr<finite_automata::RegexASTLiteral<NFAStateType>> next_char_rule
+                = std::make_unique<finite_automata::RegexASTLiteral<NFAStateType>>(next_char);
         rule_chain = std::make_unique<finite_automata::RegexASTCat<NFAStateType>>(
-                std::move(rule_chain), std::move(next_char_rule));
+                std::move(rule_chain),
+                std::move(next_char_rule)
+        );
     }
     add_rule(name, std::move(rule_chain));
 }
 
 template <typename NFAStateType, typename DFAStateType>
-auto LALR1Parser<NFAStateType, DFAStateType>::add_production(std::string const& head,
-                                                             std::vector<std::string> const& body,
-                                                             SemanticRule semantic_rule)
-        -> uint32_t {
+auto LALR1Parser<NFAStateType, DFAStateType>::add_production(
+        std::string const& head,
+        std::vector<std::string> const& body,
+        SemanticRule semantic_rule
+) -> uint32_t {
     if (this->m_lexer.m_symbol_id.find(head) == this->m_lexer.m_symbol_id.end()) {
         this->m_lexer.m_symbol_id[head] = this->m_lexer.m_symbol_id.size();
         this->m_lexer.m_id_symbol[this->m_lexer.m_symbol_id[head]] = head;
@@ -141,17 +191,20 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lr0_kernels() {
 }
 
 template <typename NFAStateType, typename DFAStateType>
-auto LALR1Parser<NFAStateType, DFAStateType>::lr_closure_helper(ItemSet* item_set_ptr,
-                                                                Item const* item,
-                                                                uint32_t* next_symbol) -> bool {
-    if (!item_set_ptr->m_closure.insert(*item).second) { // add {S'->(dot)S, ""}
+auto LALR1Parser<NFAStateType, DFAStateType>::lr_closure_helper(
+        ItemSet* item_set_ptr,
+        Item const* item,
+        uint32_t* next_symbol
+) -> bool {
+    // add {S'->(dot)S, ""}
+    if (!item_set_ptr->m_closure.insert(*item).second) {
         return true;
     }
     if (item->has_dot_at_end()) {
         return true;
     }
     *next_symbol = item->next_symbol();
-    if (this->symbol_is_token(*next_symbol)) { // false
+    if (this->symbol_is_token(*next_symbol)) {
         return true;
     }
     return false;
@@ -159,10 +212,12 @@ auto LALR1Parser<NFAStateType, DFAStateType>::lr_closure_helper(ItemSet* item_se
 
 template <typename NFAStateType, typename DFAStateType>
 void LALR1Parser<NFAStateType, DFAStateType>::generate_lr0_closure(ItemSet* item_set_ptr) {
-    std::deque<Item> q(item_set_ptr->m_kernel.begin(),
-                       item_set_ptr->m_kernel.end()); // {{S'->(dot)S, ""}}
+    std::deque<Item> q(
+            item_set_ptr->m_kernel.begin(),
+            item_set_ptr->m_kernel.end()
+    );  // {{S'->(dot)S, ""}}
     while (!q.empty()) {
-        Item item = q.back(); // {S'->(dot)S, ""}
+        Item item = q.back();  // {S'->(dot)S, ""}
         q.pop_back();
         uint32_t next_symbol = 0;
         if (lr_closure_helper(item_set_ptr, &item, &next_symbol)) {
@@ -171,15 +226,17 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lr0_closure(ItemSet* item
         if (m_non_terminals.find(next_symbol) == m_non_terminals.end()) {
             assert(false);
         }
-        for (Production* const p : m_non_terminals.at(next_symbol)) { // S -> a
-            q.emplace_back(p, 0, cNullSymbol);                        // {S -> (dot) a, ""}
+        for (Production* const p : m_non_terminals.at(next_symbol)) {  // S -> a
+            q.emplace_back(p, 0, cNullSymbol);  // {S -> (dot) a, ""}
         }
     }
 }
 
 template <typename NFAStateType, typename DFAStateType>
-auto LALR1Parser<NFAStateType, DFAStateType>::go_to(ItemSet* from_item_set,
-                                                    uint32_t const& next_symbol) -> ItemSet* {
+auto LALR1Parser<NFAStateType, DFAStateType>::go_to(
+        ItemSet* from_item_set,
+        uint32_t const& next_symbol
+) -> ItemSet* {
     std::unique_ptr<ItemSet> next_item_set_ptr = std::make_unique<ItemSet>();
     assert(from_item_set != nullptr);
     for (Item const& item : from_item_set->m_closure) {
@@ -187,8 +244,8 @@ auto LALR1Parser<NFAStateType, DFAStateType>::go_to(ItemSet* from_item_set,
             continue;
         }
         if (item.next_symbol() == next_symbol) {
-            next_item_set_ptr->m_kernel.emplace(
-                    item.m_production, item.m_dot + 1, item.m_lookahead);
+            next_item_set_ptr->m_kernel
+                    .emplace(item.m_production, item.m_dot + 1, item.m_lookahead);
         }
     }
     if (next_item_set_ptr->m_kernel.empty()) {
@@ -242,8 +299,8 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_first_sets() {
 
 template <typename NFAStateType, typename DFAStateType>
 void LALR1Parser<NFAStateType, DFAStateType>::generate_lr1_item_sets() {
-    for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv :
-         m_lr0_item_sets) {
+    for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv : m_lr0_item_sets)
+    {
         for (Item const& l0_item : kv.second->m_kernel) {
             ItemSet temp_item_set;
             temp_item_set.m_kernel.insert(l0_item);
@@ -261,11 +318,13 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lr1_item_sets() {
         }
     }
     std::map<Item, std::set<int>> lookaheads;
-    for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv :
-         m_lr0_item_sets) {
+    for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv : m_lr0_item_sets)
+    {
         for (Item const& l0_item : kv.second->m_kernel) {
-            lookaheads[l0_item].insert(m_spontaneous_map[l0_item.m_production].begin(),
-                                       m_spontaneous_map[l0_item.m_production].end());
+            lookaheads[l0_item].insert(
+                    m_spontaneous_map[l0_item.m_production].begin(),
+                    m_spontaneous_map[l0_item.m_production].end()
+            );
             if (l0_item.m_production == m_productions[m_root_production_id].get()) {
                 lookaheads[l0_item].insert((int)SymbolID::TokenEndID);
             }
@@ -278,23 +337,26 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lr1_item_sets() {
             Item item_from = kv.first;
             for (Item const& item_to : kv.second) {
                 size_t size_before = lookaheads[item_to].size();
-                lookaheads[item_to].insert(lookaheads[item_from].begin(),
-                                           lookaheads[item_from].end());
+                lookaheads[item_to].insert(
+                        lookaheads[item_from].begin(),
+                        lookaheads[item_from].end()
+                );
                 size_t size_after = lookaheads[item_to].size();
                 changed = changed || size_after > size_before;
             }
         }
     }
-    for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv :
-         m_lr0_item_sets) {
+    for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv : m_lr0_item_sets)
+    {
         std::unique_ptr<ItemSet> lr1_item_set_ptr = std::make_unique<ItemSet>();
         for (Item const& l0_item : kv.second->m_kernel) {
             for (int const& lookahead : lookaheads[l0_item]) {
                 Item lr1_item(l0_item.m_production, l0_item.m_dot, lookahead);
                 lr1_item_set_ptr->m_kernel.insert(lr1_item);
             }
-            if (l0_item.m_production == m_productions[m_root_production_id].get() &&
-                l0_item.m_dot == 0) {
+            if (l0_item.m_production == m_productions[m_root_production_id].get()
+                && l0_item.m_dot == 0)
+            {
                 m_root_item_set_ptr = lr1_item_set_ptr.get();
             }
         }
@@ -304,10 +366,12 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lr1_item_sets() {
     }
     // this seems like the wrong way to do this still:
     for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv1 :
-         m_lr1_item_sets) {
+         m_lr1_item_sets)
+    {
         for (auto const& next_index : m_go_to_table[kv1.second->m_index]) {
             for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv2 :
-                 m_lr1_item_sets) {
+                 m_lr1_item_sets)
+            {
                 if (next_index.second == kv2.second->m_index) {
                     kv1.second->m_next[next_index.first] = kv2.second.get();
                     break;
@@ -332,9 +396,11 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lr1_closure(ItemSet* item
         while (pos < item.m_production->m_body.size()) {
             uint32_t symbol = item.m_production->m_body.at(pos);
             std::set<uint32_t> symbol_firsts = m_firsts.find(symbol)->second;
-            lookaheads.insert(lookaheads.end(),
-                              std::make_move_iterator(symbol_firsts.begin()),
-                              std::make_move_iterator(symbol_firsts.end()));
+            lookaheads.insert(
+                    lookaheads.end(),
+                    std::make_move_iterator(symbol_firsts.begin()),
+                    std::make_move_iterator(symbol_firsts.end())
+            );
             if (m_nullable.find(symbol) == m_nullable.end()) {
                 break;
             }
@@ -365,29 +431,31 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lalr1_goto() {
 // Dragon book page 253
 template <typename NFAStateType, typename DFAStateType>
 void LALR1Parser<NFAStateType, DFAStateType>::generate_lalr1_action() {
-    for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv :
-         m_lr1_item_sets) {
+    for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv : m_lr1_item_sets)
+    {
         ItemSet* item_set_ptr = kv.second.get();
         item_set_ptr->m_actions.resize(this->m_lexer.m_symbol_id.size(), false);
         for (Item const& item : item_set_ptr->m_closure) {
             if (!item.has_dot_at_end()) {
-                if (m_terminals.find(item.next_symbol()) == m_terminals.end() &&
-                    m_non_terminals.find(item.next_symbol()) == m_non_terminals.end()) {
+                if (m_terminals.find(item.next_symbol()) == m_terminals.end()
+                    && m_non_terminals.find(item.next_symbol()) == m_non_terminals.end())
+                {
                     continue;
                 }
                 assert(item_set_ptr->m_next.find(item.next_symbol()) != item_set_ptr->m_next.end());
                 Action& action = item_set_ptr->m_actions[item.next_symbol()];
                 if (!std::holds_alternative<bool>(action)) {
-                    if (std::holds_alternative<ItemSet*>(action) &&
-                        std::get<ItemSet*>(action) == item_set_ptr->m_next[item.next_symbol()]) {
+                    if (std::holds_alternative<ItemSet*>(action)
+                        && std::get<ItemSet*>(action) == item_set_ptr->m_next[item.next_symbol()])
+                    {
                         continue;
                     }
                     std::string conflict_msg{};
                     conflict_msg += "For symbol ";
                     conflict_msg += this->m_lexer.m_id_symbol[item.next_symbol()];
                     conflict_msg += ", adding shift to ";
-                    conflict_msg +=
-                            std::to_string(item_set_ptr->m_next[item.next_symbol()]->m_index);
+                    conflict_msg += std::to_string(item_set_ptr->m_next[item.next_symbol()]->m_index
+                    );
                     conflict_msg += " causes ";
                     if (std::holds_alternative<ItemSet*>(action)) {
                         conflict_msg += "shift-shift conflict with shift to ";
@@ -395,8 +463,8 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lalr1_action() {
                         conflict_msg += "\n";
                     } else {
                         conflict_msg += "shift-reduce conflict with reduction ";
-                        conflict_msg +=
-                                this->m_lexer.m_id_symbol[std::get<Production*>(action)->m_head];
+                        conflict_msg
+                                += this->m_lexer.m_id_symbol[std::get<Production*>(action)->m_head];
                         conflict_msg += "-> {";
                         for (uint32_t symbol : std::get<Production*>(action)->m_body) {
                             conflict_msg += this->m_lexer.m_id_symbol[symbol] + ",";
@@ -405,8 +473,8 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lalr1_action() {
                     }
                     throw std::runtime_error(conflict_msg);
                 }
-                item_set_ptr->m_actions[item.next_symbol()] =
-                        item_set_ptr->m_next[item.next_symbol()];
+                item_set_ptr->m_actions[item.next_symbol()]
+                        = item_set_ptr->m_next[item.next_symbol()];
             }
             if (item.has_dot_at_end()) {
                 if (item.m_production == m_productions[m_root_production_id].get()) {
@@ -431,9 +499,9 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lalr1_action() {
                             conflict_msg += "\n";
                         } else {
                             conflict_msg += "reduce-reduce conflict with reduction ";
-                            conflict_msg +=
-                                    this->m_lexer
-                                            .m_id_symbol[std::get<Production*>(action)->m_head];
+                            conflict_msg
+                                    += this->m_lexer
+                                               .m_id_symbol[std::get<Production*>(action)->m_head];
                             conflict_msg += "-> {";
                             for (uint32_t symbol : std::get<Production*>(action)->m_body) {
                                 conflict_msg += this->m_lexer.m_id_symbol[symbol] + ",";
@@ -449,54 +517,39 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lalr1_action() {
     }
 }
 
-static auto get_line_num(MatchedSymbol& top_symbol) -> uint32_t {
-    std::optional<uint32_t> line_num{std::nullopt};
-    std::stack<MatchedSymbol> symbols;
-    symbols.push(std::move(top_symbol));
-    while (std::nullopt == line_num) {
-        assert(!symbols.empty());
-        MatchedSymbol& curr_symbol = symbols.top();
-        std::visit(Overloaded{[&line_num](Token& token) { line_num = token.m_line; },
-                              [&symbols](NonTerminal& m) {
-                                  for (size_t i = 0; i < m.m_production->m_body.size(); i++) {
-                                      symbols.push(std::move(
-                                              NonTerminal::m_all_children[m.m_children_start + i]));
-                                  }
-                              }},
-                   curr_symbol);
-        symbols.pop();
-    }
-    return *line_num;
-}
-
 template <typename NFAStateType, typename DFAStateType>
 auto LALR1Parser<NFAStateType, DFAStateType>::get_input_after_last_newline(
-        std::stack<MatchedSymbol>& parse_stack_matches) -> std::string {
+        std::stack<MatchedSymbol>& parse_stack_matches
+) -> std::string {
     std::string error_message_reversed;
     bool done = false;
     while (!parse_stack_matches.empty() && !done) {
         MatchedSymbol top_symbol = std::move(parse_stack_matches.top());
         parse_stack_matches.pop();
-        std::visit(Overloaded{[&error_message_reversed, &done](Token& token) {
-                                  if (token.to_string() == "\r" || token.to_string() == "\n") {
-                                      done = true;
-                                  } else {
-                                      // input is being read backwards, so reverse each token so
-                                      // that when the entire input is reversed each token is
-                                      // displayed correctly
-                                      std::string token_string = token.to_string();
-                                      std::reverse(token_string.begin(), token_string.end());
-                                      error_message_reversed += token_string;
-                                  }
-                              },
-                              [&parse_stack_matches](NonTerminal& m) {
-                                  for (size_t i = 0; i < m.m_production->m_body.size(); i++) {
-                                      assert(m.m_children_start + i < cSizeOfAllChildren);
-                                      parse_stack_matches.push(std::move(
-                                              NonTerminal::m_all_children[m.m_children_start + i]));
-                                  }
-                              }},
-                   top_symbol);
+        std::visit(
+                Overloaded{
+                        [&error_message_reversed, &done](Token& token) {
+                            if (token.to_string() == "\r" || token.to_string() == "\n") {
+                                done = true;
+                            } else {
+                                // input is being read backwards, so reverse
+                                // each token so that when the entire input is
+                                // reversed each token is displayed correctly
+                                std::string token_string = token.to_string();
+                                std::reverse(token_string.begin(), token_string.end());
+                                error_message_reversed += token_string;
+                            }
+                        },
+                        [&parse_stack_matches](NonTerminal& m) {
+                            for (size_t i = 0; i < m.m_production->m_body.size(); i++) {
+                                assert(m.m_children_start + i < cSizeOfAllChildren);
+                                parse_stack_matches.push(std::move(
+                                        NonTerminal::m_all_children[m.m_children_start + i]
+                                ));
+                            }
+                        }},
+                top_symbol
+        );
     }
     std::reverse(error_message_reversed.begin(), error_message_reversed.end());
     return error_message_reversed;
@@ -507,12 +560,12 @@ auto LALR1Parser<NFAStateType, DFAStateType>::get_input_until_next_newline(Token
         -> std::string {
     std::string rest_of_line;
     bool next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (int)SymbolID::TokenEndID);
-    bool next_has_newline = (error_token->to_string().find('\n') != std::string::npos) ||
-                            (error_token->to_string().find('\r') != std::string::npos);
+    bool next_has_newline = (error_token->to_string().find('\n') != std::string::npos)
+                            || (error_token->to_string().find('\r') != std::string::npos);
     while (!next_has_newline && !next_is_end_token) {
         Token token = get_next_symbol();
-        next_has_newline = (token.to_string().find('\n') != std::string::npos) ||
-                           (token.to_string().find('\r') != std::string::npos);
+        next_has_newline = (token.to_string().find('\n') != std::string::npos)
+                           || (token.to_string().find('\r') != std::string::npos);
         if (!next_has_newline) {
             rest_of_line += token.to_string();
             next_is_end_token = (token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenEndID);
@@ -520,23 +573,6 @@ auto LALR1Parser<NFAStateType, DFAStateType>::get_input_until_next_newline(Token
     }
     rest_of_line += "\n";
     return rest_of_line;
-}
-
-static auto unescape(char const& c) -> std::string {
-    switch (c) {
-    case '\t':
-        return "\\t";
-    case '\r':
-        return "\\r";
-    case '\n':
-        return "\\n";
-    case '\v':
-        return "\\v";
-    case '\f':
-        return "\\f";
-    default:
-        return {c};
-    }
 }
 
 template <typename NFAStateType, typename DFAStateType>
@@ -565,9 +601,11 @@ auto LALR1Parser<NFAStateType, DFAStateType>::report_error() -> std::string {
             Action action = m_parse_stack_states.top()->m_actions[i];
             if (action.index() != 0) {
                 error_type += "'";
-                if (auto* regex_ast_literal =
-                            dynamic_cast<finite_automata::RegexASTLiteral<NFAStateType>*>(
-                                    this->m_lexer.get_rule(i))) {
+                if (auto* regex_ast_literal
+                    = dynamic_cast<finite_automata::RegexASTLiteral<NFAStateType>*>(
+                            this->m_lexer.get_rule(i)
+                    ))
+                {
                     error_type += unescape(char(regex_ast_literal->get_character()));
                 } else {
                     error_type += this->m_lexer.m_id_symbol[i];
@@ -578,9 +616,9 @@ auto LALR1Parser<NFAStateType, DFAStateType>::report_error() -> std::string {
         error_type.pop_back();
         error_type += " before '" + unescape(token.to_string()[0]) + "' token";
     }
-    std::string error_string = "Schema:" + std::to_string(line_num + 1) + ":" +
-                               std::to_string(consumed_input.size() + 1) +
-                               ": error: " + error_type + "\n";
+    std::string error_string = "Schema:" + std::to_string(line_num + 1) + ":"
+                               + std::to_string(consumed_input.size() + 1)
+                               + ": error: " + error_type + "\n";
     for (int i = 0; i < 10; i++) {
         error_string += " ";
     }
@@ -628,7 +666,8 @@ auto LALR1Parser<NFAStateType, DFAStateType>::get_next_symbol() -> Token {
     if (m_next_token == std::nullopt) {
         Token token;
         if (ErrorCode error = this->m_lexer.scan(m_input_buffer, token);
-            ErrorCode::Success != error) {
+            ErrorCode::Success != error)
+        {
             throw std::runtime_error("Error scanning in lexer.");
         }
         return token;
@@ -653,62 +692,67 @@ auto LALR1Parser<NFAStateType, DFAStateType>::parse_advance(Token& next_token, b
 }
 
 template <typename NFAStateType, typename DFAStateType>
-auto LALR1Parser<NFAStateType, DFAStateType>::parse_symbol(uint32_t const& type_id,
-                                                           Token& next_token,
-                                                           bool* accept) -> bool {
+auto LALR1Parser<NFAStateType, DFAStateType>::parse_symbol(
+        uint32_t const& type_id,
+        Token& next_token,
+        bool* accept
+) -> bool {
     ItemSet* curr = m_parse_stack_states.top();
     Action& it = curr->m_actions[type_id];
     bool ret = false;
     std::visit(
-            Overloaded{[&ret, &accept](bool is_accepting) {
-                           if (!is_accepting) {
-                               ret = false;
-                               return;
-                           }
-                           *accept = true;
-                           ret = true;
-                           return;
-                       },
-                       [&ret, &next_token, this](ItemSet* shift) {
-                           m_parse_stack_states.push(shift);
-                           m_parse_stack_matches.emplace(std::move(next_token));
-                           ret = true;
-                           return;
-                       },
-                       [&ret, &next_token, this](Production* reduce) {
-                           m_next_token = next_token;
-                           NonTerminal matched_non_terminal(reduce);
-                           size_t n = reduce->m_body.size();
-                           for (size_t i = 0; i < n; i++) {
-                               m_parse_stack_states.pop();
-                               assert((matched_non_terminal.m_children_start + n - i - 1) <
-                                      cSizeOfAllChildren);
-                               NonTerminal::m_all_children[matched_non_terminal.m_children_start +
-                                                           n - i - 1] =
-                                       std::move(m_parse_stack_matches.top());
-                               m_parse_stack_matches.pop();
-                           }
-                           if (reduce->m_semantic_rule != nullptr) {
-                               if (0 == m_next_token->m_start_pos) {
-                                   m_input_buffer.set_consumed_pos(m_input_buffer.storage().size() -
-                                                                   1);
-                               } else {
-                                   m_input_buffer.set_consumed_pos(m_next_token->m_start_pos - 1);
-                               }
-                               matched_non_terminal.m_ast =
-                                       reduce->m_semantic_rule(&matched_non_terminal);
-                           }
-                           ItemSet* curr = m_parse_stack_states.top();
-                           Action const& it =
-                                   curr->m_actions[matched_non_terminal.m_production->m_head];
-                           m_parse_stack_states.push(std::get<ItemSet*>(it));
-                           m_parse_stack_matches.emplace(std::move(matched_non_terminal));
-                           ret = true;
-                           return;
-                       }},
-            it);
+            Overloaded{
+                    [&ret, &accept](bool is_accepting) {
+                        if (!is_accepting) {
+                            ret = false;
+                            return;
+                        }
+                        *accept = true;
+                        ret = true;
+                        return;
+                    },
+                    [&ret, &next_token, this](ItemSet* shift) {
+                        m_parse_stack_states.push(shift);
+                        m_parse_stack_matches.emplace(std::move(next_token));
+                        ret = true;
+                        return;
+                    },
+                    [&ret, &next_token, this](Production* reduce) {
+                        m_next_token = next_token;
+                        NonTerminal matched_non_terminal(reduce);
+                        size_t n = reduce->m_body.size();
+                        for (size_t i = 0; i < n; i++) {
+                            m_parse_stack_states.pop();
+                            assert((matched_non_terminal.m_children_start + n - i - 1)
+                                   < cSizeOfAllChildren);
+                            NonTerminal::m_all_children
+                                    [matched_non_terminal.m_children_start + n - i - 1]
+                                    = std::move(m_parse_stack_matches.top());
+                            m_parse_stack_matches.pop();
+                        }
+                        if (reduce->m_semantic_rule != nullptr) {
+                            if (0 == m_next_token->m_start_pos) {
+                                m_input_buffer.set_consumed_pos(
+                                        m_input_buffer.storage().size() - 1
+                                );
+                            } else {
+                                m_input_buffer.set_consumed_pos(m_next_token->m_start_pos - 1);
+                            }
+                            matched_non_terminal.m_ast
+                                    = reduce->m_semantic_rule(&matched_non_terminal);
+                        }
+                        ItemSet* curr = m_parse_stack_states.top();
+                        Action const& it
+                                = curr->m_actions[matched_non_terminal.m_production->m_head];
+                        m_parse_stack_states.push(std::get<ItemSet*>(it));
+                        m_parse_stack_matches.emplace(std::move(matched_non_terminal));
+                        ret = true;
+                        return;
+                    }},
+            it
+    );
     return ret;
 }
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_LALR1_PARSER_TPP
+#endif  // LOG_SURGEON_LALR1_PARSER_TPP

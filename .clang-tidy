@@ -1,9 +1,24 @@
 ---
-Checks: 'cert-*,clang-analyzer-*,clang-diagnostic-*,cppcoreguidelines-*,modernize-*,performance-*,readability-*,-readability-identifier-length,-readability-simplify-boolean-expr'
+Checks: >-
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  cert-*,
+  clang-analyzer-*,
+  clang-diagnostic-*,
+  concurrency-*,
+  cppcoreguidelines-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -readability-identifier-length,
+  -readability-simplify-boolean-expr,
+
+WarningsAsErrors: '*'
 FormatStyle: file
-HeaderFileExtensions:         ['','h','hh','hpp','hxx','tpp']
-ImplementationFileExtensions: ['','c','cc','cpp','cxx']
 CheckOptions:
+  misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
   readability-identifier-naming.ClassCase: 'CamelCase'
   readability-identifier-naming.ClassMemberCase: 'lower_case'
   readability-identifier-naming.ClassMemberPrefix: 'm_'
@@ -23,4 +38,5 @@ CheckOptions:
   readability-identifier-naming.ParameterCase: 'lower_case'
   readability-identifier-naming.StructCase: 'CamelCase'
   readability-identifier-naming.TypedefCase: 'CamelCase'
+  readability-identifier-naming.TypedefIgnoredRegexp: '[a-z_]+_t'
   readability-identifier-naming.UnionCase: 'CamelCase'

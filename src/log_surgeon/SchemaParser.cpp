@@ -1,20 +1,18 @@
 #include "SchemaParser.hpp"
 
-// C++ libraries
 #include <cmath>
 #include <memory>
 #include <stdexcept>
 
-// Project headers
-#include "Constants.hpp"
-#include "FileReader.hpp"
-#include "LALR1Parser.hpp"
-#include "Lexer.hpp"
-#include "finite_automata/RegexAST.hpp"
-#include "utils.hpp"
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/FileReader.hpp>
+#include <log_surgeon/finite_automata/RegexAST.hpp>
+#include <log_surgeon/LALR1Parser.hpp>
+#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/utils.hpp>
 
-using RegexASTByte =
-        log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::RegexNFAByteState>;
+using RegexASTByte
+        = log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::RegexNFAByteState>;
 using RegexASTGroupByte = log_surgeon::finite_automata::RegexASTGroup<
         log_surgeon::finite_automata::RegexNFAByteState>;
 using RegexASTIntegerByte = log_surgeon::finite_automata::RegexASTInteger<
@@ -23,10 +21,10 @@ using RegexASTLiteralByte = log_surgeon::finite_automata::RegexASTLiteral<
         log_surgeon::finite_automata::RegexNFAByteState>;
 using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultiplication<
         log_surgeon::finite_automata::RegexNFAByteState>;
-using RegexASTOrByte =
-        log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::RegexNFAByteState>;
-using RegexASTCatByte =
-        log_surgeon::finite_automata::RegexASTCat<log_surgeon::finite_automata::RegexNFAByteState>;
+using RegexASTOrByte
+        = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::RegexNFAByteState>;
+using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<
+        log_surgeon::finite_automata::RegexNFAByteState>;
 
 using std::make_unique;
 using std::string;
@@ -42,7 +40,8 @@ SchemaParser::SchemaParser() {
 auto SchemaParser::generate_schema_ast(Reader& reader) -> unique_ptr<SchemaAST> {
     NonTerminal nonterminal = parse(reader);
     std::unique_ptr<SchemaAST> schema_ast(
-            dynamic_cast<SchemaAST*>(nonterminal.get_parser_ast().release()));
+            dynamic_cast<SchemaAST*>(nonterminal.get_parser_ast().release())
+    );
     return schema_ast;
 }
 
@@ -52,11 +51,13 @@ auto SchemaParser::try_schema_file(string const& schema_file_path) -> unique_ptr
     if (ErrorCode::Success != error_code) {
         if (ErrorCode::Errno == error_code) {
             throw std::runtime_error(
-                    strfmt("Failed to read '%s', errno=%d", schema_file_path.c_str(), errno));
+                    strfmt("Failed to read '%s', errno=%d", schema_file_path.c_str(), errno)
+            );
         }
         int code{static_cast<std::underlying_type_t<ErrorCode>>(error_code)};
         throw std::runtime_error(
-                strfmt("Failed to read '%s', error_code=%d", schema_file_path.c_str(), code));
+                strfmt("Failed to read '%s', error_code=%d", schema_file_path.c_str(), code)
+        );
     }
     SchemaParser sp;
     Reader reader{[&](char* buf, size_t count, size_t& read_to) -> ErrorCode {
@@ -139,33 +140,38 @@ using ParserValueRegex = ParserValue<unique_ptr<RegexASTByte>>;
 
 static auto regex_identity_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     return unique_ptr<ParserAST>(new ParserValueRegex(
-            std::move(m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>())));
+            std::move(m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>())
+    ));
 }
 
 static auto regex_cat_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
     auto& r2 = m->non_terminal_cast(1)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
     return unique_ptr<ParserAST>(new ParserValueRegex(
-            unique_ptr<RegexASTByte>(new RegexASTCatByte(std::move(r1), std::move(r2)))));
+            unique_ptr<RegexASTByte>(new RegexASTCatByte(std::move(r1), std::move(r2)))
+    ));
 }
 
 static auto regex_or_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
     auto& r2 = m->non_terminal_cast(2)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
     return unique_ptr<ParserAST>(new ParserValueRegex(
-            unique_ptr<RegexASTByte>(new RegexASTOrByte(std::move(r1), std::move(r2)))));
+            unique_ptr<RegexASTByte>(new RegexASTOrByte(std::move(r1), std::move(r2)))
+    ));
 }
 
 static auto regex_match_zero_or_more_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
     return unique_ptr<ParserAST>(new ParserValueRegex(
-            unique_ptr<RegexASTByte>(new RegexASTMultiplicationByte(std::move(r1), 0, 0))));
+            unique_ptr<RegexASTByte>(new RegexASTMultiplicationByte(std::move(r1), 0, 0))
+    ));
 }
 
 static auto regex_match_one_or_more_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
     return unique_ptr<ParserAST>(new ParserValueRegex(
-            unique_ptr<RegexASTByte>(new RegexASTMultiplicationByte(std::move(r1), 1, 0))));
+            unique_ptr<RegexASTByte>(new RegexASTMultiplicationByte(std::move(r1), 1, 0))
+    ));
 }
 
 static auto regex_match_exactly_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
@@ -178,7 +184,8 @@ static auto regex_match_exactly_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     }
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
     return unique_ptr<ParserAST>(new ParserValueRegex(
-            unique_ptr<RegexASTByte>(new RegexASTMultiplicationByte(std::move(r1), reps, reps))));
+            unique_ptr<RegexASTByte>(new RegexASTMultiplicationByte(std::move(r1), reps, reps))
+    ));
 }
 
 static auto regex_match_range_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
@@ -198,7 +205,8 @@ static auto regex_match_range_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     }
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
     return unique_ptr<ParserAST>(new ParserValueRegex(
-            unique_ptr<RegexASTByte>(new RegexASTMultiplicationByte(std::move(r1), min, max))));
+            unique_ptr<RegexASTByte>(new RegexASTMultiplicationByte(std::move(r1), min, max))
+    ));
 }
 
 static auto regex_add_literal_existing_group_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
@@ -207,7 +215,8 @@ static auto regex_add_literal_existing_group_rule(NonTerminal* m) -> unique_ptr<
     auto* r1_ptr = dynamic_cast<RegexASTGroupByte*>(r1.get());
     auto* r2_ptr = dynamic_cast<RegexASTLiteralByte*>(r2.get());
     return unique_ptr<ParserAST>(
-            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTGroupByte(r1_ptr, r2_ptr))));
+            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTGroupByte(r1_ptr, r2_ptr)))
+    );
 }
 
 static auto regex_add_range_existing_group_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
@@ -216,21 +225,24 @@ static auto regex_add_range_existing_group_rule(NonTerminal* m) -> unique_ptr<Pa
     auto* r1_ptr = dynamic_cast<RegexASTGroupByte*>(r1.get());
     auto* r2_ptr = dynamic_cast<RegexASTGroupByte*>(r2.get());
     return unique_ptr<ParserAST>(
-            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTGroupByte(r1_ptr, r2_ptr))));
+            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTGroupByte(r1_ptr, r2_ptr)))
+    );
 }
 
 static auto regex_add_literal_new_group_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto& r2 = m->non_terminal_cast(1)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
     auto* r2_ptr = dynamic_cast<RegexASTLiteralByte*>(r2.get());
     return unique_ptr<ParserAST>(
-            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTGroupByte(r2_ptr))));
+            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTGroupByte(r2_ptr)))
+    );
 }
 
 static auto regex_add_range_new_group_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto& r2 = m->non_terminal_cast(1)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
     auto* r2_ptr = dynamic_cast<RegexASTGroupByte*>(r2.get());
     return unique_ptr<ParserAST>(
-            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTGroupByte(r2_ptr))));
+            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTGroupByte(r2_ptr)))
+    );
 }
 
 static auto regex_complement_incomplete_group_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
@@ -243,26 +255,30 @@ static auto regex_range_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto* r1_ptr = dynamic_cast<RegexASTLiteralByte*>(r1.get());
     auto* r2_ptr = dynamic_cast<RegexASTLiteralByte*>(r2.get());
     return unique_ptr<ParserAST>(
-            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTGroupByte(r1_ptr, r2_ptr))));
+            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTGroupByte(r1_ptr, r2_ptr)))
+    );
 }
 
 static auto regex_middle_identity_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     return unique_ptr<ParserAST>(new ParserValueRegex(
-            std::move(m->non_terminal_cast(1)->get_parser_ast()->get<unique_ptr<RegexASTByte>>())));
+            std::move(m->non_terminal_cast(1)->get_parser_ast()->get<unique_ptr<RegexASTByte>>())
+    ));
 }
 
 static auto regex_literal_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     Token* token = m->token_cast(0);
     assert(token->to_string().size() == 1);
     return unique_ptr<ParserAST>(new ParserValueRegex(
-            unique_ptr<RegexASTByte>(new RegexASTLiteralByte(token->to_string()[0]))));
+            unique_ptr<RegexASTByte>(new RegexASTLiteralByte(token->to_string()[0]))
+    ));
 }
 
 static auto regex_cancel_literal_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     Token* token = m->token_cast(1);
     assert(token->to_string().size() == 1);
     return unique_ptr<ParserAST>(new ParserValueRegex(
-            unique_ptr<RegexASTByte>(new RegexASTLiteralByte(token->to_string()[0]))));
+            unique_ptr<RegexASTByte>(new RegexASTLiteralByte(token->to_string()[0]))
+    ));
 }
 
 static auto regex_existing_integer_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
@@ -271,19 +287,22 @@ static auto regex_existing_integer_rule(NonTerminal* m) -> unique_ptr<ParserAST>
     Token* token = m->token_cast(1);
     assert(token->to_string().size() == 1);
     return unique_ptr<ParserAST>(new ParserValueRegex(
-            unique_ptr<RegexASTByte>(new RegexASTIntegerByte(r2_ptr, token->to_string()[0]))));
+            unique_ptr<RegexASTByte>(new RegexASTIntegerByte(r2_ptr, token->to_string()[0]))
+    ));
 }
 
 static auto regex_new_integer_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     Token* token = m->token_cast(0);
     assert(token->to_string().size() == 1);
     return unique_ptr<ParserAST>(new ParserValueRegex(
-            unique_ptr<RegexASTByte>(new RegexASTIntegerByte(token->to_string()[0]))));
+            unique_ptr<RegexASTByte>(new RegexASTIntegerByte(token->to_string()[0]))
+    ));
 }
 
 static auto regex_digit_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
     return unique_ptr<ParserAST>(
-            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTGroupByte('0', '9'))));
+            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTGroupByte('0', '9')))
+    );
 }
 
 static auto regex_wildcard_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
@@ -294,34 +313,41 @@ static auto regex_wildcard_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
 
 static auto regex_vertical_tab_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
     return unique_ptr<ParserAST>(
-            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTLiteralByte('\v'))));
+            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTLiteralByte('\v')))
+    );
 }
 
 static auto regex_form_feed_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
     return unique_ptr<ParserAST>(
-            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTLiteralByte('\f'))));
+            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTLiteralByte('\f')))
+    );
 }
 
 static auto regex_tab_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
     return unique_ptr<ParserAST>(
-            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTLiteralByte('\t'))));
+            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTLiteralByte('\t')))
+    );
 }
 
 static auto regex_char_return_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
     return unique_ptr<ParserAST>(
-            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTLiteralByte('\r'))));
+            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTLiteralByte('\r')))
+    );
 }
 
 static auto regex_newline_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
     return unique_ptr<ParserAST>(
-            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTLiteralByte('\n'))));
+            new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTLiteralByte('\n')))
+    );
 }
 
 static auto regex_white_space_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
-    unique_ptr<RegexASTGroupByte> regex_ast_group =
-            make_unique<RegexASTGroupByte>(RegexASTGroupByte({' ', '\t', '\r', '\n', '\v', '\f'}));
+    unique_ptr<RegexASTGroupByte> regex_ast_group = make_unique<RegexASTGroupByte>(
+            RegexASTGroupByte({' ', '\t', '\r', '\n', '\v', '\f'})
+    );
     return unique_ptr<ParserAST>(
-            new ParserValueRegex(unique_ptr<RegexASTByte>(std::move(regex_ast_group))));
+            new ParserValueRegex(unique_ptr<RegexASTByte>(std::move(regex_ast_group)))
+    );
 }
 
 static auto existing_delimiter_string_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
@@ -340,11 +366,11 @@ static auto new_delimiter_string_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
 }
 
 void SchemaParser::add_lexical_rules() {
-    add_token("Tab", '\t');            // 9
-    add_token("NewLine", '\n');        // 10
-    add_token("VerticalTab", '\v');    // 11
-    add_token("FormFeed", '\f');       // 12
-    add_token("CarriageReturn", '\r'); // 13
+    add_token("Tab", '\t');  // 9
+    add_token("NewLine", '\n');  // 10
+    add_token("VerticalTab", '\v');  // 11
+    add_token("FormFeed", '\f');  // 12
+    add_token("CarriageReturn", '\r');  // 13
     add_token("Space", ' ');
     add_token("Bang", '!');
     add_token("Quotation", '"');
@@ -402,18 +428,31 @@ void SchemaParser::add_productions() {
     add_production("Schema", {"Comment"}, new_schema_rule);
     add_production("Schema", {"SchemaVar"}, new_schema_rule_with_var);
     add_production(
-            "Schema", {"Delimiters", "Colon", "DelimiterString"}, new_schema_rule_with_delimiters);
+            "Schema",
+            {"Delimiters", "Colon", "DelimiterString"},
+            new_schema_rule_with_delimiters
+    );
     add_production("Schema", {"Schema", "PortableNewLine"}, identity_rule_ParserASTSchema);
     add_production(
-            "Schema", {"Schema", "PortableNewLine", "Comment"}, identity_rule_ParserASTSchema);
-    add_production("Schema",
-                   {"Schema", "PortableNewLine", "SchemaVar"},
-                   std::bind(&SchemaParser::existing_schema_rule, this, std::placeholders::_1));
-    add_production("Schema",
-                   {"Schema", "PortableNewLine", "Delimiters", "Colon", "DelimiterString"},
-                   existing_schema_rule_with_delimiter);
+            "Schema",
+            {"Schema", "PortableNewLine", "Comment"},
+            identity_rule_ParserASTSchema
+    );
     add_production(
-            "DelimiterString", {"DelimiterString", "Literal"}, existing_delimiter_string_rule);
+            "Schema",
+            {"Schema", "PortableNewLine", "SchemaVar"},
+            std::bind(&SchemaParser::existing_schema_rule, this, std::placeholders::_1)
+    );
+    add_production(
+            "Schema",
+            {"Schema", "PortableNewLine", "Delimiters", "Colon", "DelimiterString"},
+            existing_schema_rule_with_delimiter
+    );
+    add_production(
+            "DelimiterString",
+            {"DelimiterString", "Literal"},
+            existing_delimiter_string_rule
+    );
     add_production("DelimiterString", {"Literal"}, new_delimiter_string_rule);
     add_production("PortableNewLine", {"CarriageReturn", "NewLine"}, nullptr);
     add_production("PortableNewLine", {"NewLine"}, nullptr);
@@ -423,7 +462,10 @@ void SchemaParser::add_productions() {
     add_production("Text", {"Text", "Delimiters"}, nullptr);
     add_production("Text", {"Delimiters"}, nullptr);
     add_production(
-            "SchemaVar", {"WhitespaceStar", "Identifier", "Colon", "Regex"}, schema_var_rule);
+            "SchemaVar",
+            {"WhitespaceStar", "Identifier", "Colon", "Regex"},
+            schema_var_rule
+    );
     add_production("Identifier", {"Identifier", "AlphaNumeric"}, existing_identifier_rule);
     add_production("Identifier", {"AlphaNumeric"}, new_identifier_rule);
     add_production("WhitespaceStar", {"WhitespaceStar", "Space"}, nullptr);
@@ -439,28 +481,41 @@ void SchemaParser::add_productions() {
     add_production("Or", {"CompleteGroup"}, regex_identity_rule);
     add_production("MatchStar", {"CompleteGroup", "Star"}, regex_match_zero_or_more_rule);
     add_production("MatchPlus", {"CompleteGroup", "Plus"}, regex_match_one_or_more_rule);
-    add_production("MatchExact",
-                   {"CompleteGroup", "Lbrace", "Integer", "Rbrace"},
-                   regex_match_exactly_rule);
-    add_production("MatchRange",
-                   {"CompleteGroup", "Lbrace", "Integer", "Comma", "Integer", "Rbrace"},
-                   regex_match_range_rule);
+    add_production(
+            "MatchExact",
+            {"CompleteGroup", "Lbrace", "Integer", "Rbrace"},
+            regex_match_exactly_rule
+    );
+    add_production(
+            "MatchRange",
+            {"CompleteGroup", "Lbrace", "Integer", "Comma", "Integer", "Rbrace"},
+            regex_match_range_rule
+    );
     add_production("CompleteGroup", {"IncompleteGroup", "Rbracket"}, regex_identity_rule);
     add_production("CompleteGroup", {"Literal"}, regex_identity_rule);
     add_production("CompleteGroup", {"Digit"}, regex_identity_rule);
     add_production("CompleteGroup", {"Wildcard"}, regex_identity_rule);
     add_production("CompleteGroup", {"WhiteSpace"}, regex_identity_rule);
-    add_production("IncompleteGroup",
-                   {"IncompleteGroup", "LiteralRange"},
-                   regex_add_range_existing_group_rule);
     add_production(
-            "IncompleteGroup", {"IncompleteGroup", "Digit"}, regex_add_range_existing_group_rule);
-    add_production("IncompleteGroup",
-                   {"IncompleteGroup", "Literal"},
-                   regex_add_literal_existing_group_rule);
-    add_production("IncompleteGroup",
-                   {"IncompleteGroup", "WhiteSpace"},
-                   regex_add_literal_existing_group_rule);
+            "IncompleteGroup",
+            {"IncompleteGroup", "LiteralRange"},
+            regex_add_range_existing_group_rule
+    );
+    add_production(
+            "IncompleteGroup",
+            {"IncompleteGroup", "Digit"},
+            regex_add_range_existing_group_rule
+    );
+    add_production(
+            "IncompleteGroup",
+            {"IncompleteGroup", "Literal"},
+            regex_add_literal_existing_group_rule
+    );
+    add_production(
+            "IncompleteGroup",
+            {"IncompleteGroup", "WhiteSpace"},
+            regex_add_literal_existing_group_rule
+    );
     add_production("IncompleteGroup", {"Lbracket", "LiteralRange"}, regex_add_range_new_group_rule);
     add_production("IncompleteGroup", {"Lbracket", "Digit"}, regex_add_range_new_group_rule);
     add_production("IncompleteGroup", {"Lbracket", "Literal"}, regex_add_literal_new_group_rule);
@@ -513,4 +568,4 @@ void SchemaParser::add_productions() {
     add_production("Wildcard", {"Dot"}, regex_wildcard_rule);
     add_production("WhiteSpace", {"Backslash", "s"}, regex_white_space_rule);
 }
-} // namespace log_surgeon
+}  // namespace log_surgeon

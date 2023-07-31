@@ -1,14 +1,12 @@
 #ifndef LOG_SURGEON_LEXER_TPP
 #define LOG_SURGEON_LEXER_TPP
 
-// C++ standard libraries
 #include <cassert>
 #include <string>
 #include <vector>
 
-// Project headers
-#include "Constants.hpp"
-#include "finite_automata/RegexAST.hpp"
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/RegexAST.hpp>
 
 /**
  * utf8 format (https://en.wikipedia.org/wiki/UTF-8)
@@ -25,8 +23,8 @@ void Lexer<NFAStateType, DFAStateType>::flip_states(uint32_t old_storage_size) {
     } else {
         m_match_pos += old_storage_size / 2;
     }
-    /// TODO when m_start_pos == old_storage_size / 2, theres two possible cases currently so both
-    /// options are potentially wrong
+    // TODO when m_start_pos == old_storage_size / 2, theres two possible cases
+    // currently so both options are potentially wrong
     if (m_start_pos > old_storage_size / 2) {
         m_start_pos -= old_storage_size / 2;
     } else {
@@ -51,12 +49,13 @@ auto Lexer<NFAStateType, DFAStateType>::scan(ParserInputBuffer& input_buffer, To
             m_match = false;
             m_last_match_pos = m_match_pos;
             m_last_match_line = m_match_line;
-            token = Token{m_start_pos,
-                          m_match_pos,
-                          input_buffer.storage().get_active_buffer(),
-                          input_buffer.storage().size(),
-                          m_match_line,
-                          m_type_ids};
+            token = Token{
+                    m_start_pos,
+                    m_match_pos,
+                    input_buffer.storage().get_active_buffer(),
+                    input_buffer.storage().size(),
+                    m_match_line,
+                    m_type_ids};
             return ErrorCode::Success;
         }
         m_start_pos = input_buffer.storage().pos();
@@ -72,8 +71,9 @@ auto Lexer<NFAStateType, DFAStateType>::scan(ParserInputBuffer& input_buffer, To
             m_prev_state = state;
             return err;
         }
-        if ((m_is_delimiter[next_char] || input_buffer.log_fully_consumed() || !m_has_delimiters) &&
-            state->is_accepting()) {
+        if ((m_is_delimiter[next_char] || input_buffer.log_fully_consumed() || !m_has_delimiters)
+            && state->is_accepting())
+        {
             m_match = true;
             m_type_ids = &(state->get_tags());
             m_match_pos = prev_byte_buf_pos;
@@ -97,23 +97,25 @@ auto Lexer<NFAStateType, DFAStateType>::scan(ParserInputBuffer& input_buffer, To
                 input_buffer.set_pos(m_match_pos);
                 m_line = m_match_line;
                 if (m_last_match_pos != m_start_pos) {
-                    token = Token{m_last_match_pos,
-                                  m_start_pos,
-                                  input_buffer.storage().get_active_buffer(),
-                                  input_buffer.storage().size(),
-                                  m_last_match_line,
-                                  &cTokenUncaughtStringTypes};
+                    token = Token{
+                            m_last_match_pos,
+                            m_start_pos,
+                            input_buffer.storage().get_active_buffer(),
+                            input_buffer.storage().size(),
+                            m_last_match_line,
+                            &cTokenUncaughtStringTypes};
                     return ErrorCode::Success;
                 }
                 m_match = false;
                 m_last_match_pos = m_match_pos;
                 m_last_match_line = m_match_line;
-                token = Token{m_start_pos,
-                              m_match_pos,
-                              input_buffer.storage().get_active_buffer(),
-                              input_buffer.storage().size(),
-                              m_match_line,
-                              m_type_ids};
+                token = Token{
+                        m_start_pos,
+                        m_match_pos,
+                        input_buffer.storage().get_active_buffer(),
+                        input_buffer.storage().size(),
+                        m_match_line,
+                        m_type_ids};
                 return ErrorCode::Success;
             }
             if (input_buffer.log_fully_consumed() && m_start_pos == input_buffer.storage().pos()) {
@@ -121,29 +123,33 @@ auto Lexer<NFAStateType, DFAStateType>::scan(ParserInputBuffer& input_buffer, To
                     m_match_pos = input_buffer.storage().pos();
                     m_type_ids = &cTokenEndTypes;
                     m_match = true;
-                    token = Token{m_last_match_pos,
-                                  m_start_pos,
-                                  input_buffer.storage().get_active_buffer(),
-                                  input_buffer.storage().size(),
-                                  m_last_match_line,
-                                  &cTokenUncaughtStringTypes};
+                    token = Token{
+                            m_last_match_pos,
+                            m_start_pos,
+                            input_buffer.storage().get_active_buffer(),
+                            input_buffer.storage().size(),
+                            m_last_match_line,
+                            &cTokenUncaughtStringTypes};
                     return ErrorCode::Success;
                 }
-                token = Token{input_buffer.storage().pos(),
-                              input_buffer.storage().pos(),
-                              input_buffer.storage().get_active_buffer(),
-                              input_buffer.storage().size(),
-                              m_line,
-                              &cTokenEndTypes};
+                token = Token{
+                        input_buffer.storage().pos(),
+                        input_buffer.storage().pos(),
+                        input_buffer.storage().get_active_buffer(),
+                        input_buffer.storage().size(),
+                        m_line,
+                        &cTokenEndTypes};
                 return ErrorCode::Success;
             }
-            /// TODO: remove timestamp from m_is_fist_char so that m_is_delimiter check not
-            /// needed
-            while (input_buffer.log_fully_consumed() == false &&
-                   (m_is_first_char[next_char] == false || m_is_delimiter[next_char] == false)) {
+            // TODO: remove timestamp from m_is_fist_char so that m_is_delimiter
+            // check not needed
+            while (input_buffer.log_fully_consumed() == false
+                   && (m_is_first_char[next_char] == false || m_is_delimiter[next_char] == false))
+            {
                 prev_byte_buf_pos = input_buffer.storage().pos();
                 if (ErrorCode err = input_buffer.get_next_character(next_char);
-                    ErrorCode::Success != err) {
+                    ErrorCode::Success != err)
+                {
                     m_asked_for_more_data = true;
                     m_prev_state = state;
                     return err;
@@ -158,11 +164,13 @@ auto Lexer<NFAStateType, DFAStateType>::scan(ParserInputBuffer& input_buffer, To
     }
 }
 
-/// TODO: this is duplicating almost all the code of scan()
+// TODO: this is duplicating almost all the code of scan()
 template <typename NFAStateType, typename DFAStateType>
-auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(ParserInputBuffer& input_buffer,
-                                                           char wildcard,
-                                                           Token& token) -> ErrorCode {
+auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(
+        ParserInputBuffer& input_buffer,
+        char wildcard,
+        Token& token
+) -> ErrorCode {
     DFAStateType* state = m_dfa->get_root();
     if (m_asked_for_more_data) {
         state = m_prev_state;
@@ -172,12 +180,13 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(ParserInputBuffer& in
             m_match = false;
             m_last_match_pos = m_match_pos;
             m_last_match_line = m_match_line;
-            token = Token{m_start_pos,
-                          m_match_pos,
-                          input_buffer.storage().get_active_buffer(),
-                          input_buffer.storage().size(),
-                          m_match_line,
-                          m_type_ids};
+            token = Token{
+                    m_start_pos,
+                    m_match_pos,
+                    input_buffer.storage().get_active_buffer(),
+                    input_buffer.storage().size(),
+                    m_match_line,
+                    m_type_ids};
             return ErrorCode::Success;
         }
         m_start_pos = input_buffer.storage().pos();
@@ -193,8 +202,9 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(ParserInputBuffer& in
             m_prev_state = state;
             return err;
         }
-        if ((m_is_delimiter[next_char] || input_buffer.log_fully_consumed() || !m_has_delimiters) &&
-            state->is_accepting()) {
+        if ((m_is_delimiter[next_char] || input_buffer.log_fully_consumed() || !m_has_delimiters)
+            && state->is_accepting())
+        {
             m_match = true;
             m_type_ids = &(state->get_tags());
             m_match_pos = prev_byte_buf_pos;
@@ -215,12 +225,13 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(ParserInputBuffer& in
         if (input_buffer.log_fully_consumed() || next == nullptr) {
             assert(input_buffer.log_fully_consumed());
             if (!m_match || (m_match && m_match_pos != input_buffer.storage().pos())) {
-                token = Token{m_last_match_pos,
-                              input_buffer.storage().pos(),
-                              input_buffer.storage().get_active_buffer(),
-                              input_buffer.storage().size(),
-                              m_last_match_line,
-                              &cTokenUncaughtStringTypes};
+                token = Token{
+                        m_last_match_pos,
+                        input_buffer.storage().pos(),
+                        input_buffer.storage().get_active_buffer(),
+                        input_buffer.storage().size(),
+                        m_last_match_line,
+                        &cTokenUncaughtStringTypes};
                 return ErrorCode::Success;
             }
             if (m_match) {
@@ -229,12 +240,13 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(ParserInputBuffer& in
                     for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
                         DFAStateType* next_state = state->next(byte);
                         if (next_state->is_accepting() == false) {
-                            token = Token{m_last_match_pos,
-                                          input_buffer.storage().pos(),
-                                          input_buffer.storage().get_active_buffer(),
-                                          input_buffer.storage().size(),
-                                          m_last_match_line,
-                                          &cTokenUncaughtStringTypes};
+                            token = Token{
+                                    m_last_match_pos,
+                                    input_buffer.storage().pos(),
+                                    input_buffer.storage().get_active_buffer(),
+                                    input_buffer.storage().size(),
+                                    m_last_match_line,
+                                    &cTokenUncaughtStringTypes};
                             return ErrorCode::Success;
                         }
                     }
@@ -245,12 +257,13 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(ParserInputBuffer& in
                     while (!unvisited_states.empty()) {
                         DFAStateType* current_state = unvisited_states.top();
                         if (current_state == nullptr || current_state->is_accepting() == false) {
-                            token = Token{m_last_match_pos,
-                                          input_buffer.storage().pos(),
-                                          input_buffer.storage().get_active_buffer(),
-                                          input_buffer.storage().size(),
-                                          m_last_match_line,
-                                          &cTokenUncaughtStringTypes};
+                            token = Token{
+                                    m_last_match_pos,
+                                    input_buffer.storage().pos(),
+                                    input_buffer.storage().get_active_buffer(),
+                                    input_buffer.storage().size(),
+                                    m_last_match_line,
+                                    &cTokenUncaughtStringTypes};
                             return ErrorCode::Success;
                         }
                         unvisited_states.pop();
@@ -271,12 +284,13 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(ParserInputBuffer& in
                 m_match = false;
                 m_last_match_pos = m_match_pos;
                 m_last_match_line = m_match_line;
-                token = Token{m_start_pos,
-                              m_match_pos,
-                              input_buffer.storage().get_active_buffer(),
-                              input_buffer.storage().size(),
-                              m_match_line,
-                              m_type_ids};
+                token = Token{
+                        m_start_pos,
+                        m_match_pos,
+                        input_buffer.storage().get_active_buffer(),
+                        input_buffer.storage().size(),
+                        m_match_line,
+                        m_type_ids};
                 return ErrorCode::Success;
             }
         }
@@ -312,7 +326,9 @@ void Lexer<NFAStateType, DFAStateType>::add_delimiters(std::vector<uint32_t> con
 
 template <typename NFAStateType, typename DFAStateType>
 void Lexer<NFAStateType, DFAStateType>::add_rule(
-        uint32_t const& id, std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule) {
+        uint32_t const& id,
+        std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule
+) {
     m_rules.emplace_back(id, std::move(rule));
 }
 
@@ -363,8 +379,8 @@ void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
 }
 
 template <typename NFAStateType, typename DFAStateType>
-void Lexer<NFAStateType, DFAStateType>::Rule::add_ast(
-        finite_automata::RegexNFA<NFAStateType>* nfa) const {
+void Lexer<NFAStateType, DFAStateType>::Rule::add_ast(finite_automata::RegexNFA<NFAStateType>* nfa
+) const {
     NFAStateType* s = nfa->new_state();
     s->set_accepting(true);
     s->set_tag(m_name);
@@ -393,12 +409,12 @@ template <typename NFAStateType, typename DFAStateType>
 auto Lexer<NFAStateType, DFAStateType>::nfa_to_dfa(finite_automata::RegexNFA<NFAStateType>& nfa)
         -> std::unique_ptr<finite_automata::RegexDFA<DFAStateType>> {
     typedef std::set<NFAStateType const*> StateSet;
-    std::unique_ptr<finite_automata::RegexDFA<DFAStateType>> dfa =
-            std::make_unique<finite_automata::RegexDFA<DFAStateType>>();
+    std::unique_ptr<finite_automata::RegexDFA<DFAStateType>> dfa
+            = std::make_unique<finite_automata::RegexDFA<DFAStateType>>();
     std::map<StateSet, DFAStateType*> dfa_states;
     std::stack<StateSet> unmarked_sets;
-    auto create_dfa_state =
-            [&dfa, &dfa_states, &unmarked_sets](StateSet const& set) -> DFAStateType* {
+    auto create_dfa_state = [&dfa, &dfa_states, &unmarked_sets](StateSet const& set
+                            ) -> DFAStateType* {
         DFAStateType* state = dfa->new_state(set);
         dfa_states[set] = state;
         unmarked_sets.push(set);
@@ -419,14 +435,15 @@ auto Lexer<NFAStateType, DFAStateType>::nfa_to_dfa(finite_automata::RegexNFA<NFA
                     ascii_transitions_map[i].insert(closure.begin(), closure.end());
                 }
             }
-            /// TODO: add this for the utf8 case
-            // for (const typename NFAStateType::Tree::Data& data: s0->get_tree_transitions().all())
-            // {
-            //     for (NFAStateType* const s1: data.m_value) {
-            //     StateSet closure = epsilon_closure(s1);
-            //         transitions_map[data.m_interval].insert(closure.begin(), closure.end());
-            //     }
-            // }
+            // TODO: add this for the utf8 case
+            /*
+            for (const typename NFAStateType::Tree::Data& data : s0->get_tree_transitions().all()) {
+                for (NFAStateType* const s1 : data.m_value) {
+                    StateSet closure = epsilon_closure(s1);
+                    transitions_map[data.m_interval].insert(closure.begin(), closure.end());
+                }
+            }
+            */
         }
         auto next_dfa_state = [&dfa_states,
                                &create_dfa_state](StateSet const& set) -> DFAStateType* {
@@ -443,15 +460,18 @@ auto Lexer<NFAStateType, DFAStateType>::nfa_to_dfa(finite_automata::RegexNFA<NFA
             DFAStateType* dest_state = next_dfa_state(kv.second);
             dfa_state->add_byte_transition(kv.first, dest_state);
         }
-        /// TODO: add this for the utf8 case
-        // for (const typename map<Interval, typename NFAStateType::StateSet>::value_type& kv:
-        // transitions_map) {
-        //     DFAStateType* dest_state = next_dfa_state(kv.second);
-        //     dfa_state->add_tree_transition(kv.first, dest_state);
-        // }
+        // TODO: add this for the utf8 case
+        /*
+        for (const typename map<Interval, typename NFAStateType::StateSet>::value_type& kv :
+             transitions_map)
+        {
+            DFAStateType* dest_state = next_dfa_state(kv.second);
+            dfa_state->add_tree_transition(kv.first, dest_state);
+        }
+        */
     }
     return dfa;
 }
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
-#endif // LOG_SURGEON_LEXER_TPP
+#endif  // LOG_SURGEON_LEXER_TPP
