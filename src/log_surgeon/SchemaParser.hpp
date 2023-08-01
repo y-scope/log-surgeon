@@ -79,14 +79,6 @@ public:
     auto existing_schema_rule(NonTerminal* m) -> std::unique_ptr<SchemaAST>;
 
     /**
-     * Parse a user defined schema to generate a schema AST used for generating
-     * the log lexer
-     * @param reader
-     * @return std::unique_ptr<SchemaAST>
-     */
-    auto generate_schema_ast(Reader& reader) -> std::unique_ptr<SchemaAST>;
-
-    /**
      * Wrapper around generate_schema_ast()
      * @param schema_file_path
      * @return std::unique_ptr<SchemaAST>
@@ -110,6 +102,14 @@ private:
      * Add all productions needed for schema parsing
      */
     auto add_productions() -> void;
+
+    /**
+     * Parse a user defined schema to generate a schema AST used for generating
+     * the log lexer
+     * @param reader
+     * @return std::unique_ptr<SchemaAST>
+     */
+    auto generate_schema_ast(Reader& reader) -> std::unique_ptr<SchemaAST>;
 };
 }  // namespace log_surgeon
 
