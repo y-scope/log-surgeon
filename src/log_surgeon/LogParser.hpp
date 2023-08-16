@@ -58,15 +58,6 @@ public:
     auto parse(std::unique_ptr<LogParserOutputBuffer>& output_buffer, ParsingAction& parsing_action)
             -> ErrorCode;
 
-    /**
-     * Flips the lexer states to match the static buffer flipping.
-     * @param old_storage_size The previous buffer size used to calculate the
-     * new states inside the flipped buffer.
-     */
-    auto flip_lexer_states(uint32_t old_storage_size) -> void {
-        m_lexer.flip_states(old_storage_size);
-    }
-
     // TODO protect against invalid id (use optional) and make const
     /**
      * @param id The integer ID of the symbol from the schema.
@@ -117,18 +108,13 @@ public:
     /**
      * Grows the capacity of the input buffer if it is not large enough to store
      * the contents of an entire LogEvent.
-     * @param old_storage_size Populated with the previous size of the input
-     * buffer.
-     * @param flipped_static_buffer Populated with whether the buffer needed to
-     * be flipped while copying. If true then the second half of the old buffer
-     * contained data preceeding the first half of the old buffer. The order of
-     * data in the new buffer will be sequential.
      * @return ErrorCode::Success
      * @throw It is possible for std::bad_alloc to be thrown in the case
      * allocation of the new buffer fails.
      */
-    auto increase_capacity(uint32_t& old_storage_size, bool& flipped_static_buffer) -> ErrorCode {
-        return m_input_buffer.increase_capacity(old_storage_size, flipped_static_buffer);
+    auto increase_capacity() -> ErrorCode {
+        /// TODO: is the lexer suppose to own the buffer and not the parser?
+        return m_lexer.increase_buffer_capacity(m_input_buffer);
     }
 
 private:

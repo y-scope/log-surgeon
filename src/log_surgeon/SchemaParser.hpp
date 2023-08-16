@@ -17,8 +17,12 @@ public:
         m_delimiters = std::move(delimiters_in);
     }
 
-    auto add_schema_var(std::unique_ptr<ParserAST> schema_var) -> void {
-        m_schema_vars.push_back(std::move(schema_var));
+    auto add_schema_var(std::unique_ptr<ParserAST> schema_var, int32_t pos = -1) -> void {
+        if(pos == -1) {
+            m_schema_vars.push_back(std::move(schema_var));
+        } else {
+            m_schema_vars.insert(m_schema_vars.begin() + pos, std::move(schema_var));
+        }
     }
 
     std::vector<std::unique_ptr<ParserAST>> m_schema_vars;
@@ -79,11 +83,18 @@ public:
     auto existing_schema_rule(NonTerminal* m) -> std::unique_ptr<SchemaAST>;
 
     /**
-     * Wrapper around generate_schema_ast()
+     * File wrapper around generate_schema_ast()
      * @param schema_file_path
      * @return std::unique_ptr<SchemaAST>
      */
     static auto try_schema_file(std::string const& schema_file_path) -> std::unique_ptr<SchemaAST>;
+
+    /**
+     * String wrapper around generate_schema_ast()
+     * @param schema_string
+     * @return std::unique_ptr<SchemaAST>
+     */
+    static auto try_schema_string(std::string const& schema_string) -> std::unique_ptr<SchemaAST>;
 
 private:
     /**

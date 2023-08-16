@@ -72,6 +72,26 @@ auto SchemaParser::try_schema_file(string const& schema_file_path) -> unique_ptr
     return schema_ast;
 }
 
+auto SchemaParser::try_schema_string(string const& schema_string) -> unique_ptr<SchemaAST> {
+    uint32_t unparsed_string_pos = 0;
+    Reader reader{[&](char* buf, size_t count, size_t& read_to) -> ErrorCode {
+        if(unparsed_string_pos + count > schema_string.length()) {
+            count = schema_string.length() - unparsed_string_pos;
+        }
+        read_to = count;
+        if(read_to == 0) {
+             return ErrorCode::EndOfFile;
+        }
+        for(uint32_t i = 0; i < count; i++) {
+            *(buf + i) = schema_string[unparsed_string_pos + i];
+        }
+        unparsed_string_pos += count;
+        return ErrorCode::Success;
+    }};
+    SchemaParser sp;
+    return sp.generate_schema_ast(reader);
+}
+
 static auto new_identifier_rule(NonTerminal* m) -> unique_ptr<IdentifierAST> {
     string r1 = m->token_cast(0)->to_string();
     return make_unique<IdentifierAST>(IdentifierAST(r1[0]));
