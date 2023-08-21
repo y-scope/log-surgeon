@@ -141,7 +141,7 @@ private:
      */
     auto add_rules(SchemaAST const* schema_ast) -> void;
 
-    /// TODO: lexer should own the buffer, not the parser
+    /// TODO: move ownership of the buffer to the lexer
     ParserInputBuffer m_input_buffer;
     bool m_has_start_of_log;
     Token m_start_of_log_message{};
