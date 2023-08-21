@@ -113,7 +113,6 @@ public:
      * allocation of the new buffer fails.
      */
     auto increase_capacity() -> ErrorCode {
-        /// TODO: is the lexer suppose to own the buffer and not the parser?
         return m_lexer.increase_buffer_capacity(m_input_buffer);
     }
 
@@ -142,6 +141,7 @@ private:
      */
     auto add_rules(SchemaAST const* schema_ast) -> void;
 
+    /// TODO: lexer should own the buffer, not the parser
     ParserInputBuffer m_input_buffer;
     bool m_has_start_of_log;
     Token m_start_of_log_message{};
