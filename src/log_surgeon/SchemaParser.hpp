@@ -12,7 +12,7 @@ public:
     // Constructor
     SchemaAST() = default;
 
-    /// TODO: shouldn't this add delimiters instead of setting it?
+    // TODO: shouldn't this add delimiters instead of setting it?
     auto set_delimiters(std::unique_ptr<ParserAST> delimiters_in) -> void {
         m_delimiters = std::move(delimiters_in);
     }

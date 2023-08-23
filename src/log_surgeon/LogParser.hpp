@@ -13,7 +13,7 @@
 #include <log_surgeon/SchemaParser.hpp>
 
 namespace log_surgeon {
-/// TODO: Compare c-array vs. vectors (its underlying array) for buffers
+// TODO: Compare c-array vs. vectors (its underlying array) for buffers
 class LogParser
         : public Parser<finite_automata::RegexNFAByteState, finite_automata::RegexDFAByteState> {
 public:
@@ -141,7 +141,7 @@ private:
      */
     auto add_rules(SchemaAST const* schema_ast) -> void;
 
-    /// TODO: move ownership of the buffer to the lexer
+    // TODO: move ownership of the buffer to the lexer
     ParserInputBuffer m_input_buffer;
     bool m_has_start_of_log;
     Token m_start_of_log_message{};

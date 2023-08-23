@@ -163,8 +163,10 @@ auto LogParser::parse(
             if(false == output_buffer->has_timestamp() &&
                 next_token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenNewlineTimestampId) 
             {
-                /// TODO: combine with found_start_of_next_message into 1 function
-                // increment by 1 because the '\n' character is not part of the next log message
+                // TODO: combine with found_start_of_next_message into 1
+                //  function
+                // increment by 1 because the '\n' character is not part of the
+                // next log message
                 m_start_of_log_message = next_token;
                 if (m_start_of_log_message.m_start_pos == m_start_of_log_message.m_buffer_size - 1) {
                     m_start_of_log_message.m_start_pos = 0;
