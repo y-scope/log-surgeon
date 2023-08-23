@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <memory>
+#include <span>
 #include <stdexcept>
 
 #include <log_surgeon/Constants.hpp>
@@ -73,8 +74,9 @@ auto SchemaParser::try_schema_file(string const& schema_file_path) -> unique_ptr
 }
 
 auto SchemaParser::try_schema_string(string const& schema_string) -> unique_ptr<SchemaAST> {
-    uint32_t unparsed_string_pos = 0;
-    Reader reader{[&](char* buf, size_t count, size_t& read_to) -> ErrorCode {
+    Reader reader{[&](char* dst_buf, size_t count, size_t& read_to) -> ErrorCode {
+        uint32_t unparsed_string_pos = 0;
+        std::span<char> const buf{dst_buf, count};
         if(unparsed_string_pos + count > schema_string.length()) {
             count = schema_string.length() - unparsed_string_pos;
         }

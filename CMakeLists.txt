@@ -73,7 +73,7 @@ target_include_directories(log_surgeon
     )
 
 target_compile_features(log_surgeon
-    PRIVATE cxx_std_17
+    PRIVATE cxx_std_20
     )
 
 target_compile_options(log_surgeon PRIVATE
