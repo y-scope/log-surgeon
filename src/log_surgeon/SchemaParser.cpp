@@ -83,7 +83,7 @@ auto SchemaParser::try_schema_string(string const& schema_string) -> unique_ptr<
              return ErrorCode::EndOfFile;
         }
         for(uint32_t i = 0; i < count; i++) {
-            *(buf + i) = schema_string[unparsed_string_pos + i];
+            buf[i] = schema_string[unparsed_string_pos + i];
         }
         unparsed_string_pos += count;
         return ErrorCode::Success;
