@@ -388,10 +388,10 @@ static auto new_delimiter_string_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
 }
 
 void SchemaParser::add_lexical_rules() {
-    add_token("Tab", '\t');             // 9
-    add_token("NewLine", '\n');         // 10
-    add_token("VerticalTab", '\v');     // 11
-    add_token("FormFeed", '\f');        // 12
+    add_token("Tab", '\t');  // 9
+    add_token("NewLine", '\n');  // 10
+    add_token("VerticalTab", '\v');  // 11
+    add_token("FormFeed", '\f');  // 12
     add_token("CarriageReturn", '\r');  // 13
     add_token("Space", ' ');
     add_token("Bang", '!');

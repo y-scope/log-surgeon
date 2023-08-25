@@ -227,7 +227,7 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lr0_closure(ItemSet* item
             assert(false);
         }
         for (Production* const p : m_non_terminals.at(next_symbol)) {  // S -> a
-            q.emplace_back(p, 0, cNullSymbol);                         // {S -> (dot) a, ""}
+            q.emplace_back(p, 0, cNullSymbol);  // {S -> (dot) a, ""}
         }
     }
 }
