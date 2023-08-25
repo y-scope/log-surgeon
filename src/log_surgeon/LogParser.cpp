@@ -27,17 +27,10 @@ using finite_automata::RegexASTOr;
 using finite_automata::RegexDFAByteState;
 using finite_automata::RegexNFAByteState;
 
-LogParser::LogParser(string const& schema_file_path) : m_has_start_of_log(false) {
-    std::unique_ptr<SchemaAST> schema_ast = SchemaParser::try_schema_file(schema_file_path);
-    add_delimiters(schema_ast->m_delimiters);
-    add_rules(schema_ast.get());
-    m_lexer.generate();
-}
+LogParser::LogParser(string const& schema_file_path)
+        : LogParser::LogParser(SchemaParser::try_schema_file(schema_file_path).get()) {}
 
 LogParser::LogParser(SchemaAST const* schema_ast) : m_has_start_of_log(false) {
-    for (auto const& delimiters : schema_ast->m_delimiters) {
-        add_delimiters(delimiters);
-    }
     add_rules(schema_ast);
     m_lexer.generate();
 }
@@ -50,13 +43,19 @@ auto LogParser::add_delimiters(unique_ptr<ParserAST> const& delimiters) -> void 
 }
 
 void LogParser::add_rules(SchemaAST const* schema_ast) {
-    // Currently, required to have delimiters (if schema_ast->delimiters !=
-    // nullptr it is already enforced that at least 1 delimiter is specified)
-    if (schema_ast->m_delimiters == nullptr) {
+    for (auto const& delimiters : schema_ast->m_delimiters) {
+        add_delimiters(delimiters);
+    }
+    vector<uint32_t> delimiters;
+    for (uint32_t i = 0; i < cSizeOfByte; i++) {
+        if (m_lexer.is_delimiter(i)) {
+            delimiters.push_back(i);
+        }
+    }
+    // Currently, required to have delimiters
+    if (delimiters.empty()) {
         throw runtime_error("When using --schema-path, \"delimiters:\" line must be used.");
     }
-    vector<uint32_t>& delimiters
-            = dynamic_cast<DelimiterStringAST*>(schema_ast->m_delimiters.get())->m_delimiters;
     add_token("newLine", '\n');
     for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* rule = dynamic_cast<SchemaVarAST*>(parser_ast.get());
