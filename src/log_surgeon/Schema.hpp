@@ -26,7 +26,7 @@ public:
      * @param regex
      * @param priority
      */
-    auto add_variable(const std::string& var_name, const std::string& regex, int priority) -> void;
+    auto add_variable(std::string const& var_name, std::string const& regex, int priority) -> void;
 
     /* Work in progress API to modify a schema object
 
