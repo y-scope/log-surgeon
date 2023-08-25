@@ -160,23 +160,24 @@ auto LogParser::parse(
             if (ErrorCode err = get_next_symbol(next_token); ErrorCode::Success != err) {
                 return err;
             }
-            if(false == output_buffer->has_timestamp() &&
-                next_token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenNewlineTimestampId) 
+            if (false == output_buffer->has_timestamp()
+                && next_token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenNewlineTimestampId)
             {
                 // TODO: combine with found_start_of_next_message into 1
                 //  function
                 // increment by 1 because the '\n' character is not part of the
                 // next log message
                 m_start_of_log_message = next_token;
-                if (m_start_of_log_message.m_start_pos == m_start_of_log_message.m_buffer_size - 1) {
+                if (m_start_of_log_message.m_start_pos == m_start_of_log_message.m_buffer_size - 1)
+                {
                     m_start_of_log_message.m_start_pos = 0;
                 } else {
                     m_start_of_log_message.m_start_pos++;
                 }
                 // make a message with just the '\n' character
                 next_token.m_end_pos = next_token.m_start_pos + 1;
-                next_token.m_type_ids_ptr =
-                        &Lexer<RegexNFAByteState, RegexDFAByteState>::cTokenUncaughtStringTypes;
+                next_token.m_type_ids_ptr
+                        = &Lexer<RegexNFAByteState, RegexDFAByteState>::cTokenUncaughtStringTypes;
                 output_buffer->set_token(1, next_token);
                 output_buffer->set_pos(2);
                 m_input_buffer.set_consumed_pos(next_token.m_start_pos);

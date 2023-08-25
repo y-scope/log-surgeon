@@ -77,14 +77,14 @@ auto SchemaParser::try_schema_string(string const& schema_string) -> unique_ptr<
     Reader reader{[&](char* dst_buf, size_t count, size_t& read_to) -> ErrorCode {
         uint32_t unparsed_string_pos = 0;
         std::span<char> const buf{dst_buf, count};
-        if(unparsed_string_pos + count > schema_string.length()) {
+        if (unparsed_string_pos + count > schema_string.length()) {
             count = schema_string.length() - unparsed_string_pos;
         }
         read_to = count;
-        if(read_to == 0) {
-             return ErrorCode::EndOfFile;
+        if (read_to == 0) {
+            return ErrorCode::EndOfFile;
         }
-        for(uint32_t i = 0; i < count; i++) {
+        for (uint32_t i = 0; i < count; i++) {
             buf[i] = schema_string[unparsed_string_pos + i];
         }
         unparsed_string_pos += count;
@@ -388,10 +388,10 @@ static auto new_delimiter_string_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
 }
 
 void SchemaParser::add_lexical_rules() {
-    add_token("Tab", '\t');  // 9
-    add_token("NewLine", '\n');  // 10
-    add_token("VerticalTab", '\v');  // 11
-    add_token("FormFeed", '\f');  // 12
+    add_token("Tab", '\t');             // 9
+    add_token("NewLine", '\n');         // 10
+    add_token("VerticalTab", '\v');     // 11
+    add_token("FormFeed", '\f');        // 12
     add_token("CarriageReturn", '\r');  // 13
     add_token("Space", ' ');
     add_token("Bang", '!');

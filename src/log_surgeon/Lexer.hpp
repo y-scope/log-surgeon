@@ -114,7 +114,7 @@ public:
             -> ErrorCode;
 
     /**
-     * Grows the capacity of the passed in input buffer if it is not large 
+     * Grows the capacity of the passed in input buffer if it is not large
      * enough to store the contents of an entire LogEvent. Then, adjusts any
      * values being tracked in the lexer related to the input buffer if needed.
      * @param parser_input_buffer Buffer which size needs to be checked.

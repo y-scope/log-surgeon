@@ -303,7 +303,8 @@ auto Lexer<NFAStateType, DFAStateType>::increase_buffer_capacity(ParserInputBuff
     uint32_t old_storage_size{0};
     bool flipped_static_buffer{false};
     if (ErrorCode err = input_buffer.increase_capacity(old_storage_size, flipped_static_buffer);
-        ErrorCode::Success != err) {
+        ErrorCode::Success != err)
+    {
         return err;
     }
     if (old_storage_size < input_buffer.storage().size()) {

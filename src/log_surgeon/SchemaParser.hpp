@@ -18,7 +18,7 @@ public:
     }
 
     auto add_schema_var(std::unique_ptr<ParserAST> schema_var, int32_t pos = -1) -> void {
-        if(pos == -1) {
+        if (pos == -1) {
             m_schema_vars.push_back(std::move(schema_var));
         } else {
             m_schema_vars.insert(m_schema_vars.begin() + pos, std::move(schema_var));
