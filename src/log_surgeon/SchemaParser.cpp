@@ -128,7 +128,7 @@ static auto new_schema_rule_with_var(NonTerminal* m) -> unique_ptr<SchemaAST> {
 static auto new_schema_rule_with_delimiters(NonTerminal* m) -> unique_ptr<SchemaAST> {
     unique_ptr<ParserAST>& r1 = m->non_terminal_cast(2)->get_parser_ast();
     unique_ptr<SchemaAST> schema_ast = make_unique<SchemaAST>();
-    schema_ast->set_delimiters(std::move(r1));
+    schema_ast->add_delimiters(std::move(r1));
     return schema_ast;
 }
 
@@ -136,7 +136,7 @@ static auto existing_schema_rule_with_delimiter(NonTerminal* m) -> unique_ptr<Sc
     unique_ptr<ParserAST>& r1 = m->non_terminal_cast(0)->get_parser_ast();
     std::unique_ptr<SchemaAST> schema_ast(dynamic_cast<SchemaAST*>(r1.release()));
     unique_ptr<ParserAST>& r5 = m->non_terminal_cast(4)->get_parser_ast();
-    schema_ast->set_delimiters(std::move(r5));
+    schema_ast->add_delimiters(std::move(r5));
     return schema_ast;
 }
 

@@ -35,7 +35,9 @@ LogParser::LogParser(string const& schema_file_path) : m_has_start_of_log(false)
 }
 
 LogParser::LogParser(SchemaAST const* schema_ast) : m_has_start_of_log(false) {
-    add_delimiters(schema_ast->m_delimiters);
+    for (auto const& delimiters : schema_ast->m_delimiters) {
+        add_delimiters(delimiters);
+    }
     add_rules(schema_ast);
     m_lexer.generate();
 }

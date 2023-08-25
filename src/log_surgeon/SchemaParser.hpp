@@ -12,9 +12,8 @@ public:
     // Constructor
     SchemaAST() = default;
 
-    // TODO: shouldn't this add delimiters instead of setting it?
-    auto set_delimiters(std::unique_ptr<ParserAST> delimiters_in) -> void {
-        m_delimiters = std::move(delimiters_in);
+    auto add_delimiters(std::unique_ptr<ParserAST> delimiters_in) -> void {
+        m_delimiters.push_back(std::move(delimiters_in));
     }
 
     auto add_schema_var(std::unique_ptr<ParserAST> schema_var, int32_t pos = -1) -> void {
@@ -26,7 +25,7 @@ public:
     }
 
     std::vector<std::unique_ptr<ParserAST>> m_schema_vars;
-    std::unique_ptr<ParserAST> m_delimiters;
+    std::vector<std::unique_ptr<ParserAST>> m_delimiters;
     std::string m_file_path;
 };
 
