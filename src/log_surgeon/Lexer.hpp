@@ -118,11 +118,8 @@ public:
      * enough to store the contents of an entire LogEvent. Then, adjusts any
      * values being tracked in the lexer related to the input buffer if needed.
      * @param parser_input_buffer Buffer which size needs to be checked.
-     * @return ErrorCode::Success
-     * @throw It is possible for std::bad_alloc to be thrown in the case
-     * allocation of the new buffer fails.
      */
-    auto increase_buffer_capacity(ParserInputBuffer& input_buffer);
+    auto increase_buffer_capacity(ParserInputBuffer& input_buffer) -> void;
 
     [[nodiscard]] auto get_has_delimiters() const -> bool const& { return m_has_delimiters; }
 

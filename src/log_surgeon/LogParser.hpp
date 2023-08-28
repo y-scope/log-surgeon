@@ -108,13 +108,8 @@ public:
     /**
      * Grows the capacity of the input buffer if it is not large enough to store
      * the contents of an entire LogEvent.
-     * @return ErrorCode::Success
-     * @throw It is possible for std::bad_alloc to be thrown in the case
-     * allocation of the new buffer fails.
      */
-    auto increase_capacity() -> ErrorCode {
-        return m_lexer.increase_buffer_capacity(m_input_buffer);
-    }
+    auto increase_capacity() -> void { m_lexer.increase_buffer_capacity(m_input_buffer); }
 
 private:
     /**

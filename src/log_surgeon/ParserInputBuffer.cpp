@@ -62,7 +62,7 @@ auto ParserInputBuffer::read(Reader& reader) -> ErrorCode {
 }
 
 auto ParserInputBuffer::increase_capacity(uint32_t& old_storage_size, bool& flipped_static_buffer)
-        -> ErrorCode {
+        -> void {
     old_storage_size = m_storage.size();
     uint32_t new_storage_size = old_storage_size * 2;
     flipped_static_buffer = false;
@@ -81,7 +81,6 @@ auto ParserInputBuffer::increase_capacity(uint32_t& old_storage_size, bool& flip
     m_last_read_first_half = true;
     m_pos_last_read_char = new_storage_size - old_storage_size;
     m_storage.set_pos(old_storage_size);
-    return ErrorCode::Success;
 }
 
 auto ParserInputBuffer::get_next_character(unsigned char& next_char) -> ErrorCode {

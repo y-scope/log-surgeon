@@ -34,9 +34,7 @@ auto ReaderParser::get_next_event_view(LogEventView& event_view) -> ErrorCode {
             break;
         }
         if (ErrorCode::BufferOutOfBounds == parse_error) {
-            if (ErrorCode err = m_log_parser.increase_capacity(); ErrorCode::Success != err) {
-                return err;
-            }
+            m_log_parser.increase_capacity();
             if (ErrorCode err = m_log_parser.read_into_input(m_reader);
                 ErrorCode::Success != err && ErrorCode::EndOfFile != err)
             {
