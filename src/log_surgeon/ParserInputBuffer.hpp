@@ -53,9 +53,9 @@ public:
      * content stored in the second half precedes the content stored in the
      * first half in the original log.
      * @param old_storage_size
-     * @return if old buffer was flipped when creating new buffer
+     * @param flipped_static_buffer
      */
-    auto increase_capacity(uint32_t& old_storage_size, bool& flipped_static_buffer) -> ErrorCode;
+    auto increase_capacity(uint32_t& old_storage_size, bool& flipped_static_buffer) -> void;
 
     /**
      * Attempt to get the next character from the input buffer.

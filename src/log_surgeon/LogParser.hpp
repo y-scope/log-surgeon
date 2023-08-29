@@ -13,7 +13,7 @@
 #include <log_surgeon/SchemaParser.hpp>
 
 namespace log_surgeon {
-/// TODO: Compare c-array vs. vectors (its underlying array) for buffers
+// TODO: Compare c-array vs. vectors (its underlying array) for buffers
 class LogParser
         : public Parser<finite_automata::RegexNFAByteState, finite_automata::RegexDFAByteState> {
 public:
@@ -57,15 +57,6 @@ public:
      */
     auto parse(std::unique_ptr<LogParserOutputBuffer>& output_buffer, ParsingAction& parsing_action)
             -> ErrorCode;
-
-    /**
-     * Flips the lexer states to match the static buffer flipping.
-     * @param old_storage_size The previous buffer size used to calculate the
-     * new states inside the flipped buffer.
-     */
-    auto flip_lexer_states(uint32_t old_storage_size) -> void {
-        m_lexer.flip_states(old_storage_size);
-    }
 
     // TODO protect against invalid id (use optional) and make const
     /**
@@ -117,19 +108,8 @@ public:
     /**
      * Grows the capacity of the input buffer if it is not large enough to store
      * the contents of an entire LogEvent.
-     * @param old_storage_size Populated with the previous size of the input
-     * buffer.
-     * @param flipped_static_buffer Populated with whether the buffer needed to
-     * be flipped while copying. If true then the second half of the old buffer
-     * contained data preceeding the first half of the old buffer. The order of
-     * data in the new buffer will be sequential.
-     * @return ErrorCode::Success
-     * @throw It is possible for std::bad_alloc to be thrown in the case
-     * allocation of the new buffer fails.
      */
-    auto increase_capacity(uint32_t& old_storage_size, bool& flipped_static_buffer) -> ErrorCode {
-        return m_input_buffer.increase_capacity(old_storage_size, flipped_static_buffer);
-    }
+    auto increase_capacity() -> void { m_lexer.increase_buffer_capacity(m_input_buffer); }
 
 private:
     /**
@@ -156,6 +136,7 @@ private:
      */
     auto add_rules(SchemaAST const* schema_ast) -> void;
 
+    // TODO: move ownership of the buffer to the lexer
     ParserInputBuffer m_input_buffer;
     bool m_has_start_of_log;
     Token m_start_of_log_message{};

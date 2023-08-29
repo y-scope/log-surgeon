@@ -82,6 +82,11 @@ For advanced uses, `log-surgeon` also has a
 
 ## Building and installing
 
+Requirements:
+
+* CMake
+* GCC >= 10 or Clang >= 7
+
 From the repo's root, run:
 ```shell
 # Generate the CMake project

@@ -34,17 +34,7 @@ auto ReaderParser::get_next_event_view(LogEventView& event_view) -> ErrorCode {
             break;
         }
         if (ErrorCode::BufferOutOfBounds == parse_error) {
-            uint32_t old_storage_size{0};
-            bool flipped_static_buffer{false};
-            if (ErrorCode err
-                = m_log_parser.increase_capacity(old_storage_size, flipped_static_buffer);
-                ErrorCode::Success != err)
-            {
-                return err;
-            }
-            if (flipped_static_buffer) {
-                m_log_parser.flip_lexer_states(old_storage_size);
-            }
+            m_log_parser.increase_capacity();
             if (ErrorCode err = m_log_parser.read_into_input(m_reader);
                 ErrorCode::Success != err && ErrorCode::EndOfFile != err)
             {

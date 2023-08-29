@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <memory>
+#include <span>
 #include <stdexcept>
 
 #include <log_surgeon/Constants.hpp>
@@ -72,6 +73,27 @@ auto SchemaParser::try_schema_file(string const& schema_file_path) -> unique_ptr
     return schema_ast;
 }
 
+auto SchemaParser::try_schema_string(string const& schema_string) -> unique_ptr<SchemaAST> {
+    Reader reader{[&](char* dst_buf, size_t count, size_t& read_to) -> ErrorCode {
+        uint32_t unparsed_string_pos = 0;
+        std::span<char> const buf{dst_buf, count};
+        if (unparsed_string_pos + count > schema_string.length()) {
+            count = schema_string.length() - unparsed_string_pos;
+        }
+        read_to = count;
+        if (read_to == 0) {
+            return ErrorCode::EndOfFile;
+        }
+        for (uint32_t i = 0; i < count; i++) {
+            buf[i] = schema_string[unparsed_string_pos + i];
+        }
+        unparsed_string_pos += count;
+        return ErrorCode::Success;
+    }};
+    SchemaParser sp;
+    return sp.generate_schema_ast(reader);
+}
+
 static auto new_identifier_rule(NonTerminal* m) -> unique_ptr<IdentifierAST> {
     string r1 = m->token_cast(0)->to_string();
     return make_unique<IdentifierAST>(IdentifierAST(r1[0]));
@@ -106,7 +128,7 @@ static auto new_schema_rule_with_var(NonTerminal* m) -> unique_ptr<SchemaAST> {
 static auto new_schema_rule_with_delimiters(NonTerminal* m) -> unique_ptr<SchemaAST> {
     unique_ptr<ParserAST>& r1 = m->non_terminal_cast(2)->get_parser_ast();
     unique_ptr<SchemaAST> schema_ast = make_unique<SchemaAST>();
-    schema_ast->set_delimiters(std::move(r1));
+    schema_ast->add_delimiters(std::move(r1));
     return schema_ast;
 }
 
@@ -114,7 +136,7 @@ static auto existing_schema_rule_with_delimiter(NonTerminal* m) -> unique_ptr<Sc
     unique_ptr<ParserAST>& r1 = m->non_terminal_cast(0)->get_parser_ast();
     std::unique_ptr<SchemaAST> schema_ast(dynamic_cast<SchemaAST*>(r1.release()));
     unique_ptr<ParserAST>& r5 = m->non_terminal_cast(4)->get_parser_ast();
-    schema_ast->set_delimiters(std::move(r5));
+    schema_ast->add_delimiters(std::move(r5));
     return schema_ast;
 }
 

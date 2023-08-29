@@ -113,6 +113,14 @@ public:
     auto scan_with_wildcard(ParserInputBuffer& input_buffer, char wildcard, Token& token)
             -> ErrorCode;
 
+    /**
+     * Grows the capacity of the passed in input buffer if it is not large
+     * enough to store the contents of an entire LogEvent. Then, adjusts any
+     * values being tracked in the lexer related to the input buffer if needed.
+     * @param parser_input_buffer Buffer which size needs to be checked.
+     */
+    auto increase_buffer_capacity(ParserInputBuffer& input_buffer) -> void;
+
     [[nodiscard]] auto get_has_delimiters() const -> bool const& { return m_has_delimiters; }
 
     [[nodiscard]] auto is_delimiter(uint8_t byte) const -> bool const& {

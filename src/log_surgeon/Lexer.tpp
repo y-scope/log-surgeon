@@ -299,6 +299,23 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(
 }
 
 template <typename NFAStateType, typename DFAStateType>
+auto Lexer<NFAStateType, DFAStateType>::increase_buffer_capacity(ParserInputBuffer& input_buffer)
+        -> void {
+    uint32_t old_storage_size{0};
+    bool flipped_static_buffer{false};
+    input_buffer.increase_capacity(old_storage_size, flipped_static_buffer);
+    if (old_storage_size < input_buffer.storage().size()) {
+        if (flipped_static_buffer) {
+            flip_states(old_storage_size);
+        }
+        if (0 == m_last_match_pos) {
+            m_last_match_pos = old_storage_size;
+            m_start_pos = old_storage_size;
+        }
+    }
+}
+
+template <typename NFAStateType, typename DFAStateType>
 void Lexer<NFAStateType, DFAStateType>::reset() {
     m_last_match_pos = 0;
     m_match = false;

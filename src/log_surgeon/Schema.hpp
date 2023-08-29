@@ -18,9 +18,18 @@ public:
 
     explicit Schema(std::string const& schema_file_path);
 
-    /* Work in progress API to modify a schema object
+    /**
+     * Parses var_name+":"+regex as if it were its own entire schema file. Then
+     * extracts the SchemaVarAST from the resulting SchemaAST and adds it to
+     * m_schema_vars in m_schema_ast. Position in m_schema_vars is determined by
+     * the priority (priority == -1 to set to lowest).
+     * @param var_name
+     * @param regex
+     * @param priority
+     */
+    auto add_variable(std::string const& var_name, std::string const& regex, int priority) -> void;
 
-    auto add_variable (std::string& var_name, std::string& regex) -> void;
+    /* Work in progress API to modify a schema object
 
     auto remove_variable (std::string var_name) -> void;
 
