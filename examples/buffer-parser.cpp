@@ -75,7 +75,9 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
             continue;
         }
 
+        cout << "log: " << event.to_string() << endl;
         print_timestamp_loglevel(event, *loglevel_id);
+        cout << "logtype: " << event.get_logtype() << endl;
         if (event.is_multiline()) {
             multiline_logs.emplace_back(event);
         }

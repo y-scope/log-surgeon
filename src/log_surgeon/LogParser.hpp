@@ -58,13 +58,13 @@ public:
     auto parse(std::unique_ptr<LogParserOutputBuffer>& output_buffer, ParsingAction& parsing_action)
             -> ErrorCode;
 
-    // TODO protect against invalid id (use optional) and make const
+    // TODO protect against invalid id (use optional)
     /**
      * @param id The integer ID of the symbol from the schema.
      * @return the name of the variable type / symbol from the schema using its
      * integer ID.
      */
-    auto get_id_symbol(uint32_t id) -> std::string { return m_lexer.m_id_symbol[id]; }
+    auto get_id_symbol(uint32_t id) const -> std::string { return m_lexer.m_id_symbol.at(id); }
 
     /**
      * @param symbol name of the variable type from the schema.

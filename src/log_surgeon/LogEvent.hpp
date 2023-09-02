@@ -95,8 +95,8 @@ public:
     /**
      * Constructs a user friendly/readable representation of the log event's
      * logtype. A logtype is essentially the static text of a log event with the
-     * variable components replaced with their name/id. Therefore, two separate
-     * log events from the same logging source code may have the same logtype.
+     * variable components replaced with their name. Therefore, two separate log
+     * events from the same logging source code may have the same logtype.
      * @return The logtype of the log.
      */
     auto get_logtype() -> std::string;
