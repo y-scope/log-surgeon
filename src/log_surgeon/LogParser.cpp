@@ -151,9 +151,6 @@ void LogParser::add_rules(SchemaAST const* schema_ast) {
 auto LogParser::reset() -> void {
     m_input_buffer.reset();
     m_lexer.reset();
-}
-
-auto LogParser::prepend_SOF() -> void {
     m_lexer.prepend_SOF(m_input_buffer);
 }
 

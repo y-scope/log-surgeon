@@ -47,12 +47,6 @@ public:
     auto reset() -> void;
 
     /**
-     * Set the lexer state as if it had already read a delimiter (used for
-     * treating start of file as a delimiter)
-     */
-    auto prepend_SOF() -> void;
-
-    /**
      * Parses the input buffer until a complete log event has been parsed and
      * its tokens are stored into output_buffer.
      * @param output_buffer Buffer to write Token objects to as they are parsed.
