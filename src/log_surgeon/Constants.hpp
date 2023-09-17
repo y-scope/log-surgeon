@@ -48,6 +48,7 @@ namespace utf8 {
     // 0xFF are invalid UTF-8 code units
     static unsigned char const cCharEOF = 0xFF;
     static unsigned char const cCharErr = 0xFE;
+    static unsigned char const cCharSOF = 0xFD;
 }  // namespace utf8
 }  // namespace log_surgeon
 

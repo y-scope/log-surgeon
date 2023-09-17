@@ -45,6 +45,12 @@ public:
     auto reset_and_set_reader(Reader& reader) -> void;
 
     /**
+     * Set the lexer state as if it had already read a delimiter (used for
+     * treating start of file as a delimiter)
+     */
+    auto prepend_SOF() -> void;
+
+    /**
      * Attempts to parse the next log event from the internal `Reader`. Users
      * should add their own error handling and tracking logic to Reader::read,
      * in order to retrieve IO errors.

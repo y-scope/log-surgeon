@@ -17,6 +17,10 @@ auto ReaderParser::reset_and_set_reader(Reader& reader) -> void {
     m_reader = reader;
 }
 
+auto ReaderParser::prepend_SOF() -> void {
+    m_log_parser.prepend_SOF();
+}
+
 auto ReaderParser::get_next_event_view(LogEventView& event_view) -> ErrorCode {
     event_view.reset();
     if (ErrorCode err = m_log_parser.read_into_input(m_reader);
