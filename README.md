@@ -98,7 +98,7 @@ cmake --install ./build --prefix ~/.local
 ```
 
 To build the debug version replace the first command with:
-`cmake -S . -B ./build -j -DCMAKE_BUILD_TYPE=Debug`
+`cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug`
 
 ## Documentation and examples
 
