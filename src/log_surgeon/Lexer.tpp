@@ -330,8 +330,8 @@ void Lexer<NFAStateType, DFAStateType>::reset() {
 }
 
 template <typename NFAStateType, typename DFAStateType>
-void Lexer<NFAStateType, DFAStateType>::prepend_SOF(ParserInputBuffer& input_buffer) {
-    m_prev_state = m_dfa->get_root()->next(utf8::cCharSOF);
+void Lexer<NFAStateType, DFAStateType>::prepend_start_of_file(ParserInputBuffer& input_buffer) {
+    m_prev_state = m_dfa->get_root()->next(utf8::cCharStartOfFile);
     m_asked_for_more_data = true;
     m_start_pos = input_buffer.storage().pos();
     m_match_pos = input_buffer.storage().pos();
@@ -349,7 +349,7 @@ void Lexer<NFAStateType, DFAStateType>::add_delimiters(std::vector<uint32_t> con
     for (uint32_t delimiter : delimiters) {
         m_is_delimiter[delimiter] = true;
     }
-    m_is_delimiter[utf8::cCharSOF] = true;
+    m_is_delimiter[utf8::cCharStartOfFile] = true;
 }
 
 template <typename NFAStateType, typename DFAStateType>

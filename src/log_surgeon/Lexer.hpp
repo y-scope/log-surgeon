@@ -88,7 +88,7 @@ public:
      * treating start of file as a delimiter)
      * @param input_buffer containing the data to be lexed
      */
-    auto prepend_SOF(ParserInputBuffer& input_buffer) -> void;
+    auto prepend_start_of_file(ParserInputBuffer& input_buffer) -> void;
 
     /**
      * Flip lexer states to match static buffer flipping.
