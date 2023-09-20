@@ -151,7 +151,7 @@ void LogParser::add_rules(SchemaAST const* schema_ast) {
 auto LogParser::reset() -> void {
     m_input_buffer.reset();
     m_lexer.reset();
-    m_lexer.prepend_start_of_file(m_input_buffer);
+    m_lexer.prepend_start_of_file_char(m_input_buffer);
 }
 
 // TODO: if the first text is a variable in the no timestamp case you lose the
