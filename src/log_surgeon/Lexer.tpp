@@ -330,7 +330,8 @@ void Lexer<NFAStateType, DFAStateType>::reset() {
 }
 
 template <typename NFAStateType, typename DFAStateType>
-void Lexer<NFAStateType, DFAStateType>::prepend_start_of_file_char(ParserInputBuffer& input_buffer) {
+void Lexer<NFAStateType, DFAStateType>::prepend_start_of_file_char(ParserInputBuffer& input_buffer
+) {
     m_prev_state = m_dfa->get_root()->next(utf8::cCharStartOfFile);
     m_asked_for_more_data = true;
     m_start_pos = input_buffer.storage().pos();
