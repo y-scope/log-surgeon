@@ -84,6 +84,13 @@ public:
     auto reset() -> void;
 
     /**
+     * Set the lexer state as if it had already read a delimiter (used for
+     * treating start of file as a delimiter)
+     * @param input_buffer containing the data to be lexed
+     */
+    auto prepend_start_of_file_char(ParserInputBuffer& input_buffer) -> void;
+
+    /**
      * Flip lexer states to match static buffer flipping.
      * @param old_storage_size The previous buffer size used to calculate the
      * new states inside the flipped buffer.

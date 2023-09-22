@@ -63,7 +63,15 @@ void LogParser::add_rules(SchemaAST const* schema_ast) {
             unique_ptr<RegexAST<RegexNFAByteState>> first_timestamp_regex_ast(
                     rule->m_regex_ptr->clone()
             );
-            add_rule("firstTimestamp", std::move(first_timestamp_regex_ast));
+            unique_ptr<RegexASTLiteral<RegexNFAByteState>> r1
+                    = make_unique<RegexASTLiteral<RegexNFAByteState>>(utf8::cCharStartOfFile);
+            add_rule(
+                    "firstTimestamp",
+                    make_unique<RegexASTCat<RegexNFAByteState>>(
+                            std::move(r1),
+                            std::move(first_timestamp_regex_ast)
+                    )
+            );
             unique_ptr<RegexAST<RegexNFAByteState>> newline_timestamp_regex_ast(
                     rule->m_regex_ptr->clone()
             );
@@ -143,6 +151,7 @@ void LogParser::add_rules(SchemaAST const* schema_ast) {
 auto LogParser::reset() -> void {
     m_input_buffer.reset();
     m_lexer.reset();
+    m_lexer.prepend_start_of_file_char(m_input_buffer);
 }
 
 // TODO: if the first text is a variable in the no timestamp case you lose the

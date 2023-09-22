@@ -96,7 +96,7 @@ delimiters: \t\r\n:,!;%
 timestamp:\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3}){0,1}
 timestamp:\[\d{8}\-\d{2}:\d{2}:\d{2}\]
 int:\-{0,1}[0-9]+
-double:\-{0,1}[0-9]+\.[0-9]+
+float:\-{0,1}[0-9]+\.[0-9]+
 
 // Custom variables
 hex:[a-fA-F]+
@@ -109,7 +109,7 @@ equals:.*=.*[a-zA-Z0-9].*
 * `timestamp` matches two different patterns:
     * 2023-04-19 12:32:08.064
     * [20230419-12:32:08]
-* `int`, `double`, `hex`, `hasNumber`, and `equals` all match different user
+* `int`, `float`, `hex`, `hasNumber`, and `equals` all match different user
   defined variables.
 
 ## Regular Expression Syntax
