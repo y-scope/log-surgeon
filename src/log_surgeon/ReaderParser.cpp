@@ -26,9 +26,7 @@ auto ReaderParser::parse_next_event() -> ErrorCode {
     }
     while (true) {
         LogParser::ParsingAction parsing_action{LogParser::ParsingAction::None};
-        ErrorCode parse_error = m_log_parser.parse(
-                parsing_action
-        );
+        ErrorCode parse_error = m_log_parser.parse(parsing_action);
         if (ErrorCode::Success == parse_error) {
             if (LogParser::ParsingAction::CompressAndFinish == parsing_action) {
                 m_done = true;

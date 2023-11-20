@@ -29,9 +29,7 @@ auto BufferParser::parse_next_event(
     // the user
     m_log_parser.set_input_buffer(buf, size, offset, finished_reading_input);
     LogParser::ParsingAction parsing_action{LogParser::ParsingAction::None};
-    ErrorCode error_code = m_log_parser.parse(
-            parsing_action
-    );
+    ErrorCode error_code = m_log_parser.parse(parsing_action);
     if (ErrorCode::Success != error_code) {
         if (0 != m_log_parser.get_log_event_view().m_log_output_buffer->pos()) {
             offset = m_log_parser.get_log_event_view()

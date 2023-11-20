@@ -66,12 +66,9 @@ public:
      * internally before this method returns.
      * @return ErrorCode from LogParser::parse.
      */
-    auto parse_next_event(
-            char* buf,
-            size_t size,
-            size_t& offset,
-            bool finished_reading_input = false
-    ) -> ErrorCode;
+    auto
+    parse_next_event(char* buf, size_t size, size_t& offset, bool finished_reading_input = false)
+            -> ErrorCode;
 
     /**
      * @return The underlying LogParser.
