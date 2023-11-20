@@ -35,6 +35,7 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
     if (infs.eof()) {
         input_done = true;
     }
+    parser.reset();
 
     cout << "# Parsing timestamp and loglevel for each log event in " << input_path << ":" << endl;
 
@@ -82,7 +83,6 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
             multiline_logs.emplace_back(event);
         }
     }
-    parser.reset();
 
     cout << endl << "# Printing multiline logs:" << endl;
     for (auto const& log : multiline_logs) {
