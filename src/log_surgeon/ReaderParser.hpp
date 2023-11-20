@@ -36,7 +36,7 @@ public:
     /**
      * Clears the internal state of the log parser (lexer and input buffer),
      * and sets the reader containing the logs to be parsed. The next call to
-     * get_next_event_view will begin parsing from scratch. This is an
+     * parse_next_event will begin parsing from scratch. This is an
      * alternative to constructing a new Parser that would require rebuilding
      * the LogParser (generating a new lexer and input buffer). This should be
      * called whenever new input is needed.
@@ -47,16 +47,16 @@ public:
     /**
      * Attempts to parse the next log event from the internal `Reader`. Users
      * should add their own error handling and tracking logic to Reader::read,
-     * in order to retrieve IO errors.
-     * @param event_view Populated with the LogEventView parsed from the reader.
-     * Only valid if ErrorCode::Success is returned.
+     * in order to retrieve IO errors. The result is stored in
+     * m_log_parser.log_event_view, and only valid if ErrorCode::Success is
+     * returned.
      * @return ErrorCode::Success if a log event is successfully parsed as a
      * LogEventView.
      * @return ErrorCode from LogParser::parse.
      * @return ErrorCode from the user defined Reader::read.
      * @throw std::bad_alloc if a log event is large enough to exhaust memory.
      */
-    auto get_next_event_view(LogEventView& event_view) -> ErrorCode;
+    auto parse_next_event() -> ErrorCode;
 
     /**
      * @return The underlying LogParser.

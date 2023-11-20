@@ -12,7 +12,7 @@ endif()
 # files.
 # For example, if log-surgeon was installed to ~/.local:
 # set(log_surgeon_DIR "~/.local/lib/cmake/log_surgeon/")
-find_package(log_surgeon REQUIRED)
+add_subdirectory(.. log-surgeon-build EXCLUDE_FROM_ALL)
 
 function(add_to_target target libraries)
     target_link_libraries(${target} ${libraries})

@@ -27,7 +27,7 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
         return;
     }
 
-    constexpr ssize_t const cSize{4096L * 8}; // 8 pages
+    constexpr ssize_t const cSize{4096L * 8};  // 8 pages
     vector<char> buf(cSize);
     infs.read(buf.data(), cSize);
     ssize_t valid_size{infs.gcount()};
@@ -40,11 +40,11 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
 
     vector<LogEvent> multiline_logs;
     size_t offset{0};
-    LogEventView event{&parser.get_log_parser()};
+    LogEventView const& event = parser.get_log_parser().get_log_event_view();
     while (false == parser.done()) {
-        if (ErrorCode err{
-                    parser.get_next_event_view(buf.data(), valid_size, offset, event, input_done)};
-            ErrorCode::Success != err) {
+        if (ErrorCode err{parser.parse_next_event(buf.data(), valid_size, offset, input_done)};
+            ErrorCode::Success != err)
+        {
             // The only expected error is the parser has read to the bound
             // of the buffer.
             if (ErrorCode::BufferOutOfBounds != err) {

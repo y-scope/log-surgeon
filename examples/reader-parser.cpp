@@ -39,9 +39,9 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
     cout << "# Parsing timestamp and loglevel for each log event in " << input_path << ":" << endl;
 
     vector<LogEvent> multiline_logs;
-    LogEventView event{&parser.get_log_parser()};
+    LogEventView const& event = parser.get_log_parser().get_log_event_view();
     while (false == parser.done()) {
-        if (ErrorCode err{parser.get_next_event_view(event)}; ErrorCode::Success != err) {
+        if (ErrorCode err{parser.parse_next_event()}; ErrorCode::Success != err) {
             throw runtime_error("Parsing Failed");
         }
 

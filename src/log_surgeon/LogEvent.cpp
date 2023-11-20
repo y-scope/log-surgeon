@@ -10,10 +10,13 @@
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
-LogEventView::LogEventView(LogParser const* log_parser)
-        : m_log_parser{log_parser},
-          m_log_var_occurrences{log_parser->m_lexer.m_id_symbol.size()} {
+LogEventView::LogEventView() : m_log_parser{nullptr}, m_log_var_occurrences{0} {
     m_log_output_buffer = std::make_unique<LogParserOutputBuffer>();
+}
+
+auto LogEventView::init(LogParser const* log_parser) -> void {
+    m_log_parser = log_parser;
+    m_log_var_occurrences.resize(log_parser->m_lexer.m_id_symbol.size());
 }
 
 auto LogEventView::deep_copy() const -> LogEvent {
@@ -48,7 +51,7 @@ auto LogEventView::reset() -> void {
     return raw_log;
 }
 
-auto LogEventView::get_logtype() -> std::string {
+auto LogEventView::get_logtype() const -> std::string {
     std::string logtype;
     for (uint32_t i = 1; i < m_log_output_buffer->pos(); i++) {
         Token& token = m_log_output_buffer->get_mutable_token(i);
@@ -64,7 +67,8 @@ auto LogEventView::get_logtype() -> std::string {
     return logtype;
 }
 
-LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()} {
+LogEvent::LogEvent(LogEventView const& src) : LogEventView{} {
+    init(src.get_log_parser());
     set_multiline(src.is_multiline());
     m_log_output_buffer->set_has_timestamp(src.m_log_output_buffer->has_timestamp());
     m_log_output_buffer->set_has_delimiters(src.m_log_output_buffer->has_delimiters());
