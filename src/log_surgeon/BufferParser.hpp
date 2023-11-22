@@ -50,8 +50,8 @@ public:
      * bytes between offset and size may contain a partial log event. It is the
      * user's responsibility to preserve these bytes when mutating the buffer
      * to contain more of the log event before the next call of
-     * get_next_log_view. The result is stored in m_log_parser.log_event_view,
-     * and only valid if ErrorCode::Success is returned.
+     * get_next_log_view. The result is stored internally and is only valid if
+     * ErrorCode::Success is returned.
      * @param buf The byte buffer containing raw log events to be parsed.
      * @param size The size of the buffer.
      * @param offset The starting position in the buffer of the current log
