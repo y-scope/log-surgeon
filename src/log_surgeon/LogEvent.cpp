@@ -10,7 +10,7 @@
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
-LogEventView::LogEventView() : m_log_parser{nullptr}, m_log_var_occurrences{0} {
+LogEventView::LogEventView() {
     m_log_output_buffer = std::make_unique<LogParserOutputBuffer>();
 }
 

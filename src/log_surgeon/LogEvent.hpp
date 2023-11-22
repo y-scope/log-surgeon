@@ -127,8 +127,8 @@ public:
 
 private:
     bool m_multiline{false};
-    LogParser const* m_log_parser;
-    std::vector<std::vector<Token*>> m_log_var_occurrences;
+    LogParser const* m_log_parser{nullptr};
+    std::vector<std::vector<Token*>> m_log_var_occurrences{};
 };
 
 /**
