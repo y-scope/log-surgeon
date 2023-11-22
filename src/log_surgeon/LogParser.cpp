@@ -33,7 +33,7 @@ LogParser::LogParser(string const& schema_file_path)
 LogParser::LogParser(SchemaAST const* schema_ast) {
     add_rules(schema_ast);
     m_lexer.generate();
-    m_log_event_view = make_unique<LogEventView>(this);
+    m_log_event_view = make_unique<LogEventView>(*this);
 }
 
 auto LogParser::add_delimiters(unique_ptr<ParserAST> const& delimiters) -> void {

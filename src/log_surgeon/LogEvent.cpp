@@ -10,9 +10,9 @@
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
-LogEventView::LogEventView(LogParser const* log_parser)
+LogEventView::LogEventView(LogParser const& log_parser)
         : m_log_parser{log_parser},
-          m_log_var_occurrences{log_parser->m_lexer.m_id_symbol.size()} {
+          m_log_var_occurrences{log_parser.m_lexer.m_id_symbol.size()} {
     m_log_output_buffer = std::make_unique<LogParserOutputBuffer>();
 }
 
@@ -56,12 +56,12 @@ auto LogEventView::get_logtype() const -> std::string {
             logtype += token.to_string_view();
         } else if (token.m_type_ids_ptr->at(0) == (int)log_surgeon::SymbolID::TokenNewlineId) {
             logtype += "<";
-            logtype += m_log_parser->get_id_symbol(token.m_type_ids_ptr->at(0));
+            logtype += m_log_parser.get_id_symbol(token.m_type_ids_ptr->at(0));
             logtype += ">";
         } else {
             logtype += token.get_delimiter();
             logtype += "<";
-            logtype += m_log_parser->get_id_symbol(token.m_type_ids_ptr->at(0));
+            logtype += m_log_parser.get_id_symbol(token.m_type_ids_ptr->at(0));
             logtype += ">";
         }
     }
