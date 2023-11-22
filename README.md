@@ -48,7 +48,6 @@ parser.reset_and_set_reader(reader);
 optional<uint32_t> loglevel_id{parser.get_variable_id("loglevel")};
 // <Omitted validation of loglevel_id>
 
-// Create a LogEventView (similar to a string_view)
 while (false == parser.done()) {
     if (ErrorCode err{parser.parse_next_event()}; ErrorCode::Success != err) {
         throw runtime_error("Parsing Failed");
