@@ -24,16 +24,10 @@ class LogEventView {
 public:
     /**
      * Constructs an empty LogEventView
-     */
-    explicit LogEventView();
-
-    /**
-     * Initialize log event view after the parser containing it has already
-     * been constructed, therefore this cannot be done in its own constructor
      * @param log_parser The LogParser whose input buffer the view will
      * reference
      */
-    auto init(LogParser const* log_parser) -> void;
+    explicit LogEventView(LogParser const* log_parser);
 
     /**
      * Copies the tokens representing a log event from the source buffer. This

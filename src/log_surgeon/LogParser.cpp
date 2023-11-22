@@ -30,10 +30,10 @@ using finite_automata::RegexNFAByteState;
 LogParser::LogParser(string const& schema_file_path)
         : LogParser::LogParser(SchemaParser::try_schema_file(schema_file_path).get()) {}
 
-LogParser::LogParser(SchemaAST const* schema_ast) : m_has_start_of_log(false), m_log_event_view{} {
+LogParser::LogParser(SchemaAST const* schema_ast) {
     add_rules(schema_ast);
     m_lexer.generate();
-    m_log_event_view.init(this);
+    m_log_event_view = make_unique<LogEventView>(this);
 }
 
 auto LogParser::add_delimiters(unique_ptr<ParserAST> const& delimiters) -> void {
@@ -167,7 +167,7 @@ auto LogParser::parse_and_generate_metadata(LogParser::ParsingAction& parsing_ac
 // first character to static text since it has no leading delim
 // TODO: switching between timestamped and non-timestamped logs
 auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
-    std::unique_ptr<LogParserOutputBuffer>& output_buffer = m_log_event_view.m_log_output_buffer;
+    std::unique_ptr<LogParserOutputBuffer>& output_buffer = m_log_event_view->m_log_output_buffer;
     if (0 == output_buffer->pos()) {
         output_buffer->set_has_delimiters(m_lexer.get_has_delimiters());
         Token next_token;
@@ -288,13 +288,13 @@ auto LogParser::get_next_symbol(Token& token) -> ErrorCode {
 
 auto LogParser::generate_log_event_view_metadata() -> void {
     uint32_t start = 0;
-    if (false == m_log_event_view.m_log_output_buffer->has_timestamp()) {
+    if (false == m_log_event_view->m_log_output_buffer->has_timestamp()) {
         start = 1;
     }
     uint32_t first_newline_pos{0};
-    for (uint32_t i = start; i < m_log_event_view.m_log_output_buffer->pos(); i++) {
-        Token* token = &m_log_event_view.m_log_output_buffer->get_mutable_token(i);
-        m_log_event_view.add_token(token->m_type_ids_ptr->at(0), token);
+    for (uint32_t i = start; i < m_log_event_view->m_log_output_buffer->pos(); i++) {
+        Token* token = &m_log_event_view->m_log_output_buffer->get_mutable_token(i);
+        m_log_event_view->add_token(token->m_type_ids_ptr->at(0), token);
         if (token->m_type_ids_ptr->at(0) == (int)SymbolID::TokenNewlineId && first_newline_pos == 0)
         {
             first_newline_pos = i;
@@ -302,10 +302,10 @@ auto LogParser::generate_log_event_view_metadata() -> void {
     }
     // To be a multiline log there must be at least one token between the
     // newline token and the last token in the output buffer.
-    if (m_log_event_view.m_log_output_buffer->has_timestamp() && 0 < first_newline_pos
-        && first_newline_pos + 1 < m_log_event_view.m_log_output_buffer->pos())
+    if (m_log_event_view->m_log_output_buffer->has_timestamp() && 0 < first_newline_pos
+        && first_newline_pos + 1 < m_log_event_view->m_log_output_buffer->pos())
     {
-        m_log_event_view.set_multiline(true);
+        m_log_event_view->set_multiline(true);
     }
 }
 }  // namespace log_surgeon

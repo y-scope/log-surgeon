@@ -112,12 +112,12 @@ public:
     /**
      * Resets the log event view to prepare for the next parse
      */
-    auto reset_log_event_view() -> void { m_log_event_view.reset(); }
+    auto reset_log_event_view() -> void { m_log_event_view->reset(); }
 
     /**
      * @return the log event view based on the last parse
      */
-    auto get_log_event_view() const -> LogEventView const& { return m_log_event_view; }
+    auto get_log_event_view() const -> LogEventView const& { return *m_log_event_view; }
 
 private:
     /**
@@ -162,9 +162,9 @@ private:
 
     // TODO: move ownership of the buffer to the lexer
     ParserInputBuffer m_input_buffer;
-    bool m_has_start_of_log;
+    bool m_has_start_of_log{false};
     Token m_start_of_log_message{};
-    LogEventView m_log_event_view;
+    std::unique_ptr<LogEventView> m_log_event_view{nullptr};
 };
 }  // namespace log_surgeon
 

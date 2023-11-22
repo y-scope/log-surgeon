@@ -10,13 +10,10 @@
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
-LogEventView::LogEventView() {
+LogEventView::LogEventView(LogParser const* log_parser)
+        : m_log_parser{log_parser},
+          m_log_var_occurrences{log_parser->m_lexer.m_id_symbol.size()} {
     m_log_output_buffer = std::make_unique<LogParserOutputBuffer>();
-}
-
-auto LogEventView::init(LogParser const* log_parser) -> void {
-    m_log_parser = log_parser;
-    m_log_var_occurrences.resize(log_parser->m_lexer.m_id_symbol.size());
 }
 
 auto LogEventView::deep_copy() const -> LogEvent {
@@ -71,8 +68,7 @@ auto LogEventView::get_logtype() const -> std::string {
     return logtype;
 }
 
-LogEvent::LogEvent(LogEventView const& src) : LogEventView{} {
-    init(src.get_log_parser());
+LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()} {
     set_multiline(src.is_multiline());
     m_log_output_buffer->set_has_timestamp(src.m_log_output_buffer->has_timestamp());
     m_log_output_buffer->set_has_delimiters(src.m_log_output_buffer->has_delimiters());
