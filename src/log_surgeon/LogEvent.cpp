@@ -57,6 +57,10 @@ auto LogEventView::get_logtype() const -> std::string {
         Token& token = m_log_output_buffer->get_mutable_token(i);
         if (token.m_type_ids_ptr->at(0) == (int)log_surgeon::SymbolID::TokenUncaughtStringID) {
             logtype += token.to_string_view();
+        } else if (token.m_type_ids_ptr->at(0) == (int)log_surgeon::SymbolID::TokenNewlineId) {
+            logtype += "<";
+            logtype += m_log_parser->get_id_symbol(token.m_type_ids_ptr->at(0));
+            logtype += ">";
         } else {
             logtype += token.get_delimiter();
             logtype += "<";
