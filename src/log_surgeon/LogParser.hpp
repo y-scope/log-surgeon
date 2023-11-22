@@ -48,14 +48,13 @@ public:
     auto reset() -> void;
 
     /**
-     * Parses the input buffer until a complete log event has been parsed and
-     * its tokens are stored into output_buffer.
+     * Parses and generates metadata if parse was successful.
      * @param parsing_action Returns the action for CLP to take by reference.
      * @return ErrorCode::Success if successfully parsed to the start of a new
      * log event.
-     * @return ErrorCode from LogParser::get_next_symbol.
+     * @return ErrorCode from LogParser::parse.
      */
-    auto parse(ParsingAction& parsing_action) -> ErrorCode;
+    auto parse_and_generate_metadata(ParsingAction& parsing_action) -> ErrorCode;
 
     // TODO protect against invalid id (use optional)
     /**
@@ -116,17 +115,27 @@ public:
     auto reset_log_event_view() -> void { m_log_event_view.reset(); }
 
     /**
-     * Run after parsing to fill m_var_occurrences field for fast variable
-     * search and m_multiline in log event view
-     */
-    auto generate_log_event_view_metadata() -> void;
-
-    /**
      * @return the log event view based on the last parse
      */
     auto get_log_event_view() const -> LogEventView const& { return m_log_event_view; }
 
 private:
+    /**
+     * Parses the input buffer until a complete log event has been parsed and
+     * its tokens are stored into output_buffer.
+     * @param parsing_action Returns the action for CLP to take by reference.
+     * @return ErrorCode::Success if successfully parsed to the start of a new
+     * log event.
+     * @return ErrorCode from LogParser::get_next_symbol.
+     */
+    auto parse(ParsingAction& parsing_action) -> ErrorCode;
+
+    /**
+     * Generates metadata for last parsed log event indicating occurrences of
+     * each variable and if the log event is multiline
+     */
+    auto generate_log_event_view_metadata() -> void;
+
     /**
      * Requests the next token from the lexer.
      * @param token is populated with the next token found by the parser.

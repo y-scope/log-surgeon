@@ -155,6 +155,14 @@ auto LogParser::reset() -> void {
     m_lexer.prepend_start_of_file_char(m_input_buffer);
 }
 
+auto LogParser::parse_and_generate_metadata(LogParser::ParsingAction& parsing_action) -> ErrorCode {
+    ErrorCode error_code = parse(parsing_action);
+    if (ErrorCode::Success == error_code) {
+        generate_log_event_view_metadata();
+    }
+    return error_code;
+}
+
 // TODO: if the first text is a variable in the no timestamp case you lose the
 // first character to static text since it has no leading delim
 // TODO: switching between timestamped and non-timestamped logs
