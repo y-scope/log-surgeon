@@ -295,8 +295,7 @@ auto LogParser::generate_log_event_view_metadata() -> void {
     for (uint32_t i = start; i < m_log_event_view->m_log_output_buffer->pos(); i++) {
         Token* token = &m_log_event_view->m_log_output_buffer->get_mutable_token(i);
         m_log_event_view->add_token(token->m_type_ids_ptr->at(0), token);
-        if (token->m_type_ids_ptr->at(0) == (int)SymbolID::TokenNewlineId && first_newline_pos == 0)
-        {
+        if (token->get_delimiter() == "\n" && first_newline_pos == 0) {
             first_newline_pos = i;
         }
     }
