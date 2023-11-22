@@ -163,8 +163,6 @@ auto LogParser::parse_and_generate_metadata(LogParser::ParsingAction& parsing_ac
     return error_code;
 }
 
-// TODO: if the first text is a variable in the no timestamp case you lose the
-// first character to static text since it has no leading delim
 // TODO: switching between timestamped and non-timestamped logs
 auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
     std::unique_ptr<LogParserOutputBuffer>& output_buffer = m_log_event_view->m_log_output_buffer;
