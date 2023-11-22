@@ -111,7 +111,7 @@ public:
     auto increase_capacity() -> void { m_lexer.increase_buffer_capacity(m_input_buffer); }
 
     /**
-     * Reset the log event view to prepare for the next parse
+     * Resets the log event view to prepare for the next parse
      */
     auto reset_log_event_view() -> void { m_log_event_view.reset(); }
 
