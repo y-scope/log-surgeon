@@ -41,7 +41,6 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
 
     vector<LogEvent> multiline_logs;
     size_t offset{0};
-    LogEventView const& event = parser.get_log_parser().get_log_event_view();
     while (false == parser.done()) {
         if (ErrorCode err{parser.parse_next_event(buf.data(), valid_size, offset, input_done)};
             ErrorCode::Success != err)
@@ -76,6 +75,7 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
             continue;
         }
 
+        LogEventView const& event = parser.get_log_parser().get_log_event_view();
         cout << "log: " << event.to_string() << endl;
         print_timestamp_loglevel(event, *loglevel_id);
         cout << "logtype: " << event.get_logtype() << endl;

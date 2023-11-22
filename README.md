@@ -49,7 +49,6 @@ optional<uint32_t> loglevel_id{parser.get_variable_id("loglevel")};
 // <Omitted validation of loglevel_id>
 
 // Create a LogEventView (similar to a string_view)
-LogEventView const& event = parser.get_log_parser().get_log_event_view();
 while (false == parser.done()) {
     if (ErrorCode err{parser.parse_next_event()}; ErrorCode::Success != err) {
         throw runtime_error("Parsing Failed");
@@ -71,6 +70,7 @@ while (false == parser.done()) {
     // Other analysis...
 
     // Print the entire event
+    LogEventView const& event = parser.get_log_parser().get_log_event_view();
     cout << event->to_string() << endl;
 }
 ```
