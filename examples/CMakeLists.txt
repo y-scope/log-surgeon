@@ -7,11 +7,13 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
-# If log-surgeon was not installed to the system library path, set
-# log_surgeon_DIR to the installed location containing the cmake configuration
-# files.
-# For example, if log-surgeon was installed to ~/.local:
-# set(log_surgeon_DIR "~/.local/lib/cmake/log_surgeon/")
+# To use log-surgeon in your own project, replace the line below as follows:
+# - If log-surgeon was NOT installed to the system library path, set
+#   log_surgeon_DIR to the installed location containing the CMake configuration
+#   files. For example, if log-surgeon was installed to ~/.local:
+#   set(log_surgeon_DIR "~/.local/lib/cmake/log_surgeon/")
+# - Add the following find_package call:
+#   find_package(log_surgeon REQUIRED)
 add_subdirectory(.. log-surgeon-build EXCLUDE_FROM_ALL)
 
 function(add_to_target target libraries)
