@@ -122,7 +122,7 @@ public:
 private:
     /**
      * Parses the input buffer until a complete log event has been parsed and
-     * its tokens are stored into output_buffer.
+     * its tokens are stored into m_log_event_view.
      * @param parsing_action Returns the action for CLP to take by reference.
      * @return ErrorCode::Success if successfully parsed to the start of a new
      * log event.
