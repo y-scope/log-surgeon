@@ -47,8 +47,8 @@ public:
     /**
      * Attempts to parse the next log event from the internal `Reader`. Users
      * should add their own error handling and tracking logic to Reader::read,
-     * in order to retrieve IO errors. The result is stored in internally and
-     * is only valid if ErrorCode::Success is returned.
+     * in order to retrieve IO errors. The result is stored internally and is
+     * only valid if ErrorCode::Success is returned.
      * @return ErrorCode::Success if a log event is successfully parsed as a
      * LogEventView.
      * @return ErrorCode from LogParser::parse.
