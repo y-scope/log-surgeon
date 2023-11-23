@@ -5,11 +5,11 @@
 #include <string>
 #include <vector>
 
-#include <log_surgeon/LogParser.hpp>
 #include <log_surgeon/LogParserOutputBuffer.hpp>
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
+class LogParser;
 class LogEvent;
 
 /**
@@ -27,7 +27,7 @@ public:
      * @param log_parser The LogParser whose input buffer the view will
      * reference
      */
-    explicit LogEventView(LogParser const* log_parser);
+    explicit LogEventView(LogParser const& log_parser);
 
     /**
      * Copies the tokens representing a log event from the source buffer. This
@@ -57,7 +57,7 @@ public:
     /**
      * @return The LogParser whose input buffer this LogEventView references
      */
-    [[nodiscard]] auto get_log_parser() const -> LogParser const* { return m_log_parser; }
+    [[nodiscard]] auto get_log_parser() const -> LogParser const& { return m_log_parser; }
 
     /**
      * @return The LogParserOutputBuffer containing the tokens that make up the
@@ -99,7 +99,7 @@ public:
      * events from the same logging source code may have the same logtype.
      * @return The logtype of the log.
      */
-    auto get_logtype() -> std::string;
+    auto get_logtype() const -> std::string;
 
     /**
      * Adds a Token to the array of tokens of a particular token type.
@@ -121,8 +121,8 @@ public:
 
 private:
     bool m_multiline{false};
-    LogParser const* m_log_parser;
-    std::vector<std::vector<Token*>> m_log_var_occurrences;
+    LogParser const& m_log_parser;
+    std::vector<std::vector<Token*>> m_log_var_occurrences{};
 };
 
 /**

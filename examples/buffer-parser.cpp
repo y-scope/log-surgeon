@@ -27,7 +27,7 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
         return;
     }
 
-    constexpr ssize_t const cSize{4096L * 8}; // 8 pages
+    constexpr ssize_t const cSize{4096L * 8};  // 8 pages
     vector<char> buf(cSize);
     infs.read(buf.data(), cSize);
     ssize_t valid_size{infs.gcount()};
@@ -35,16 +35,16 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
     if (infs.eof()) {
         input_done = true;
     }
+    parser.reset();
 
     cout << "# Parsing timestamp and loglevel for each log event in " << input_path << ":" << endl;
 
     vector<LogEvent> multiline_logs;
     size_t offset{0};
-    LogEventView event{&parser.get_log_parser()};
     while (false == parser.done()) {
-        if (ErrorCode err{
-                    parser.get_next_event_view(buf.data(), valid_size, offset, event, input_done)};
-            ErrorCode::Success != err) {
+        if (ErrorCode err{parser.parse_next_event(buf.data(), valid_size, offset, input_done)};
+            ErrorCode::Success != err)
+        {
             // The only expected error is the parser has read to the bound
             // of the buffer.
             if (ErrorCode::BufferOutOfBounds != err) {
@@ -75,6 +75,7 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
             continue;
         }
 
+        LogEventView const& event = parser.get_log_parser().get_log_event_view();
         cout << "log: " << event.to_string() << endl;
         print_timestamp_loglevel(event, *loglevel_id);
         cout << "logtype: " << event.get_logtype() << endl;
@@ -82,7 +83,6 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
             multiline_logs.emplace_back(event);
         }
     }
-    parser.reset();
 
     cout << endl << "# Printing multiline logs:" << endl;
     for (auto const& log : multiline_logs) {

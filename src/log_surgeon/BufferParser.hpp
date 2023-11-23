@@ -36,7 +36,7 @@ public:
 
     /**
      * Clears the internal state of the log parser (lexer and input buffer) so
-     * that the next call to get_next_event_view will begin parsing from
+     * that the next call to parse_next_event will begin parsing from
      * scratch. This is an alternative to constructing a new Parser that would
      * require rebuilding the LogParser (generating a new lexer and input
      * buffer). This should be called whenever you mutate the input buffer, but
@@ -50,14 +50,13 @@ public:
      * bytes between offset and size may contain a partial log event. It is the
      * user's responsibility to preserve these bytes when mutating the buffer
      * to contain more of the log event before the next call of
-     * get_next_log_view.
+     * get_next_log_view. The result is stored internally and is only valid if
+     * ErrorCode::Success is returned.
      * @param buf The byte buffer containing raw log events to be parsed.
      * @param size The size of the buffer.
      * @param offset The starting position in the buffer of the current log
      * event to be parsed. Updated to be the starting position of the next
      * unparsed log event. If no log event is parsed it remains unchanged.
-     * @param event_view Populated with the log event view parsed from the
-     * buffer. Only valid if ErrorCode::Success is returned.
      * @param finished_reading_input Indicates if the end of the buffer is the
      * end of input and therefore the end of the final log event.
      * @return ErrorCode::Success if a log event is successfully parsed as a
@@ -67,13 +66,9 @@ public:
      * internally before this method returns.
      * @return ErrorCode from LogParser::parse.
      */
-    auto get_next_event_view(
-            char* buf,
-            size_t size,
-            size_t& offset,
-            LogEventView& event_view,
-            bool finished_reading_input = false
-    ) -> ErrorCode;
+    auto
+    parse_next_event(char* buf, size_t size, size_t& offset, bool finished_reading_input = false)
+            -> ErrorCode;
 
     /**
      * @return The underlying LogParser.
@@ -93,7 +88,7 @@ public:
     /**
      * @return true when the BufferParser has completed parsing all of the
      * provided input. This can only occur if finished_reading_input was set to
-     * true in get_next_event_view. Otherwise, the BufferParser will always
+     * true in parse_next_event. Otherwise, the BufferParser will always
      * assume more input can be read.
      */
     auto done() const -> bool { return m_done; }

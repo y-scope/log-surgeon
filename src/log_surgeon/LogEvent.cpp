@@ -10,9 +10,9 @@
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
-LogEventView::LogEventView(LogParser const* log_parser)
+LogEventView::LogEventView(LogParser const& log_parser)
         : m_log_parser{log_parser},
-          m_log_var_occurrences{log_parser->m_lexer.m_id_symbol.size()} {
+          m_log_var_occurrences{log_parser.m_lexer.m_id_symbol.size()} {
     m_log_output_buffer = std::make_unique<LogParserOutputBuffer>();
 }
 
@@ -48,16 +48,18 @@ auto LogEventView::reset() -> void {
     return raw_log;
 }
 
-auto LogEventView::get_logtype() -> std::string {
+auto LogEventView::get_logtype() const -> std::string {
     std::string logtype;
     for (uint32_t i = 1; i < m_log_output_buffer->pos(); i++) {
         Token& token = m_log_output_buffer->get_mutable_token(i);
         if (token.m_type_ids_ptr->at(0) == (int)log_surgeon::SymbolID::TokenUncaughtStringID) {
             logtype += token.to_string_view();
         } else {
-            logtype += token.get_delimiter();
+            if ((int)log_surgeon::SymbolID::TokenNewlineId != token.m_type_ids_ptr->at(0)) {
+                logtype += token.get_delimiter();
+            }
             logtype += "<";
-            logtype += m_log_parser->get_id_symbol(token.m_type_ids_ptr->at(0));
+            logtype += m_log_parser.get_id_symbol(token.m_type_ids_ptr->at(0));
             logtype += ">";
         }
     }
