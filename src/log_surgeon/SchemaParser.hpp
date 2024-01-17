@@ -137,8 +137,8 @@ private:
     auto generate_schema_ast(Reader& reader) -> std::unique_ptr<SchemaAST>;
 
     static inline std::vector<SpecialRegexCharacter> const m_special_regex_characters = {
-            SpecialRegexCharacter("Lparen", '{'),
-            SpecialRegexCharacter("Rparen", '}'),
+            SpecialRegexCharacter("Lparen", '('),
+            SpecialRegexCharacter("Rparen", ')'),
             SpecialRegexCharacter("Star", '*'),
             SpecialRegexCharacter("Plus", '+'),
             SpecialRegexCharacter("Dash", '-'),
@@ -149,7 +149,7 @@ private:
             SpecialRegexCharacter("Hat", '^'),
             SpecialRegexCharacter("Lbrace", '{'),
             SpecialRegexCharacter("Rbrace", '}'),
-            SpecialRegexCharacter("VBar", '|')};
+            SpecialRegexCharacter("Vbar", '|')};
 };
 }  // namespace log_surgeon
 
