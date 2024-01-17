@@ -6,6 +6,17 @@
 #include <log_surgeon/LALR1Parser.hpp>
 
 namespace log_surgeon {
+// Represents a non-literal character used to specify regex
+class SpecialRegexCharacter {
+public:
+    SpecialRegexCharacter(std::string name, char character)
+            : m_name(name),
+              m_character(character) {}
+
+    std::string m_name;
+    char m_character;
+};
+
 // ASTs used in SchemaParser AST
 class SchemaAST : public ParserAST {
 public:
@@ -71,16 +82,6 @@ class SchemaParser : public LALR1Parser<
                              finite_automata::RegexNFAByteState,
                              finite_automata::RegexDFAByteState> {
 public:
-    // Constructor
-    SchemaParser();
-
-    /**
-     * A semantic rule that needs access to soft_reset()
-     * @param m
-     * @return std::unique_ptr<SchemaAST>
-     */
-    auto existing_schema_rule(NonTerminal* m) -> std::unique_ptr<SchemaAST>;
-
     /**
      * File wrapper around generate_schema_ast()
      * @param schema_file_path
@@ -95,7 +96,21 @@ public:
      */
     static auto try_schema_string(std::string const& schema_string) -> std::unique_ptr<SchemaAST>;
 
+    static auto get_special_regex_characters() -> std::vector<SpecialRegexCharacter> const& {
+        return m_special_regex_characters;
+    }
+
 private:
+    // Constructor
+    SchemaParser();
+
+    /**
+     * A semantic rule that needs access to soft_reset()
+     * @param m
+     * @return std::unique_ptr<SchemaAST>
+     */
+    auto existing_schema_rule(NonTerminal* m) -> std::unique_ptr<SchemaAST>;
+
     /**
      * After lexing half of the buffer, reads into that half of the buffer and
      * changes variables accordingly
@@ -120,6 +135,21 @@ private:
      * @return std::unique_ptr<SchemaAST>
      */
     auto generate_schema_ast(Reader& reader) -> std::unique_ptr<SchemaAST>;
+
+    static inline std::vector<SpecialRegexCharacter> const m_special_regex_characters = {
+            SpecialRegexCharacter("Lparen", '{'),
+            SpecialRegexCharacter("Rparen", '}'),
+            SpecialRegexCharacter("Star", '*'),
+            SpecialRegexCharacter("Plus", '+'),
+            SpecialRegexCharacter("Dash", '-'),
+            SpecialRegexCharacter("Dot", '.'),
+            SpecialRegexCharacter("Lbracket", '['),
+            SpecialRegexCharacter("Rbracket", ']'),
+            SpecialRegexCharacter("Backslash", '\\'),
+            SpecialRegexCharacter("Hat", '^'),
+            SpecialRegexCharacter("Lbrace", '{'),
+            SpecialRegexCharacter("Rbrace", '}'),
+            SpecialRegexCharacter("VBar", '|')};
 };
 }  // namespace log_surgeon
 
