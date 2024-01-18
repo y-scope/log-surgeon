@@ -85,7 +85,7 @@ public:
      */
     static auto try_schema_string(std::string const& schema_string) -> std::unique_ptr<SchemaAST>;
 
-    static auto get_special_regex_characters() -> std::unordered_map<std::string,char> const& {
+    static auto get_special_regex_characters() -> std::unordered_map<std::string, char> const& {
         return m_special_regex_characters;
     }
 
