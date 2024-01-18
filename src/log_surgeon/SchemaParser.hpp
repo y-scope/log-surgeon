@@ -7,9 +7,9 @@
 
 namespace log_surgeon {
 // Represents a non-literal character used to specify regex
-class SpecialRegexCharacter {
+class RegexCharacter {
 public:
-    SpecialRegexCharacter(std::string name, char character)
+    RegexCharacter(std::string name, char character)
             : m_name(name),
               m_character(character) {}
 
@@ -96,7 +96,7 @@ public:
      */
     static auto try_schema_string(std::string const& schema_string) -> std::unique_ptr<SchemaAST>;
 
-    static auto get_special_regex_characters() -> std::vector<SpecialRegexCharacter> const& {
+    static auto get_special_regex_characters() -> std::vector<RegexCharacter> const& {
         return m_special_regex_characters;
     }
 
@@ -136,20 +136,20 @@ private:
      */
     auto generate_schema_ast(Reader& reader) -> std::unique_ptr<SchemaAST>;
 
-    static inline std::vector<SpecialRegexCharacter> const m_special_regex_characters = {
-            SpecialRegexCharacter("Lparen", '('),
-            SpecialRegexCharacter("Rparen", ')'),
-            SpecialRegexCharacter("Star", '*'),
-            SpecialRegexCharacter("Plus", '+'),
-            SpecialRegexCharacter("Dash", '-'),
-            SpecialRegexCharacter("Dot", '.'),
-            SpecialRegexCharacter("Lbracket", '['),
-            SpecialRegexCharacter("Rbracket", ']'),
-            SpecialRegexCharacter("Backslash", '\\'),
-            SpecialRegexCharacter("Hat", '^'),
-            SpecialRegexCharacter("Lbrace", '{'),
-            SpecialRegexCharacter("Rbrace", '}'),
-            SpecialRegexCharacter("Vbar", '|')};
+    static inline std::vector<RegexCharacter> const m_special_regex_characters = {
+            RegexCharacter("Lparen", '('),
+            RegexCharacter("Rparen", ')'),
+            RegexCharacter("Star", '*'),
+            RegexCharacter("Plus", '+'),
+            RegexCharacter("Dash", '-'),
+            RegexCharacter("Dot", '.'),
+            RegexCharacter("Lbracket", '['),
+            RegexCharacter("Rbracket", ']'),
+            RegexCharacter("Backslash", '\\'),
+            RegexCharacter("Hat", '^'),
+            RegexCharacter("Lbrace", '{'),
+            RegexCharacter("Rbrace", '}'),
+            RegexCharacter("Vbar", '|')};
 };
 }  // namespace log_surgeon
 
