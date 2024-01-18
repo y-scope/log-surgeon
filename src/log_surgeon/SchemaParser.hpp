@@ -6,10 +6,9 @@
 #include <log_surgeon/LALR1Parser.hpp>
 
 namespace log_surgeon {
-// Represents a non-literal character used to specify regex
-class RegexCharacter {
+class NamedCharacter {
 public:
-    RegexCharacter(std::string name, char character)
+    NamedCharacter(std::string name, char character)
             : m_name(name),
               m_character(character) {}
 
@@ -96,7 +95,7 @@ public:
      */
     static auto try_schema_string(std::string const& schema_string) -> std::unique_ptr<SchemaAST>;
 
-    static auto get_special_regex_characters() -> std::vector<RegexCharacter> const& {
+    static auto get_special_regex_characters() -> std::vector<NamedCharacter> const& {
         return m_special_regex_characters;
     }
 
@@ -136,20 +135,20 @@ private:
      */
     auto generate_schema_ast(Reader& reader) -> std::unique_ptr<SchemaAST>;
 
-    static inline std::vector<RegexCharacter> const m_special_regex_characters = {
-            RegexCharacter("Lparen", '('),
-            RegexCharacter("Rparen", ')'),
-            RegexCharacter("Star", '*'),
-            RegexCharacter("Plus", '+'),
-            RegexCharacter("Dash", '-'),
-            RegexCharacter("Dot", '.'),
-            RegexCharacter("Lbracket", '['),
-            RegexCharacter("Rbracket", ']'),
-            RegexCharacter("Backslash", '\\'),
-            RegexCharacter("Hat", '^'),
-            RegexCharacter("Lbrace", '{'),
-            RegexCharacter("Rbrace", '}'),
-            RegexCharacter("Vbar", '|')};
+    static inline std::vector<NamedCharacter> const m_special_regex_characters = {
+            NamedCharacter("Lparen", '('),
+            NamedCharacter("Rparen", ')'),
+            NamedCharacter("Star", '*'),
+            NamedCharacter("Plus", '+'),
+            NamedCharacter("Dash", '-'),
+            NamedCharacter("Dot", '.'),
+            NamedCharacter("Lbracket", '['),
+            NamedCharacter("Rbracket", ']'),
+            NamedCharacter("Backslash", '\\'),
+            NamedCharacter("Hat", '^'),
+            NamedCharacter("Lbrace", '{'),
+            NamedCharacter("Rbrace", '}'),
+            NamedCharacter("Vbar", '|')};
 };
 }  // namespace log_surgeon
 
