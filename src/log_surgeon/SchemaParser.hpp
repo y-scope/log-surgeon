@@ -6,16 +6,6 @@
 #include <log_surgeon/LALR1Parser.hpp>
 
 namespace log_surgeon {
-class NamedCharacter {
-public:
-    NamedCharacter(std::string name, char character)
-            : m_name(name),
-              m_character(character) {}
-
-    std::string m_name;
-    char m_character;
-};
-
 // ASTs used in SchemaParser AST
 class SchemaAST : public ParserAST {
 public:
@@ -95,7 +85,7 @@ public:
      */
     static auto try_schema_string(std::string const& schema_string) -> std::unique_ptr<SchemaAST>;
 
-    static auto get_special_regex_characters() -> std::vector<NamedCharacter> const& {
+    static auto get_special_regex_characters() -> std::unordered_map<std::string,char> const& {
         return m_special_regex_characters;
     }
 
@@ -135,20 +125,20 @@ private:
      */
     auto generate_schema_ast(Reader& reader) -> std::unique_ptr<SchemaAST>;
 
-    static inline std::vector<NamedCharacter> const m_special_regex_characters = {
-            NamedCharacter("Lparen", '('),
-            NamedCharacter("Rparen", ')'),
-            NamedCharacter("Star", '*'),
-            NamedCharacter("Plus", '+'),
-            NamedCharacter("Dash", '-'),
-            NamedCharacter("Dot", '.'),
-            NamedCharacter("Lbracket", '['),
-            NamedCharacter("Rbracket", ']'),
-            NamedCharacter("Backslash", '\\'),
-            NamedCharacter("Hat", '^'),
-            NamedCharacter("Lbrace", '{'),
-            NamedCharacter("Rbrace", '}'),
-            NamedCharacter("Vbar", '|')};
+    static inline std::unordered_map<std::string, char> const m_special_regex_characters{
+            {"Lparen", '('},
+            {"Rparen", ')'},
+            {"Star", '*'},
+            {"Plus", '+'},
+            {"Dash", '-'},
+            {"Dot", '.'},
+            {"Lbracket", '['},
+            {"Rbracket", ']'},
+            {"Backslash", '\\'},
+            {"Hat", '^'},
+            {"Lbrace", '{'},
+            {"Rbrace", '}'},
+            {"Vbar", '|'}};
 };
 }  // namespace log_surgeon
 

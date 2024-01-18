@@ -389,7 +389,7 @@ static auto new_delimiter_string_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
 
 void SchemaParser::add_lexical_rules() {
     for (auto special_char : m_special_regex_characters) {
-        add_token(special_char.m_name, special_char.m_character);
+        add_token(special_char.first, special_char.second);
     }
     add_token("Tab", '\t');  // 9
     add_token("NewLine", '\n');  // 10
@@ -575,7 +575,7 @@ void SchemaParser::add_productions() {
     add_production("Literal", {"Tilde"}, regex_literal_rule);
     add_production("Literal", {"Lparen", "Regex", "Rparen"}, regex_middle_identity_rule);
     for (auto special_char : m_special_regex_characters) {
-        add_production("Literal", {"Backslash", special_char.m_name}, regex_cancel_literal_rule);
+        add_production("Literal", {"Backslash", special_char.first}, regex_cancel_literal_rule);
     }
     add_production("Integer", {"Integer", "Numeric"}, regex_existing_integer_rule);
     add_production("Integer", {"Numeric"}, regex_new_integer_rule);
