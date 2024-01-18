@@ -575,7 +575,7 @@ void SchemaParser::add_productions() {
     add_production("Literal", {"Tilde"}, regex_literal_rule);
     add_production("Literal", {"Lparen", "Regex", "Rparen"}, regex_middle_identity_rule);
     for (auto const& [special_regex_name, special_regex_char] : m_special_regex_characters) {
-        (void)special_regex_char;
+        std::ignore = special_regex_char;
         add_production("Literal", {"Backslash", special_regex_name}, regex_cancel_literal_rule);
     }
     add_production("Integer", {"Integer", "Numeric"}, regex_existing_integer_rule);
