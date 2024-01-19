@@ -388,7 +388,7 @@ static auto new_delimiter_string_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
 }
 
 void SchemaParser::add_lexical_rules() {
-    for (auto const& [special_regex_name, special_regex_char] : m_special_regex_characters) {
+    for (auto const& [special_regex_char, special_regex_name] : m_special_regex_characters) {
         add_token(special_regex_name, special_regex_char);
     }
     add_token("Tab", '\t');  // 9
@@ -574,7 +574,7 @@ void SchemaParser::add_productions() {
     add_production("Literal", {"Backslash", "Rbrace"}, regex_cancel_literal_rule);
     add_production("Literal", {"Tilde"}, regex_literal_rule);
     add_production("Literal", {"Lparen", "Regex", "Rparen"}, regex_middle_identity_rule);
-    for (auto const& [special_regex_name, special_regex_char] : m_special_regex_characters) {
+    for (auto const& [special_regex_char, special_regex_name] : m_special_regex_characters) {
         std::ignore = special_regex_char;
         add_production("Literal", {"Backslash", special_regex_name}, regex_cancel_literal_rule);
     }
