@@ -388,6 +388,9 @@ static auto new_delimiter_string_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
 }
 
 void SchemaParser::add_lexical_rules() {
+    for (auto const& [special_regex_name, special_regex_char] : m_special_regex_characters) {
+        add_token(special_regex_name, special_regex_char);
+    }
     add_token("Tab", '\t');  // 9
     add_token("NewLine", '\n');  // 10
     add_token("VerticalTab", '\v');  // 11
@@ -401,13 +404,7 @@ void SchemaParser::add_lexical_rules() {
     add_token("Percent", '%');
     add_token("Ampersand", '&');
     add_token("Apostrophe", '\'');
-    add_token("Lparen", '(');
-    add_token("Rparen", ')');
-    add_token("Star", '*');
-    add_token("Plus", '+');
     add_token("Comma", ',');
-    add_token("Dash", '-');
-    add_token("Dot", '.');
     add_token("ForwardSlash", '/');
     add_token_group("Numeric", make_unique<RegexASTGroupByte>('0', '9'));
     add_token("Colon", ':');
@@ -420,15 +417,8 @@ void SchemaParser::add_lexical_rules() {
     add_token_group("AlphaNumeric", make_unique<RegexASTGroupByte>('a', 'z'));
     add_token_group("AlphaNumeric", make_unique<RegexASTGroupByte>('A', 'Z'));
     add_token_group("AlphaNumeric", make_unique<RegexASTGroupByte>('0', '9'));
-    add_token("Lbracket", '[');
-    add_token("Backslash", '\\');
-    add_token("Rbracket", ']');
-    add_token("Hat", '^');
     add_token("Underscore", '_');
     add_token("Backtick", '`');
-    add_token("Lbrace", '{');
-    add_token("Vbar", '|');
-    add_token("Rbrace", '}');
     add_token("Tilde", '~');
     add_token("d", 'd');
     add_token("s", 's');
@@ -584,6 +574,10 @@ void SchemaParser::add_productions() {
     add_production("Literal", {"Backslash", "Rbrace"}, regex_cancel_literal_rule);
     add_production("Literal", {"Tilde"}, regex_literal_rule);
     add_production("Literal", {"Lparen", "Regex", "Rparen"}, regex_middle_identity_rule);
+    for (auto const& [special_regex_name, special_regex_char] : m_special_regex_characters) {
+        std::ignore = special_regex_char;
+        add_production("Literal", {"Backslash", special_regex_name}, regex_cancel_literal_rule);
+    }
     add_production("Integer", {"Integer", "Numeric"}, regex_existing_integer_rule);
     add_production("Integer", {"Numeric"}, regex_new_integer_rule);
     add_production("Digit", {"Backslash", "d"}, regex_digit_rule);
