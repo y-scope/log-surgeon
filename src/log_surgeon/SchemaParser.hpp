@@ -85,7 +85,7 @@ public:
      */
     static auto try_schema_string(std::string const& schema_string) -> std::unique_ptr<SchemaAST>;
 
-    static auto get_special_regex_characters() -> std::unordered_map<std::string, char> const& {
+    static auto get_special_regex_characters() -> std::unordered_map<char, std::string> const& {
         return m_special_regex_characters;
     }
 
@@ -125,20 +125,20 @@ private:
      */
     auto generate_schema_ast(Reader& reader) -> std::unique_ptr<SchemaAST>;
 
-    static inline std::unordered_map<std::string, char> const m_special_regex_characters{
-            {"Lparen", '('},
-            {"Rparen", ')'},
-            {"Star", '*'},
-            {"Plus", '+'},
-            {"Dash", '-'},
-            {"Dot", '.'},
-            {"Lbracket", '['},
-            {"Rbracket", ']'},
-            {"Backslash", '\\'},
-            {"Hat", '^'},
-            {"Lbrace", '{'},
-            {"Rbrace", '}'},
-            {"Vbar", '|'}};
+    static inline std::unordered_map<char, std::string> const m_special_regex_characters{
+            {'(', "Lparen"},
+            {')', "Rparen"},
+            {'*', "Star"},
+            {'+', "Plus"},
+            {'-', "Dash"},
+            {'.', "Dot"},
+            {'[', "Lbracket"},
+            {']', "Rbracket"},
+            {'\\', "Backslash"},
+            {'^', "Hat"},
+            {'{', "Lbrace"},
+            {'}', "Rbrace"},
+            {'|', "Vbar"}};
 };
 }  // namespace log_surgeon
 
