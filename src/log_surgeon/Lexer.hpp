@@ -177,7 +177,7 @@ private:
     bool m_has_delimiters{false};
     std::unique_ptr<finite_automata::RegexDFA<DFAStateType>> m_dfa;
     bool m_asked_for_more_data{false};
-    DFAStateType* m_prev_state{nullptr};
+    DFAStateType const* m_prev_state{nullptr};
 };
 
 namespace lexers {

@@ -40,7 +40,7 @@ void Lexer<NFAStateType, DFAStateType>::flip_states(uint32_t old_storage_size) {
 template <typename NFAStateType, typename DFAStateType>
 auto Lexer<NFAStateType, DFAStateType>::scan(ParserInputBuffer& input_buffer, Token& token)
         -> ErrorCode {
-    DFAStateType* state = m_dfa->get_root();
+    DFAStateType const* state = m_dfa->get_root();
     if (m_asked_for_more_data) {
         state = m_prev_state;
         m_asked_for_more_data = false;
@@ -171,7 +171,7 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(
         char wildcard,
         Token& token
 ) -> ErrorCode {
-    DFAStateType* state = m_dfa->get_root();
+    DFAStateType const* state = m_dfa->get_root();
     if (m_asked_for_more_data) {
         state = m_prev_state;
         m_asked_for_more_data = false;
@@ -210,7 +210,7 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(
             m_match_pos = prev_byte_buf_pos;
             m_match_line = m_line;
         }
-        DFAStateType* next = state->next(next_char);
+        DFAStateType const* next = state->next(next_char);
         if (next_char == '\n') {
             m_line++;
             if (m_has_delimiters && !m_match) {
@@ -251,11 +251,11 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(
                         }
                     }
                 } else if (wildcard == '*') {
-                    std::stack<DFAStateType*> unvisited_states;
-                    std::set<DFAStateType*> visited_states;
+                    std::stack<DFAStateType const*> unvisited_states;
+                    std::set<DFAStateType const*> visited_states;
                     unvisited_states.push(state);
                     while (!unvisited_states.empty()) {
-                        DFAStateType* current_state = unvisited_states.top();
+                        DFAStateType const* current_state = unvisited_states.top();
                         if (current_state == nullptr || current_state->is_accepting() == false) {
                             token = Token{
                                     m_last_match_pos,
@@ -272,7 +272,7 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(
                             if (m_is_delimiter[byte]) {
                                 continue;
                             }
-                            DFAStateType* next_state = current_state->next(byte);
+                            DFAStateType const* next_state = current_state->next(byte);
                             if (visited_states.find(next_state) == visited_states.end()) {
                                 unvisited_states.push(next_state);
                             }
@@ -379,7 +379,7 @@ void Lexer<NFAStateType, DFAStateType>::generate() {
         r.add_ast(&nfa);
     }
     m_dfa = nfa_to_dfa(nfa);
-    DFAStateType* state = m_dfa->get_root();
+    DFAStateType const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
         if (state->next(i) != nullptr) {
             m_is_first_char[i] = true;
@@ -397,7 +397,7 @@ void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
     }
     nfa.reverse();
     m_dfa = nfa_to_dfa(nfa);
-    DFAStateType* state = m_dfa->get_root();
+    DFAStateType const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
         if (state->next(i) != nullptr) {
             m_is_first_char[i] = true;

@@ -27,7 +27,7 @@ public:
 
     [[nodiscard]] auto get_tags() const -> std::vector<int> const& { return m_tags; }
 
-    auto is_accepting() -> bool { return !m_tags.empty(); }
+    [[nodiscard]] auto is_accepting() const -> bool { return !m_tags.empty(); }
 
     auto add_byte_transition(uint8_t const& byte, RegexDFAState<stateType>* dest_state) -> void {
         m_bytes_transition[byte] = dest_state;
@@ -39,7 +39,7 @@ public:
      * @param character
      * @return RegexDFAState<stateType>*
      */
-    auto next(uint32_t character) -> RegexDFAState<stateType>*;
+    [[nodiscard]] auto next(uint32_t character) const -> RegexDFAState<stateType>*;
 
 private:
     std::vector<int> m_tags;
@@ -65,7 +65,7 @@ public:
     template <typename NFAStateType>
     auto new_state(std::set<NFAStateType*> const& set) -> DFAStateType*;
 
-    auto get_root() -> DFAStateType* { return m_states.at(0).get(); }
+    auto get_root() const -> DFAStateType const* { return m_states.at(0).get(); }
 
 private:
     std::vector<std::unique_ptr<DFAStateType>> m_states;
