@@ -66,6 +66,7 @@ public:
     auto new_state(std::set<NFAStateType*> const& set) -> DFAStateType*;
 
     auto get_root() const -> DFAStateType const* { return m_states.at(0).get(); }
+
 private:
     std::vector<std::unique_ptr<DFAStateType>> m_states;
 };
