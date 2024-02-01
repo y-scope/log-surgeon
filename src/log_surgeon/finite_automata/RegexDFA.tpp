@@ -4,7 +4,7 @@
 namespace log_surgeon::finite_automata {
 
 template <RegexDFAStateType stateType>
-auto RegexDFAState<stateType>::next(uint32_t character) -> RegexDFAState<stateType>* {
+auto RegexDFAState<stateType>::next(uint32_t character) const -> RegexDFAState<stateType>* {
     if constexpr (RegexDFAStateType::Byte == stateType) {
         return m_bytes_transition[character];
     } else {
