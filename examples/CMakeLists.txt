@@ -28,3 +28,6 @@ add_to_target(buffer-parser "${libraries}")
 
 add_executable(reader-parser reader-parser.cpp)
 add_to_target(reader-parser "${libraries}")
+
+add_executable(intersect-test intersect-test.cpp)
+add_to_target(intersect-test "${libraries}")
