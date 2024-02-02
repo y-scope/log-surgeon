@@ -3,6 +3,10 @@
 #include <string>
 
 namespace log_surgeon {
+Schema::Schema() {
+    m_schema_ast = std::make_unique<SchemaAST>();
+}
+
 Schema::Schema(std::string const& schema_file_path)
         : m_schema_ast{SchemaParser::try_schema_file(schema_file_path)} {}
 

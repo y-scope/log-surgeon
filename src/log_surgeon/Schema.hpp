@@ -14,7 +14,7 @@ namespace log_surgeon {
  */
 class Schema {
 public:
-    Schema() = default;
+    Schema();
 
     explicit Schema(std::string const& schema_file_path);
 
