@@ -149,7 +149,7 @@ public:
      * @param finite_automata::RegexNFA<NFAStateType> nfa
      * @return std::unique_ptr<finite_automata::RegexDFA<DFAStateType>>
      */
-    auto nfa_to_dfa(finite_automata::RegexNFA<NFAStateType>& nfa)
+    static auto nfa_to_dfa(finite_automata::RegexNFA<NFAStateType>& nfa)
             -> std::unique_ptr<finite_automata::RegexDFA<DFAStateType>>;
 
     std::unordered_map<std::string, uint32_t> m_symbol_id;
@@ -166,7 +166,7 @@ private:
      * Return epsilon_closure over m_epsilon_transitions
      * @return
      */
-    auto epsilon_closure(NFAStateType const* state_ptr) -> std::set<NFAStateType const*>;
+    static auto epsilon_closure(NFAStateType const* state_ptr) -> std::set<NFAStateType const*>;
 
     uint32_t m_match_pos{0};
     uint32_t m_start_pos{0};
