@@ -46,6 +46,14 @@ public:
     };
 
     /**
+     * Generate a DFA from an NFA
+     * @param finite_automata::RegexNFA<NFAStateType> nfa
+     * @return std::unique_ptr<finite_automata::RegexDFA<DFAStateType>>
+     */
+    static auto nfa_to_dfa(finite_automata::RegexNFA<NFAStateType>& nfa)
+            -> std::unique_ptr<finite_automata::RegexDFA<DFAStateType>>;
+
+    /**
      * Add a delimiters line from the schema to the lexer
      * @param delimiters
      */
@@ -139,29 +147,27 @@ public:
         return m_is_first_char[byte];
     }
 
+    [[nodiscard]] auto get_dfa() const
+            -> std::unique_ptr<finite_automata::RegexDFA<DFAStateType>> const& {
+        return m_dfa;
+    }
+
     std::unordered_map<std::string, uint32_t> m_symbol_id;
     std::unordered_map<uint32_t, std::string> m_id_symbol;
 
 private:
+    /**
+     * Return epsilon_closure over m_epsilon_transitions
+     * @return
+     */
+    static auto epsilon_closure(NFAStateType const* state_ptr) -> std::set<NFAStateType const*>;
+
     /**
      * Get next character from the input buffer
      * @return unsigned char
      */
     auto get_next_character() -> unsigned char;
 
-    /**
-     * Return epsilon_closure over m_epsilon_transitions
-     * @return
-     */
-    auto epsilon_closure(NFAStateType const* state_ptr) -> std::set<NFAStateType const*>;
-
-    /**
-     * Generate a DFA from the NFA
-     * @param finite_automata::RegexNFA<NFAStateType> nfa
-     * @return std::unique_ptr<finite_automata::RegexDFA<DFAStateType>>
-     */
-    auto nfa_to_dfa(finite_automata::RegexNFA<NFAStateType>& nfa)
-            -> std::unique_ptr<finite_automata::RegexDFA<DFAStateType>>;
     uint32_t m_match_pos{0};
     uint32_t m_start_pos{0};
     uint32_t m_match_line{0};
