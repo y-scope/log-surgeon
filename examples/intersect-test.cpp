@@ -31,12 +31,9 @@ auto get_intersect_for_query(ByteLexer& lexer, std::string const& search_string)
         ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
         rule.add_ast(&nfa);
     }
-    // TODO: this is obviously bad, but the code needs to be reorganized a lot
-    // to fix the fact that DFAs and NFAs can't be used without a lexer
-    std::unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 = lexer.nfa_to_dfa(nfa);
-    [[maybe_unused]] std::unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 = lexer.get_dfa();
+    std::unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 = ByteLexer::nfa_to_dfa(nfa);
+    std::unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 = lexer.get_dfa();
     std::set<uint32_t> schema_types = dfa1->get_intersect(dfa2);
-
     std::cout << search_string << ":";
     for (auto const& schema_type : schema_types) {
         std::cout << lexer.m_id_symbol[schema_type] << ",";
