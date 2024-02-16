@@ -54,7 +54,7 @@ auto main() -> int {
     for (int i = 0; i < 2; i++) {
         log_surgeon::Schema schema;
         if (0 == i) {
-            std::cout << "--LEXER1--" << std::endl;
+            std::cout << "--Schema1--" << std::endl;
             schema.add_variable("int", "\\-{0,1}[0-9]+", -1);
             schema.add_variable("float", "\\-{0,1}[0-9]+\\.[0-9]+", -1);
             schema.add_variable("hex", "[a-fA-F]+", -1);
@@ -62,7 +62,7 @@ auto main() -> int {
             schema.add_variable("equals", ".*=.*[a-zA-Z0-9].*", -1);
             schema.add_variable("logLevel", "(INFO)|(DEBUG)|(WARN)|(ERROR)|(TRACE)|(FATAL)", -1);
         } else {
-            std::cout << "--LEXER2--" << std::endl;
+            std::cout << "--Schema2--" << std::endl;
             schema.add_variable("v1", "1", -1);
             schema.add_variable("v2", "2", -1);
             schema.add_variable("v3", "3", -1);
