@@ -51,23 +51,23 @@ template <typename DFAStateType>
 auto RegexDFA<DFAStateType>::get_intersect(std::unique_ptr<RegexDFA> const& dfa_in)
         -> std::set<uint32_t> {
     std::set<uint32_t> schema_types;
-    std::set<RegexDFAStatePair<DFAStateType>> unused_pairs;
-    std::set<RegexDFAStatePair<DFAStateType>> used_pairs;
-    unused_pairs.emplace(this->get_root(), dfa_in->get_root());
+    std::set<RegexDFAStatePair<DFAStateType>> unvisited_pairs;
+    std::set<RegexDFAStatePair<DFAStateType>> visited_pairs;
+    unvisited_pairs.emplace(this->get_root(), dfa_in->get_root());
     // TODO: Handle UTF-8 (multi-byte transitions) as well
-    while (false == unused_pairs.empty()) {
-        auto current_pair = *unused_pairs.begin();
+    while (false == unvisited_pairs.empty()) {
+        auto current_pair = *unvisited_pairs.begin();
         if (current_pair.is_accepting()) {
             auto tags = current_pair.get_first_tags();
             schema_types.insert(tags.begin(), tags.end());
         }
-        unused_pairs.erase(unused_pairs.begin());
-        used_pairs.insert(current_pair);
+        unvisited_pairs.erase(unvisited_pairs.begin());
+        visited_pairs.insert(current_pair);
         std::set<RegexDFAStatePair<DFAStateType>> reachable_pairs
                 = current_pair.get_reachable_pairs();
         for (RegexDFAStatePair<DFAStateType> const& reachable_pair : reachable_pairs) {
-            if (used_pairs.find(reachable_pair) == used_pairs.end()) {
-                unused_pairs.insert(reachable_pair);
+            if (visited_pairs.find(reachable_pair) == visited_pairs.end()) {
+                unvisited_pairs.insert(reachable_pair);
             }
         }
     }
