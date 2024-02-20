@@ -48,7 +48,7 @@ auto RegexDFA<DFAStateType>::new_state(std::set<NFAStateType*> const& set) -> DF
 }
 
 template <typename DFAStateType>
-auto RegexDFA<DFAStateType>::get_intersect(std::unique_ptr<RegexDFA> const& dfa_in)
+auto RegexDFA<DFAStateType>::get_intersect(std::unique_ptr<RegexDFA> const& dfa_in) const
         -> std::set<uint32_t> {
     std::set<uint32_t> schema_types;
     std::set<RegexDFAStatePair<DFAStateType>> unvisited_pairs;

@@ -112,7 +112,17 @@ public:
 
     auto get_root() const -> DFAStateType const* { return m_states.at(0).get(); }
 
-    auto get_intersect(std::unique_ptr<RegexDFA> const& dfa_in) -> std::set<uint32_t>;
+    /**
+     * Compares this dfa with dfa_in to determine the set of schema types in
+     * this dfa that are reachable by any type in dfa_in. A type is considered
+     * reachable if there is at least one string for which: (1) this dfa returns
+     * a set of types containing the type, and (2) dfa_in returns any non-empty
+     * set of types.
+     * @param dfa_in
+     * @return set of schema types reachable by dfa_in
+     */
+    [[nodiscard]] auto get_intersect(std::unique_ptr<RegexDFA> const& dfa_in) const
+            -> std::set<uint32_t>;
 
 private:
     std::vector<std::unique_ptr<DFAStateType>> m_states;
