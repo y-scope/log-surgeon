@@ -33,16 +33,6 @@ auto RegexDFAStatePair<DFAState>::get_reachable_pairs() -> std::set<RegexDFAStat
     return reachable_pairs;
 }
 
-template <typename DFAState>
-auto RegexDFAStatePair<DFAState>::is_accepting() const -> bool {
-    return m_state1->is_accepting() && m_state2->is_accepting();
-}
-
-template <typename DFAState>
-auto RegexDFAStatePair<DFAState>::get_first_tags() const -> std::vector<int> const& {
-    return m_state1->get_tags();
-}
-
 template <typename DFAStateType>
 template <typename NFAStateType>
 auto RegexDFA<DFAStateType>::new_state(std::set<NFAStateType*> const& set) -> DFAStateType* {

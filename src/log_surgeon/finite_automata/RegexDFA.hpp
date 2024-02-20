@@ -67,19 +67,23 @@ public:
 
     /**
      * Generates all pairs reachable from the current pair via a single input.
-     * @return vector of reachable pairs
+     * @return A vector of reachable pairs
      */
     auto get_reachable_pairs() -> std::set<RegexDFAStatePair>;
 
     /**
      * @return Whether both states are accepting
      */
-    [[nodiscard]] auto is_accepting() const -> bool;
+    [[nodiscard]] auto is_accepting() const -> bool {
+        return m_state1->is_accepting() && m_state2->is_accepting();
+    }
 
     /**
-     * @return the tags of the first state of the pair
+     * @return The tags of the first state of the pair
      */
-    [[nodiscard]] auto get_first_tags() const -> std::vector<int> const&;
+    [[nodiscard]] auto get_first_tags() const -> std::vector<int> const& {
+        return m_state1->get_tags();
+    }
 
 private:
     DFAState const* m_state1;
