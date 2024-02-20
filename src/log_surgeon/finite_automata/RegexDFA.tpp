@@ -58,15 +58,15 @@ auto RegexDFA<DFAStateType>::get_intersect(std::unique_ptr<RegexDFA> const& dfa_
     unvisited_pairs.emplace(this->get_root(), dfa_in->get_root());
     // TODO: Handle UTF-8 (multi-byte transitions) as well
     while (false == unvisited_pairs.empty()) {
-        auto current_pair = *unvisited_pairs.begin();
-        if (current_pair.is_accepting()) {
-            auto tags = current_pair.get_first_tags();
+        auto current_pair_itt = unvisited_pairs.begin();
+        if (current_pair_itt->is_accepting()) {
+            auto tags = current_pair_itt->get_first_tags();
             schema_types.insert(tags.begin(), tags.end());
         }
-        unvisited_pairs.erase(unvisited_pairs.begin());
-        visited_pairs.insert(current_pair);
+        visited_pairs.insert(*current_pair_itt);
         std::set<RegexDFAStatePair<DFAStateType>> reachable_pairs
-                = current_pair.get_reachable_pairs();
+                = current_pair_itt->get_reachable_pairs();
+        unvisited_pairs.erase(current_pair_itt);
         for (RegexDFAStatePair<DFAStateType> const& reachable_pair : reachable_pairs) {
             if (visited_pairs.find(reachable_pair) == visited_pairs.end()) {
                 unvisited_pairs.insert(reachable_pair);
