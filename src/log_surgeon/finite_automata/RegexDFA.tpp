@@ -22,9 +22,9 @@ auto RegexDFAState<stateType>::next(uint32_t character) const -> RegexDFAState<s
 }
 
 template <typename DFAState>
-auto RegexDFAStatePair<DFAState>::generate_reachable_pairs() -> std::set<RegexDFAStatePair> {
+auto RegexDFAStatePair<DFAState>::get_reachable_pairs() -> std::set<RegexDFAStatePair> {
     std::set<RegexDFAStatePair> reachable_pairs;
-    // TODO: currently assumes it is a byte input, needs to handle utf8 as well
+    // TODO: Handle UTF-8 (multi-byte transitions) as well
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
         if (m_state1->next(i) != nullptr && m_state2->next(i) != nullptr) {
             reachable_pairs.emplace(m_state1->next(i), m_state2->next(i));
@@ -64,17 +64,17 @@ auto RegexDFA<DFAStateType>::get_intersect(std::unique_ptr<RegexDFA> const& dfa_
     std::set<RegexDFAStatePair<DFAStateType>> unused_pairs;
     std::set<RegexDFAStatePair<DFAStateType>> used_pairs;
     unused_pairs.emplace(this->get_root(), dfa_in->get_root());
-    // TODO: currently assumes it is a byte input, needs to handle utf8 as well
+    // TODO: Handle UTF-8 (multi-byte transitions) as well
     while (false == unused_pairs.empty()) {
         auto current_pair = *unused_pairs.begin();
         if (current_pair.is_accepting()) {
-            std::vector<int> const& tags = current_pair.get_first_tags();
+            auto tags = current_pair.get_first_tags();
             schema_types.insert(tags.begin(), tags.end());
         }
         unused_pairs.erase(unused_pairs.begin());
         used_pairs.insert(current_pair);
         std::set<RegexDFAStatePair<DFAStateType>> reachable_pairs
-                = current_pair.generate_reachable_pairs();
+                = current_pair.get_reachable_pairs();
         for (RegexDFAStatePair<DFAStateType> const& reachable_pair : reachable_pairs) {
             if (used_pairs.find(reachable_pair) == used_pairs.end()) {
                 unused_pairs.insert(reachable_pair);

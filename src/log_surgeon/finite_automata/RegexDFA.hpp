@@ -58,7 +58,7 @@ public:
             : m_state1(state1),
               m_state2(state2){};
 
-    bool operator<(RegexDFAStatePair const& rhs) const {
+    auto operator<(RegexDFAStatePair const& rhs) const -> bool {
         if (m_state1 == rhs.m_state1) {
             return m_state2 < rhs.m_state2;
         }
@@ -69,12 +69,12 @@ public:
      * Generates all pairs reachable from the current pair via a single input.
      * @return vector of reachable pairs
      */
-    auto generate_reachable_pairs() -> std::set<RegexDFAStatePair>;
+    auto get_reachable_pairs() -> std::set<RegexDFAStatePair>;
 
     /**
-     * @return if both pairs are accepting
+     * @return Whether both states are accepting
      */
-    auto is_accepting() const -> bool;
+    [[nodiscard]] auto is_accepting() const -> bool;
 
     /**
      * @return the tags of the first state of the pair
