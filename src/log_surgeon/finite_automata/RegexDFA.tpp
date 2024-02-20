@@ -26,8 +26,10 @@ auto RegexDFAStatePair<DFAState>::get_reachable_pairs() -> std::set<RegexDFAStat
     std::set<RegexDFAStatePair> reachable_pairs;
     // TODO: Handle UTF-8 (multi-byte transitions) as well
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
-        if (m_state1->next(i) != nullptr && m_state2->next(i) != nullptr) {
-            reachable_pairs.emplace(m_state1->next(i), m_state2->next(i));
+        auto next_state1 = m_state1->next(i);
+        auto next_state2 = m_state2->next(i);
+        if (next_state1 != nullptr && next_state2 != nullptr) {
+            reachable_pairs.emplace(next_state1, next_state2);
         }
     }
     return reachable_pairs;
