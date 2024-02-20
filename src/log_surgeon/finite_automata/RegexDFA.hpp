@@ -62,7 +62,7 @@ public:
         if (m_state1 == rhs.m_state1) {
             return m_state2 < rhs.m_state2;
         }
-        return m_state1 < rhs.m_state1;  // assume that you compare the record based on a
+        return m_state1 < rhs.m_state1;
     }
 
     /**
