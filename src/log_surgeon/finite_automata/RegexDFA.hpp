@@ -53,7 +53,6 @@ private:
 template <typename DFAState>
 class RegexDFAStatePair {
 public:
-    /// TODO: a lot of this pointer usage could probably be references
     RegexDFAStatePair(DFAState const* state1, DFAState const* state2)
             : m_state1(state1),
               m_state2(state2){};
