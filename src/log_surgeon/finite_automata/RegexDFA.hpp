@@ -57,6 +57,12 @@ public:
             : m_state1(state1),
               m_state2(state2){};
 
+    /**
+     * Used for ordering in a set by considering the states' addresses
+     * @param rhs
+     * @return true if m_state1 in lhs has a lower address than in rhs, if tied,
+     * true if m_state2 in lhs has a lower address than in rhs, false otherwise
+     */
     auto operator<(RegexDFAStatePair const& rhs) const -> bool {
         if (m_state1 == rhs.m_state1) {
             return m_state2 < rhs.m_state2;
