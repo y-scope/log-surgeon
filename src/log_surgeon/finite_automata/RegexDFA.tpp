@@ -22,14 +22,20 @@ auto RegexDFAState<stateType>::next(uint32_t character) const -> RegexDFAState<s
 }
 
 template <typename DFAState>
-auto RegexDFAStatePair<DFAState>::get_reachable_pairs() -> std::set<RegexDFAStatePair> {
+auto RegexDFAStatePair<DFAState>::get_reachable_pairs(
+        std::set<RegexDFAStatePair<DFAState>>& visited_pairs,
+        std::set<RegexDFAStatePair<DFAState>>& unvisited_pairs
+) -> void {
     std::set<RegexDFAStatePair> reachable_pairs;
     // TODO: Handle UTF-8 (multi-byte transitions) as well
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
         auto next_state1 = m_state1->next(i);
         auto next_state2 = m_state2->next(i);
         if (next_state1 != nullptr && next_state2 != nullptr) {
-            reachable_pairs.emplace(next_state1, next_state2);
+            RegexDFAStatePair<DFAState> reachable_pair(next_state1, next_state2);
+            if (visited_pairs.count(reachable_pair) == 0) {
+                unvisited_pairs.insert(reachable_pair);
+            }
         }
     }
     return reachable_pairs;
@@ -65,13 +71,8 @@ auto RegexDFA<DFAStateType>::get_intersect(std::unique_ptr<RegexDFA> const& dfa_
         }
         visited_pairs.insert(*current_pair_it);
         std::set<RegexDFAStatePair<DFAStateType>> reachable_pairs
-                = current_pair_it->get_reachable_pairs();
+                = current_pair_it->get_reachable_pairs(visited_pairs, unvisited_pairs);
         unvisited_pairs.erase(current_pair_it);
-        for (RegexDFAStatePair<DFAStateType> const& reachable_pair : reachable_pairs) {
-            if (visited_pairs.find(reachable_pair) == visited_pairs.end()) {
-                unvisited_pairs.insert(reachable_pair);
-            }
-        }
     }
     return schema_types;
 }

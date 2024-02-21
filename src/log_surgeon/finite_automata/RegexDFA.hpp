@@ -71,10 +71,13 @@ public:
     }
 
     /**
-     * Generates all pairs reachable from the current pair via a single input.
-     * @return A vector of reachable pairs
+     * Generates all pairs reachable from the current pair via any string and
+     * store any reachable pair not previously visited in unvisited_pairs
      */
-    auto get_reachable_pairs() -> std::set<RegexDFAStatePair>;
+    auto get_reachable_pairs(
+            std::set<RegexDFAStatePair<DFAState>>& visited_pairs,
+            std::set<RegexDFAStatePair<DFAState>>& unvisited_pairs
+    ) -> void;
 
     /**
      * @return Whether both states are accepting
