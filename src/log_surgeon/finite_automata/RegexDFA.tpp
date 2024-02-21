@@ -38,7 +38,6 @@ auto RegexDFAStatePair<DFAState>::get_reachable_pairs(
             }
         }
     }
-    return reachable_pairs;
 }
 
 template <typename DFAStateType>
