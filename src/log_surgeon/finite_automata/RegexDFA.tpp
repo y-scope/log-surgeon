@@ -25,7 +25,7 @@ template <typename DFAState>
 auto RegexDFAStatePair<DFAState>::get_reachable_pairs(
         std::set<RegexDFAStatePair<DFAState>>& visited_pairs,
         std::set<RegexDFAStatePair<DFAState>>& unvisited_pairs
-) -> void {
+) const -> void {
     std::set<RegexDFAStatePair> reachable_pairs;
     // TODO: Handle UTF-8 (multi-byte transitions) as well
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
@@ -69,8 +69,7 @@ auto RegexDFA<DFAStateType>::get_intersect(std::unique_ptr<RegexDFA> const& dfa_
             schema_types.insert(tags.begin(), tags.end());
         }
         visited_pairs.insert(*current_pair_it);
-        std::set<RegexDFAStatePair<DFAStateType>> reachable_pairs
-                = current_pair_it->get_reachable_pairs(visited_pairs, unvisited_pairs);
+        current_pair_it->get_reachable_pairs(visited_pairs, unvisited_pairs);
         unvisited_pairs.erase(current_pair_it);
     }
     return schema_types;

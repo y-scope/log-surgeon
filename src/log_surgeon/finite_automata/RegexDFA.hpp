@@ -77,7 +77,7 @@ public:
     auto get_reachable_pairs(
             std::set<RegexDFAStatePair<DFAState>>& visited_pairs,
             std::set<RegexDFAStatePair<DFAState>>& unvisited_pairs
-    ) -> void;
+    ) const -> void;
 
     /**
      * @return Whether both states are accepting
