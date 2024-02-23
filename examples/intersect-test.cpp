@@ -14,17 +14,11 @@ using log_surgeon::SchemaVarAST;
 using std::string;
 using std::unique_ptr;
 
-auto get_intersect_for_query(log_surgeon::Schema& schema, std::string const& search_string)
-        -> void {
-    std::map<uint32_t, std::string> m_id_symbol;
-    RegexNFA<RegexNFAByteState> nfa1;
-    for (unique_ptr<ParserAST> const& parser_ast : schema.get_schema_ast_ptr()->m_schema_vars) {
-        auto* var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-        ByteLexer::Rule rule(m_id_symbol.size(), std::move(var_ast->m_regex_ptr));
-        m_id_symbol[m_id_symbol.size()] = var_ast->m_name;
-        rule.add_ast(&nfa1);
-    }
-    std::unique_ptr<RegexDFA<RegexDFAByteState>> dfa1 = ByteLexer::nfa_to_dfa(nfa1);
+auto get_intersect_for_query(
+        std::map<uint32_t, std::string>& m_id_symbol,
+        std::unique_ptr<RegexDFA<RegexDFAByteState>>& dfa1,
+        std::string const& search_string
+) -> void {
     std::string processed_search_string;
     // Replace all * with .*
     for (char const& c : search_string) {
@@ -33,15 +27,17 @@ auto get_intersect_for_query(log_surgeon::Schema& schema, std::string const& sea
         }
         processed_search_string.push_back(c);
     }
-    log_surgeon::Schema schema2;
-    schema2.add_variable("search", processed_search_string, -1);
-    RegexNFA<RegexNFAByteState> nfa2;
-    for (unique_ptr<ParserAST> const& parser_ast : schema2.get_schema_ast_ptr()->m_schema_vars) {
+    log_surgeon::Schema schema;
+    schema.add_variable("search", processed_search_string, -1);
+    RegexNFA<RegexNFAByteState> nfa;
+    std::unique_ptr<log_surgeon::SchemaAST> schema_ast = schema.release_schema_ast_ptr();
+    for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars)
+    {
         auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
         ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
-        rule.add_ast(&nfa2);
+        rule.add_ast(&nfa);
     }
-    std::unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 = ByteLexer::nfa_to_dfa(nfa2);
+    std::unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 = ByteLexer::nfa_to_dfa(nfa);
     std::set<uint32_t> schema_types = dfa1->get_intersect(dfa2);
     std::cout << search_string << ":";
     for (auto const& schema_type : schema_types) {
@@ -70,15 +66,26 @@ auto main() -> int {
             schema.add_variable("v5", "23def", -1);
             schema.add_variable("v6", "123", -1);
         }
-        get_intersect_for_query(schema, "*1*");
-        get_intersect_for_query(schema, "*a*");
-        get_intersect_for_query(schema, "*a1*");
-        get_intersect_for_query(schema, "*=*");
-        get_intersect_for_query(schema, "abc123");
-        get_intersect_for_query(schema, "=");
-        get_intersect_for_query(schema, "1");
-        get_intersect_for_query(schema, "a*1");
-        get_intersect_for_query(schema, "a1");
+        std::map<uint32_t, std::string> m_id_symbol;
+        RegexNFA<RegexNFAByteState> nfa;
+
+        std::unique_ptr<log_surgeon::SchemaAST> schema_ast = schema.release_schema_ast_ptr();
+        for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
+            auto* var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
+            ByteLexer::Rule rule(m_id_symbol.size(), std::move(var_ast->m_regex_ptr));
+            m_id_symbol[m_id_symbol.size()] = var_ast->m_name;
+            rule.add_ast(&nfa);
+        }
+        std::unique_ptr<RegexDFA<RegexDFAByteState>> dfa = ByteLexer::nfa_to_dfa(nfa);
+        get_intersect_for_query(m_id_symbol, dfa, "*1*");
+        get_intersect_for_query(m_id_symbol, dfa, "*a*");
+        get_intersect_for_query(m_id_symbol, dfa, "*a1*");
+        get_intersect_for_query(m_id_symbol, dfa, "*=*");
+        get_intersect_for_query(m_id_symbol, dfa, "abc123");
+        get_intersect_for_query(m_id_symbol, dfa, "=");
+        get_intersect_for_query(m_id_symbol, dfa, "1");
+        get_intersect_for_query(m_id_symbol, dfa, "a*1");
+        get_intersect_for_query(m_id_symbol, dfa, "a1");
     }
     return 0;
 }

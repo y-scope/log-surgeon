@@ -27,11 +27,11 @@ public:
 
     /**
      * Constructs the parser using the given schema object.
-     * @param schema
+     * @param schema_ast
      * @throw std::runtime_error from LALR1Parser, RegexAST, or Lexer
      * describing the failure processing the schema AST.
      */
-    explicit ReaderParser(Schema& schema);
+    explicit ReaderParser(std::unique_ptr<log_surgeon::SchemaAST> schema_ast);
 
     /**
      * Clears the internal state of the log parser (lexer and input buffer),

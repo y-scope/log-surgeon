@@ -35,11 +35,11 @@ public:
 
     /**
      * Constructs the parser using the given schema object.
-     * @param schema
+     * @param schema_ast
      * @throw std::runtime_error from LALR1Parser, RegexAST, or Lexer
      * describing the failure processing the schema AST.
      */
-    explicit LogParser(log_surgeon::SchemaAST const* schema_ast);
+    explicit LogParser(std::unique_ptr<log_surgeon::SchemaAST> schema_ast);
 
     /**
      * Returns the parser to its initial state, clearing any existing
@@ -158,7 +158,7 @@ private:
      * @param schema_ast The AST from which parsing and lexing rules are
      * generated.
      */
-    auto add_rules(SchemaAST const* schema_ast) -> void;
+    auto add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void;
 
     // TODO: move ownership of the buffer to the lexer
     ParserInputBuffer m_input_buffer;
