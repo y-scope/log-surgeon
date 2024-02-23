@@ -26,13 +26,12 @@ auto RegexDFAStatePair<DFAState>::get_reachable_pairs(
         std::set<RegexDFAStatePair<DFAState>>& visited_pairs,
         std::set<RegexDFAStatePair<DFAState>>& unvisited_pairs
 ) const -> void {
-    std::set<RegexDFAStatePair> reachable_pairs;
     // TODO: Handle UTF-8 (multi-byte transitions) as well
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
         auto next_state1 = m_state1->next(i);
         auto next_state2 = m_state2->next(i);
         if (next_state1 != nullptr && next_state2 != nullptr) {
-            RegexDFAStatePair<DFAState> reachable_pair(next_state1, next_state2);
+            RegexDFAStatePair<DFAState> reachable_pair{next_state1, next_state2};
             if (visited_pairs.count(reachable_pair) == 0) {
                 unvisited_pairs.insert(reachable_pair);
             }

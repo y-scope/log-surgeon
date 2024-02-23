@@ -30,15 +30,14 @@ auto get_intersect_for_query(
     log_surgeon::Schema schema;
     schema.add_variable("search", processed_search_string, -1);
     RegexNFA<RegexNFAByteState> nfa;
-    std::unique_ptr<log_surgeon::SchemaAST> schema_ast = schema.release_schema_ast_ptr();
-    for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars)
-    {
+    auto schema_ast = schema.release_schema_ast_ptr();
+    for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
         ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
         rule.add_ast(&nfa);
     }
-    std::unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 = ByteLexer::nfa_to_dfa(nfa);
-    std::set<uint32_t> schema_types = dfa1->get_intersect(dfa2);
+    auto dfa2 = ByteLexer::nfa_to_dfa(nfa);
+    auto schema_types = dfa1->get_intersect(dfa2);
     std::cout << search_string << ":";
     for (auto const& schema_type : schema_types) {
         std::cout << m_id_symbol[schema_type] << ",";
@@ -68,15 +67,14 @@ auto main() -> int {
         }
         std::map<uint32_t, std::string> m_id_symbol;
         RegexNFA<RegexNFAByteState> nfa;
-
-        std::unique_ptr<log_surgeon::SchemaAST> schema_ast = schema.release_schema_ast_ptr();
+        auto schema_ast = schema.release_schema_ast_ptr();
         for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
             auto* var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
             ByteLexer::Rule rule(m_id_symbol.size(), std::move(var_ast->m_regex_ptr));
             m_id_symbol[m_id_symbol.size()] = var_ast->m_name;
             rule.add_ast(&nfa);
         }
-        std::unique_ptr<RegexDFA<RegexDFAByteState>> dfa = ByteLexer::nfa_to_dfa(nfa);
+        auto dfa = ByteLexer::nfa_to_dfa(nfa);
         get_intersect_for_query(m_id_symbol, dfa, "*1*");
         get_intersect_for_query(m_id_symbol, dfa, "*a*");
         get_intersect_for_query(m_id_symbol, dfa, "*a1*");

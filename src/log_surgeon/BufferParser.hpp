@@ -27,7 +27,7 @@ public:
     explicit BufferParser(std::string const& schema_file_path);
 
     /**
-     * Constructs the parser using the given schema object.
+     * Constructs the parser using the given schema AST.
      * @param schema_ast
      * @throw std::runtime_error from LALR1Parser, RegexAST, or Lexer
      * describing the failure processing the schema AST.

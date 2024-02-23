@@ -60,8 +60,8 @@ public:
     /**
      * Used for ordering in a set by considering the states' addresses
      * @param rhs
-     * @return true if m_state1 in lhs has a lower address than in rhs, if tied,
-     * true if m_state2 in lhs has a lower address than in rhs, false otherwise
+     * @return Whether m_state1 in lhs has a lower address than in rhs, or if they're equal,
+     * whether m_state2 in lhs has a lower address than in rhs
      */
     auto operator<(RegexDFAStatePair const& rhs) const -> bool {
         if (m_state1 == rhs.m_state1) {
@@ -71,8 +71,10 @@ public:
     }
 
     /**
-     * Generates all pairs reachable from the current pair via any string and
-     * store any reachable pair not previously visited in unvisited_pairs
+     * Generates all pairs reachable from the current pair via any string and store any reachable
+     * pair not previously visited in unvisited_pairs
+     * @param visited_pairs Previously visited pairs
+     * @param unvisited_pairs Set to add unvisited reachable pairs
      */
     auto get_reachable_pairs(
             std::set<RegexDFAStatePair<DFAState>>& visited_pairs,
@@ -122,7 +124,7 @@ public:
      * a set of types containing the type, and (2) dfa_in returns any non-empty
      * set of types.
      * @param dfa_in
-     * @return set of schema types reachable by dfa_in
+     * @return The set of schema types reachable by dfa_in
      */
     [[nodiscard]] auto get_intersect(std::unique_ptr<RegexDFA> const& dfa_in) const
             -> std::set<uint32_t>;
