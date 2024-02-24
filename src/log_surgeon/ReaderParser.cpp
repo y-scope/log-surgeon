@@ -7,7 +7,8 @@
 #include <log_surgeon/Schema.hpp>
 
 namespace log_surgeon {
-ReaderParser::ReaderParser(Schema& schema) : m_log_parser(schema.get_schema_ast_ptr()) {}
+ReaderParser::ReaderParser(std::unique_ptr<log_surgeon::SchemaAST> schema_ast)
+        : m_log_parser(std::move(schema_ast)) {}
 
 ReaderParser::ReaderParser(std::string const& schema_file_path) : m_log_parser(schema_file_path) {}
 

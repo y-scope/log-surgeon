@@ -50,6 +50,56 @@ private:
     std::conditional_t<stateType == RegexDFAStateType::UTF8, Tree, std::tuple<>> m_tree_transitions;
 };
 
+template <typename DFAState>
+class RegexDFAStatePair {
+public:
+    RegexDFAStatePair(DFAState const* state1, DFAState const* state2)
+            : m_state1(state1),
+              m_state2(state2){};
+
+    /**
+     * Used for ordering in a set by considering the states' addresses
+     * @param rhs
+     * @return Whether m_state1 in lhs has a lower address than in rhs, or if they're equal,
+     * whether m_state2 in lhs has a lower address than in rhs
+     */
+    auto operator<(RegexDFAStatePair const& rhs) const -> bool {
+        if (m_state1 == rhs.m_state1) {
+            return m_state2 < rhs.m_state2;
+        }
+        return m_state1 < rhs.m_state1;
+    }
+
+    /**
+     * Generates all pairs reachable from the current pair via any string and store any reachable
+     * pair not previously visited in unvisited_pairs
+     * @param visited_pairs Previously visited pairs
+     * @param unvisited_pairs Set to add unvisited reachable pairs
+     */
+    auto get_reachable_pairs(
+            std::set<RegexDFAStatePair<DFAState>>& visited_pairs,
+            std::set<RegexDFAStatePair<DFAState>>& unvisited_pairs
+    ) const -> void;
+
+    /**
+     * @return Whether both states are accepting
+     */
+    [[nodiscard]] auto is_accepting() const -> bool {
+        return m_state1->is_accepting() && m_state2->is_accepting();
+    }
+
+    /**
+     * @return The tags of the first state of the pair
+     */
+    [[nodiscard]] auto get_first_tags() const -> std::vector<int> const& {
+        return m_state1->get_tags();
+    }
+
+private:
+    DFAState const* m_state1;
+    DFAState const* m_state2;
+};
+
 using RegexDFAByteState = RegexDFAState<RegexDFAStateType::Byte>;
 using RegexDFAUTF8State = RegexDFAState<RegexDFAStateType::UTF8>;
 
@@ -66,6 +116,18 @@ public:
     auto new_state(std::set<NFAStateType*> const& set) -> DFAStateType*;
 
     auto get_root() const -> DFAStateType const* { return m_states.at(0).get(); }
+
+    /**
+     * Compares this dfa with dfa_in to determine the set of schema types in
+     * this dfa that are reachable by any type in dfa_in. A type is considered
+     * reachable if there is at least one string for which: (1) this dfa returns
+     * a set of types containing the type, and (2) dfa_in returns any non-empty
+     * set of types.
+     * @param dfa_in
+     * @return The set of schema types reachable by dfa_in
+     */
+    [[nodiscard]] auto get_intersect(std::unique_ptr<RegexDFA> const& dfa_in) const
+            -> std::set<uint32_t>;
 
 private:
     std::vector<std::unique_ptr<DFAStateType>> m_states;

@@ -28,10 +28,10 @@ using finite_automata::RegexDFAByteState;
 using finite_automata::RegexNFAByteState;
 
 LogParser::LogParser(string const& schema_file_path)
-        : LogParser::LogParser(SchemaParser::try_schema_file(schema_file_path).get()) {}
+        : LogParser::LogParser(SchemaParser::try_schema_file(schema_file_path)) {}
 
-LogParser::LogParser(SchemaAST const* schema_ast) {
-    add_rules(schema_ast);
+LogParser::LogParser(std::unique_ptr<SchemaAST> schema_ast) {
+    add_rules(std::move(schema_ast));
     m_lexer.generate();
     m_log_event_view = make_unique<LogEventView>(*this);
 }
@@ -43,7 +43,7 @@ auto LogParser::add_delimiters(unique_ptr<ParserAST> const& delimiters) -> void 
     }
 }
 
-void LogParser::add_rules(SchemaAST const* schema_ast) {
+void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
     for (auto const& delimiters : schema_ast->m_delimiters) {
         add_delimiters(delimiters);
     }

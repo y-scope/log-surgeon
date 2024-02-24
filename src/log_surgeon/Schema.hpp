@@ -56,7 +56,17 @@ public:
     auto clear ();
     */
 
-    [[nodiscard]] auto get_schema_ast_ptr() const -> SchemaAST const* { return m_schema_ast.get(); }
+    /**
+     * Transfers ownership of the previously built schema_ast to the caller and
+     * replaces it with an empty schema_ast to be used by this schema object in
+     * the future
+     * @return the previously built schema_ast
+     */
+    [[nodiscard]] auto release_schema_ast_ptr() -> std::unique_ptr<SchemaAST> {
+        auto old_schema_ast = std::move(m_schema_ast);
+        m_schema_ast = std::make_unique<SchemaAST>();
+        return old_schema_ast;
+    }
 
 private:
     std::unique_ptr<SchemaAST> m_schema_ast;
