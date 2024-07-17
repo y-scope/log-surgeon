@@ -428,7 +428,9 @@ void SchemaParser::add_lexical_rules() {
     add_token("f", 'f');
     add_token("v", 'v');
     add_token_chain("Delimiters", "delimiters");
-    // default constructs to a m_negate group
+    // RegexASTGroupByte default constructs to an m_negate group, so we add the only two characters
+    // which can't be in a comment, the newline and carriage return characters as they signify the
+    // end of the comment.
     unique_ptr<RegexASTGroupByte> comment_characters = make_unique<RegexASTGroupByte>();
     comment_characters->add_literal('\r');
     comment_characters->add_literal('\n');
