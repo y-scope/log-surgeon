@@ -54,8 +54,8 @@ template <typename DFAState>
 class RegexDFAStatePair {
 public:
     RegexDFAStatePair(DFAState const* state1, DFAState const* state2)
-            : m_state1(state1),
-              m_state2(state2){};
+        : m_state1(state1),
+          m_state2(state2) {};
 
     /**
      * Used for ordering in a set by considering the states' addresses
@@ -77,8 +77,8 @@ public:
      * @param unvisited_pairs Set to add unvisited reachable pairs
      */
     auto get_reachable_pairs(
-            std::set<RegexDFAStatePair<DFAState>>& visited_pairs,
-            std::set<RegexDFAStatePair<DFAState>>& unvisited_pairs
+        std::set<RegexDFAStatePair<DFAState>>& visited_pairs,
+        std::set<RegexDFAStatePair<DFAState>>& unvisited_pairs
     ) const -> void;
 
     /**
@@ -127,12 +127,12 @@ public:
      * @return The set of schema types reachable by dfa_in
      */
     [[nodiscard]] auto get_intersect(std::unique_ptr<RegexDFA> const& dfa_in) const
-            -> std::set<uint32_t>;
+        -> std::set<uint32_t>;
 
 private:
     std::vector<std::unique_ptr<DFAStateType>> m_states;
 };
-}  // namespace log_surgeon::finite_automata
+} // namespace log_surgeon::finite_automata
 
 #include "RegexDFA.tpp"
 
