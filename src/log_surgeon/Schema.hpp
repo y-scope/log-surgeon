@@ -71,6 +71,6 @@ public:
 private:
     std::unique_ptr<SchemaAST> m_schema_ast;
 };
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
 #endif  // LOG_SURGEON_SCHEMA_HPP

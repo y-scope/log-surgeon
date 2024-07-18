@@ -8,10 +8,10 @@
 
 namespace log_surgeon {
 BufferParser::BufferParser(std::unique_ptr<log_surgeon::SchemaAST> schema_ast)
-    : m_log_parser(std::move(schema_ast)) {}
+        : m_log_parser(std::move(schema_ast)) {}
 
 BufferParser::BufferParser(std::string const& schema_file_path)
-    : m_log_parser(LogParser(schema_file_path)) {}
+        : m_log_parser(LogParser(schema_file_path)) {}
 
 auto BufferParser::reset() -> void {
     m_log_parser.reset();
@@ -19,10 +19,10 @@ auto BufferParser::reset() -> void {
 }
 
 auto BufferParser::parse_next_event(
-    char* buf,
-    size_t size,
-    size_t& offset,
-    bool finished_reading_input
+        char* buf,
+        size_t size,
+        size_t& offset,
+        bool finished_reading_input
 ) -> ErrorCode {
     m_log_parser.reset_log_event_view();
     // TODO in order to allow logs/tokens to wrap user buffers this function
@@ -34,8 +34,8 @@ auto BufferParser::parse_next_event(
     if (ErrorCode::Success != error_code) {
         if (0 != m_log_parser.get_log_event_view().m_log_output_buffer->pos()) {
             offset = m_log_parser.get_log_event_view()
-                                 .m_log_output_buffer->get_token(0)
-                                 .m_start_pos;
+                             .m_log_output_buffer->get_token(0)
+                             .m_start_pos;
         }
         reset();
         return error_code;
@@ -46,4 +46,4 @@ auto BufferParser::parse_next_event(
     offset = m_log_parser.get_input_pos();
     return ErrorCode::Success;
 }
-} // namespace log_surgeon
+}  // namespace log_surgeon

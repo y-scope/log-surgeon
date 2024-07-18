@@ -212,9 +212,10 @@ public:
      * @param name
      * @param rule
      */
-    auto
-    add_rule(std::string const& name, std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule)
-            -> void override;
+    auto add_rule(
+            std::string const& name,
+            std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule
+    ) -> void override;
 
     /**
      * Calls add_rule with the given RegexASTGroup
@@ -382,8 +383,8 @@ private:
      * @param parse_stack_matches
      * @return std::string
      */
-    static auto get_input_after_last_newline(std::stack<MatchedSymbol>& parse_stack_matches)
-            -> std::string;
+    static auto get_input_after_last_newline(std::stack<MatchedSymbol>& parse_stack_matches
+    ) -> std::string;
 
     /**
      * Get the current line after the error symbol

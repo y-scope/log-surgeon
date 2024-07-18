@@ -43,14 +43,14 @@ class SchemaVarAST : public ParserAST {
 public:
     // Constructor
     SchemaVarAST(
-        std::string name,
-        std::unique_ptr<finite_automata::RegexAST<finite_automata::RegexNFAByteState>>
-        regex_ptr,
-        uint32_t line_num
+            std::string name,
+            std::unique_ptr<finite_automata::RegexAST<finite_automata::RegexNFAByteState>>
+                    regex_ptr,
+            uint32_t line_num
     )
-        : m_line_num(line_num),
-          m_name(std::move(name)),
-          m_regex_ptr(std::move(regex_ptr)) {}
+            : m_line_num(line_num),
+              m_name(std::move(name)),
+              m_regex_ptr(std::move(regex_ptr)) {}
 
     uint32_t m_line_num;
     std::string m_name;
@@ -68,8 +68,8 @@ public:
 };
 
 class SchemaParser : public LALR1Parser<
-            finite_automata::RegexNFAByteState,
-            finite_automata::RegexDFAByteState> {
+                             finite_automata::RegexNFAByteState,
+                             finite_automata::RegexDFAByteState> {
 public:
     /**
      * File wrapper around generate_schema_ast()
@@ -141,6 +141,6 @@ private:
             {'|', "Vbar"}
     };
 };
-} // namespace log_surgeon
+}  // namespace log_surgeon
 
 #endif  // LOG_SURGEON_SCHEMA_PARSER_HPP
