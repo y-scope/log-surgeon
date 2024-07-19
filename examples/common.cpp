@@ -1,3 +1,5 @@
+#include "common.hpp"
+
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -5,8 +7,6 @@
 #include <vector>
 
 #include <log_surgeon/LogEvent.hpp>
-
-#include "common.hpp"
 
 using namespace std;
 using namespace log_surgeon;
