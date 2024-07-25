@@ -2,8 +2,19 @@ name: Build
 
 on:
   pull_request:
+    paths:
+      - ".github/workflows/build.yaml"
+      - "src/*"
+      - "examples/*"
   push:
+    paths:
+      - ".github/workflows/build.yaml"
+      - "src/*"
+      - "examples/*"
   workflow_call:
+
+# Concurrency group to prevent multiple workflow instances from trying to publish releases
+concurrency: "${{github.workflow}}-${{github.ref}}"
 
 jobs:
   build:
@@ -13,10 +24,14 @@ jobs:
         build_type: [Release, Debug]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - run: cmake -B ./build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
 
       - run: cmake --build ./build --config ${{ matrix.build_type }}
 
       - run: cmake --install ./build --prefix ./install
+
+      - run: cmake -S examples -B ./examples/build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+      - run: cmake --build ./examples/build --config ${{ matrix.build_type }}
