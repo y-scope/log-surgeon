@@ -2,7 +2,7 @@ name: "Bug Report"
 description: "Report software deficiencies"
 labels: ["bug"]
 body:
-  - type: markdown
+  - type: "markdown"
     attributes:
       value: |
         Use this form to report any functional or performance bugs you've found in the software.
