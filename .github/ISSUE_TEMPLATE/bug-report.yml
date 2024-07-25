@@ -1,5 +1,5 @@
 name: "Bug Report"
-description: Report software deficiencies
+description: "Report software deficiencies"
 labels: ["bug"]
 body:
 - type: markdown
@@ -9,32 +9,32 @@ body:
 
       Be sure to check if your [issue](https://github.com/y-scope/log-surgeon/issues) has already been reported.
 
-- type: textarea
+- type: "textarea"
   attributes:
-    label: Bug
+    label: "Bug"
     description: "Describe what's wrong and if applicable, what you expected instead."
   validations:
     required: true
 
-- type: input
+- type: "input"
   attributes:
-    label: log-surgeon version
+    label: "log-surgeon version"
     description: "The release version number or development commit hash that has the bug."
     placeholder: "Version number or commit hash"
   validations:
     required: true
 
-- type: textarea
+- type: "textarea"
   attributes:
-    label: Environment
+    label: "Environment"
     description: "The environment in which you're running log-surgeon."
     placeholder: "OS version, docker version, etc."
   validations:
     required: true
 
-- type: textarea
+- type: "textarea"
   attributes:
-    label: Reproduction steps
+    label: "Reproduction steps"
     description: "List each step required to reproduce the bug."
   validations:
     required: true
