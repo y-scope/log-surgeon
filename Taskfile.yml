@@ -11,13 +11,13 @@ vars:
 
 tasks:
   default:
-    deps: [ "lint" ]
+    deps: ["lint"]
 
   clean:
-    cmds: [ "rm -rf '{{.G_BUILD_DIR}}' '{{.G_LINT_VENV_DIR}}'" ]
+    cmds: ["rm -rf '{{.G_BUILD_DIR}}' '{{.G_LINT_VENV_DIR}}'"]
 
   lint:
-    deps: [ "lint-venv" ]
+    deps: ["lint-venv"]
     cmds:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
@@ -32,8 +32,8 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
-    sources: [ "{{.TASKFILE}}", "lint-requirements.txt" ]
-    generates: [ "{{.CHECKSUM_FILE}}" ]
+    sources: ["{{.TASKFILE}}", "lint-requirements.txt"]
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - task: "utils:validate-checksum"
         vars:
