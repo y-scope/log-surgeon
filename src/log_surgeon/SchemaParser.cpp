@@ -364,9 +364,9 @@ static auto regex_newline_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
 }
 
 static auto regex_white_space_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
-    unique_ptr<RegexASTGroupByte> regex_ast_group = make_unique<RegexASTGroupByte>(
-            RegexASTGroupByte({' ', '\t', '\r', '\n', '\v', '\f'})
-    );
+    unique_ptr<RegexASTGroupByte> regex_ast_group
+            = make_unique<RegexASTGroupByte>(RegexASTGroupByte({' ', '\t', '\r', '\n', '\v', '\f'})
+            );
     return unique_ptr<ParserAST>(
             new ParserValueRegex(unique_ptr<RegexASTByte>(std::move(regex_ast_group)))
     );
@@ -428,7 +428,9 @@ void SchemaParser::add_lexical_rules() {
     add_token("f", 'f');
     add_token("v", 'v');
     add_token_chain("Delimiters", "delimiters");
-    // default constructs to a m_negate group
+    // RegexASTGroupByte default constructs to an m_negate group, so we add the only two characters
+    // which can't be in a comment, the newline and carriage return characters as they signify the
+    // end of the comment.
     unique_ptr<RegexASTGroupByte> comment_characters = make_unique<RegexASTGroupByte>();
     comment_characters->add_literal('\r');
     comment_characters->add_literal('\n');

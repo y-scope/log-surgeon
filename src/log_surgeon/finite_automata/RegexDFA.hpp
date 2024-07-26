@@ -55,7 +55,7 @@ class RegexDFAStatePair {
 public:
     RegexDFAStatePair(DFAState const* state1, DFAState const* state2)
             : m_state1(state1),
-              m_state2(state2){};
+              m_state2(state2) {};
 
     /**
      * Used for ordering in a set by considering the states' addresses
@@ -126,8 +126,8 @@ public:
      * @param dfa_in
      * @return The set of schema types reachable by dfa_in
      */
-    [[nodiscard]] auto get_intersect(std::unique_ptr<RegexDFA> const& dfa_in) const
-            -> std::set<uint32_t>;
+    [[nodiscard]] auto get_intersect(std::unique_ptr<RegexDFA> const& dfa_in
+    ) const -> std::set<uint32_t>;
 
 private:
     std::vector<std::unique_ptr<DFAStateType>> m_states;

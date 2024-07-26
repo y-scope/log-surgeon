@@ -23,8 +23,8 @@ class Lexer {
 public:
     // std::vector<int> can be declared as constexpr in c++20
     static inline std::vector<int> const cTokenEndTypes = {(int)SymbolID::TokenEndID};
-    static inline std::vector<int> const cTokenUncaughtStringTypes = {
-            (int)SymbolID::TokenUncaughtStringID};
+    static inline std::vector<int> const cTokenUncaughtStringTypes
+            = {(int)SymbolID::TokenUncaughtStringID};
 
     /**
      * A lexical rule has a name and regex pattern
@@ -50,8 +50,8 @@ public:
      * @param finite_automata::RegexNFA<NFAStateType> nfa
      * @return std::unique_ptr<finite_automata::RegexDFA<DFAStateType>>
      */
-    static auto nfa_to_dfa(finite_automata::RegexNFA<NFAStateType>& nfa)
-            -> std::unique_ptr<finite_automata::RegexDFA<DFAStateType>>;
+    static auto nfa_to_dfa(finite_automata::RegexNFA<NFAStateType>& nfa
+    ) -> std::unique_ptr<finite_automata::RegexDFA<DFAStateType>>;
 
     /**
      * Add a delimiters line from the schema to the lexer
@@ -125,8 +125,8 @@ public:
      * @return Token
      * @throw runtime_error("Input buffer about to overflow")
      */
-    auto scan_with_wildcard(ParserInputBuffer& input_buffer, char wildcard, Token& token)
-            -> ErrorCode;
+    auto
+    scan_with_wildcard(ParserInputBuffer& input_buffer, char wildcard, Token& token) -> ErrorCode;
 
     /**
      * Grows the capacity of the passed in input buffer if it is not large
@@ -147,8 +147,8 @@ public:
         return m_is_first_char[byte];
     }
 
-    [[nodiscard]] auto get_dfa() const
-            -> std::unique_ptr<finite_automata::RegexDFA<DFAStateType>> const& {
+    [[nodiscard]] auto get_dfa(
+    ) const -> std::unique_ptr<finite_automata::RegexDFA<DFAStateType>> const& {
         return m_dfa;
     }
 
@@ -187,8 +187,8 @@ private:
 };
 
 namespace lexers {
-    using ByteLexer = Lexer<finite_automata::RegexNFAByteState, finite_automata::RegexDFAByteState>;
-    using UTF8Lexer = Lexer<finite_automata::RegexNFAUTF8State, finite_automata::RegexDFAUTF8State>;
+using ByteLexer = Lexer<finite_automata::RegexNFAByteState, finite_automata::RegexDFAByteState>;
+using UTF8Lexer = Lexer<finite_automata::RegexNFAUTF8State, finite_automata::RegexDFAUTF8State>;
 }  // namespace lexers
 }  // namespace log_surgeon
 

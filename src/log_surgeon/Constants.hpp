@@ -44,11 +44,11 @@ constexpr char cTokenNewline[] = "newLine";
 constexpr uint32_t cStaticByteBuffSize = 48'000;
 
 namespace utf8 {
-    // 0xC0, 0xC1, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE,
-    // 0xFF are invalid UTF-8 code units
-    static unsigned char const cCharEOF = 0xFF;
-    static unsigned char const cCharErr = 0xFE;
-    static unsigned char const cCharStartOfFile = 0xFD;
+// 0xC0, 0xC1, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE,
+// 0xFF are invalid UTF-8 code units
+static unsigned char const cCharEOF = 0xFF;
+static unsigned char const cCharErr = 0xFE;
+static unsigned char const cCharStartOfFile = 0xFD;
 }  // namespace utf8
 }  // namespace log_surgeon
 

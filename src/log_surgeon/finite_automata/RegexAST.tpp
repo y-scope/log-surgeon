@@ -11,7 +11,6 @@
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-
 template <typename NFAStateType>
 RegexASTLiteral<NFAStateType>::RegexASTLiteral(uint32_t character) : m_character(character) {}
 
@@ -28,24 +27,24 @@ RegexASTInteger<NFAStateType>::RegexASTInteger(uint32_t digit) {
 
 template <typename NFAStateType>
 RegexASTInteger<NFAStateType>::RegexASTInteger(RegexASTInteger<NFAStateType>* left, uint32_t digit)
-        : m_digits(std::move(left->m_digits)) {
+    : m_digits(std::move(left->m_digits)) {
     digit = digit - '0';
     m_digits.push_back(digit);
 }
 
 template <typename NFAStateType>
 void RegexASTInteger<
-        NFAStateType>::add(RegexNFA<NFAStateType>* /* nfa */, NFAStateType* /* end_state */) {
+    NFAStateType>::add(RegexNFA<NFAStateType>* /* nfa */, NFAStateType* /* end_state */) {
     throw std::runtime_error("Unsupported");
 }
 
 template <typename NFAStateType>
 RegexASTOr<NFAStateType>::RegexASTOr(
-        std::unique_ptr<RegexAST<NFAStateType>> left,
-        std::unique_ptr<RegexAST<NFAStateType>> right
+    std::unique_ptr<RegexAST<NFAStateType>> left,
+    std::unique_ptr<RegexAST<NFAStateType>> right
 )
-        : m_left(std::move(left)),
-          m_right(std::move(right)) {}
+    : m_left(std::move(left)),
+      m_right(std::move(right)) {}
 
 template <typename NFAStateType>
 void RegexASTOr<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
@@ -55,11 +54,11 @@ void RegexASTOr<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* en
 
 template <typename NFAStateType>
 RegexASTCat<NFAStateType>::RegexASTCat(
-        std::unique_ptr<RegexAST<NFAStateType>> left,
-        std::unique_ptr<RegexAST<NFAStateType>> right
+    std::unique_ptr<RegexAST<NFAStateType>> left,
+    std::unique_ptr<RegexAST<NFAStateType>> right
 )
-        : m_left(std::move(left)),
-          m_right(std::move(right)) {}
+    : m_left(std::move(left)),
+      m_right(std::move(right)) {}
 
 template <typename NFAStateType>
 void RegexASTCat<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
@@ -73,18 +72,18 @@ void RegexASTCat<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* e
 
 template <typename NFAStateType>
 RegexASTMultiplication<NFAStateType>::RegexASTMultiplication(
-        std::unique_ptr<RegexAST<NFAStateType>> operand,
-        uint32_t min,
-        uint32_t max
+    std::unique_ptr<RegexAST<NFAStateType>> operand,
+    uint32_t min,
+    uint32_t max
 )
-        : m_operand(std::move(operand)),
-          m_min(min),
-          m_max(max) {}
+    : m_operand(std::move(operand)),
+      m_min(min),
+      m_max(max) {}
 
 template <typename NFAStateType>
 void RegexASTMultiplication<NFAStateType>::add(
-        RegexNFA<NFAStateType>* nfa,
-        NFAStateType* end_state
+    RegexNFA<NFAStateType>* nfa,
+    NFAStateType* end_state
 ) {
     NFAStateType* saved_root = nfa->get_root();
     if (this->m_min == 0) {
@@ -122,13 +121,13 @@ RegexASTGroup<NFAStateType>::RegexASTGroup() = default;
 
 template <typename NFAStateType>
 RegexASTGroup<NFAStateType>::RegexASTGroup(
-        RegexASTGroup<NFAStateType>* left,
-        RegexASTLiteral<NFAStateType>* right
+    RegexASTGroup<NFAStateType>* left,
+    RegexASTLiteral<NFAStateType>* right
 ) {
     if (right == nullptr) {
         throw std::runtime_error("RegexASTGroup1: right == nullptr: A bracket expression in the "
-                                 "schema contains illegal characters, remember to escape special "
-                                 "characters. Refer to README-Schema.md for more details.");
+            "schema contains illegal characters, remember to escape special "
+            "characters. Refer to README-Schema.md for more details.");
     }
     m_negate = left->m_negate;
     m_ranges = left->m_ranges;
@@ -137,12 +136,12 @@ RegexASTGroup<NFAStateType>::RegexASTGroup(
 
 template <typename NFAStateType>
 RegexASTGroup<NFAStateType>::RegexASTGroup(
-        RegexASTGroup<NFAStateType>* left,
-        RegexASTGroup<NFAStateType>* right
+    RegexASTGroup<NFAStateType>* left,
+    RegexASTGroup<NFAStateType>* right
 )
-        : m_negate(left->m_negate),
-          m_ranges(left->m_ranges) {
-    assert(right->m_ranges.size() == 1);  // Only add LiteralRange
+    : m_negate(left->m_negate),
+      m_ranges(left->m_ranges) {
+    assert(right->m_ranges.size() == 1); // Only add LiteralRange
     m_ranges.push_back(right->m_ranges[0]);
 }
 
@@ -150,8 +149,8 @@ template <typename NFAStateType>
 RegexASTGroup<NFAStateType>::RegexASTGroup(RegexASTLiteral<NFAStateType>* right) {
     if (right == nullptr) {
         throw std::runtime_error("RegexASTGroup2: right == nullptr: A bracket expression in the "
-                                 "schema contains illegal characters, remember to escape special "
-                                 "characters. Refer to README-Schema.md for more details.");
+            "schema contains illegal characters, remember to escape special "
+            "characters. Refer to README-Schema.md for more details.");
     }
     m_negate = false;
     m_ranges.emplace_back(right->get_character(), right->get_character());
@@ -159,20 +158,20 @@ RegexASTGroup<NFAStateType>::RegexASTGroup(RegexASTLiteral<NFAStateType>* right)
 
 template <typename NFAStateType>
 RegexASTGroup<NFAStateType>::RegexASTGroup(RegexASTGroup<NFAStateType>* right) : m_negate(false) {
-    assert(right->m_ranges.size() == 1);  // Only add LiteralRange
+    assert(right->m_ranges.size() == 1); // Only add LiteralRange
     m_ranges.push_back(right->m_ranges[0]);
 }
 
 template <typename NFAStateType>
 RegexASTGroup<NFAStateType>::RegexASTGroup(
-        RegexASTLiteral<NFAStateType>* left,
-        RegexASTLiteral<NFAStateType>* right
+    RegexASTLiteral<NFAStateType>* left,
+    RegexASTLiteral<NFAStateType>* right
 ) {
     if (left == nullptr || right == nullptr) {
         throw std::runtime_error(
-                "RegexASTGroup3: left == nullptr || right == nullptr: A bracket expression in the "
-                "schema contains illegal characters, remember to escape special characters. Refer "
-                "to README-Schema.md for more details."
+            "RegexASTGroup3: left == nullptr || right == nullptr: A bracket expression in the "
+            "schema contains illegal characters, remember to escape special characters. Refer "
+            "to README-Schema.md for more details."
         );
     }
     m_negate = false;
@@ -182,7 +181,7 @@ RegexASTGroup<NFAStateType>::RegexASTGroup(
 
 template <typename NFAStateType>
 RegexASTGroup<NFAStateType>::RegexASTGroup(std::vector<uint32_t> const& literals)
-        : m_negate(false) {
+    : m_negate(false) {
     for (uint32_t literal : literals) {
         m_ranges.emplace_back(literal, literal);
     }
@@ -196,7 +195,7 @@ RegexASTGroup<NFAStateType>::RegexASTGroup(uint32_t min, uint32_t max) : m_negat
 // ranges must be sorted
 template <typename NFAStateType>
 auto RegexASTGroup<NFAStateType>::merge(std::vector<Range> const& ranges)
-        -> std::vector<typename RegexASTGroup<NFAStateType>::Range> {
+    -> std::vector<typename RegexASTGroup<NFAStateType>::Range> {
     std::vector<Range> merged;
     if (ranges.empty()) {
         return merged;
@@ -218,7 +217,7 @@ auto RegexASTGroup<NFAStateType>::merge(std::vector<Range> const& ranges)
 // ranges must be sorted and non-overlapping
 template <typename NFAStateType>
 auto RegexASTGroup<NFAStateType>::complement(std::vector<Range> const& ranges)
-        -> std::vector<typename RegexASTGroup<NFAStateType>::Range> {
+    -> std::vector<typename RegexASTGroup<NFAStateType>::Range> {
     std::vector<Range> complemented;
     uint32_t low = 0;
     for (Range const& r : ranges) {
@@ -244,6 +243,6 @@ void RegexASTGroup<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType*
         nfa->get_root()->add_interval(Interval(r.first, r.second), end_state);
     }
 }
-}  // namespace log_surgeon::finite_automata
+} // namespace log_surgeon::finite_automata
 
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_TPP

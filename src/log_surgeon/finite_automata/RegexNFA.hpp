@@ -31,8 +31,8 @@ public:
 
     [[nodiscard]] auto get_tag() const -> int const& { return m_tag; }
 
-    auto set_epsilon_transitions(std::vector<RegexNFAState<stateType>*>& epsilon_transitions)
-            -> void {
+    auto set_epsilon_transitions(std::vector<RegexNFAState<stateType>*>& epsilon_transitions
+    ) -> void {
         m_epsilon_transitions = epsilon_transitions;
     }
 
@@ -42,14 +42,15 @@ public:
 
     auto clear_epsilon_transitions() -> void { m_epsilon_transitions.clear(); }
 
-    [[nodiscard]] auto get_epsilon_transitions() const
-            -> std::vector<RegexNFAState<stateType>*> const& {
+    [[nodiscard]] auto get_epsilon_transitions(
+    ) const -> std::vector<RegexNFAState<stateType>*> const& {
         return m_epsilon_transitions;
     }
 
-    auto
-    set_byte_transitions(uint8_t byte, std::vector<RegexNFAState<stateType>*>& byte_transitions)
-            -> void {
+    auto set_byte_transitions(
+            uint8_t byte,
+            std::vector<RegexNFAState<stateType>*>& byte_transitions
+    ) -> void {
         m_bytes_transitions[byte] = byte_transitions;
     }
 
@@ -59,8 +60,8 @@ public:
 
     auto clear_byte_transitions(uint8_t byte) -> void { m_bytes_transitions[byte].clear(); }
 
-    [[nodiscard]] auto get_byte_transitions(uint8_t byte) const
-            -> std::vector<RegexNFAState<stateType>*> const& {
+    [[nodiscard]] auto get_byte_transitions(uint8_t byte
+    ) const -> std::vector<RegexNFAState<stateType>*> const& {
         return m_bytes_transitions[byte];
     }
 

@@ -138,7 +138,8 @@ private:
             {'^', "Hat"},
             {'{', "Lbrace"},
             {'}', "Rbrace"},
-            {'|', "Vbar"}};
+            {'|', "Vbar"}
+    };
 };
 }  // namespace log_surgeon
 
