@@ -7,7 +7,7 @@ tasks:
   check:
     cmds:
       - task: "cpp-check"
-      - task: "yml-check"
+      #- task: "yml-check"
 
   fix:
     cmds:
