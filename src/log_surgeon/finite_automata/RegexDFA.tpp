@@ -22,8 +22,8 @@ auto RegexDFAState<stateType>::next(uint32_t character) const -> RegexDFAState<s
 
 template <typename DFAState>
 auto RegexDFAStatePair<DFAState>::get_reachable_pairs(
-    std::set<RegexDFAStatePair<DFAState>>& visited_pairs,
-    std::set<RegexDFAStatePair<DFAState>>& unvisited_pairs
+        std::set<RegexDFAStatePair<DFAState>>& visited_pairs,
+        std::set<RegexDFAStatePair<DFAState>>& unvisited_pairs
 ) const -> void {
     // TODO: Handle UTF-8 (multi-byte transitions) as well
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
@@ -53,8 +53,8 @@ auto RegexDFA<DFAStateType>::new_state(std::set<NFAStateType*> const& set) -> DF
 }
 
 template <typename DFAStateType>
-auto RegexDFA<DFAStateType>::get_intersect(std::unique_ptr<RegexDFA> const& dfa_in) const
-    -> std::set<uint32_t> {
+auto RegexDFA<DFAStateType>::get_intersect(std::unique_ptr<RegexDFA> const& dfa_in
+) const -> std::set<uint32_t> {
     std::set<uint32_t> schema_types;
     std::set<RegexDFAStatePair<DFAStateType>> unvisited_pairs;
     std::set<RegexDFAStatePair<DFAStateType>> visited_pairs;
@@ -72,6 +72,6 @@ auto RegexDFA<DFAStateType>::get_intersect(std::unique_ptr<RegexDFA> const& dfa_
     }
     return schema_types;
 }
-} // namespace log_surgeon::finite_automata
+}  // namespace log_surgeon::finite_automata
 
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_TPP
