@@ -7,17 +7,15 @@ tasks:
   check:
     cmds:
       - task: "cpp-check"
-      - task: "py-check"
       - task: "yml-check"
 
   fix:
     cmds:
       - task: "cpp-fix"
-      - task: "py-fix"
       - task: "yml-fix"
 
   cpp-check:
-    dir: "{{.TASKFILE_DIR}}/components/core"
+    dir: "{{.TASKFILE_DIR}}"
     cmds:
       - task: "cpp"
         vars:
@@ -29,32 +27,18 @@ tasks:
       - "src/**/*.h"
       - "src/**/*.hpp"
       - "src/**/*.inc"
-      - "tests/**/*.cpp"
-      - "tests/**/*.h"
-      - "tests/**/*.hpp"
-      - "tests/**/*.inc"
+      - "examples/**/*.cpp"
+      - "examples/**/*.h"
+      - "examples/**/*.hpp"
+      - "examples/**/*.inc"
 
   cpp-fix:
-    dir: "{{.TASKFILE_DIR}}/components/core"
+    dir: "{{.TASKFILE_DIR}}"
     cmds:
       - task: "cpp"
         vars:
           FLAGS: "-i"
     sources: *cpp_source_files
-
-  py-check:
-    cmds:
-      - task: "py"
-        vars:
-          BLACK_FLAGS: "--check"
-          RUFF_FLAGS: ""
-
-  py-fix:
-    cmds:
-      - task: "py"
-        vars:
-          BLACK_FLAGS: ""
-          RUFF_FLAGS: "--fix"
 
   yml:
     aliases:
@@ -80,22 +64,6 @@ tasks:
           \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
           -print0 | \
             xargs -0 clang-format {{.FLAGS}} -Werror
-
-  py:
-    internal: true
-    requires:
-      vars: ["BLACK_FLAGS", "RUFF_FLAGS"]
-    deps: ["venv"]
-    cmds:
-      - for:
-          - "components/clp-package-utils/clp_package_utils"
-          - "components/clp-py-utils/clp_py_utils"
-          - "components/job-orchestration/job_orchestration"
-        cmd: |-
-          . "{{.VENV_DIR}}/bin/activate"
-          cd "{{.ITEM}}"
-          black --color --line-length 100 {{.BLACK_FLAGS}} .
-          ruff check {{.RUFF_FLAGS}} .
 
   venv:
     internal: true
