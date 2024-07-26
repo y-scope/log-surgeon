@@ -1,13 +1,13 @@
 version: "3"
 
 vars:
-  VENV_DIR: "{{.TASKFILE_DIR}}/.lint-venv"
+  G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
 
 tasks:
   check:
     cmds:
       - task: "cpp-check"
-      #- task: "yml-check"
+      - task: "yml-check"
 
   fix:
     cmds:
@@ -15,14 +15,9 @@ tasks:
       - task: "yml-fix"
 
   cpp-check:
-    dir: "{{.TASKFILE_DIR}}"
-    cmds:
-      - task: "cpp"
-        vars:
-          FLAGS: "--dry-run"
     sources: &cpp_source_files
+      - "{{.TASKFILE}}"
       - ".clang-format"
-      - "lint-tasks.yml"
       - "src/**/*.cpp"
       - "src/**/*.h"
       - "src/**/*.hpp"
@@ -31,14 +26,17 @@ tasks:
       - "examples/**/*.h"
       - "examples/**/*.hpp"
       - "examples/**/*.inc"
+    cmds:
+      - task: "cpp"
+        vars:
+          FLAGS: "--dry-run"
 
   cpp-fix:
-    dir: "{{.TASKFILE_DIR}}"
+    sources: *cpp_source_files
     cmds:
       - task: "cpp"
         vars:
           FLAGS: "-i"
-    sources: *cpp_source_files
 
   yml:
     aliases:
@@ -47,19 +45,24 @@ tasks:
     deps: ["venv"]
     cmds:
       - |-
-        . "{{.VENV_DIR}}/bin/activate"
-        yamllint .
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
+        yamllint --strict \
+          .github \
+          .yamllint.yml \
+          .clang-format \
+          docs \
+          lint-tasks.yml \
+          Taskfile.yml
 
   cpp:
     internal: true
     requires:
       vars: ["FLAGS"]
     deps: ["venv"]
-    dir: "{{.TASKFILE_DIR}}"
     cmds:
       - |-
-        . "{{.VENV_DIR}}/bin/activate"
-        find src tests \
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
+        find src examples \
           -type f \
           \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
           -print0 | \
@@ -67,20 +70,28 @@ tasks:
 
   venv:
     internal: true
-    dir: "{{.TASKFILE_DIR}}"
-    cmds:
-      - "rm -rf '{{.VENV_DIR}}'"
-      - "python3 -m venv '{{.VENV_DIR}}'"
-      # Remove calls to `hash` since Task uses `gosh` rather than `bash`.
-      # NOTE: Older versions of Python's venv would only call `hash` if they detected the running
-      # shell was one that had the command, but that's not the case in newer versions.
-      - "sed -i 's/^\\s*hash\\s\\+.*/true/g' \"{{.VENV_DIR}}/bin/activate\""
-      - |-
-        . "{{.VENV_DIR}}/bin/activate"
-        pip3 install --upgrade pip
-        pip3 install --upgrade -r lint-requirements.txt
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
     sources:
+      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
       - "lint-requirements.txt"
-      - "lint-tasks.yml"
-    generates:
-      - "{{.VENV_DIR}}/**/*"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - ":init"
+      - task: ":utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+    cmds:
+      - task: ":utils:create-venv"
+        vars:
+          LABEL: "lint"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          REQUIREMENTS_FILE: "lint-requirements.txt"
+      # This command must be last
+      - task: ":utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
