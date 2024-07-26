@@ -57,27 +57,6 @@ public:
     std::unique_ptr<finite_automata::RegexAST<finite_automata::RegexNFAByteState>> m_regex_ptr;
 };
 
-class CaptureAST : public ParserAST {
-public:
-    // Constructor
-    CaptureAST(
-            std::unique_ptr<SchemaVarAST> schema_var_ast,
-            std::unique_ptr<finite_automata::RegexAST<finite_automata::RegexNFAByteState>>
-                    regex_ptr,
-            std::unique_ptr<CaptureAST> capture_ast,
-            uint32_t line_num
-    )
-            : m_line_num(line_num),
-              m_schema_var_ast(std::move(schema_var_ast)),
-              m_regex_ptr(std::move(regex_ptr)),
-              m_capture_ast(std::move(capture_ast)) {}
-
-    uint32_t m_line_num;
-    std::unique_ptr<SchemaVarAST> m_schema_var_ast;
-    std::unique_ptr<finite_automata::RegexAST<finite_automata::RegexNFAByteState>> m_regex_ptr;
-    std::unique_ptr<CaptureAST> m_capture_ast;
-};
-
 class DelimiterStringAST : public ParserAST {
 public:
     // Constructor

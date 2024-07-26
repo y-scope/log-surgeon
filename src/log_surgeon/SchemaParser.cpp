@@ -26,12 +26,17 @@ using RegexASTOrByte
         = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::RegexNFAByteState>;
 using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<
         log_surgeon::finite_automata::RegexNFAByteState>;
+using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<
+        log_surgeon::finite_automata::RegexNFAByteState>;
 
 using std::make_unique;
 using std::string;
 using std::unique_ptr;
 
 namespace log_surgeon {
+
+std::unordered_map<char, std::string> SchemaParser::m_special_regex_characters;
+
 SchemaParser::SchemaParser() {
     add_lexical_rules();
     add_productions();
@@ -281,6 +286,14 @@ static auto regex_range_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     );
 }
 
+static auto regex_capture_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
+    auto* r4 = dynamic_cast<IdentifierAST*>(m->non_terminal_cast(3)->get_parser_ast().get());
+    auto& r6 = m->non_terminal_cast(5)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
+    return std::make_unique<ParserValueRegex>(
+            make_unique<RegexASTCaptureByte>(r4->m_name, std::move(r6))
+    );
+}
+
 static auto regex_middle_identity_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     return unique_ptr<ParserAST>(new ParserValueRegex(
             std::move(m->non_terminal_cast(1)->get_parser_ast()->get<unique_ptr<RegexASTByte>>())
@@ -404,6 +417,7 @@ void SchemaParser::add_lexical_rules() {
         m_special_regex_characters['|'] = "Vbar";
         m_special_regex_characters['<'] = "Langle";
         m_special_regex_characters['>'] = "Rangle";
+        m_special_regex_characters['?'] = "QuestionMark";
     }
     for (auto const& [special_regex_char, special_regex_name] : m_special_regex_characters) {
         add_token(special_regex_name, special_regex_char);
@@ -427,7 +441,6 @@ void SchemaParser::add_lexical_rules() {
     add_token("Colon", ':');
     add_token("SemiColon", ';');
     add_token("Equal", '=');
-    add_token("QuestionMark", '?');
     add_token("At", '@');
     add_token_group("AlphaNumeric", make_unique<RegexASTGroupByte>('a', 'z'));
     add_token_group("AlphaNumeric", make_unique<RegexASTGroupByte>('A', 'Z'));
@@ -443,7 +456,6 @@ void SchemaParser::add_lexical_rules() {
     add_token("f", 'f');
     add_token("v", 'v');
     add_token_chain("Delimiters", "delimiters");
-    add_token_chain("Capture", "capture");
     // RegexASTGroupByte default constructs to an m_negate group, so we add the only two characters
     // which can't be in a comment, the newline and carriage return characters as they signify the
     // end of the comment.
@@ -577,7 +589,6 @@ void SchemaParser::add_productions() {
     add_production("Literal", {"Colon"}, regex_literal_rule);
     add_production("Literal", {"SemiColon"}, regex_literal_rule);
     add_production("Literal", {"Equal"}, regex_literal_rule);
-    add_production("Literal", {"QuestionMark"}, regex_literal_rule);
     add_production("Literal", {"At"}, regex_literal_rule);
     add_production("Literal", {"Backslash", "Lbracket"}, regex_cancel_literal_rule);
     add_production("Literal", {"Backslash", "Backslash"}, regex_cancel_literal_rule);
@@ -590,7 +601,13 @@ void SchemaParser::add_productions() {
     add_production("Literal", {"Backslash", "Rbrace"}, regex_cancel_literal_rule);
     add_production("Literal", {"Backslash", "Langle"}, regex_cancel_literal_rule);
     add_production("Literal", {"Backslash", "Rangle"}, regex_cancel_literal_rule);
+    add_production("Literal", {"Backslash", "QuestionMark"}, regex_cancel_literal_rule);
     add_production("Literal", {"Tilde"}, regex_literal_rule);
+    add_production(
+            "Literal",
+            {"Lparen", "QuestionMark", "Langle", "Identifier", "Rangle", "Regex", "Rparen"},
+            regex_capture_rule
+    );
     add_production("Literal", {"Lparen", "Regex", "Rparen"}, regex_middle_identity_rule);
     for (auto const& [special_regex_char, special_regex_name] : m_special_regex_characters) {
         std::ignore = special_regex_char;
