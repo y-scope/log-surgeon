@@ -1,13 +1,14 @@
 #ifndef LOG_SURGEON_BUFFER_HPP
 #define LOG_SURGEON_BUFFER_HPP
 
-#include <cstdint>
+#include <cstdint> 
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/Reader.hpp>
 
-namespace log_surgeon {
+namespace log_surgeon
+{
 /**
  * A base class for the efficient implementation of a single growing buffer.
  * Under the hood it keeps track of one static buffer and multiple dynamic
