@@ -21,11 +21,11 @@ tasks:
       - "src/**/*.cpp"
       - "src/**/*.h"
       - "src/**/*.hpp"
-      - "src/**/*.inc"
+      - "src/**/*.tpp"
       - "examples/**/*.cpp"
       - "examples/**/*.h"
       - "examples/**/*.hpp"
-      - "examples/**/*.inc"
+      - "examples/**/*.tpp"
     cmds:
       - task: "cpp"
         vars:
@@ -64,7 +64,7 @@ tasks:
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
         find src examples \
           -type f \
-          \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
+          \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.tpp" \) \
           -print0 | \
             xargs -0 clang-format {{.FLAGS}} -Werror
 
