@@ -55,7 +55,7 @@ tasks:
     requires:
       vars: ["FLAGS"]
     deps: ["venv"]
-    dir: "{{.TASKFILE_DIR}}/components/core"
+    dir: "{{.TASKFILE_DIR}}"
     cmds:
       - |-
         . "{{.VENV_DIR}}/bin/activate"
