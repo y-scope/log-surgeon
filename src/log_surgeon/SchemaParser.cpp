@@ -388,6 +388,23 @@ static auto new_delimiter_string_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
 }
 
 void SchemaParser::add_lexical_rules() {
+    if (m_special_regex_characters.empty()) {
+        m_special_regex_characters['('] = "Lparen";
+        m_special_regex_characters[')'] = "Rparen";
+        m_special_regex_characters['*'] = "Star";
+        m_special_regex_characters['+'] = "Plus";
+        m_special_regex_characters['-'] = "Dash";
+        m_special_regex_characters['.'] = "Dot";
+        m_special_regex_characters['['] = "Lbracket";
+        m_special_regex_characters[']'] = "Rbracket";
+        m_special_regex_characters['\\'] = "Backslash";
+        m_special_regex_characters['^'] = "Hat";
+        m_special_regex_characters['{'] = "Lbrace";
+        m_special_regex_characters['}'] = "Rbrace";
+        m_special_regex_characters['|'] = "Vbar";
+        m_special_regex_characters['<'] = "Langle";
+        m_special_regex_characters['>'] = "Rangle";
+    }
     for (auto const& [special_regex_char, special_regex_name] : m_special_regex_characters) {
         add_token(special_regex_name, special_regex_char);
     }
@@ -409,9 +426,7 @@ void SchemaParser::add_lexical_rules() {
     add_token_group("Numeric", make_unique<RegexASTGroupByte>('0', '9'));
     add_token("Colon", ':');
     add_token("SemiColon", ';');
-    add_token("LAngle", '<');
     add_token("Equal", '=');
-    add_token("RAngle", '>');
     add_token("QuestionMark", '?');
     add_token("At", '@');
     add_token_group("AlphaNumeric", make_unique<RegexASTGroupByte>('a', 'z'));
@@ -428,6 +443,7 @@ void SchemaParser::add_lexical_rules() {
     add_token("f", 'f');
     add_token("v", 'v');
     add_token_chain("Delimiters", "delimiters");
+    add_token_chain("Capture", "capture");
     // RegexASTGroupByte default constructs to an m_negate group, so we add the only two characters
     // which can't be in a comment, the newline and carriage return characters as they signify the
     // end of the comment.
@@ -560,9 +576,7 @@ void SchemaParser::add_productions() {
     add_production("Literal", {"AlphaNumeric"}, regex_literal_rule);
     add_production("Literal", {"Colon"}, regex_literal_rule);
     add_production("Literal", {"SemiColon"}, regex_literal_rule);
-    add_production("Literal", {"LAngle"}, regex_literal_rule);
     add_production("Literal", {"Equal"}, regex_literal_rule);
-    add_production("Literal", {"RAngle"}, regex_literal_rule);
     add_production("Literal", {"QuestionMark"}, regex_literal_rule);
     add_production("Literal", {"At"}, regex_literal_rule);
     add_production("Literal", {"Backslash", "Lbracket"}, regex_cancel_literal_rule);
@@ -574,6 +588,8 @@ void SchemaParser::add_productions() {
     add_production("Literal", {"Backslash", "Lbrace"}, regex_cancel_literal_rule);
     add_production("Literal", {"Backslash", "Vbar"}, regex_cancel_literal_rule);
     add_production("Literal", {"Backslash", "Rbrace"}, regex_cancel_literal_rule);
+    add_production("Literal", {"Backslash", "Langle"}, regex_cancel_literal_rule);
+    add_production("Literal", {"Backslash", "Rangle"}, regex_cancel_literal_rule);
     add_production("Literal", {"Tilde"}, regex_literal_rule);
     add_production("Literal", {"Lparen", "Regex", "Rparen"}, regex_middle_identity_rule);
     for (auto const& [special_regex_char, special_regex_name] : m_special_regex_characters) {
