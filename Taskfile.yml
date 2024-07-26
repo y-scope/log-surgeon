@@ -49,3 +49,9 @@ tasks:
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+
+  init:
+    internal: true
+    silent: true
+    run: "once"
+    cmd: "mkdir -p '{{.G_BUILD_DIR}}'"
