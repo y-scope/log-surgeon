@@ -433,7 +433,7 @@ public:
               m_regex(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_regex->clone())) {}
 
     /**
-     * Used for cloning a unique_pointer of type RegexASTCat
+     * Used for cloning a `unique_pointer` of type `RegexASTCapture`.
      * @return RegexASTCapture*
      */
     [[nodiscard]] auto clone() const -> RegexASTCapture* override {
@@ -442,7 +442,7 @@ public:
 
     /**
      * Sets `is_possible_input` to specify which utf8 characters are allowed in a
-     * lexer rule containing `RegexASTCat` at a leaf node in its AST.
+     * lexer rule containing `RegexASTCapture` at a leaf node in its AST.
      * @param is_possible_input
      */
     auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
@@ -451,7 +451,7 @@ public:
 
     /**
      * Transforms '.' to to be any non-delimiter in a lexer rule if
-     * RegexASTGroup with `.` is a descendant of this RegexASTCapture node
+     * `RegexASTGroup` with `.` is a descendant of this `RegexASTCapture` node.
      * @param delimiters
      */
     auto remove_delimiters_from_wildcard(std::vector<uint32_t>& delimiters) -> void override {
@@ -459,8 +459,8 @@ public:
     }
 
     /**
-     * Add the needed RegexNFA::states to the passed in nfa to handle a
-     * RegexASTCapture before transitioning to a pre-tagged end_state
+     * Adds the needed `RegexNFA::states` to the passed in nfa to handle a
+     * `RegexASTCapture` before transitioning to a pre-tagged `end_state`.
      * @param nfa
      * @param end_state
      */
