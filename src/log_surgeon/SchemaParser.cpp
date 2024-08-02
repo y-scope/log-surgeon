@@ -35,8 +35,6 @@ using std::unique_ptr;
 
 namespace log_surgeon {
 
-std::unordered_map<char, std::string> SchemaParser::m_special_regex_characters;
-
 SchemaParser::SchemaParser() {
     add_lexical_rules();
     add_productions();
@@ -402,22 +400,22 @@ static auto new_delimiter_string_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
 
 void SchemaParser::add_lexical_rules() {
     if (m_special_regex_characters.empty()) {
-        m_special_regex_characters['('] = "Lparen";
-        m_special_regex_characters[')'] = "Rparen";
-        m_special_regex_characters['*'] = "Star";
-        m_special_regex_characters['+'] = "Plus";
-        m_special_regex_characters['-'] = "Dash";
-        m_special_regex_characters['.'] = "Dot";
-        m_special_regex_characters['['] = "Lbracket";
-        m_special_regex_characters[']'] = "Rbracket";
-        m_special_regex_characters['\\'] = "Backslash";
-        m_special_regex_characters['^'] = "Hat";
-        m_special_regex_characters['{'] = "Lbrace";
-        m_special_regex_characters['}'] = "Rbrace";
-        m_special_regex_characters['|'] = "Vbar";
-        m_special_regex_characters['<'] = "Langle";
-        m_special_regex_characters['>'] = "Rangle";
-        m_special_regex_characters['?'] = "QuestionMark";
+        m_special_regex_characters.emplace('(', "Lparen");
+        m_special_regex_characters.emplace(')', "Rparen");
+        m_special_regex_characters.emplace('*', "Star");
+        m_special_regex_characters.emplace('+', "Plus");
+        m_special_regex_characters.emplace('-', "Dash");
+        m_special_regex_characters.emplace('.', "Dot");
+        m_special_regex_characters.emplace('[', "Lbracket");
+        m_special_regex_characters.emplace(']', "Rbracket");
+        m_special_regex_characters.emplace('\\', "Backslash");
+        m_special_regex_characters.emplace('^', "Hat");
+        m_special_regex_characters.emplace('{', "Lbrace");
+        m_special_regex_characters.emplace('}', "Rbrace");
+        m_special_regex_characters.emplace('|', "Vbar");
+        m_special_regex_characters.emplace('<', "Langle");
+        m_special_regex_characters.emplace('>', "Rangle");
+        m_special_regex_characters.emplace('?', "QuestionMark");
     }
     for (auto const& [special_regex_char, special_regex_name] : m_special_regex_characters) {
         add_token(special_regex_name, special_regex_char);

@@ -125,7 +125,7 @@ private:
      */
     auto generate_schema_ast(Reader& reader) -> std::unique_ptr<SchemaAST>;
 
-    static std::unordered_map<char, std::string> m_special_regex_characters;
+    static inline std::unordered_map<char, std::string> m_special_regex_characters;
 };
 }  // namespace log_surgeon
 
