@@ -89,7 +89,7 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
             continue;
         }
         // currently capture groups are not yet supported
-        if (rule->m_name == "capture") {
+        if ("capture" == rule->m_name) {
             continue;
         }
         // transform '.' from any-character into any non-delimiter character
