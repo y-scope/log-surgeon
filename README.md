@@ -121,6 +121,7 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 * `md5sum`
 * Python 3.8 or newer
 * python3-venv
+* [Task]
 
 ### Running the linters
 
@@ -157,3 +158,4 @@ The following are issues we're aware of and working on:
 
 [feature-req]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [lint]: https://github.com/y-scope/log-surgeon/blob/main/.github/workflows/lint.yml
+[Task]: https://taskfile.dev/
