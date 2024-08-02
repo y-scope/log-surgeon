@@ -4,13 +4,15 @@ on:
   pull_request:
     paths:
       - ".github/workflows/build.yaml"
-      - "src/*"
-      - "examples/*"
+      - "CMakeLists.txt"
+      - "examples/**/*"
+      - "src/**/*"
   push:
     paths:
       - ".github/workflows/build.yaml"
-      - "src/*"
-      - "examples/*"
+      - "CMakeLists.txt"
+      - "examples/**/*"
+      - "src/**/*"
   workflow_call:
 
 # Concurrency group to prevent multiple workflow instances from trying to publish releases
