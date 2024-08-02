@@ -15,41 +15,6 @@ tasks:
   clean:
     cmds: ["rm -rf '{{.G_BUILD_DIR}}' '{{.G_LINT_VENV_DIR}}'"]
 
-  lint:
-    deps: ["lint-venv"]
-    cmds:
-      - |-
-        . "{{.G_LINT_VENV_DIR}}/bin/activate"
-        yamllint \
-          --config-file "{{.ROOT_DIR}}/tools/yscope-dev-utils/lint-configs/.yamllint.yml" \
-          --strict \
-          .github \
-          Taskfile.yml
-
-  lint-venv:
-    internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
-    sources: ["{{.TASKFILE}}", "lint-requirements.txt"]
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - task: "utils:validate-checksum"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-    cmds:
-      - task: "utils:create-venv"
-        vars:
-          LABEL: "lint"
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          REQUIREMENTS_FILE: "lint-requirements.txt"
-      # This command must be last
-      - task: "utils:compute-checksum"
-        vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-
   init:
     internal: true
     silent: true
