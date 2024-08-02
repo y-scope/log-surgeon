@@ -441,8 +441,8 @@ public:
     }
 
     /**
-     * Sets is_possible_input to specify which utf8 characters are allowed in a
-     * lexer rule containing RegexASTCat at a leaf node in its AST
+     * Sets `is_possible_input` to specify which utf8 characters are allowed in a
+     * lexer rule containing `RegexASTCat` at a leaf node in its AST.
      * @param is_possible_input
      */
     auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
