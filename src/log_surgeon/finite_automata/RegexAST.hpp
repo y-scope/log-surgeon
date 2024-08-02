@@ -425,12 +425,12 @@ template <typename NFAStateType>
 class RegexASTCapture : public RegexAST<NFAStateType> {
 public:
     RegexASTCapture(
-            std::string /*name*/,
-            std::unique_ptr<RegexAST<NFAStateType>> /*regex*/
+            std::string group_name ,
+            std::unique_ptr<RegexAST<NFAStateType>> regex
     );
 
     RegexASTCapture(RegexASTCapture const& rhs)
-            : m_name(rhs.m_name),
+            : m_group_name(rhs.m_group_name),
               m_regex(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_regex->clone())) {}
 
     /**
@@ -468,7 +468,7 @@ public:
     auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
 
 private:
-    std::string m_name;
+    std::string m_group_name;
     std::unique_ptr<RegexAST<NFAStateType>> m_regex;
 };
 
