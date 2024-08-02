@@ -118,7 +118,7 @@ void RegexASTMultiplication<NFAStateType>::add(
 
 template <typename NFAStateType>
 void RegexASTCapture<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
-    m_regex->add(nfa, end_state);
+    m_group_regex_ast->add(nfa, end_state);
 }
 
 template <typename NFAStateType>

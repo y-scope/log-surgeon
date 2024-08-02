@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
-#include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -424,13 +424,15 @@ private:
 template <typename NFAStateType>
 class RegexASTCapture : public RegexAST<NFAStateType> {
 public:
-    RegexASTCapture(std::string group_name, std::unique_ptr<RegexAST<NFAStateType>> regex)
+    RegexASTCapture(std::string group_name, std::unique_ptr<RegexAST<NFAStateType>> group_regex_ast)
             : m_group_name(std::move(group_name)),
-              m_regex(std::move(regex)) {}
+              m_group_regex_ast(std::move(group_regex_ast)) {}
 
     RegexASTCapture(RegexASTCapture const& rhs)
             : m_group_name(rhs.m_group_name),
-              m_regex(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_regex->clone())) {}
+              m_group_regex_ast(
+                      std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_group_regex_ast->clone())
+              ) {}
 
     /**
      * Used for cloning a `unique_pointer` of type `RegexASTCapture`.
@@ -446,7 +448,7 @@ public:
      * @param is_possible_input
      */
     auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
-        m_regex->set_possible_inputs_to_true(is_possible_input);
+        m_group_regex_ast->set_possible_inputs_to_true(is_possible_input);
     }
 
     /**
@@ -455,7 +457,7 @@ public:
      * @param delimiters
      */
     auto remove_delimiters_from_wildcard(std::vector<uint32_t>& delimiters) -> void override {
-        m_regex->remove_delimiters_from_wildcard(delimiters);
+        m_group_regex_ast->remove_delimiters_from_wildcard(delimiters);
     }
 
     /**
@@ -468,7 +470,7 @@ public:
 
 private:
     std::string m_group_name;
-    std::unique_ptr<RegexAST<NFAStateType>> m_regex;
+    std::unique_ptr<RegexAST<NFAStateType>> m_group_regex_ast;
 };
 
 }  // namespace log_surgeon::finite_automata
