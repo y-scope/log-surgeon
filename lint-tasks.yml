@@ -19,14 +19,14 @@ tasks:
     sources: &cpp_source_files
       - "{{.TASKFILE}}"
       - ".clang-format"
-      - "src/**/*.cpp"
-      - "src/**/*.h"
-      - "src/**/*.hpp"
-      - "src/**/*.tpp"
       - "examples/**/*.cpp"
       - "examples/**/*.h"
       - "examples/**/*.hpp"
       - "examples/**/*.tpp"
+      - "src/**/*.cpp"
+      - "src/**/*.h"
+      - "src/**/*.hpp"
+      - "src/**/*.tpp"
     cmds:
       - task: "cpp"
         vars:

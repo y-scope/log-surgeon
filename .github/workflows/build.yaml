@@ -15,15 +15,17 @@ on:
       - "src/**/*"
   workflow_call:
 
-# Concurrency group to prevent multiple workflow instances from trying to publish releases
-concurrency: "${{github.workflow}}-${{github.ref}}"
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
 
 jobs:
   build:
     strategy:
       matrix:
         os: ["macos-latest", "ubuntu-latest"]
-        build_type: ["Release", "Debug"]
+        build_type: ["Debug", "Release"]
     runs-on: "${{ matrix.os }}"
     steps:
       - uses: "actions/checkout@v4"
