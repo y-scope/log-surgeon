@@ -424,10 +424,9 @@ private:
 template <typename NFAStateType>
 class RegexASTCapture : public RegexAST<NFAStateType> {
 public:
-    RegexASTCapture(
-            std::string group_name ,
-            std::unique_ptr<RegexAST<NFAStateType>> regex
-    );
+    RegexASTCapture(std::string group_name, std::unique_ptr<RegexAST<NFAStateType>> regex)
+            : m_group_name(group_name),
+              m_regex(std::move(regex)) {}
 
     RegexASTCapture(RegexASTCapture const& rhs)
             : m_group_name(rhs.m_group_name),
