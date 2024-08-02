@@ -430,7 +430,8 @@ public:
     );
 
     RegexASTCapture(RegexASTCapture const& rhs)
-            : m_regex(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_regex->clone())) {}
+            : m_name(rhs.m_name),
+              m_regex(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_regex->clone())) {}
 
     /**
      * Used for cloning a unique_pointer of type RegexASTCat
