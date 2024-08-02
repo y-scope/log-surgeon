@@ -30,12 +30,12 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
 
-      - run: "cmake -B ./build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}"
+      - run: "cmake -B ./build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}"
 
-      - run: "cmake --build ./build --config ${{ matrix.build_type }}"
+      - run: "cmake --build ./build --config ${{matrix.build_type}}"
 
       - run: "cmake --install ./build --prefix ./install"
 
-      - run: "cmake -S examples -B ./examples/build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}"
+      - run: "cmake -S examples -B ./examples/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}"
 
-      - run: "cmake --build ./examples/build --config ${{ matrix.build_type }}"
+      - run: "cmake --build ./examples/build --config ${{matrix.build_type}}"
