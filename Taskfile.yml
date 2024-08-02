@@ -5,7 +5,7 @@ includes:
   utils: "tools/yscope-dev-utils/taskfiles/utils.yml"
 
 vars:
-  G_BUILD_DIR: "{{.ROOT_DIR}}/target"
+  G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
 
 tasks:
