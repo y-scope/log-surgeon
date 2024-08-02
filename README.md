@@ -105,10 +105,42 @@ To build the debug version replace the first command with:
   * `log-surgeon`'s [design objectives](docs/design-objectives.md)
 * [examples](examples) contains programs demonstrating usage of the library.
 
+## Linting
+
+Before submitting a PR, ensure you've run our linting tools and either fixed any violations or
+suppressed the warning.
+
+### Requirements
+
+We currently support running our linting tools on Linux and macOS. If you're developing on another
+OS, you can submit a [feature request][feature-req]. If you can't run the linting workflows
+locally, you can enable and run the [lint] workflow in your fork.
+
+To run the linting tools, besides commonly installed tools like `tar`, you'll need:
+
+* `md5sum`
+* Python 3.8 or newer
+* python3-venv
+* [Task]
+
+### Running the linters
+
+To report all errors run:
+
+```shell
+task lint:check
+```
+
+To fix cpp errors, and report yml errors, run:
+
+```shell
+task lint:fix
+```
+
 ## Providing feedback
 
 You can use GitHub issues to [report a bug](https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=bug&template=bug-report.yml)
-or [request a feature](https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=enhancement&template=feature-request.yml).
+or [request a feature][feature-req].
 
 Join us on [Zulip](https://yscope-clp.zulipchat.com/) to chat with developers
 and other community members.
@@ -123,3 +155,7 @@ The following are issues we're aware of and working on:
 * A variable pattern has no way to match text around a variable, without having
   it also be a part of the variable.
   * Support for submatch extraction will be coming in a future release.
+
+[feature-req]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[lint]: https://github.com/y-scope/log-surgeon/blob/main/.github/workflows/lint.yml
+[Task]: https://taskfile.dev/
