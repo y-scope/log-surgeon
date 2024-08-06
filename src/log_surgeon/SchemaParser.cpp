@@ -34,7 +34,6 @@ using std::string;
 using std::unique_ptr;
 
 namespace log_surgeon {
-
 SchemaParser::SchemaParser() {
     add_lexical_rules();
     add_productions();
