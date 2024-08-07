@@ -144,3 +144,5 @@ install(
     DESTINATION
     ${LCHIP_INSTALL_CONFIG_DIR}
     )
+
+include(tests/CMakeLists.txt)

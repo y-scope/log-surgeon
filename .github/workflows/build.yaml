@@ -7,12 +7,14 @@ on:
       - "CMakeLists.txt"
       - "examples/**/*"
       - "src/**/*"
+      - "tests/**/*"
   push:
     paths:
       - ".github/workflows/build.yaml"
       - "CMakeLists.txt"
       - "examples/**/*"
       - "src/**/*"
+      - "tests/**/*"
   workflow_call:
 
 concurrency:
@@ -29,6 +31,8 @@ jobs:
     runs-on: "${{matrix.os}}"
     steps:
       - uses: "actions/checkout@v4"
+        with:
+          submodules: "recursive"
 
       - run: "cmake -B ./build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}"
 
@@ -39,3 +43,5 @@ jobs:
       - run: "cmake -S examples -B ./examples/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}"
 
       - run: "cmake --build ./examples/build --config ${{matrix.build_type}}"
+
+      - run: "./build/unitTest"
