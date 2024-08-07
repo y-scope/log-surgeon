@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
-#include <string>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -420,59 +420,6 @@ private:
     uint32_t m_min;
     uint32_t m_max;
 };
-
-template <typename NFAStateType>
-class RegexASTCapture : public RegexAST<NFAStateType> {
-public:
-    RegexASTCapture(std::string group_name, std::unique_ptr<RegexAST<NFAStateType>> group_regex_ast)
-            : m_group_name(std::move(group_name)),
-              m_group_regex_ast(std::move(group_regex_ast)) {}
-
-    RegexASTCapture(RegexASTCapture const& rhs)
-            : m_group_name(rhs.m_group_name),
-              m_group_regex_ast(
-                      std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_group_regex_ast->clone())
-              ) {}
-
-    /**
-     * Used for cloning a `unique_pointer` of type `RegexASTCapture`.
-     * @return RegexASTCapture*
-     */
-    [[nodiscard]] auto clone() const -> RegexASTCapture* override {
-        return new RegexASTCapture(*this);
-    }
-
-    /**
-     * Sets `is_possible_input` to specify which utf8 characters are allowed in a
-     * lexer rule containing `RegexASTCapture` at a leaf node in its AST.
-     * @param is_possible_input
-     */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
-        m_group_regex_ast->set_possible_inputs_to_true(is_possible_input);
-    }
-
-    /**
-     * Transforms '.' to to be any non-delimiter in a lexer rule if
-     * `RegexASTGroup` with `.` is a descendant of this `RegexASTCapture` node.
-     * @param delimiters
-     */
-    auto remove_delimiters_from_wildcard(std::vector<uint32_t>& delimiters) -> void override {
-        m_group_regex_ast->remove_delimiters_from_wildcard(delimiters);
-    }
-
-    /**
-     * Adds the needed `RegexNFA::states` to the passed in nfa to handle a
-     * `RegexASTCapture` before transitioning to a pre-tagged `end_state`.
-     * @param nfa
-     * @param end_state
-     */
-    auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
-
-private:
-    std::string m_group_name;
-    std::unique_ptr<RegexAST<NFAStateType>> m_group_regex_ast;
-};
-
 }  // namespace log_surgeon::finite_automata
 
 #include "RegexAST.tpp"
