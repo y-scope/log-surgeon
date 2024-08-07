@@ -44,4 +44,4 @@ jobs:
 
       - run: "cmake --build ./examples/build --config ${{matrix.build_type}}"
 
-      - run: "./${{ROOT_DIR}}/build/unitTest"
+      - run: "./build/unitTest"
