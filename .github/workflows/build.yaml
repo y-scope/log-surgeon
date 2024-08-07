@@ -7,12 +7,14 @@ on:
       - "CMakeLists.txt"
       - "examples/**/*"
       - "src/**/*"
+      - "tests/**/*"
   push:
     paths:
       - ".github/workflows/build.yaml"
       - "CMakeLists.txt"
       - "examples/**/*"
       - "src/**/*"
+      - "tests/**/*"
   workflow_call:
 
 concurrency:
