@@ -27,19 +27,24 @@ public:
     /**
      * Constructs the parser using the given schema file.
      * @param schema_file_path
+     * @param query_parser
      * @throw std::runtime_error from LALR1Parser, RegexAST, or Lexer
      * describing the failure parsing the schema file or processing the schema
      * AST.
      */
-    explicit LogParser(std::string const& schema_file_path);
+    explicit LogParser(std::string const& schema_file_path, bool query_parser = false);
 
     /**
      * Constructs the parser using the given schema AST.
      * @param schema_ast
+     * @param query_parser
      * @throw std::runtime_error from LALR1Parser, RegexAST, or Lexer
      * describing the failure processing the schema AST.
      */
-    explicit LogParser(std::unique_ptr<log_surgeon::SchemaAST> schema_ast);
+    explicit LogParser(
+            std::unique_ptr<log_surgeon::SchemaAST> schema_ast,
+            bool query_parser = false
+    );
 
     /**
      * Returns the parser to its initial state, clearing any existing
@@ -157,8 +162,9 @@ private:
      * specified in the schema AST.
      * @param schema_ast The AST from which parsing and lexing rules are
      * generated.
+     * @param query_parser
      */
-    auto add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void;
+    auto add_rules(std::unique_ptr<SchemaAST> schema_ast, bool query_parser = false) -> void;
 
     // TODO: move ownership of the buffer to the lexer
     ParserInputBuffer m_input_buffer;

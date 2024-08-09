@@ -10,10 +10,12 @@ Schema::Schema() {
 Schema::Schema(std::string const& schema_file_path)
         : m_schema_ast{SchemaParser::try_schema_file(schema_file_path)} {}
 
-auto Schema::add_variable(std::string const& var_name, std::string const& regex, int priority)
-        -> void {
-    std::string unparsed_string = var_name + ":" + regex;
-    std::unique_ptr<SchemaAST> schema_ast = SchemaParser::try_schema_string(unparsed_string);
-    m_schema_ast->add_schema_var(std::move(schema_ast->m_schema_vars[0]), priority);
+auto Schema::add_schema_line(std::string const& schema_line, int priority) -> void {
+    std::unique_ptr<SchemaAST> schema_ast = SchemaParser::try_schema_string(schema_line);
+    if ("delimiters" == schema_line.substr(0, std::string("delimiters").size())) {
+        m_schema_ast->add_delimiters(std::move(schema_ast->m_delimiters[0]));
+    } else {
+        m_schema_ast->add_schema_var(std::move(schema_ast->m_schema_vars[0]), priority);
+    }
 }
 }  // namespace log_surgeon

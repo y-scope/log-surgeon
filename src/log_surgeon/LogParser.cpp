@@ -27,11 +27,11 @@ using finite_automata::RegexASTOr;
 using finite_automata::RegexDFAByteState;
 using finite_automata::RegexNFAByteState;
 
-LogParser::LogParser(string const& schema_file_path)
-        : LogParser::LogParser(SchemaParser::try_schema_file(schema_file_path)) {}
+LogParser::LogParser(string const& schema_file_path, bool query_parser)
+        : LogParser::LogParser(SchemaParser::try_schema_file(schema_file_path), query_parser) {}
 
-LogParser::LogParser(std::unique_ptr<SchemaAST> schema_ast) {
-    add_rules(std::move(schema_ast));
+LogParser::LogParser(std::unique_ptr<SchemaAST> schema_ast, bool query_parser) {
+    add_rules(std::move(schema_ast), query_parser);
     m_lexer.generate();
     m_log_event_view = make_unique<LogEventView>(*this);
 }
@@ -43,7 +43,7 @@ auto LogParser::add_delimiters(unique_ptr<ParserAST> const& delimiters) -> void 
     }
 }
 
-void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
+void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast, bool query_parser) {
     for (auto const& delimiters : schema_ast->m_delimiters) {
         add_delimiters(delimiters);
     }
@@ -57,10 +57,14 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
     if (delimiters.empty()) {
         throw runtime_error("When using --schema-path, \"delimiters:\" line must be used.");
     }
-    add_token("newLine", '\n');
+    if(false == query_parser) {
+        add_token("newLine", '\n');
+    }
     for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* rule = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-        if (rule->m_name == "timestamp") {
+        // transform '.' from any-character into any non-delimiter character
+        rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters);
+        if (rule->m_name == "timestamp" && false == query_parser) {
             unique_ptr<RegexAST<RegexNFAByteState>> first_timestamp_regex_ast(
                     rule->m_regex_ptr->clone()
             );
@@ -88,8 +92,6 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
             // prevent timestamps from going into the dictionary
             continue;
         }
-        // transform '.' from any-character into any non-delimiter character
-        rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters);
         // currently, error out if non-timestamp pattern contains a delimiter
         // check if regex contains a delimiter
         bool is_possible_input[cUnicodeMax] = {false};
@@ -103,7 +105,7 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
                 break;
             }
         }
-        if (contains_delimiter) {
+        if (contains_delimiter && "timestamp" != rule->m_name) {
             FileReader schema_reader;
             ErrorCode error_code = schema_reader.try_open(schema_ast->m_file_path);
             if (ErrorCode::Success != error_code) {
@@ -137,14 +139,16 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
                     + arrows + "\n"
             );
         }
-        unique_ptr<RegexASTGroup<RegexNFAByteState>> delimiter_group
-                = make_unique<RegexASTGroup<RegexNFAByteState>>(
-                        RegexASTGroup<RegexNFAByteState>(delimiters)
-                );
-        rule->m_regex_ptr = make_unique<RegexASTCat<RegexNFAByteState>>(
-                std::move(delimiter_group),
-                std::move(rule->m_regex_ptr)
-        );
+        if (false == query_parser) {
+            unique_ptr<RegexASTGroup<RegexNFAByteState>> delimiter_group
+                    = make_unique<RegexASTGroup<RegexNFAByteState>>(
+                            RegexASTGroup<RegexNFAByteState>(delimiters)
+                    );
+            rule->m_regex_ptr = make_unique<RegexASTCat<RegexNFAByteState>>(
+                    std::move(delimiter_group),
+                    std::move(rule->m_regex_ptr)
+            );
+        }
         add_rule(rule->m_name, std::move(rule->m_regex_ptr));
     }
 }

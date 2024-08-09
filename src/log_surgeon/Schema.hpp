@@ -19,15 +19,15 @@ public:
     explicit Schema(std::string const& schema_file_path);
 
     /**
-     * Parses var_name+":"+regex as if it were its own entire schema file. Then
-     * extracts the SchemaVarAST from the resulting SchemaAST and adds it to
-     * m_schema_vars in m_schema_ast. Position in m_schema_vars is determined by
-     * the priority (priority == -1 to set to lowest).
-     * @param var_name
+     * Parses schema line as if it were its own entire schema file. Then extracts the
+     * SchemaVarAST/DelimiterStringAST from the resulting SchemaAST and adds it to
+     * m_schema_vars/m_delimiters in m_schema_ast. Position in m_schema_vars is determined by the
+     * priority (priority == -1 to set to lowest).
+     * @param schema_line
      * @param regex
      * @param priority
      */
-    auto add_variable(std::string const& var_name, std::string const& regex, int priority) -> void;
+    auto add_schema_line(std::string const& schema_line, int priority) -> void;
 
     /* Work in progress API to modify a schema object
 
@@ -41,17 +41,11 @@ public:
 
     auto set_variables (std::map<std::string, std::string> variables) -> void;
 
-    auto add_delimiter (char delimiter) -> void;
-
     auto remove_delimiter (char delimiter) -> void;
-
-    auto add_delimiters (std::vector<char> delimiter) -> void;
 
     auto remove_delimiters (std::vector<char> delimiter) -> void;
 
     auto remove_all_delimiters () -> void;
-
-    auto set_delimiters (std::vector<char> delimiters) -> void;
 
     auto clear ();
     */
