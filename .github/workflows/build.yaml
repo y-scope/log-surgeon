@@ -33,8 +33,7 @@ jobs:
       - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
-      - name: Install catch
-        run: |
+      - run: |
           "cd Catch2 ./submodules/catch2"
           "cmake -B build -S . -DBUILD_TESTING=OFF"
           "sudo cmake --build build/ --target install"
