@@ -34,6 +34,9 @@ jobs:
         with:
           submodules: "recursive"
 
+      - name: List Directory Contents
+        run: ls -R
+
       - name: Install Catch2
         run: |
           "cmake -B build -S . -DBUILD_TESTING=OFF"
