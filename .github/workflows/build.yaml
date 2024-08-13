@@ -41,12 +41,6 @@ jobs:
         run: ls -R
         working-directory: submodules/Catch2
 
-      - name: Install Catch2
-        working-directory: submodules/Catch2
-        run: |
-          "cmake -B build -S . -DBUILD_TESTING=OFF"
-          "sudo cmake --build build/ --target install"
-
       - name: Build Executables
         run: |
           "cmake -B ./build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}"
