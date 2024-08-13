@@ -33,14 +33,14 @@ jobs:
       - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
-          
-      - name: Install catch2
+
+      - name: Install Catch2
         run: |
-          "cd ./submodules/Catch2"
           "cmake -B build -S . -DBUILD_TESTING=OFF"
           "sudo cmake --build build/ --target install"
+        working-directory: submodules/Catch2
 
-      - name: Build executables
+      - name: Build Executables
         run: |
           "cmake -B ./build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}"
           "cmake --build ./build --config ${{matrix.build_type}}"
@@ -48,5 +48,5 @@ jobs:
           "cmake -S examples -B ./examples/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}"
           "cmake --build ./examples/build --config ${{matrix.build_type}}"
 
-      - name: Run unit-test
+      - name: Run Unit Tests
         run: "./build/unit-test"
