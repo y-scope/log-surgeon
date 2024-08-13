@@ -34,13 +34,13 @@ jobs:
         with:
           submodules: "recursive"
           
-      - name: install catch2
+      - name: Install catch2
         run: |
           "cd ./submodules/Catch2"
           "cmake -B build -S . -DBUILD_TESTING=OFF"
           "sudo cmake --build build/ --target install"
 
-      - name: build
+      - name: Build executables
         run: |
           "cmake -B ./build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}"
           "cmake --build ./build --config ${{matrix.build_type}}"
@@ -48,5 +48,5 @@ jobs:
           "cmake -S examples -B ./examples/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}"
           "cmake --build ./examples/build --config ${{matrix.build_type}}"
 
-      - name: run unit-test
+      - name: Run unit-test
         run: "./build/unit-test"
