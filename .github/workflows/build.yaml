@@ -46,7 +46,7 @@ jobs:
           cmake --build ./build --config ${{matrix.build_type}}
           cmake --install ./build --prefix ./install
           cmake -S examples -B ./examples/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
-          cmake --build ./examples/build --config ${{matrix.build_type}}"
+          cmake --build ./examples/build --config ${{matrix.build_type}}
 
       - name: "Run Unit Tests"
         run: "./build/tests/unit-test"
