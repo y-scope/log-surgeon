@@ -1,6 +1,6 @@
 find_package(Catch2 3 REQUIRED)
 
-set(SOURCE_FILES_unitTest
+set(SOURCES_LOG_SURGEON
     src/log_surgeon/FileReader.cpp
     src/log_surgeon/FileReader.hpp
     src/log_surgeon/finite_automata/RegexAST.hpp
@@ -18,10 +18,13 @@ set(SOURCE_FILES_unitTest
     src/log_surgeon/SchemaParser.hpp
     src/log_surgeon/Token.cpp
     src/log_surgeon/Token.hpp
+)
+
+set(SOURCES_TESTS
     tests/test-lexer.cpp
 )
 
-add_executable(unitTest ${SOURCE_FILES_unitTest})
+add_executable(unitTest ${SOURCES_LOG_SURGEON} ${SOURCES_TESTS})
 target_link_libraries(unitTest PRIVATE Catch2::Catch2WithMain)
 target_include_directories(unitTest
                            PRIVATE
