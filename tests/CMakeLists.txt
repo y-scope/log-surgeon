@@ -1,3 +1,5 @@
+find_package(Catch2 3 REQUIRED)
+
 set(SOURCE_FILES_unitTest
     src/log_surgeon/FileReader.cpp
     src/log_surgeon/FileReader.hpp
@@ -17,13 +19,12 @@ set(SOURCE_FILES_unitTest
     src/log_surgeon/Token.cpp
     src/log_surgeon/Token.hpp
     tests/test-lexer.cpp
-    tests/test-main.cpp
 )
 
 add_executable(unitTest ${SOURCE_FILES_unitTest})
+target_link_libraries(unitTest PRIVATE Catch2::Catch2WithMain)
 target_include_directories(unitTest
                            PRIVATE
-                           ${CMAKE_SOURCE_DIR}/submodules
                            ${CMAKE_SOURCE_DIR}/src
 )
 target_compile_features(unitTest

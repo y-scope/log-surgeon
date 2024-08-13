@@ -83,6 +83,7 @@ Requirements:
 
 * CMake
 * GCC >= 10 or Clang >= 7
+* [Catch2] >= 3
 
 From the repo's root, run:
 ```shell
@@ -156,6 +157,7 @@ The following are issues we're aware of and working on:
   it also be a part of the variable.
   * Support for submatch extraction will be coming in a future release.
 
+[Catch2]: https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md#installing-catch2-from-git-repository
 [feature-req]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [lint]: https://github.com/y-scope/log-surgeon/blob/main/.github/workflows/lint.yml
 [Task]: https://taskfile.dev/
