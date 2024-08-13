@@ -36,16 +36,17 @@ jobs:
 
       - name: "Install Catch2"
         working-directory: "submodules/Catch2"
-        run: "cmake -B build -S . -DBUILD_TESTING=OFF && sudo cmake --build build/ --target install"
+        run: |
+          cmake -B build -S . -DBUILD_TESTING=OFF
+          sudo cmake --build build/ --target install
 
       - name: "Build Executables"
-        run: "cmake -B ./build -DCMAKE_BUILD_TYPE=${{matrix.build_type}} && cmake --build ./build --config ${{matrix.build_type}} && cmake --install ./build --prefix ./install && cmake -S examples -B ./examples/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}} && cmake --build ./examples/build --config ${{matrix.build_type}}"
+        run: |
+          cmake -B ./build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
+          cmake --build ./build --config ${{matrix.build_type}}
+          cmake --install ./build --prefix ./install
+          cmake -S examples -B ./examples/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
+          cmake --build ./examples/build --config ${{matrix.build_type}}"
 
       - name: "Run Unit Tests"
         run: "./build/tests/unit-test"
-
-      - name: "Test multi-line"
-        working-directory: "submodules/Catch2"
-        run: |
-          echo "line 1"
-          echo "line 2"
