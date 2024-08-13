@@ -36,7 +36,7 @@ jobs:
           
       - name: Install catch2
         run: |
-          "cd ./submodules/Catch2"
+          "cd submodules/Catch2"
           "cmake -B build -S . -DBUILD_TESTING=OFF"
           "sudo cmake --build build/ --target install"
 
