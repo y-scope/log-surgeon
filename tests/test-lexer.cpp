@@ -1,7 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <log_surgeon/finite_automata/RegexAST.hpp>
-#include <log_surgeon/finite_automata/RegexNFA.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
@@ -17,8 +15,6 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     auto& schema_var_ast = dynamic_cast<log_surgeon::SchemaVarAST&>(*schema_var_ast_ptr);
     REQUIRE("myNumber" == schema_var_ast.m_name);
 
-    auto* regexASTCat = dynamic_cast<log_surgeon::finite_automata::RegexASTCat<
-            log_surgeon::finite_automata::RegexNFAByteState>*>(schema_var_ast->m_regex_ptr.get()
-    );
-    REQUIRE(nullptr != regexASTCat);
+    auto& regex_ast_cat = schema_var_ast.m_regex_ptr;
+    REQUIRE(nullptr != regex_ast_cat);
 }
