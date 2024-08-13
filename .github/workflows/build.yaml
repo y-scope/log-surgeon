@@ -37,11 +37,15 @@ jobs:
       - name: List Directory Contents
         run: ls -R
 
+      - name: List Catch2 Directory Contents
+        run: ls -R
+        working-directory: submodules/Catch2
+
       - name: Install Catch2
+        working-directory: submodules/Catch2
         run: |
           "cmake -B build -S . -DBUILD_TESTING=OFF"
           "sudo cmake --build build/ --target install"
-        working-directory: submodules/Catch2
 
       - name: Build Executables
         run: |
