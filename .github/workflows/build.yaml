@@ -34,7 +34,7 @@ jobs:
         with:
           submodules: "recursive"
       - run: |
-          "cd Catch2 ./submodules/catch2"
+          "cd Catch2 ./submodules/Catch2"
           "cmake -B build -S . -DBUILD_TESTING=OFF"
           "sudo cmake --build build/ --target install"
 
