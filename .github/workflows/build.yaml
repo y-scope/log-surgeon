@@ -34,28 +34,12 @@ jobs:
         with:
           submodules: "recursive"
 
-      - name: List Directory Contents
-        run: ls -R
-
-      - name: List Catch2 Directory Contents
-        run: ls -R
+      - name: "Install Catch2"
         working-directory: submodules/Catch2
+        run: "cmake -B build -S . -DBUILD_TESTING=OFF && sudo cmake --build build/ --target install"
 
-      - name: Build Catch2
-        working-directory: submodules/Catch2
-        run: "cmake -B build -S . -DBUILD_TESTING=OFF"
+      - name: "Build Executables"
+        run: "cmake -B ./build -DCMAKE_BUILD_TYPE=${{matrix.build_type}} && cmake --build ./build --config ${{matrix.build_type}} && cmake --install ./build --prefix ./install && cmake -S examples -B ./examples/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}} && cmake --build ./examples/build --config ${{matrix.build_type}}"
 
-      - name: Install Catch2
-        working-directory: submodules/Catch2
-        run: "sudo cmake --build build/ --target install"
-
-      - name: Build Executables
-        run: |
-          "cmake -B ./build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}"
-          "cmake --build ./build --config ${{matrix.build_type}}"
-          "cmake --install ./build --prefix ./install"
-          "cmake -S examples -B ./examples/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}"
-          "cmake --build ./examples/build --config ${{matrix.build_type}}"
-
-      - name: Run Unit Tests
+      - name: "Run Unit Tests"
         run: "./build/unit-test"
