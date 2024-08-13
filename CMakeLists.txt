@@ -145,4 +145,4 @@ install(
     ${LCHIP_INSTALL_CONFIG_DIR}
     )
 
-include(tests/CMakeLists.txt)
+add_subdirectory(tests)
