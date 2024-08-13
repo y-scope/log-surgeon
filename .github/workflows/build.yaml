@@ -47,5 +47,5 @@ jobs:
       - name: "Test multi-line"
         working-directory: "submodules/Catch2"
         run: |
-          echo \"line 1\"
-          echo \"line 2\"
+          echo "line 1"
+          echo "line 2"
