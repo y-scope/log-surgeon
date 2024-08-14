@@ -101,15 +101,15 @@ Requirements:
 From the repo's root, run:
 ```shell
 # Generate the CMake project
-cmake -S . -B build
+cmake -S . -B build -DBUILD_TESTING=OFF
 # Build the project
 cmake --build ./build -j
 # Install the project to ~/.local
 cmake --install ./build --prefix ~/.local
 ```
 
-To build the debug version replace the first command with:
-`cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Debug`
+To build the debug version and tests replace the first command with:
+`cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON`
 
 ## Documentation and examples
 
@@ -118,6 +118,13 @@ To build the debug version replace the first command with:
     writing your own schema
   * `log-surgeon`'s [design objectives](docs/design-objectives.md)
 * [examples](examples) contains programs demonstrating usage of the library.
+
+## Testing
+
+To run unit tests, run:
+```shell
+cmake --build ./build --target test
+```
 
 ## Linting
 
