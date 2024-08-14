@@ -84,6 +84,19 @@ Requirements:
 * CMake
 * GCC >= 10 or Clang >= 7
 * [Catch2] >= 3
+  * On Ubuntu <= 20.04, you can install it using:
+    ```shell
+    sudo tools/deps-install/ubuntu/install-catch2.sh 3.6.0
+    ```
+  * On Ubuntu >= 22.04, you can install it using:
+    ```shell
+    sudo apt-get update
+    sudo apt-get install catch2
+    ```
+  * On macOS, you can install it using:
+    ```shell
+    brew install catch2
+    ```
 
 From the repo's root, run:
 ```shell
@@ -157,7 +170,7 @@ The following are issues we're aware of and working on:
   it also be a part of the variable.
   * Support for submatch extraction will be coming in a future release.
 
-[Catch2]: https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md#installing-catch2-from-git-repository
+[Catch2]: https://github.com/catchorg/Catch2/tree/devel
 [feature-req]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [lint]: https://github.com/y-scope/log-surgeon/blob/main/.github/workflows/lint.yml
 [Task]: https://taskfile.dev/
