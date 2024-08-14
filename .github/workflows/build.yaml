@@ -40,7 +40,7 @@ jobs:
 
       - name: "Install Catch2 on Ubuntu"
         if: "matrix.os == 'ubuntu-latest'"
-        working-directory: "tools/deps-install"
+        working-directory: "tools/deps-install/ubuntu"
         run: "./install-catch2.sh 3.6.0"
 
       - name: "Build Executables"
