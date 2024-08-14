@@ -1,6 +1,5 @@
-find_package(Catch2 3 REQUIRED)
-
-set(SOURCES_LOG_SURGEON
+set(
+        SOURCES_LOG_SURGEON
         ../src/log_surgeon/FileReader.cpp
         ../src/log_surgeon/FileReader.hpp
         ../src/log_surgeon/finite_automata/RegexAST.hpp
@@ -27,6 +26,4 @@ target_link_libraries(unit-test PRIVATE Catch2::Catch2WithMain)
 target_include_directories(unit-test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_compile_features(unit-test PRIVATE cxx_std_20)
 
-include(CTest)
-include(Catch)
 catch_discover_tests(unit-test)

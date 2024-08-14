@@ -7,8 +7,16 @@ project(log_surgeon
     LANGUAGES CXX
     )
 
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+    find_package(Catch2 3 REQUIRED)
+    include(CTest)
+    include(Catch)
+endif()
+
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    include(CMakePackageConfigHelpers)
+    include(GNUInstallDirs)
+endif()
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
@@ -145,4 +153,6 @@ install(
     ${LCHIP_INSTALL_CONFIG_DIR}
     )
 
-add_subdirectory(tests)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
