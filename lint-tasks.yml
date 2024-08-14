@@ -63,7 +63,7 @@ tasks:
     cmds:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
-        find src examples \
+        find src examples tests \
           -type f \
           \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.tpp" \) \
           -print0 | \
