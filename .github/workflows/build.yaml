@@ -31,8 +31,6 @@ jobs:
     runs-on: "${{matrix.os}}"
     steps:
       - uses: "actions/checkout@v4"
-        with:
-          submodules: "recursive"
 
       - name: "Install Catch2 on macOS"
         if: "matrix.os == 'macos-latest'"
@@ -40,9 +38,9 @@ jobs:
 
       - name: "Install Catch2 on Ubuntu"
         if: "matrix.os == 'ubuntu-latest'"
-        run: |-
-          apt-get update
-          apt-get install -y catch2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y catch2
 
       - name: "Build Executables"
         run: |
