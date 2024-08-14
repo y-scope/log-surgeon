@@ -38,12 +38,12 @@ jobs:
 
       - name: "Install Catch2 on Ubuntu"
         if: "matrix.os == 'ubuntu-latest'"
-        run: |
+        run: |-
           sudo apt-get update
           sudo apt-get install -y catch2
 
       - name: "Build Executables"
-        run: |
+        run: |-
           cmake -B ./build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
           cmake --build ./build --config ${{matrix.build_type}}
           cmake --install ./build --prefix ./install
