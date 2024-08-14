@@ -38,9 +38,7 @@ jobs:
 
       - name: "Install Catch2 on Ubuntu"
         if: "matrix.os == 'ubuntu-latest'"
-        run: |-
-          sudo apt-get update
-          sudo apt-get install -y catch2
+        run: "./tools/deps-install/ubuntu/install-catch2.sh 3.6.0"
 
       - name: "Build Executables"
         run: |-
@@ -51,5 +49,4 @@ jobs:
           cmake --build ./examples/build --config ${{matrix.build_type}}
 
       - name: "Run Unit Tests"
-        working-directory: "./build"
-        run: "ctest"
+        run: "ctest --test-dir ./build"
