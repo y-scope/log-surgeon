@@ -35,10 +35,8 @@ jobs:
           submodules: "recursive"
 
       - name: "Install Catch2"
-        working-directory: "submodules/Catch2"
-        run: |
-          cmake -B build -S . -DBUILD_TESTING=OFF
-          sudo cmake --build build/ --target install
+        working-directory: "tools/deps-install"
+        run: "./install-catch2.sh"
 
       - name: "Build Executables"
         run: |
