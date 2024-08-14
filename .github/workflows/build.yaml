@@ -39,7 +39,7 @@ jobs:
         run: "brew install catch2"
         
       - name: "Install Catch2 on Ubuntu"
-        if: matrix-os == 'macos-latest'
+        if: matrix-os == 'ubuntu-latest'
         working-directory: "tools/deps-install"
         run: "./install-catch2.sh 3.6.0"
 
