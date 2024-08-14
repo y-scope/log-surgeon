@@ -6,19 +6,15 @@ project(log_surgeon
     HOMEPAGE_URL https://github.com/y-scope/log-surgeon
     LANGUAGES CXX
     )
-message(STATUS "CMAKE_PROJECT_NAME: ${CMAKE_PROJECT_NAME}")
-message(STATUS "PROJECT_NAME: ${PROJECT_NAME}")
+
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
     find_package(Catch2 3 REQUIRED)
     include(Catch)
     include(CTest)
 endif()
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-    include(CMakePackageConfigHelpers)
-    include(GNUInstallDirs)
-    message(STATUS "Included CMakePackageConfigHelpers")
-endif()
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
