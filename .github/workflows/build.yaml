@@ -36,7 +36,7 @@ jobs:
 
       - name: "Install Catch2"
         working-directory: "tools/deps-install"
-        run: "./install-catch2.sh"
+        run: "./install-catch2.sh 3.6.0"
 
       - name: "Build Executables"
         run: |
