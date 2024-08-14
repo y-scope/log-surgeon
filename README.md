@@ -83,19 +83,33 @@ Requirements:
 
 * CMake
 * GCC >= 10 or Clang >= 7
+* [Catch2] >= 3
+  * On Ubuntu <= 20.04, you can install it using:
+    ```shell
+    sudo tools/deps-install/ubuntu/install-catch2.sh 3.6.0
+    ```
+  * On Ubuntu >= 22.04, you can install it using:
+    ```shell
+    sudo apt-get update
+    sudo apt-get install catch2
+    ```
+  * On macOS, you can install it using:
+    ```shell
+    brew install catch2
+    ```
 
 From the repo's root, run:
 ```shell
 # Generate the CMake project
-cmake -S . -B build
+cmake -S . -B build -DBUILD_TESTING=OFF
 # Build the project
 cmake --build ./build -j
 # Install the project to ~/.local
 cmake --install ./build --prefix ~/.local
 ```
 
-To build the debug version replace the first command with:
-`cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Debug`
+To build the debug version and tests replace the first command with:
+`cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON`
 
 ## Documentation and examples
 
@@ -104,6 +118,13 @@ To build the debug version replace the first command with:
     writing your own schema
   * `log-surgeon`'s [design objectives](docs/design-objectives.md)
 * [examples](examples) contains programs demonstrating usage of the library.
+
+## Testing
+
+To run unit tests, run:
+```shell
+cmake --build ./build --target test
+```
 
 ## Linting
 
@@ -156,6 +177,7 @@ The following are issues we're aware of and working on:
   it also be a part of the variable.
   * Support for submatch extraction will be coming in a future release.
 
+[Catch2]: https://github.com/catchorg/Catch2/tree/devel
 [feature-req]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [lint]: https://github.com/y-scope/log-surgeon/blob/main/.github/workflows/lint.yml
 [Task]: https://taskfile.dev/
