@@ -8,6 +8,7 @@ on:
       - "examples/**/*"
       - "src/**/*"
       - "tests/**/*"
+      - "tools/deps-install/ubuntu/**/*"
   push:
     paths:
       - ".github/workflows/build.yaml"
@@ -15,6 +16,7 @@ on:
       - "examples/**/*"
       - "src/**/*"
       - "tests/**/*"
+      - "tools/deps-install/ubuntu/**/*"
   workflow_call:
 
 concurrency:
