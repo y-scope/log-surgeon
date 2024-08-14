@@ -32,14 +32,14 @@ if [[ "$#" -gt 1 ]] ; then
 fi
 
 # Check if already installed
-#set +e
-#dpkg -l ${package_name} | grep "$version"
-#installed=$?
-#set -e
-#if [ $installed -eq 0 ] ; then
+set +e
+dpkg -l ${package_name} | grep "$version"
+installed=$?
+set -e
+if [ $installed -eq 0 ] ; then
   # Nothing to do
-#  exit
-#fi
+  exit
+fi
 
 echo "Checking for elevated privileges..."
 install_cmd_args=()

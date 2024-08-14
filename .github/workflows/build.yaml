@@ -34,7 +34,12 @@ jobs:
         with:
           submodules: "recursive"
 
-      - name: "Install Catch2"
+      - name: "Install Catch2 on macOS"
+        if: matrix-os == 'macos-latest'
+        run: "brew install catch2"
+        
+      - name: "Install Catch2 on Ubuntu"
+        if: matrix-os == 'macos-latest'
         working-directory: "tools/deps-install"
         run: "./install-catch2.sh 3.6.0"
 
