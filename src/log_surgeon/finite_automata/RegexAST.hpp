@@ -241,6 +241,12 @@ public:
 
     auto set_is_wildcard_true() -> void { m_is_wildcard = true; }
 
+    [[nodiscard]] auto is_wildcard() const -> bool { return m_is_wildcard; }
+
+    [[nodiscard]] auto get_negate() const -> bool { return m_negate; }
+
+    [[nodiscard]] auto get_ranges() const -> std::vector<Range> { return m_ranges; }
+
 private:
     /**
      * Merges multiple ranges such that the resulting m_ranges is sorted and
@@ -359,6 +365,14 @@ public:
      */
     auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
 
+    [[nodiscard]] auto get_left() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
+        return m_left;
+    }
+
+    [[nodiscard]] auto get_right() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
+        return m_right;
+    }
+
 private:
     std::unique_ptr<RegexAST<NFAStateType>> m_left;
     std::unique_ptr<RegexAST<NFAStateType>> m_right;
@@ -415,6 +429,14 @@ public:
 
     [[nodiscard]] auto is_infinite() const -> bool { return this->m_max == 0; }
 
+    [[nodiscard]] auto get_operand() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
+        return m_operand;
+    }
+
+    [[nodiscard]] auto get_min() const -> uint32_t { return m_min; }
+
+    [[nodiscard]] auto get_max() const -> uint32_t { return m_max; }
+
 private:
     std::unique_ptr<RegexAST<NFAStateType>> m_operand;
     uint32_t m_min;
@@ -467,6 +489,13 @@ public:
      * @param end_state
      */
     auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
+
+    [[nodiscard]] auto get_group_name() const -> std::string const& { return m_group_name; }
+
+    [[nodiscard]] auto get_group_regex_ast(
+    ) const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
+        return m_group_regex_ast;
+    }
 
 private:
     std::string m_group_name;
