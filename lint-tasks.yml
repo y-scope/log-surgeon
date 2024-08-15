@@ -51,7 +51,6 @@ tasks:
           --strict \
           .github \
           .clang-format \
-          .clang-tidy \
           lint-tasks.yml \
           Taskfile.yml
 

@@ -144,7 +144,17 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 * python3-venv
 * [Task]
 
+### Install clang-tidy
+```shell
+./tools/init.sh
+```
+
 ### Running the linters
+
+Currently, clang-tidy has to be run manually:
+```shell
+clang-tidy --config-file .clang-tidy -p <build-dir> src/**/*.cpp
+```
 
 To report all errors run:
 
