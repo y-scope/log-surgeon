@@ -36,7 +36,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     }
 
     SECTION("Add a capture variable to schema") {
-        const std::string var_name = "capture";
+        std::string const var_name = "capture";
         schema.add_variable(var_name, "u(?<uID>[0-9]+)", -1);
         auto const schema_ast = schema.release_schema_ast_ptr();
         REQUIRE(schema_ast->m_schema_vars.size() == 1);
