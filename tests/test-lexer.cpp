@@ -36,7 +36,8 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     }
 
     SECTION("Add a capture variable to schema") {
-        schema.add_variable("capture", "u(?<uID>[0-9]+)", -1);
+        const std::string var_name = "capture";
+        schema.add_variable(var_name, "u(?<uID>[0-9]+)", -1);
         auto const schema_ast = schema.release_schema_ast_ptr();
         REQUIRE(schema_ast->m_schema_vars.size() == 1);
         REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());
@@ -44,7 +45,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         auto& schema_var_ast_ptr = schema_ast->m_schema_vars[0];
         REQUIRE(nullptr != schema_var_ast_ptr);
         auto& schema_var_ast = dynamic_cast<log_surgeon::SchemaVarAST&>(*schema_var_ast_ptr);
-        REQUIRE("capture" == schema_var_ast.m_name);
+        REQUIRE(var_name == schema_var_ast.m_name);
 
         auto* regex_ast_cat_ptr = dynamic_cast<RegexASTCatByte*>(schema_var_ast.m_regex_ptr.get());
         REQUIRE(nullptr != regex_ast_cat_ptr);
