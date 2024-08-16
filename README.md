@@ -139,12 +139,28 @@ locally, you can enable and run the [lint] workflow in your fork.
 
 To run the linting tools, besides commonly installed tools like `tar`, you'll need:
 
+* [clang-tidy]
 * `md5sum`
 * Python 3.8 or newer
 * python3-venv
 * [Task]
 
+### Setup
+
+```shell
+./tools/init.sh
+```
+
 ### Running the linters
+
+Currently, `clang-tidy` has to be run manually:
+```shell
+find src tests \
+    -type f \
+    \( -iname "*.cpp" -o -iname "*.hpp" \) \
+    -print0 | \
+        xargs -0 clang-tidy --config-file .clang-tidy -p build
+```
 
 To report all errors run:
 
@@ -178,6 +194,7 @@ The following are issues we're aware of and working on:
   * Support for submatch extraction will be coming in a future release.
 
 [Catch2]: https://github.com/catchorg/Catch2/tree/devel
+[clang-tidy]: https://clang.llvm.org/extra/clang-tidy/
 [feature-req]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [lint]: https://github.com/y-scope/log-surgeon/blob/main/.github/workflows/lint.yml
 [Task]: https://taskfile.dev/

@@ -16,6 +16,8 @@ endif()
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
     message(STATUS "No build type specified. Setting to '${default_build_type}'.")
