@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
-#include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -241,6 +241,12 @@ public:
 
     auto set_is_wildcard_true() -> void { m_is_wildcard = true; }
 
+    [[nodiscard]] auto is_wildcard() const -> bool { return m_is_wildcard; }
+
+    [[nodiscard]] auto get_negate() const -> bool { return m_negate; }
+
+    [[nodiscard]] auto get_ranges() const -> std::vector<Range> { return m_ranges; }
+
 private:
     /**
      * Merges multiple ranges such that the resulting m_ranges is sorted and
@@ -359,6 +365,14 @@ public:
      */
     auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
 
+    [[nodiscard]] auto get_left() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
+        return m_left;
+    }
+
+    [[nodiscard]] auto get_right() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
+        return m_right;
+    }
+
 private:
     std::unique_ptr<RegexAST<NFAStateType>> m_left;
     std::unique_ptr<RegexAST<NFAStateType>> m_right;
@@ -415,11 +429,79 @@ public:
 
     [[nodiscard]] auto is_infinite() const -> bool { return this->m_max == 0; }
 
+    [[nodiscard]] auto get_operand() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
+        return m_operand;
+    }
+
+    [[nodiscard]] auto get_min() const -> uint32_t { return m_min; }
+
+    [[nodiscard]] auto get_max() const -> uint32_t { return m_max; }
+
 private:
     std::unique_ptr<RegexAST<NFAStateType>> m_operand;
     uint32_t m_min;
     uint32_t m_max;
 };
+
+template <typename NFAStateType>
+class RegexASTCapture : public RegexAST<NFAStateType> {
+public:
+    RegexASTCapture(std::string group_name, std::unique_ptr<RegexAST<NFAStateType>> group_regex_ast)
+            : m_group_name(std::move(group_name)),
+              m_group_regex_ast(std::move(group_regex_ast)) {}
+
+    RegexASTCapture(RegexASTCapture const& rhs)
+            : m_group_name(rhs.m_group_name),
+              m_group_regex_ast(
+                      std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_group_regex_ast->clone())
+              ) {}
+
+    /**
+     * Used for cloning a `unique_pointer` of type `RegexASTCapture`.
+     * @return RegexASTCapture*
+     */
+    [[nodiscard]] auto clone() const -> RegexASTCapture* override {
+        return new RegexASTCapture(*this);
+    }
+
+    /**
+     * Sets `is_possible_input` to specify which utf8 characters are allowed in a
+     * lexer rule containing `RegexASTCapture` at a leaf node in its AST.
+     * @param is_possible_input
+     */
+    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
+        m_group_regex_ast->set_possible_inputs_to_true(is_possible_input);
+    }
+
+    /**
+     * Transforms '.' to to be any non-delimiter in a lexer rule if
+     * `RegexASTGroup` with `.` is a descendant of this `RegexASTCapture` node.
+     * @param delimiters
+     */
+    auto remove_delimiters_from_wildcard(std::vector<uint32_t>& delimiters) -> void override {
+        m_group_regex_ast->remove_delimiters_from_wildcard(delimiters);
+    }
+
+    /**
+     * Adds the needed `RegexNFA::states` to the passed in nfa to handle a
+     * `RegexASTCapture` before transitioning to a pre-tagged `end_state`.
+     * @param nfa
+     * @param end_state
+     */
+    auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
+
+    [[nodiscard]] auto get_group_name() const -> std::string const& { return m_group_name; }
+
+    [[nodiscard]] auto get_group_regex_ast(
+    ) const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
+        return m_group_regex_ast;
+    }
+
+private:
+    std::string m_group_name;
+    std::unique_ptr<RegexAST<NFAStateType>> m_group_regex_ast;
+};
+
 }  // namespace log_surgeon::finite_automata
 
 #include "RegexAST.tpp"

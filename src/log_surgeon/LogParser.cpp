@@ -88,6 +88,10 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
             // prevent timestamps from going into the dictionary
             continue;
         }
+        // currently capture groups are not yet supported
+        if ("capture" == rule->m_name) {
+            continue;
+        }
         // transform '.' from any-character into any non-delimiter character
         rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters);
         // currently, error out if non-timestamp pattern contains a delimiter
