@@ -1,27 +1,25 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP
 
-#include <algorithm>
+#include <array>
 #include <cstdint>
 #include <memory>
-#include <set>
-#include <stack>
-#include <utility>
+#include <tuple>
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-enum class RegexNFAStateType {
+enum class RegexNFAStateType : uint8_t {
     Byte,
     UTF8
 };
 
-template <RegexNFAStateType stateType>
+template <RegexNFAStateType state_type>
 class RegexNFAState {
 public:
-    using Tree = UnicodeIntervalTree<RegexNFAState<stateType>*>;
+    using Tree = UnicodeIntervalTree<RegexNFAState<state_type>*>;
 
     auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
 
@@ -31,37 +29,37 @@ public:
 
     [[nodiscard]] auto get_tag() const -> int const& { return m_tag; }
 
-    auto set_epsilon_transitions(std::vector<RegexNFAState<stateType>*>& epsilon_transitions
+    auto set_epsilon_transitions(std::vector<RegexNFAState<state_type>*>& epsilon_transitions
     ) -> void {
         m_epsilon_transitions = epsilon_transitions;
     }
 
-    auto add_epsilon_transition(RegexNFAState<stateType>* epsilon_transition) -> void {
+    auto add_epsilon_transition(RegexNFAState<state_type>* epsilon_transition) -> void {
         m_epsilon_transitions.push_back(epsilon_transition);
     }
 
     auto clear_epsilon_transitions() -> void { m_epsilon_transitions.clear(); }
 
     [[nodiscard]] auto get_epsilon_transitions(
-    ) const -> std::vector<RegexNFAState<stateType>*> const& {
+    ) const -> std::vector<RegexNFAState<state_type>*> const& {
         return m_epsilon_transitions;
     }
 
     auto set_byte_transitions(
             uint8_t byte,
-            std::vector<RegexNFAState<stateType>*>& byte_transitions
+            std::vector<RegexNFAState<state_type>*>& byte_transitions
     ) -> void {
         m_bytes_transitions[byte] = byte_transitions;
     }
 
-    auto add_byte_transition(uint8_t byte, RegexNFAState<stateType>* dest_state) -> void {
+    auto add_byte_transition(uint8_t byte, RegexNFAState<state_type>* dest_state) -> void {
         m_bytes_transitions[byte].push_back(dest_state);
     }
 
     auto clear_byte_transitions(uint8_t byte) -> void { m_bytes_transitions[byte].clear(); }
 
     [[nodiscard]] auto get_byte_transitions(uint8_t byte
-    ) const -> std::vector<RegexNFAState<stateType>*> const& {
+    ) const -> std::vector<RegexNFAState<state_type>*> const& {
         return m_bytes_transitions[byte];
     }
 
@@ -75,17 +73,18 @@ public:
      * @param interval
      * @param dest_state
      */
-    auto add_interval(Interval interval, RegexNFAState<stateType>* dest_state) -> void;
+    auto add_interval(Interval interval, RegexNFAState<state_type>* dest_state) -> void;
 
 private:
-    bool m_accepting;
-    int m_tag;
-    std::vector<RegexNFAState<stateType>*> m_epsilon_transitions;
-    std::vector<RegexNFAState<stateType>*> m_bytes_transitions[cSizeOfByte];
+    bool m_accepting = false;
+    int m_tag = 0;
+    std::vector<RegexNFAState<state_type>*> m_epsilon_transitions;
+    std::array<std::vector<RegexNFAState<state_type>*>,cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
     // RegexDFAStateType::Byte` case, so we use an empty class (`std::tuple<>`)
     // in that case.
-    std::conditional_t<stateType == RegexNFAStateType::UTF8, Tree, std::tuple<>> m_tree_transitions;
+    std::conditional_t<state_type == RegexNFAStateType::UTF8, Tree, std::tuple<>>
+            m_tree_transitions;
 };
 
 using RegexNFAByteState = RegexNFAState<RegexNFAStateType::Byte>;

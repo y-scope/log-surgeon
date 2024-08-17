@@ -1,13 +1,7 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_TPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_TPP
 
-#include <algorithm>
 #include <cassert>
-#include <map>
-#include <stack>
-
-#include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
 template <RegexNFAStateType stateType>
@@ -123,25 +117,25 @@ void RegexNFA<NFAStateType>::reverse() {
                 std::vector<NFAStateType*> byte_transitions
                         = current_state->get_byte_transitions(byte);
                 for (NFAStateType* next_state : byte_transitions) {
-                    if (visited_states.find(next_state) == visited_states.end()) {
+                    if (!visited_states.contains(next_state)  ) {
                         unvisited_states.push(next_state);
                     }
                 }
             }
             for (NFAStateType* next_state : current_state->get_epsilon_transitions()) {
-                if (visited_states.find(next_state) == visited_states.end()) {
+                if (!visited_states.contains(next_state)  ) {
                     unvisited_states.push(next_state);
                 }
             }
         }
     }
-    for (int32_t i = m_states.size() - 1; i >= 0; i--) {
+    for (int32_t i = m_states.size() - 1; i >= 0; --i) {
         std::unique_ptr<NFAStateType>& src_state_unique_ptr = m_states[i];
         NFAStateType* src_state = src_state_unique_ptr.get();
         int tag = src_state->get_tag();
         for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
             std::vector<NFAStateType*> byte_transitions = src_state->get_byte_transitions(byte);
-            for (int32_t j = byte_transitions.size() - 1; j >= 0; j--) {
+            for (int32_t j = byte_transitions.size() - 1; j >= 0; --j) {
                 NFAStateType*& dest_state = byte_transitions[j];
                 if (dest_state == m_root) {
                     dest_state = new_state();
@@ -154,7 +148,7 @@ void RegexNFA<NFAStateType>::reverse() {
             src_state->set_byte_transitions(byte, byte_transitions);
         }
         std::vector<NFAStateType*> epsilon_transitions = src_state->get_epsilon_transitions();
-        for (int32_t j = epsilon_transitions.size() - 1; j >= 0; j--) {
+        for (int32_t j = epsilon_transitions.size() - 1; j >= 0; --j) {
             NFAStateType*& dest_state = epsilon_transitions[j];
             if (dest_state == m_root) {
                 dest_state = new_state();
