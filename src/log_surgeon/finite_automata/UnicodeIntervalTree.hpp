@@ -146,13 +146,13 @@ private:
          * overlaps_recursive()
          * @param i
          */
-        auto overlaps_recursive(Interval i) -> bool;
+        [[nodiscard]] auto overlaps_recursive(Interval const& i) const -> bool;
 
         /**
          * overlaps()
          * @param i
          */
-        auto overlaps(Interval i) -> bool;
+        [[nodiscard]] auto overlaps(Interval const& i) const -> bool;
 
         auto get_interval() -> Interval { return m_interval; }
 
