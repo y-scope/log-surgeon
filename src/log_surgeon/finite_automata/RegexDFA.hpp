@@ -1,27 +1,27 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_HPP
 
-#include <algorithm>
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <set>
-#include <utility>
+#include <tuple>
+#include <type_traits>
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/RegexNFA.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-enum class RegexDFAStateType {
+enum class RegexDFAStateType : std::uint8_t {
     Byte,
     UTF8
 };
 
-template <RegexDFAStateType stateType>
+template <RegexDFAStateType state_type>
 class RegexDFAState {
 public:
-    using Tree = UnicodeIntervalTree<RegexDFAState<stateType>*>;
+    using Tree = UnicodeIntervalTree<RegexDFAState<state_type>*>;
 
     auto add_tag(int const& rule_name_id) -> void { m_tags.push_back(rule_name_id); }
 
@@ -29,7 +29,7 @@ public:
 
     [[nodiscard]] auto is_accepting() const -> bool { return !m_tags.empty(); }
 
-    auto add_byte_transition(uint8_t const& byte, RegexDFAState<stateType>* dest_state) -> void {
+    auto add_byte_transition(uint8_t const& byte, RegexDFAState<state_type>* dest_state) -> void {
         m_bytes_transition[byte] = dest_state;
     }
 
@@ -39,15 +39,16 @@ public:
      * @param character
      * @return RegexDFAState<stateType>*
      */
-    [[nodiscard]] auto next(uint32_t character) const -> RegexDFAState<stateType>*;
+    [[nodiscard]] auto next(uint32_t character) const -> RegexDFAState<state_type>*;
 
 private:
     std::vector<int> m_tags;
-    RegexDFAState<stateType>* m_bytes_transition[cSizeOfByte];
+    std::array<RegexDFAState<state_type>*, cSizeOfByte> m_bytes_transition;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
     // RegexDFAStateType::Byte` case, so we use an empty class (`std::tuple<>`)
     // in that case.
-    std::conditional_t<stateType == RegexDFAStateType::UTF8, Tree, std::tuple<>> m_tree_transitions;
+    std::conditional_t<state_type == RegexDFAStateType::UTF8, Tree, std::tuple<>>
+            m_tree_transitions;
 };
 
 template <typename DFAState>
