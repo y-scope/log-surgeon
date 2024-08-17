@@ -1,14 +1,7 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_TPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_TPP
 
-#include <algorithm>
 #include <cassert>
-#include <cstdint>
-#include <stdexcept>
-
-#include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/RegexNFA.hpp>
-#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
 template <typename NFAStateType>
@@ -105,7 +98,7 @@ void RegexASTMultiplication<NFAStateType>::add(
             m_operand->add(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
-        for (uint32_t i = this->m_min + 1; i < this->m_max; i++) {
+        for (uint32_t i = this->m_min + 1; i < this->m_max; ++i) {
             m_operand->add(nfa, end_state);
             NFAStateType* intermediate_state = nfa->new_state();
             m_operand->add(nfa, intermediate_state);
@@ -141,7 +134,7 @@ RegexASTGroup<NFAStateType>::RegexASTGroup(
 
 template <typename NFAStateType>
 RegexASTGroup<NFAStateType>::RegexASTGroup(
-        RegexASTGroup<NFAStateType>* left,
+        RegexASTGroup<NFAStateType> const* left,
         RegexASTGroup<NFAStateType>* right
 )
         : m_negate(left->m_negate),
@@ -199,8 +192,7 @@ RegexASTGroup<NFAStateType>::RegexASTGroup(uint32_t min, uint32_t max) : m_negat
 
 // ranges must be sorted
 template <typename NFAStateType>
-auto RegexASTGroup<NFAStateType>::merge(std::vector<Range> const& ranges
-) -> std::vector<typename RegexASTGroup<NFAStateType>::Range> {
+auto RegexASTGroup<NFAStateType>::merge(std::vector<Range> const& ranges) -> std::vector<Range> {
     std::vector<Range> merged;
     if (ranges.empty()) {
         return merged;
@@ -222,7 +214,7 @@ auto RegexASTGroup<NFAStateType>::merge(std::vector<Range> const& ranges
 // ranges must be sorted and non-overlapping
 template <typename NFAStateType>
 auto RegexASTGroup<NFAStateType>::complement(std::vector<Range> const& ranges
-) -> std::vector<typename RegexASTGroup<NFAStateType>::Range> {
+) -> std::vector<Range> {
     std::vector<Range> complemented;
     uint32_t low = 0;
     for (Range const& r : ranges) {
