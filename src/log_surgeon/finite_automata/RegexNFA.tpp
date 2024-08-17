@@ -2,15 +2,14 @@
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_TPP
 
 #include <cassert>
+#include <map>
+#include <stack>
 
 namespace log_surgeon::finite_automata {
 template <RegexNFAStateType stateType>
-void RegexNFAState<stateType>::add_interval(
-        Interval interval,
-        RegexNFAState<stateType>* dest_state
-) {
+void RegexNFAState<stateType>::add_interval(Interval interval, RegexNFAState* dest_state) {
     if (interval.first < cSizeOfByte) {
-        uint32_t bound = std::min(interval.second, cSizeOfByte - 1);
+        uint32_t const bound = std::min(interval.second, cSizeOfByte - 1);
         for (uint32_t i = interval.first; i <= bound; i++) {
             add_byte_transition(i, dest_state);
         }
@@ -117,13 +116,13 @@ void RegexNFA<NFAStateType>::reverse() {
                 std::vector<NFAStateType*> byte_transitions
                         = current_state->get_byte_transitions(byte);
                 for (NFAStateType* next_state : byte_transitions) {
-                    if (!visited_states.contains(next_state)  ) {
+                    if (!visited_states.contains(next_state)) {
                         unvisited_states.push(next_state);
                     }
                 }
             }
             for (NFAStateType* next_state : current_state->get_epsilon_transitions()) {
-                if (!visited_states.contains(next_state)  ) {
+                if (!visited_states.contains(next_state)) {
                     unvisited_states.push(next_state);
                 }
             }

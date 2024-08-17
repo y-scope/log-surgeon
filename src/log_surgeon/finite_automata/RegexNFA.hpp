@@ -79,7 +79,7 @@ private:
     bool m_accepting = false;
     int m_tag = 0;
     std::vector<RegexNFAState<state_type>*> m_epsilon_transitions;
-    std::array<std::vector<RegexNFAState<state_type>*>,cSizeOfByte> m_bytes_transitions;
+    std::array<std::vector<RegexNFAState<state_type>*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
     // RegexDFAStateType::Byte` case, so we use an empty class (`std::tuple<>`)
     // in that case.
