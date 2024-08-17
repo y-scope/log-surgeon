@@ -15,6 +15,15 @@ endif()
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
+include(FetchContent)
+
+FetchContent_Declare(GSL
+                     GIT_REPOSITORY "https://github.com/microsoft/GSL"
+                     GIT_TAG "v4.0.0"
+                     GIT_SHALLOW ON
+)
+
+FetchContent_MakeAvailable(GSL)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -78,6 +87,7 @@ target_include_directories(log_surgeon
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${GSL_SOURCE_DIR}/include
     )
 
 target_compile_features(log_surgeon

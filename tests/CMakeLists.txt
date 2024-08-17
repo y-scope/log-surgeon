@@ -23,7 +23,7 @@ set(SOURCES_TESTS test-lexer.cpp)
 
 add_executable(unit-test ${SOURCES_LOG_SURGEON} ${SOURCES_TESTS})
 target_link_libraries(unit-test PRIVATE Catch2::Catch2WithMain)
-target_include_directories(unit-test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(unit-test PRIVATE ${CMAKE_SOURCE_DIR}/src ${GSL_SOURCE_DIR}/include)
 target_compile_features(unit-test PRIVATE cxx_std_20)
 
 catch_discover_tests(unit-test)
