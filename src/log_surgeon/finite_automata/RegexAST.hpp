@@ -4,7 +4,8 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include <gsl/gsl>
+#include <gsl/pointers>
+#include <gsl/util>
 #include <memory>
 #include <string>
 #include <utility>
