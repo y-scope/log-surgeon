@@ -152,7 +152,7 @@ public:
 
     RegexASTGroup(RegexASTGroup* left, RegexASTLiteral<NFAStateType>* right);
 
-    RegexASTGroup(const RegexASTGroup* left, RegexASTGroup* right);
+    RegexASTGroup(RegexASTGroup const* left, RegexASTGroup* right);
 
     explicit RegexASTGroup(RegexASTLiteral<NFAStateType>* right);
 
