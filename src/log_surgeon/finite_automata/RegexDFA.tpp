@@ -31,7 +31,7 @@ auto RegexDFAStatePair<DFAState>::get_reachable_pairs(
         auto next_state2 = m_state2->next(i);
         if (next_state1 != nullptr && next_state2 != nullptr) {
             RegexDFAStatePair<DFAState> reachable_pair{next_state1, next_state2};
-            if (!visited_pairs.contains(reachable_pair)  ) {
+            if (!visited_pairs.contains(reachable_pair)) {
                 unvisited_pairs.insert(reachable_pair);
             }
         }
