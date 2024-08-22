@@ -81,6 +81,10 @@ set(LCHIP_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 
 add_library(log_surgeon ${SOURCE_FILES})
 add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
+target_link_libraries(log_surgeon
+                      PUBLIC
+                      Microsoft.GSL::GSL
+)
 target_include_directories(log_surgeon
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
@@ -116,6 +120,7 @@ target_compile_definitions(log_surgeon
 install(
     TARGETS
     log_surgeon
+    GSL
     EXPORT
     log_surgeon-targets
     )

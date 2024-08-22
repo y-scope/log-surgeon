@@ -25,12 +25,9 @@ list(APPEND libraries log_surgeon::log_surgeon common)
 
 add_executable(buffer-parser buffer-parser.cpp)
 add_to_target(buffer-parser "${libraries}")
-target_include_directories(buffer-parser PRIVATE ${GSL_SOURCE_DIR}/include)
 
 add_executable(reader-parser reader-parser.cpp)
 add_to_target(reader-parser "${libraries}")
-target_include_directories(reader-parser PRIVATE ${GSL_SOURCE_DIR}/include)
 
 add_executable(intersect-test intersect-test.cpp)
 add_to_target(intersect-test "${libraries}")
-target_include_directories(intersect-test PRIVATE ${GSL_SOURCE_DIR}/include)
