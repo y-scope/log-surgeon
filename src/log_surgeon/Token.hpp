@@ -2,6 +2,7 @@
 #define LOG_SURGEON_TOKEN_HPP
 
 #include <set>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -37,7 +38,7 @@ public:
 
     uint32_t m_start_pos{0};
     uint32_t m_end_pos{0};
-    char const* m_buffer{nullptr};
+    std::span<char const> m_buffer;
     uint32_t m_buffer_size{0};
     uint32_t m_line{0};
     std::vector<int> const* m_type_ids_ptr{nullptr};

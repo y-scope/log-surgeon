@@ -66,7 +66,7 @@ auto ParserInputBuffer::increase_capacity(uint32_t& old_storage_size, bool& flip
     old_storage_size = m_storage.size();
     uint32_t new_storage_size = old_storage_size * 2;
     flipped_static_buffer = false;
-    char const* old_storage = m_storage.get_active_buffer();
+    char const* old_storage = m_storage.get_active_buffer().data();
     m_storage.double_size();
     if (m_last_read_first_half == false) {
         // Buffer in correct order
@@ -108,7 +108,7 @@ auto ParserInputBuffer::get_next_character(unsigned char& next_char) -> ErrorCod
 // ParserInputBuffer into thinking it never reaches the wrap, while still
 // respecting the actual size of the buffer the user passed in.
 void ParserInputBuffer::set_storage(
-        char* storage,
+        std::span<char> storage,
         uint32_t size,
         uint32_t pos,
         bool finished_reading_input

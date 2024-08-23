@@ -1,7 +1,10 @@
 #ifndef LOG_SURGEON_BUFFER_HPP
 #define LOG_SURGEON_BUFFER_HPP
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
+#include <span>
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
@@ -45,12 +48,11 @@ public:
     [[nodiscard]] auto pos() const -> uint32_t { return m_pos; }
 
     auto double_size() -> void {
-        std::vector<Item>& new_buffer = m_dynamic_storages.emplace_back(2 * m_active_size);
-        m_active_storage = new_buffer.data();
+        m_active_storage = m_dynamic_storages.emplace_back(2 * m_active_size);
         m_active_size *= 2;
     }
 
-    [[nodiscard]] auto static_size() const -> uint32_t { return cStaticByteBuffSize; }
+    [[nodiscard]] static auto static_size()  -> uint32_t { return cStaticByteBuffSize; }
 
     [[nodiscard]] auto size() const -> uint32_t { return m_active_size; }
 
@@ -61,35 +63,37 @@ public:
         m_active_size = cStaticByteBuffSize;
     }
 
-    auto set_active_buffer(Item* storage, uint32_t size, uint32_t pos) -> void {
+    auto set_active_buffer(std::span<Item> storage, uint32_t size, uint32_t pos) -> void {
         m_active_storage = storage;
         m_active_size = size;
         m_pos = pos;
     }
 
-    [[nodiscard]] auto get_active_buffer() const -> Item const* { return m_active_storage; }
+    [[nodiscard]] auto get_active_buffer() const -> std::span<Item const> {
+        return m_active_storage;
+    }
 
     // Currently needed for compression
-    [[nodiscard]] auto get_mutable_active_buffer() -> Item* { return m_active_storage; }
+    [[nodiscard]] auto get_mutable_active_buffer() -> std::span<Item> { return m_active_storage; }
 
     void
     copy(Item const* storage_to_copy_first, Item const* storage_to_copy_last, uint32_t offset) {
-        std::copy(storage_to_copy_first, storage_to_copy_last, m_active_storage + offset);
+        std::copy(storage_to_copy_first, storage_to_copy_last, m_active_storage.data() + offset);
     }
 
     template <class T>
     auto
     read(T& reader, uint32_t read_offset, uint32_t bytes_to_read, size_t& bytes_read) -> ErrorCode {
         static_assert(std::is_same_v<T, Reader>, "T should be a Reader");
-        return reader.read(m_active_storage + read_offset, bytes_to_read, bytes_read);
+        return reader.read(m_active_storage.data() + read_offset, bytes_to_read, bytes_read);
     }
 
 private:
     uint32_t m_pos{0};
     uint32_t m_active_size{cStaticByteBuffSize};
     std::vector<std::vector<Item>> m_dynamic_storages;
-    Item m_static_storage[cStaticByteBuffSize];
-    Item* m_active_storage{m_static_storage};
+    std::array<Item, cStaticByteBuffSize> m_static_storage;
+    std::span<Item> m_active_storage{m_static_storage};
 };
 }  // namespace log_surgeon
 
