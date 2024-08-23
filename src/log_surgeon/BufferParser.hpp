@@ -1,12 +1,15 @@
 #ifndef LOG_SURGEON_BUFFER_PARSER_HPP
 #define LOG_SURGEON_BUFFER_PARSER_HPP
 
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 
-#include <log_surgeon/LogEvent.hpp>
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/LogParser.hpp>
-#include <log_surgeon/Schema.hpp>
+#include <log_surgeon/SchemaParser.hpp>
 
 namespace log_surgeon {
 /**
@@ -32,7 +35,7 @@ public:
      * @throw std::runtime_error from LALR1Parser, RegexAST, or Lexer
      * describing the failure processing the schema AST.
      */
-    explicit BufferParser(std::unique_ptr<log_surgeon::SchemaAST> schema_ast);
+    explicit BufferParser(std::unique_ptr<SchemaAST> schema_ast);
 
     /**
      * Clears the internal state of the log parser (lexer and input buffer) so
@@ -84,7 +87,7 @@ public:
      * @return nullopt If var is not found in the schema.
      * @return The integer ID of the variable.
      */
-    auto get_variable_id(std::string const& var) -> std::optional<uint32_t> {
+    auto get_variable_id(std::string const& var) const -> std::optional<uint32_t> {
         return m_log_parser.get_symbol_id(var);
     }
 
