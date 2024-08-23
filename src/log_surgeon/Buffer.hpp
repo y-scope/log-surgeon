@@ -52,7 +52,7 @@ public:
         m_active_size *= 2;
     }
 
-    [[nodiscard]] static auto static_size()  -> uint32_t { return cStaticByteBuffSize; }
+    [[nodiscard]] static auto static_size() -> uint32_t { return cStaticByteBuffSize; }
 
     [[nodiscard]] auto size() const -> uint32_t { return m_active_size; }
 
