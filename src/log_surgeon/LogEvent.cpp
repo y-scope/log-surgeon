@@ -94,7 +94,7 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
         Token copied_token{
                 start_pos,
                 curr_pos,
-                m_buffer.data(),
+                m_buffer,
                 buffer_size,
                 0,
                 token.m_type_ids_ptr

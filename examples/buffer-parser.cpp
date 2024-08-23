@@ -42,7 +42,7 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
     vector<LogEvent> multiline_logs;
     size_t offset{0};
     while (false == parser.done()) {
-        if (ErrorCode err{parser.parse_next_event(buf.data(), valid_size, offset, input_done)};
+        if (ErrorCode err{parser.parse_next_event(buf, valid_size, offset, input_done)};
             ErrorCode::Success != err)
         {
             // The only expected error is the parser has read to the bound
