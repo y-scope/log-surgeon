@@ -19,7 +19,7 @@ auto BufferParser::reset() -> void {
 }
 
 auto BufferParser::parse_next_event(
-        char* buf,
+        std::span<char> buf,
         size_t size,
         size_t& offset,
         bool finished_reading_input
