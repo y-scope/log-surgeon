@@ -83,8 +83,12 @@ public:
      * process, so the parser will finish consuming the entire buffer without
      * requesting more input data.
      */
-    auto set_input_buffer(std::span<char> storage, uint32_t size, uint32_t pos, bool finished_reading_input)
-            -> void {
+    auto set_input_buffer(
+            std::span<char> storage,
+            uint32_t size,
+            uint32_t pos,
+            bool finished_reading_input
+    ) -> void {
         m_input_buffer.set_storage(storage, size, pos, finished_reading_input);
     }
 
