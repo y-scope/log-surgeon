@@ -1,9 +1,9 @@
 #include "FileReader.hpp"
 
-#include <unistd.h>
-
 #include <cassert>
 #include <cerrno>
+#include <cstdio>
+#include <string>
 
 #include <log_surgeon/Constants.hpp>
 
@@ -15,7 +15,8 @@ FileReader::~FileReader() {
     free(m_get_delim_buf);
 }
 
-auto FileReader::read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode {
+auto FileReader::read(char* buf, size_t const num_bytes_to_read, size_t& num_bytes_read) const
+        -> ErrorCode {
     if (nullptr == m_file) {
         return ErrorCode::NotInit;
     }
@@ -38,7 +39,9 @@ auto FileReader::read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_rea
 
 auto FileReader::try_open(string const& path) -> ErrorCode {
     // Cleanup in case caller forgot to call close before calling this function
-    close();
+    if (ErrorCode const err = close(); ErrorCode::Success != err) {
+        return err;
+    }
     m_file = fopen(path.c_str(), "rb");
     if (nullptr == m_file) {
         if (ENOENT == errno) {
@@ -49,17 +52,22 @@ auto FileReader::try_open(string const& path) -> ErrorCode {
     return ErrorCode::Success;
 }
 
-auto FileReader::close() -> void {
+auto FileReader::close() -> ErrorCode {
     if (m_file != nullptr) {
-        // NOTE: We don't check errors for fclose since it seems the only reason
-        // it could fail is if it was interrupted by a signal
-        fclose(m_file);
+        if (0 != fclose(m_file)) {
+            return ErrorCode::Errno;
+        }
         m_file = nullptr;
     }
+    return ErrorCode::Success;
 }
 
-auto FileReader::try_read_to_delimiter(char delim, bool keep_delimiter, bool append, string& str)
-        -> ErrorCode {
+auto FileReader::try_read_to_delimiter(
+        char const delim,
+        bool const keep_delimiter,
+        bool const append,
+        string& str
+) -> ErrorCode {
     assert(nullptr != m_file);
     if (false == append) {
         str.clear();

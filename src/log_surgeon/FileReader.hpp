@@ -22,7 +22,7 @@ public:
      * @return ErrorCode::EndOfFile on EOF
      * @return ErrorCode::Success on success
      */
-    auto read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode;
+    auto read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) const -> ErrorCode;
 
     /**
      * Tries to read a string from the file until it reaches the specified
@@ -51,8 +51,10 @@ public:
 
     /**
      * Closes the file if it's open
+     * @return ErrorCode::Success on success
+     * @return ErrorCode::Errno otherwise
      */
-    auto close() -> void;
+    auto close() -> ErrorCode;
 
 private:
     FILE* m_file{nullptr};
