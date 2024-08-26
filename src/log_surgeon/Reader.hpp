@@ -23,7 +23,7 @@ public:
      * @return ErrorCode::EndOfFile if the end of file was reached
      * @return ErrorCode::Success if any bytes read
      */
-    std::function<ErrorCode(char*, size_t, size_t&)> read{};
+    std::function<ErrorCode(char*, uint32_t, uint32_t&)> read{};
 };
 
 }  // namespace log_surgeon
