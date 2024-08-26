@@ -2,7 +2,8 @@
 
 #include <cassert>
 #include <cerrno>
-#include <cstdio>
+#include <cstdint>
+#include <ios>
 #include <string>
 #include <variant>
 
@@ -12,7 +13,7 @@ using std::string;
 using std::variant;
 
 namespace log_surgeon {
-auto FileReader::read(char* buf, size_t const num_bytes_to_read, size_t& num_bytes_read)
+auto FileReader::read(char* buf, uint32_t const num_bytes_to_read, uint32_t& num_bytes_read)
         -> ErrorCode {
     if (false == m_file_stream.is_open()) {
         return ErrorCode::NotInit;

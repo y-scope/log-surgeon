@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_FILE_READER_HPP
 #define LOG_SURGEON_FILE_READER_HPP
 
+#include <cstdint>
 #include <fstream>
 #include <string>
 #include <variant>
@@ -23,7 +24,7 @@ public:
      * @return ErrorCode::EndOfFile on EOF
      * @return ErrorCode::Success on success
      */
-    auto read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode;
+    auto read(char* buf, uint32_t num_bytes_to_read, uint32_t& num_bytes_read) -> ErrorCode;
 
     /**
      * Read the desired desired line from the file
