@@ -139,8 +139,8 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
             throw std::runtime_error(
                     schema_ast->m_file_path + ":" + to_string(rule->m_line_num + 1) + ": error: '"
                     + rule->m_name + "' has regex pattern which contains delimiter '"
-                    + char(delimiter_name) + "'.\n" + indent + line + indent + spaces
-                    + arrows + "\n"
+                    + char(delimiter_name) + "'.\n" + indent + line + indent + spaces + arrows
+                    + "\n"
             );
         }
         unique_ptr<RegexASTGroup<RegexNFAByteState>> delimiter_group
