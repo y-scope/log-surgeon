@@ -26,7 +26,7 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
         return;
     }
 
-    Reader reader{[&](char* buf, size_t count, size_t& read_to) -> ErrorCode {
+    Reader reader{[&](char* buf, uint32_t count, uint32_t& read_to) -> ErrorCode {
         infs.read(buf, count);
         read_to = infs.gcount();
         if (0 == read_to && infs.eof()) {

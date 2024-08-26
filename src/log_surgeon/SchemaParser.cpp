@@ -63,7 +63,7 @@ auto SchemaParser::try_schema_file(string const& schema_file_path) -> unique_ptr
         );
     }
     SchemaParser sp;
-    Reader reader{[&](char* buf, size_t count, size_t& read_to) -> ErrorCode {
+    Reader reader{[&](char* buf, uint32_t count, uint32_t& read_to) -> ErrorCode {
         schema_reader.read(buf, count, read_to);
         if (read_to == 0) {
             return ErrorCode::EndOfFile;
@@ -76,7 +76,7 @@ auto SchemaParser::try_schema_file(string const& schema_file_path) -> unique_ptr
 }
 
 auto SchemaParser::try_schema_string(string const& schema_string) -> unique_ptr<SchemaAST> {
-    Reader reader{[&](char* dst_buf, size_t count, size_t& read_to) -> ErrorCode {
+    Reader reader{[&](char* dst_buf, uint32_t count, uint32_t& read_to) -> ErrorCode {
         uint32_t unparsed_string_pos = 0;
         std::span<char> const buf{dst_buf, count};
         if (unparsed_string_pos + count > schema_string.length()) {

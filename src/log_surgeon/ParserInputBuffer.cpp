@@ -33,7 +33,7 @@ auto ParserInputBuffer::read_is_safe() -> bool {
 }
 
 auto ParserInputBuffer::read(Reader& reader) -> ErrorCode {
-    size_t bytes_read{0};
+    uint32_t bytes_read{0};
     // read into the correct half of the buffer
     uint32_t read_offset{0};
     if (m_last_read_first_half) {
