@@ -4,46 +4,45 @@
 #include <cerrno>
 #include <cstdio>
 #include <string>
+#include <variant>
 
 #include <log_surgeon/Constants.hpp>
 
 using std::string;
+using std::variant;
 
 namespace log_surgeon {
-FileReader::~FileReader() {
-    close();
-    free(m_get_delim_buf);
-}
-
-auto FileReader::read(char* buf, size_t const num_bytes_to_read, size_t& num_bytes_read) const
+auto FileReader::read(char* buf, size_t const num_bytes_to_read, size_t& num_bytes_read)
         -> ErrorCode {
-    if (nullptr == m_file) {
+    if (false == m_file_stream.is_open()) {
         return ErrorCode::NotInit;
     }
     if (nullptr == buf) {
         return ErrorCode::BadParam;
     }
-    num_bytes_read = fread(buf, sizeof(*buf), num_bytes_to_read, m_file);
+
+    m_file_stream.read(buf, num_bytes_to_read);
+    num_bytes_read = m_file_stream.gcount();
+
     if (num_bytes_read < num_bytes_to_read) {
-        if (0 != ferror(m_file)) {
-            return ErrorCode::Errno;
+        if (m_file_stream.eof()) {
+            return ErrorCode::EndOfFile;
         }
-        if (0 != feof(m_file)) {
-            if (0 == num_bytes_read) {
-                return ErrorCode::EndOfFile;
-            }
+        if (m_file_stream.fail()) {
+            return ErrorCode::Errno;
         }
     }
     return ErrorCode::Success;
 }
 
-auto FileReader::try_open(string const& path) -> ErrorCode {
+auto FileReader::open(string const& path) -> ErrorCode {
     // Cleanup in case caller forgot to call close before calling this function
-    if (ErrorCode const err = close(); ErrorCode::Success != err) {
+    if (auto const err = close(); ErrorCode::Success != err) {
         return err;
     }
-    m_file = fopen(path.c_str(), "rb");
-    if (nullptr == m_file) {
+
+    m_file_stream.open(path, std::ios::binary);
+    if (false == m_file_stream.is_open()) {
         if (ENOENT == errno) {
             return ErrorCode::FileNotFound;
         }
@@ -53,38 +52,32 @@ auto FileReader::try_open(string const& path) -> ErrorCode {
 }
 
 auto FileReader::close() -> ErrorCode {
-    if (m_file != nullptr) {
-        if (0 != fclose(m_file)) {
+    if (m_file_stream.is_open()) {
+        m_file_stream.close();
+        if (m_file_stream.fail()) {
             return ErrorCode::Errno;
         }
-        m_file = nullptr;
     }
     return ErrorCode::Success;
 }
 
-auto FileReader::try_read_to_delimiter(
-        char const delim,
-        bool const keep_delimiter,
-        bool const append,
-        string& str
-) -> ErrorCode {
-    assert(nullptr != m_file);
-    if (false == append) {
-        str.clear();
+auto FileReader::open_and_read_to_line_number(
+        std::string const& schema_path,
+        uint32_t const line_num
+) -> variant<string, ErrorCode> {
+    if (ErrorCode error_code = open(schema_path); ErrorCode::Success != error_code) {
+        return error_code;
     }
-    ssize_t num_bytes_read = getdelim(&m_get_delim_buf, &m_get_delim_buf_len, delim, m_file);
-    if (num_bytes_read < 1) {
-        if (0 != ferror(m_file)) {
-            return ErrorCode::Errno;
-        }
-        if (0 != feof(m_file)) {
+    std::string line;
+    for (uint32_t current_line = 0; current_line <= line_num; current_line++) {
+        std::getline(m_file_stream, line);
+        if (m_file_stream.eof()) {
             return ErrorCode::EndOfFile;
         }
+        if (m_file_stream.fail()) {
+            return ErrorCode::Errno;
+        }
     }
-    if (false == keep_delimiter && delim == m_get_delim_buf[num_bytes_read - 1]) {
-        --num_bytes_read;
-    }
-    str.append(m_get_delim_buf, num_bytes_read);
-    return ErrorCode::Success;
+    return line;
 }
 }  // namespace log_surgeon

@@ -50,7 +50,7 @@ auto SchemaParser::generate_schema_ast(Reader& reader) -> unique_ptr<SchemaAST> 
 
 auto SchemaParser::try_schema_file(string const& schema_file_path) -> unique_ptr<SchemaAST> {
     FileReader schema_reader;
-    ErrorCode error_code = schema_reader.try_open(schema_file_path);
+    ErrorCode error_code = schema_reader.open(schema_file_path);
     if (ErrorCode::Success != error_code) {
         if (ErrorCode::Errno == error_code) {
             throw std::runtime_error(

@@ -109,20 +109,22 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
         }
         if (contains_delimiter) {
             FileReader schema_reader;
-            ErrorCode error_code = schema_reader.try_open(schema_ast->m_file_path);
-            if (ErrorCode::Success != error_code) {
+            std::variant<std::string, ErrorCode> line_variant
+                    = schema_reader.open_and_read_to_line_number(
+                            schema_ast->m_file_path,
+                            rule->m_line_num
+                    );
+            if (std::holds_alternative<ErrorCode>(line_variant)) {
                 throw std::runtime_error(
                         schema_ast->m_file_path + ":" + to_string(rule->m_line_num + 1)
                         + ": error: '" + rule->m_name
                         + "' has regex pattern which contains delimiter '" + char(delimiter_name)
-                        + "'.\n"
+                        + "'.\n [Failed to read schema line during debugging due to error code "
+                        + std::to_string(static_cast<int>(std::get<ErrorCode>(line_variant)))
+                        + ".\n"
                 );
             }
-            // more detailed debugging based on looking at the file
-            string line;
-            for (uint32_t i = 0; i <= rule->m_line_num; i++) {
-                schema_reader.try_read_to_delimiter('\n', false, false, line);
-            }
+            auto& line = std::get<string>(line_variant);
             int colon_pos = 0;
             for (char i : line) {
                 colon_pos++;
@@ -137,7 +139,7 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
             throw std::runtime_error(
                     schema_ast->m_file_path + ":" + to_string(rule->m_line_num + 1) + ": error: '"
                     + rule->m_name + "' has regex pattern which contains delimiter '"
-                    + char(delimiter_name) + "'.\n" + indent + line + "\n" + indent + spaces
+                    + char(delimiter_name) + "'.\n" + indent + line + indent + spaces
                     + arrows + "\n"
             );
         }
