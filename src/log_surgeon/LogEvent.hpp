@@ -1,8 +1,11 @@
 #ifndef LOG_SURGEON_LOG_EVENT_HPP
 #define LOG_SURGEON_LOG_EVENT_HPP
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <log_surgeon/LogParserOutputBuffer.hpp>
@@ -22,12 +25,7 @@ class LogEvent;
  */
 class LogEventView {
 public:
-    /**
-     * Constructs an empty LogEventView
-     * @param log_parser The LogParser whose input buffer the view will
-     * reference
-     */
-    explicit LogEventView(LogParser const& log_parser);
+    explicit LogEventView(std::unordered_map<uint32_t, std::string> const& id_symbols);
 
     /**
      * Copies the tokens representing a log event from the source buffer. This
@@ -50,14 +48,16 @@ public:
      * @param var_id
      * @return The tokens corresponding to var_id
      */
-    [[nodiscard]] auto get_variables(size_t var_id) const -> std::vector<Token*> const& {
+    [[nodiscard]] auto get_variables(size_t const var_id) const -> std::vector<Token*> const& {
         return m_log_var_occurrences[var_id];
     }
 
     /**
      * @return The LogParser whose input buffer this LogEventView references
      */
-    [[nodiscard]] auto get_log_parser() const -> LogParser const& { return m_log_parser; }
+    [[nodiscard]] auto get_id_symbols() const -> std::unordered_map<uint32_t, std::string> const& {
+        return m_id_symbols;
+    }
 
     /**
      * @return The LogParserOutputBuffer containing the tokens that make up the
@@ -99,7 +99,7 @@ public:
      * events from the same logging source code may have the same logtype.
      * @return The logtype of the log.
      */
-    auto get_logtype() const -> std::string;
+    [[nodiscard]] auto get_logtype() const -> std::string;
 
     /**
      * Adds a Token to the array of tokens of a particular token type.
@@ -108,21 +108,24 @@ public:
      * @param token_ptr The token to add to the array of tokens with ID
      * token_type_id.
      */
-    auto add_token(uint32_t token_type_id, Token* token_ptr) -> void {
+    auto add_token(uint32_t const token_type_id, Token* token_ptr) -> void {
         // TODO a Token knows all of its types through m_type_ids_ptr, so it
         // should be possible to remove token_type_id, or improve the use of
         // this function
         m_log_var_occurrences[token_type_id].push_back(token_ptr);
     }
 
-    // TODO: have LogParser own the output buffer as a LogEventView is already
-    // tied to a single log parser
-    std::unique_ptr<LogParserOutputBuffer> m_log_output_buffer;
+    [[nodiscard]] auto get_log_output_buffer() -> std::unique_ptr<LogParserOutputBuffer> const& {
+        return m_log_output_buffer;
+    }
 
 private:
     bool m_multiline{false};
-    LogParser const& m_log_parser;
-    std::vector<std::vector<Token*>> m_log_var_occurrences{};
+    std::unordered_map<uint32_t, std::string> m_id_symbols;
+    std::vector<std::vector<Token*>> m_log_var_occurrences;
+    // TODO: have LogParser own the output buffer as a LogEventView is already
+    // tied to a single log parser
+    std::unique_ptr<LogParserOutputBuffer> m_log_output_buffer;
 };
 
 /**

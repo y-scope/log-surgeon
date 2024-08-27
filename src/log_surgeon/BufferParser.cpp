@@ -32,9 +32,9 @@ auto BufferParser::parse_next_event(
     LogParser::ParsingAction parsing_action{LogParser::ParsingAction::None};
     ErrorCode error_code = m_log_parser.parse_and_generate_metadata(parsing_action);
     if (ErrorCode::Success != error_code) {
-        if (0 != m_log_parser.get_log_event_view().m_log_output_buffer->pos()) {
+        if (0 != m_log_parser.get_log_event_view().get_log_output_buffer()->pos()) {
             offset = m_log_parser.get_log_event_view()
-                             .m_log_output_buffer->get_token(0)
+                             .get_log_output_buffer()->get_token(0)
                              .m_start_pos;
         }
         reset();

@@ -10,6 +10,13 @@ class Parser {
 public:
     Parser();
 
+    virtual ~Parser() = default;
+
+    Parser(Parser const&) = delete;
+    auto operator=(Parser const&) -> Parser& = delete;
+    Parser(Parser&&) noexcept = delete;
+    auto operator=(Parser&&) noexcept -> Parser& = delete;
+
     virtual auto add_rule(
             std::string const& name,
             std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule
