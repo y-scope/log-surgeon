@@ -98,7 +98,7 @@ auto SchemaParser::try_schema_string(string const& schema_string) -> unique_ptr<
 
 static auto new_identifier_rule(NonTerminal* m) -> unique_ptr<IdentifierAST> {
     string r1 = m->token_cast(0)->to_string();
-    return make_unique<IdentifierAST>(IdentifierAST(r1[0]));
+    return make_unique<IdentifierAST>(r1[0]);
 }
 
 static auto existing_identifier_rule(NonTerminal* m) -> unique_ptr<ParserAST> {

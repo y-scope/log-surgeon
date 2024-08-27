@@ -1,24 +1,27 @@
 #ifndef LOG_SURGEON_LALR1_PARSER_HPP
 #define LOG_SURGEON_LALR1_PARSER_HPP
 
+#include <array>
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <list>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <stack>
+#include <string>
 #include <tuple>
-#include <type_traits>
 #include <unordered_map>
 #include <variant>
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/Parser.hpp>
+#include <log_surgeon/ParserInputBuffer.hpp>
+#include <log_surgeon/Reader.hpp>
+#include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
 
@@ -37,7 +40,14 @@ using Action = std::variant<bool, ItemSet*, Production*>;
 
 class ParserAST {
 public:
+    ParserAST() = default;
+
     virtual ~ParserAST() = 0;
+
+    ParserAST(ParserAST const&) = delete;
+    auto operator=(ParserAST const&) -> ParserAST& = delete;
+    ParserAST(ParserAST&&) = delete;
+    auto operator=(ParserAST&&) -> ParserAST& = delete;
 
     template <typename T>
     auto get() -> T& {
@@ -75,9 +85,9 @@ public:
      * @param i
      * @return Token*
      */
-    [[nodiscard]] auto token_cast(uint32_t i) const -> Token* {
+    [[nodiscard]] auto token_cast(uint32_t const i) const -> Token* {
         assert(i < cSizeOfAllChildren);
-        return &std::get<Token>(NonTerminal::m_all_children[m_children_start + i]);
+        return &std::get<Token>(m_all_children[m_children_start + i]);
     }
 
     /**
@@ -87,9 +97,9 @@ public:
      * @param i
      * @return NonTerminal*
      */
-    [[nodiscard]] auto non_terminal_cast(uint32_t i) const -> NonTerminal* {
+    [[nodiscard]] auto non_terminal_cast(uint32_t const i) const -> NonTerminal* {
         assert(i < cSizeOfAllChildren);
-        return &std::get<NonTerminal>(NonTerminal::m_all_children[m_children_start + i]);
+        return &std::get<NonTerminal>(m_all_children[m_children_start + i]);
     }
 
     /**
@@ -99,7 +109,7 @@ public:
      */
     auto get_parser_ast() -> std::unique_ptr<ParserAST>& { return m_ast; }
 
-    static MatchedSymbol m_all_children[];
+    static std::array<MatchedSymbol, cSizeOfAllChildren> m_all_children;
     static uint32_t m_next_children_start;
     uint32_t m_children_start;
     Production* m_production;
@@ -261,7 +271,7 @@ public:
      */
     auto parse(Reader& reader) -> NonTerminal;
 
-protected:
+private:
     /**
      * Reset the parser to start a new parsing (set state to root, reset
      * buffers, reset vars tracking positions)
@@ -271,24 +281,10 @@ protected:
     /**
      * Return an error string based on the current error state, matched_stack,
      * and next_symbol in the parser
-     * @param reader
      * @return std::string
      */
     auto report_error() -> std::string;
 
-    /* Lexer<NFAStateType, DFAStateType> m_lexer; */
-    std::stack<MatchedSymbol> m_parse_stack_matches;
-    std::stack<ItemSet*> m_parse_stack_states;
-    ItemSet* m_root_item_set_ptr{nullptr};
-    std::optional<Token> m_next_token;
-    std::vector<std::unique_ptr<Production>> m_productions;
-    std::unordered_map<std::string, std::map<std::vector<std::string>, Production*>>
-            m_productions_map;
-    std::unordered_map<uint32_t, std::vector<Production*>> m_non_terminals;
-    uint32_t m_root_production_id{0};
-    ParserInputBuffer m_input_buffer;
-
-private:
     /**
      * Generate LR0 kernels based on the productions in m_productions
      */
@@ -296,7 +292,7 @@ private:
 
     /**
      * Perform closure for the specified item_set based on its kernel
-     * @param item_set
+     * @param item_set_ptr
      */
     auto generate_lr0_closure(ItemSet* item_set_ptr) -> void;
 
@@ -314,7 +310,7 @@ private:
      * input symbol
      * @return ItemSet*
      */
-    auto go_to(ItemSet* /*from_item_set*/, uint32_t const& /*next_symbol*/) -> ItemSet*;
+    auto go_to(ItemSet* from_item_set, uint32_t const& next_symbol) -> ItemSet*;
 
     /**
      * Generate m_firsts, which specify for each symbol, all possible prefixes
@@ -388,14 +384,24 @@ private:
 
     /**
      * Get the current line after the error symbol
-     * @param reader
      * @param error_token
      * @return std::string
      */
     auto get_input_until_next_newline(Token* error_token) -> std::string;
 
-    auto symbol_is_token(uint32_t s) -> bool { return m_terminals.find(s) != m_terminals.end(); }
+    auto symbol_is_token(uint32_t const s) const -> bool { return m_terminals.contains(s); }
 
+    /* Lexer<NFAStateType, DFAStateType> m_lexer; */
+    std::stack<MatchedSymbol> m_parse_stack_matches;
+    std::stack<ItemSet*> m_parse_stack_states;
+    ItemSet* m_root_item_set_ptr{nullptr};
+    std::optional<Token> m_next_token;
+    std::vector<std::unique_ptr<Production>> m_productions;
+    std::unordered_map<std::string, std::map<std::vector<std::string>, Production*>>
+            m_productions_map;
+    std::unordered_map<uint32_t, std::vector<Production*>> m_non_terminals;
+    uint32_t m_root_production_id{0};
+    ParserInputBuffer m_input_buffer;
     std::set<uint32_t> m_terminals;
     std::set<uint32_t> m_nullable;
     std::map<std::set<Item>, std::unique_ptr<ItemSet>> m_lr0_item_sets;

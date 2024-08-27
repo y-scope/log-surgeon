@@ -1,16 +1,10 @@
 #ifndef LOG_SURGEON_LALR1_PARSER_TPP
 #define LOG_SURGEON_LALR1_PARSER_TPP
 
-#include <cstddef>
-#include <functional>
-#include <iostream>
 #include <optional>
 
-#include <log_surgeon/Constants.hpp>
-
 namespace log_surgeon {
-namespace {
-[[maybe_unused]] auto get_line_num(MatchedSymbol& top_symbol) -> uint32_t {
+[[maybe_unused]] inline auto get_line_num(MatchedSymbol& top_symbol) -> uint32_t {
     std::optional<uint32_t> line_num{std::nullopt};
     std::stack<MatchedSymbol> symbols;
     symbols.push(std::move(top_symbol));
@@ -35,23 +29,22 @@ namespace {
     return *line_num;
 }
 
-[[maybe_unused]] auto unescape(char const& c) -> std::string {
+[[maybe_unused]] inline auto unescape(char const c) -> std::string {
     switch (c) {
         case '\t':
-            return "\\t";
+            return std::string{"\\t"};
         case '\r':
-            return "\\r";
+            return std::string{"\\r"};
         case '\n':
-            return "\\n";
+            return std::string{"\\n"};
         case '\v':
-            return "\\v";
+            return std::string{"\\v"};
         case '\f':
-            return "\\f";
+            return std::string{"\\f"};
         default:
-            return {c};
+            return std::string{c};
     }
 }
-}  // namespace
 
 template <typename NFAStateType, typename DFAStateType>
 LALR1Parser<NFAStateType, DFAStateType>::LALR1Parser() {
