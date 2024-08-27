@@ -34,7 +34,8 @@ auto BufferParser::parse_next_event(
     if (ErrorCode::Success != error_code) {
         if (0 != m_log_parser.get_log_event_view().get_log_output_buffer()->pos()) {
             offset = m_log_parser.get_log_event_view()
-                             .get_log_output_buffer()->get_token(0)
+                             .get_log_output_buffer()
+                             ->get_token(0)
                              .m_start_pos;
         }
         reset();
