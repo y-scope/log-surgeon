@@ -3,7 +3,9 @@
 
 #include <memory>
 #include <string>
+
 #include <log_surgeon/Lexer.hpp>
+
 #include "finite_automata/RegexAST.hpp"
 
 namespace log_surgeon {
