@@ -1,32 +1,30 @@
 #ifndef LOG_SURGEON_PARSER_TPP
 #define LOG_SURGEON_PARSER_TPP
 
-#include <memory>
-
-#include <log_surgeon/finite_automata/RegexAST.hpp>
-
 namespace log_surgeon {
 
 template <typename NFAStateType, typename DFAStateType>
 Parser<NFAStateType, DFAStateType>::Parser() {
     // TODO move clp-reserved symbols out of the parser
-    m_lexer.m_symbol_id[cTokenEnd] = (int)SymbolID::TokenEndID;
-    m_lexer.m_symbol_id[cTokenUncaughtString] = (int)SymbolID::TokenUncaughtStringID;
-    m_lexer.m_symbol_id[cTokenInt] = (int)SymbolID::TokenIntId;
-    m_lexer.m_symbol_id[cTokenFloat] = (int)SymbolID::TokenFloatId;
-    m_lexer.m_symbol_id[cTokenHex] = (int)SymbolID::TokenHexId;
-    m_lexer.m_symbol_id[cTokenFirstTimestamp] = (int)SymbolID::TokenFirstTimestampId;
-    m_lexer.m_symbol_id[cTokenNewlineTimestamp] = (int)SymbolID::TokenNewlineTimestampId;
-    m_lexer.m_symbol_id[cTokenNewline] = (int)SymbolID::TokenNewlineId;
+    m_lexer.m_symbol_id[cTokenEnd] = static_cast<int>(SymbolID::TokenEndID);
+    m_lexer.m_symbol_id[cTokenUncaughtString] = static_cast<int>(SymbolID::TokenUncaughtStringID);
+    m_lexer.m_symbol_id[cTokenInt] = static_cast<int>(SymbolID::TokenIntId);
+    m_lexer.m_symbol_id[cTokenFloat] = static_cast<int>(SymbolID::TokenFloatId);
+    m_lexer.m_symbol_id[cTokenHex] = static_cast<int>(SymbolID::TokenHexId);
+    m_lexer.m_symbol_id[cTokenFirstTimestamp] = static_cast<int>(SymbolID::TokenFirstTimestampId);
+    m_lexer.m_symbol_id[cTokenNewlineTimestamp]
+            = static_cast<int>(SymbolID::TokenNewlineTimestampId);
+    m_lexer.m_symbol_id[cTokenNewline] = static_cast<int>(SymbolID::TokenNewlineId);
 
-    m_lexer.m_id_symbol[(int)SymbolID::TokenEndID] = cTokenEnd;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenUncaughtStringID] = cTokenUncaughtString;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenIntId] = cTokenInt;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenFloatId] = cTokenFloat;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenHexId] = cTokenHex;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenFirstTimestampId] = cTokenFirstTimestamp;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenNewlineTimestampId] = cTokenNewlineTimestamp;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenNewlineId] = cTokenNewline;
+    m_lexer.m_id_symbol[static_cast<int>(SymbolID::TokenEndID)] = cTokenEnd;
+    m_lexer.m_id_symbol[static_cast<int>(SymbolID::TokenUncaughtStringID)] = cTokenUncaughtString;
+    m_lexer.m_id_symbol[static_cast<int>(SymbolID::TokenIntId)] = cTokenInt;
+    m_lexer.m_id_symbol[static_cast<int>(SymbolID::TokenFloatId)] = cTokenFloat;
+    m_lexer.m_id_symbol[static_cast<int>(SymbolID::TokenHexId)] = cTokenHex;
+    m_lexer.m_id_symbol[static_cast<int>(SymbolID::TokenFirstTimestampId)] = cTokenFirstTimestamp;
+    m_lexer.m_id_symbol[static_cast<int>(SymbolID::TokenNewlineTimestampId)]
+            = cTokenNewlineTimestamp;
+    m_lexer.m_id_symbol[static_cast<int>(SymbolID::TokenNewlineId)] = cTokenNewline;
 }
 
 template <typename NFAStateType, typename DFAStateType>

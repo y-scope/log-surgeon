@@ -1,7 +1,10 @@
 #ifndef LOG_SURGEON_PARSER_HPP
 #define LOG_SURGEON_PARSER_HPP
 
+#include <memory>
+#include <string>
 #include <log_surgeon/Lexer.hpp>
+#include "finite_automata/RegexAST.hpp"
 
 namespace log_surgeon {
 
