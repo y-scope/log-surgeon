@@ -4,7 +4,7 @@
 #include <optional>
 
 namespace log_surgeon {
-[[maybe_unused]] auto get_line_num(MatchedSymbol& top_symbol) -> uint32_t {
+[[maybe_unused]] inline auto get_line_num(MatchedSymbol& top_symbol) -> uint32_t {
     std::optional<uint32_t> line_num{std::nullopt};
     std::stack<MatchedSymbol> symbols;
     symbols.push(std::move(top_symbol));
