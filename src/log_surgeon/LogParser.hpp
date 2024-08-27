@@ -1,24 +1,29 @@
 #ifndef LOG_SURGEON_LOG_PARSER_HPP
 #define LOG_SURGEON_LOG_PARSER_HPP
 
-#include <cassert>
-#include <iostream>
+#include <cstdint>
 #include <memory>
+#include <optional>
+#include <string>
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/LALR1Parser.hpp>
 #include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/LogParserOutputBuffer.hpp>
 #include <log_surgeon/Parser.hpp>
 #include <log_surgeon/ParserInputBuffer.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
+#include "finite_automata/RegexDFA.hpp"
+#include "finite_automata/RegexNFA.hpp"
+#include "Reader.hpp"
+#include "Token.hpp"
+
 namespace log_surgeon {
 // TODO: Compare c-array vs. vectors (its underlying array) for buffers
-class LogParser
+class LogParser final
         : public Parser<finite_automata::RegexNFAByteState, finite_automata::RegexDFAByteState> {
 public:
-    enum class ParsingAction {
+    enum class ParsingAction : uint8_t {
         None,
         Compress,
         CompressAndFinish
@@ -39,7 +44,7 @@ public:
      * @throw std::runtime_error from LALR1Parser, RegexAST, or Lexer
      * describing the failure processing the schema AST.
      */
-    explicit LogParser(std::unique_ptr<log_surgeon::SchemaAST> schema_ast);
+    explicit LogParser(std::unique_ptr<SchemaAST> const& schema_ast);
 
     /**
      * Returns the parser to its initial state, clearing any existing
@@ -91,7 +96,7 @@ public:
     /**
      * @return the current position inside the input buffer.
      */
-    auto get_input_pos() -> uint32_t { return m_input_buffer.storage().pos(); }
+    auto get_input_pos() const -> uint32_t { return m_input_buffer.storage().pos(); }
 
     /**
      * Reads into the input buffer if only consumed data will be overwritten.
@@ -112,7 +117,7 @@ public:
     /**
      * Resets the log event view to prepare for the next parse
      */
-    auto reset_log_event_view() -> void { m_log_event_view->reset(); }
+    auto reset_log_event_view() const -> void { m_log_event_view->reset(); }
 
     /**
      * @return the log event view based on the last parse
@@ -134,7 +139,7 @@ private:
      * Generates metadata for last parsed log event indicating occurrences of
      * each variable and if the log event is multiline
      */
-    auto generate_log_event_view_metadata() -> void;
+    auto generate_log_event_view_metadata() const -> void;
 
     /**
      * Requests the next token from the lexer.
@@ -158,7 +163,7 @@ private:
      * @param schema_ast The AST from which parsing and lexing rules are
      * generated.
      */
-    auto add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void;
+    auto add_rules(std::unique_ptr<SchemaAST> const& schema_ast) -> void;
 
     // TODO: move ownership of the buffer to the lexer
     ParserInputBuffer m_input_buffer;
