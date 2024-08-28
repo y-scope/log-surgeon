@@ -69,7 +69,6 @@ set(SOURCE_FILES
     src/log_surgeon/Token.cpp
     src/log_surgeon/Token.hpp
     src/log_surgeon/finite_automata/RegexAST.hpp
-    src/log_surgeon/finite_automata/RegexAST.tpp
     src/log_surgeon/finite_automata/RegexDFA.hpp
     src/log_surgeon/finite_automata/RegexDFA.tpp
     src/log_surgeon/finite_automata/RegexNFA.hpp
