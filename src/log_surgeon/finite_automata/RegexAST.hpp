@@ -750,7 +750,7 @@ auto RegexASTGroup<NFAStateType>::merge(std::vector<Range> const& ranges) -> std
     }
     Range cur = ranges[0];
     for (size_t i = 1; i < ranges.size(); i++) {
-        Range const& range = ranges[i];
+        auto const& range = ranges[i];
         if (range.first <= cur.second + 1) {
             cur.second = std::max(range.second, cur.second);
         } else {
