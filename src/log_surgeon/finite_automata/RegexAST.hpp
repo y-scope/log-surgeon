@@ -2,35 +2,41 @@
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
 
 #include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <gsl/pointers>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/RegexNFA.hpp>
-#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
 
 template <typename NFAStateType>
 class RegexAST {
 public:
+    RegexAST() = default;
     virtual ~RegexAST() = default;
 
     /**
      * Used for cloning a unique_pointer of base type RegexAST
      * @return RegexAST*
      */
-    [[nodiscard]] virtual auto clone() const -> RegexAST* = 0;
+    [[nodiscard]] virtual auto clone() const -> gsl::owner<RegexAST*> = 0;
 
     /**
      * Sets is_possible_input to specify which utf8 characters are allowed in a
      * lexer rule
      * @param is_possible_input
      */
-    virtual auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void = 0;
+    virtual auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void = 0;
 
     /**
      * transform '.' from any-character into any non-delimiter in a lexer rule
@@ -45,6 +51,12 @@ public:
      * @param end_state
      */
     virtual auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void = 0;
+
+protected:
+    RegexAST(RegexAST const& rhs) = default;
+    auto operator=(RegexAST const& rhs) -> RegexAST& = default;
+    RegexAST(RegexAST&& rhs) noexcept = default;
+    auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = default;
 };
 
 template <typename NFAStateType>
@@ -56,7 +68,7 @@ public:
      * Used for cloning a unique_pointer of type RegexASTLiteral
      * @return RegexASTLiteral*
      */
-    [[nodiscard]] auto clone() const -> RegexASTLiteral* override {
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTLiteral*> override {
         return new RegexASTLiteral(*this);
     }
 
@@ -65,7 +77,8 @@ public:
      * lexer rule containing RegexASTLiteral at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
         is_possible_input[m_character] = true;
     }
 
@@ -74,7 +87,8 @@ public:
      * nothing as RegexASTLiteral is a leaf node that is not a RegexASTGroup
      * @param delimiters
      */
-    auto remove_delimiters_from_wildcard(std::vector<uint32_t>& /* delimiters */) -> void override {
+    auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters
+    ) -> void override {
         // Do nothing
     }
 
@@ -103,7 +117,7 @@ public:
      * Used for cloning a unique_pointer of type RegexASTInteger
      * @return RegexASTInteger*
      */
-    [[nodiscard]] auto clone() const -> RegexASTInteger* override {
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTInteger*> override {
         return new RegexASTInteger(*this);
     }
 
@@ -112,9 +126,10 @@ public:
      * lexer rule containing RegexASTInteger at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
-        for (uint32_t i : m_digits) {
-            is_possible_input[i + '0'] = true;
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
+        for (uint32_t const i : m_digits) {
+            is_possible_input.at('0' + i) = true;
         }
     }
 
@@ -123,7 +138,8 @@ public:
      * nothing as RegexASTInteger is a leaf node that is not a RegexASTGroup
      * @param delimiters
      */
-    auto remove_delimiters_from_wildcard(std::vector<uint32_t>& /* delimiters */) -> void override {
+    auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters
+    ) -> void override {
         // Do nothing
     }
 
@@ -150,15 +166,18 @@ public:
 
     RegexASTGroup();
 
-    RegexASTGroup(RegexASTGroup* left, RegexASTLiteral<NFAStateType>* right);
+    explicit RegexASTGroup(RegexASTLiteral<NFAStateType> const* right);
 
-    RegexASTGroup(RegexASTGroup* left, RegexASTGroup* right);
+    explicit RegexASTGroup(RegexASTGroup const* right);
 
-    explicit RegexASTGroup(RegexASTLiteral<NFAStateType>* right);
+    RegexASTGroup(RegexASTGroup const* left, RegexASTLiteral<NFAStateType> const* right);
 
-    explicit RegexASTGroup(RegexASTGroup* right);
+    RegexASTGroup(RegexASTGroup const* left, RegexASTGroup const* right);
 
-    RegexASTGroup(RegexASTLiteral<NFAStateType>* left, RegexASTLiteral<NFAStateType>* right);
+    RegexASTGroup(
+            RegexASTLiteral<NFAStateType> const* left,
+            RegexASTLiteral<NFAStateType> const* right
+    );
 
     RegexASTGroup(uint32_t min, uint32_t max);
 
@@ -168,30 +187,33 @@ public:
      * Used for cloning a unique_pointer of type RegexASTGroup
      * @return RegexASTGroup*
      */
-    [[nodiscard]] auto clone() const -> RegexASTGroup* override { return new RegexASTGroup(*this); }
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTGroup*> override {
+        return new RegexASTGroup(*this);
+    }
 
     /**
      * Sets is_possible_input to specify which utf8 characters are allowed in a
      * lexer rule containing RegexASTGroup at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
         if (!m_negate) {
-            for (Range range : m_ranges) {
-                for (uint32_t i = range.first; i <= range.second; i++) {
-                    is_possible_input[i] = true;
+            for (auto const& [begin, end] : m_ranges) {
+                for (uint32_t i = begin; i <= end; i++) {
+                    is_possible_input.at(i) = true;
                 }
             }
         } else {
             std::vector<char> inputs(cUnicodeMax, 1);
-            for (Range range : m_ranges) {
-                for (uint32_t i = range.first; i <= range.second; i++) {
+            for (auto const& [begin, end] : m_ranges) {
+                for (uint32_t i = begin; i <= end; i++) {
                     inputs[i] = 0;
                 }
             }
             for (uint32_t i = 0; i < inputs.size(); i++) {
                 if (inputs[i] != 0) {
-                    is_possible_input[i] = true;
+                    is_possible_input.at(i) = true;
                 }
             }
         }
@@ -210,19 +232,19 @@ public:
             return;
         }
         m_ranges.clear();
-        std::sort(delimiters.begin(), delimiters.end());
+        std::ranges::sort(delimiters);
         if (delimiters[0] != 0) {
-            Range range(0, delimiters[0] - 1);
+            Range const range(0, delimiters[0] - 1);
             m_ranges.push_back(range);
         }
         for (uint32_t i = 1; i < delimiters.size(); i++) {
             if (delimiters[i] - delimiters[i - 1] > 1) {
-                Range range(delimiters[i - 1] + 1, delimiters[i] - 1);
+                Range const range(delimiters[i - 1] + 1, delimiters[i] - 1);
                 m_ranges.push_back(range);
             }
         }
         if (delimiters.back() != cUnicodeMax) {
-            Range range(delimiters.back() + 1, cUnicodeMax);
+            Range const range(delimiters.back() + 1, cUnicodeMax);
             m_ranges.push_back(range);
         }
     }
@@ -271,27 +293,36 @@ private:
 template <typename NFAStateType>
 class RegexASTOr : public RegexAST<NFAStateType> {
 public:
+    ~RegexASTOr() override = default;
+
     RegexASTOr(
-            std::unique_ptr<RegexAST<NFAStateType>> /*left*/,
-            std::unique_ptr<RegexAST<NFAStateType>> /*right*/
+            std::unique_ptr<RegexAST<NFAStateType>> left,
+            std::unique_ptr<RegexAST<NFAStateType>> right
     );
 
     RegexASTOr(RegexASTOr const& rhs)
             : m_left(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone())),
               m_right(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone())) {}
 
+    auto operator=(RegexASTOr const& rhs) -> RegexASTOr& = default;
+    RegexASTOr(RegexASTOr&& rhs) noexcept = default;
+    auto operator=(RegexASTOr&& rhs) noexcept -> RegexASTOr& = default;
+
     /**
      * Used for cloning a unique_pointer of type RegexASTOr
      * @return RegexASTOr*
      */
-    [[nodiscard]] auto clone() const -> RegexASTOr* override { return new RegexASTOr(*this); }
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTOr*> override {
+        return new RegexASTOr(*this);
+    }
 
     /**
      * Sets is_possible_input to specify which utf8 characters are allowed in a
      * lexer rule containing RegexASTOr at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
         m_left->set_possible_inputs_to_true(is_possible_input);
         m_right->set_possible_inputs_to_true(is_possible_input);
     }
@@ -322,27 +353,36 @@ private:
 template <typename NFAStateType>
 class RegexASTCat : public RegexAST<NFAStateType> {
 public:
+    ~RegexASTCat() override = default;
+
     RegexASTCat(
-            std::unique_ptr<RegexAST<NFAStateType>> /*left*/,
-            std::unique_ptr<RegexAST<NFAStateType>> /*right*/
+            std::unique_ptr<RegexAST<NFAStateType>> left,
+            std::unique_ptr<RegexAST<NFAStateType>> right
     );
 
     RegexASTCat(RegexASTCat const& rhs)
             : m_left(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone())),
               m_right(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone())) {}
 
+    auto operator=(RegexASTCat const& rhs) -> RegexASTCat& = default;
+    RegexASTCat(RegexASTCat&& rhs) noexcept = default;
+    auto operator=(RegexASTCat&& rhs) noexcept -> RegexASTCat& = default;
+
     /**
      * Used for cloning a unique_pointer of type RegexASTCat
      * @return RegexASTCat*
      */
-    [[nodiscard]] auto clone() const -> RegexASTCat* override { return new RegexASTCat(*this); }
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTCat*> override {
+        return new RegexASTCat(*this);
+    }
 
     /**
      * Sets is_possible_input to specify which utf8 characters are allowed in a
      * lexer rule containing RegexASTCat at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
         m_left->set_possible_inputs_to_true(is_possible_input);
         m_right->set_possible_inputs_to_true(is_possible_input);
     }
@@ -381,6 +421,8 @@ private:
 template <typename NFAStateType>
 class RegexASTMultiplication : public RegexAST<NFAStateType> {
 public:
+    ~RegexASTMultiplication() override = default;
+
     RegexASTMultiplication(
             std::unique_ptr<RegexAST<NFAStateType>> operand,
             uint32_t min,
@@ -392,11 +434,15 @@ public:
               m_min(rhs.m_min),
               m_max(rhs.m_max) {}
 
+    auto operator=(RegexASTMultiplication const& rhs) -> RegexASTMultiplication& = default;
+    RegexASTMultiplication(RegexASTMultiplication&& rhs) noexcept = default;
+    auto operator=(RegexASTMultiplication&& rhs) noexcept -> RegexASTMultiplication& = default;
+
     /**
      * Used for cloning a unique_pointer of type RegexASTMultiplication
      * @return RegexASTMultiplication*
      */
-    [[nodiscard]] auto clone() const -> RegexASTMultiplication* override {
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTMultiplication*> override {
         return new RegexASTMultiplication(*this);
     }
 
@@ -405,7 +451,8 @@ public:
      * lexer rule containing RegexASTMultiplication at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
         m_operand->set_possible_inputs_to_true(is_possible_input);
     }
 
@@ -446,6 +493,8 @@ private:
 template <typename NFAStateType>
 class RegexASTCapture : public RegexAST<NFAStateType> {
 public:
+    ~RegexASTCapture() override = default;
+
     RegexASTCapture(std::string group_name, std::unique_ptr<RegexAST<NFAStateType>> group_regex_ast)
             : m_group_name(std::move(group_name)),
               m_group_regex_ast(std::move(group_regex_ast)) {}
@@ -456,11 +505,15 @@ public:
                       std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_group_regex_ast->clone())
               ) {}
 
+    auto operator=(RegexASTCapture const& rhs) -> RegexASTCapture& = default;
+    RegexASTCapture(RegexASTCapture&& rhs) noexcept = default;
+    auto operator=(RegexASTCapture&& rhs) noexcept -> RegexASTCapture& = default;
+
     /**
      * Used for cloning a `unique_pointer` of type `RegexASTCapture`.
      * @return RegexASTCapture*
      */
-    [[nodiscard]] auto clone() const -> RegexASTCapture* override {
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTCapture*> override {
         return new RegexASTCapture(*this);
     }
 
@@ -469,7 +522,8 @@ public:
      * lexer rule containing `RegexASTCapture` at a leaf node in its AST.
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
         m_group_regex_ast->set_possible_inputs_to_true(is_possible_input);
     }
 
@@ -502,8 +556,241 @@ private:
     std::unique_ptr<RegexAST<NFAStateType>> m_group_regex_ast;
 };
 
-}  // namespace log_surgeon::finite_automata
+template <typename NFAStateType>
+RegexASTLiteral<NFAStateType>::RegexASTLiteral(uint32_t character) : m_character(character) {}
 
-#include "RegexAST.tpp"
+template <typename NFAStateType>
+void RegexASTLiteral<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
+    nfa->add_root_interval(Interval(m_character, m_character), end_state);
+}
+
+template <typename NFAStateType>
+RegexASTInteger<NFAStateType>::RegexASTInteger(uint32_t digit) {
+    digit = digit - '0';
+    m_digits.push_back(digit);
+}
+
+template <typename NFAStateType>
+RegexASTInteger<NFAStateType>::RegexASTInteger(RegexASTInteger* left, uint32_t digit)
+        : m_digits(std::move(left->m_digits)) {
+    digit = digit - '0';
+    m_digits.push_back(digit);
+}
+
+template <typename NFAStateType>
+void RegexASTInteger<NFAStateType>::add(
+        [[maybe_unused]] RegexNFA<NFAStateType>* nfa,
+        [[maybe_unused]] NFAStateType* end_state
+) {
+    throw std::runtime_error("Unsupported");
+}
+
+template <typename NFAStateType>
+RegexASTOr<NFAStateType>::RegexASTOr(
+        std::unique_ptr<RegexAST<NFAStateType>> left,
+        std::unique_ptr<RegexAST<NFAStateType>> right
+)
+        : m_left(std::move(left)),
+          m_right(std::move(right)) {}
+
+template <typename NFAStateType>
+void RegexASTOr<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
+    m_left->add(nfa, end_state);
+    m_right->add(nfa, end_state);
+}
+
+template <typename NFAStateType>
+RegexASTCat<NFAStateType>::RegexASTCat(
+        std::unique_ptr<RegexAST<NFAStateType>> left,
+        std::unique_ptr<RegexAST<NFAStateType>> right
+)
+        : m_left(std::move(left)),
+          m_right(std::move(right)) {}
+
+template <typename NFAStateType>
+void RegexASTCat<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
+    NFAStateType* saved_root = nfa->get_root();
+    NFAStateType* intermediate_state = nfa->new_state();
+    m_left->add(nfa, intermediate_state);
+    nfa->set_root(intermediate_state);
+    m_right->add(nfa, end_state);
+    nfa->set_root(saved_root);
+}
+
+template <typename NFAStateType>
+RegexASTMultiplication<NFAStateType>::RegexASTMultiplication(
+        std::unique_ptr<RegexAST<NFAStateType>> operand,
+        uint32_t const min,
+        uint32_t const max
+)
+        : m_operand(std::move(operand)),
+          m_min(min),
+          m_max(max) {}
+
+template <typename NFAStateType>
+void RegexASTMultiplication<NFAStateType>::add(
+        RegexNFA<NFAStateType>* nfa,
+        NFAStateType* end_state
+) {
+    NFAStateType* saved_root = nfa->get_root();
+    if (this->m_min == 0) {
+        nfa->get_root()->add_epsilon_transition(end_state);
+    } else {
+        for (uint32_t i = 1; i < this->m_min; i++) {
+            NFAStateType* intermediate_state = nfa->new_state();
+            m_operand->add(nfa, intermediate_state);
+            nfa->set_root(intermediate_state);
+        }
+        m_operand->add(nfa, end_state);
+    }
+    if (this->is_infinite()) {
+        nfa->set_root(end_state);
+        m_operand->add(nfa, end_state);
+    } else if (this->m_max > this->m_min) {
+        if (this->m_min != 0) {
+            NFAStateType* intermediate_state = nfa->new_state();
+            m_operand->add(nfa, intermediate_state);
+            nfa->set_root(intermediate_state);
+        }
+        for (uint32_t i = this->m_min + 1; i < this->m_max; ++i) {
+            m_operand->add(nfa, end_state);
+            NFAStateType* intermediate_state = nfa->new_state();
+            m_operand->add(nfa, intermediate_state);
+            nfa->set_root(intermediate_state);
+        }
+        m_operand->add(nfa, end_state);
+    }
+    nfa->set_root(saved_root);
+}
+
+template <typename NFAStateType>
+void RegexASTCapture<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
+    m_group_regex_ast->add(nfa, end_state);
+}
+
+template <typename NFAStateType>
+RegexASTGroup<NFAStateType>::RegexASTGroup() = default;
+
+template <typename NFAStateType>
+RegexASTGroup<NFAStateType>::RegexASTGroup(
+        RegexASTGroup const* left,
+        RegexASTLiteral<NFAStateType> const* right
+) {
+    if (right == nullptr) {
+        throw std::runtime_error("RegexASTGroup1: right == nullptr: A bracket expression in the "
+                                 "schema contains illegal characters, remember to escape special "
+                                 "characters. Refer to README-Schema.md for more details.");
+    }
+    m_negate = left->m_negate;
+    m_ranges = left->m_ranges;
+    m_ranges.emplace_back(right->get_character(), right->get_character());
+}
+
+template <typename NFAStateType>
+RegexASTGroup<NFAStateType>::RegexASTGroup(RegexASTGroup const* left, RegexASTGroup const* right)
+        : m_negate(left->m_negate),
+          m_ranges(left->m_ranges) {
+    assert(right->m_ranges.size() == 1);  // Only add LiteralRange
+    m_ranges.push_back(right->m_ranges[0]);
+}
+
+template <typename NFAStateType>
+RegexASTGroup<NFAStateType>::RegexASTGroup(RegexASTLiteral<NFAStateType> const* right) {
+    if (right == nullptr) {
+        throw std::runtime_error("RegexASTGroup2: right == nullptr: A bracket expression in the "
+                                 "schema contains illegal characters, remember to escape special "
+                                 "characters. Refer to README-Schema.md for more details.");
+    }
+    m_negate = false;
+    m_ranges.emplace_back(right->get_character(), right->get_character());
+}
+
+template <typename NFAStateType>
+RegexASTGroup<NFAStateType>::RegexASTGroup(RegexASTGroup const* right) : m_negate(false) {
+    assert(right->m_ranges.size() == 1);  // Only add LiteralRange
+    m_ranges.push_back(right->m_ranges[0]);
+}
+
+template <typename NFAStateType>
+RegexASTGroup<NFAStateType>::RegexASTGroup(
+        RegexASTLiteral<NFAStateType> const* left,
+        RegexASTLiteral<NFAStateType> const* right
+) {
+    if (left == nullptr || right == nullptr) {
+        throw std::runtime_error(
+                "RegexASTGroup3: left == nullptr || right == nullptr: A bracket expression in the "
+                "schema contains illegal characters, remember to escape special characters. Refer "
+                "to README-Schema.md for more details."
+        );
+    }
+    m_negate = false;
+    assert(right->get_character() > left->get_character());
+    m_ranges.emplace_back(left->get_character(), right->get_character());
+}
+
+template <typename NFAStateType>
+RegexASTGroup<NFAStateType>::RegexASTGroup(std::vector<uint32_t> const& literals)
+        : m_negate(false) {
+    for (uint32_t literal : literals) {
+        m_ranges.emplace_back(literal, literal);
+    }
+}
+
+template <typename NFAStateType>
+RegexASTGroup<NFAStateType>::RegexASTGroup(uint32_t min, uint32_t max) : m_negate(false) {
+    m_ranges.emplace_back(min, max);
+}
+
+// ranges must be sorted
+template <typename NFAStateType>
+auto RegexASTGroup<NFAStateType>::merge(std::vector<Range> const& ranges) -> std::vector<Range> {
+    std::vector<Range> merged_ranges;
+    if (ranges.empty()) {
+        return merged_ranges;
+    }
+    Range cur = ranges[0];
+    for (size_t i = 1; i < ranges.size(); i++) {
+        auto const& range = ranges[i];
+        if (range.first <= cur.second + 1) {
+            cur.second = std::max(range.second, cur.second);
+        } else {
+            merged_ranges.push_back(cur);
+            cur = range;
+        }
+    }
+    merged_ranges.push_back(cur);
+    return merged_ranges;
+}
+
+// ranges must be sorted and non-overlapping
+template <typename NFAStateType>
+auto RegexASTGroup<NFAStateType>::complement(std::vector<Range> const& ranges
+) -> std::vector<Range> {
+    std::vector<Range> complemented;
+    uint32_t low = 0;
+    for (auto const& [begin, end] : ranges) {
+        if (begin > 0) {
+            complemented.emplace_back(low, begin - 1);
+        }
+        low = end + 1;
+    }
+    if (low > 0) {
+        complemented.emplace_back(low, cUnicodeMax);
+    }
+    return complemented;
+}
+
+template <typename NFAStateType>
+void RegexASTGroup<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
+    std::sort(this->m_ranges.begin(), this->m_ranges.end());
+    std::vector<Range> merged_ranges = RegexASTGroup::merge(this->m_ranges);
+    if (this->m_negate) {
+        merged_ranges = complement(merged_ranges);
+    }
+    for (auto const& [begin, end] : merged_ranges) {
+        nfa->get_root()->add_interval(Interval(begin, end), end_state);
+    }
+}
+}  // namespace log_surgeon::finite_automata
 
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP

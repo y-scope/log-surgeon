@@ -3,7 +3,6 @@ set(
         ../src/log_surgeon/FileReader.cpp
         ../src/log_surgeon/FileReader.hpp
         ../src/log_surgeon/finite_automata/RegexAST.hpp
-        ../src/log_surgeon/finite_automata/RegexAST.tpp
         ../src/log_surgeon/finite_automata/RegexNFA.hpp
         ../src/log_surgeon/LALR1Parser.cpp
         ../src/log_surgeon/LALR1Parser.hpp
@@ -21,7 +20,7 @@ set(
 set(SOURCES_TESTS test-lexer.cpp)
 
 add_executable(unit-test ${SOURCES_LOG_SURGEON} ${SOURCES_TESTS})
-target_link_libraries(unit-test PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(unit-test PRIVATE Catch2::Catch2WithMain log_surgeon::log_surgeon)
 target_include_directories(unit-test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_compile_features(unit-test PRIVATE cxx_std_20)
 
