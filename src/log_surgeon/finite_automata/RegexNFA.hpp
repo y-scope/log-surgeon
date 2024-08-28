@@ -76,8 +76,8 @@ public:
     auto add_interval(Interval interval, RegexNFAState<state_type>* dest_state) -> void;
 
 private:
-    bool m_accepting = false;
-    int m_tag = 0;
+    bool m_accepting{false};
+    int m_tag{0};
     std::vector<RegexNFAState<state_type>*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState<state_type>*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==

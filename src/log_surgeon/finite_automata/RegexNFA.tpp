@@ -1,13 +1,16 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_TPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_TPP
 
+#include <algorithm>
 #include <cassert>
 #include <map>
+#include <set>
 #include <stack>
+#include <utility>
 
 namespace log_surgeon::finite_automata {
-template <RegexNFAStateType stateType>
-void RegexNFAState<stateType>::add_interval(Interval interval, RegexNFAState* dest_state) {
+template <RegexNFAStateType state_type>
+void RegexNFAState<state_type>::add_interval(Interval interval, RegexNFAState* dest_state) {
     if (interval.first < cSizeOfByte) {
         uint32_t const bound = std::min(interval.second, cSizeOfByte - 1);
         for (uint32_t i = interval.first; i <= bound; i++) {
@@ -15,7 +18,7 @@ void RegexNFAState<stateType>::add_interval(Interval interval, RegexNFAState* de
         }
         interval.first = bound + 1;
     }
-    if constexpr (RegexNFAStateType::UTF8 == stateType) {
+    if constexpr (RegexNFAStateType::UTF8 == state_type) {
         if (interval.second < cSizeOfByte) {
             return;
         }
@@ -116,13 +119,13 @@ void RegexNFA<NFAStateType>::reverse() {
                 std::vector<NFAStateType*> byte_transitions
                         = current_state->get_byte_transitions(byte);
                 for (NFAStateType* next_state : byte_transitions) {
-                    if (!visited_states.contains(next_state)) {
+                    if (false == visited_states.contains(next_state)) {
                         unvisited_states.push(next_state);
                     }
                 }
             }
             for (NFAStateType* next_state : current_state->get_epsilon_transitions()) {
-                if (!visited_states.contains(next_state)) {
+                if (false == visited_states.contains(next_state)) {
                     unvisited_states.push(next_state);
                 }
             }
