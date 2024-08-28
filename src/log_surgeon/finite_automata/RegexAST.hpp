@@ -150,15 +150,18 @@ public:
 
     RegexASTGroup();
 
-    RegexASTGroup(RegexASTGroup* left, RegexASTLiteral<NFAStateType>* right);
+    explicit RegexASTGroup(RegexASTLiteral<NFAStateType> const* right);
 
-    RegexASTGroup(RegexASTGroup const* left, RegexASTGroup* right);
+    explicit RegexASTGroup(RegexASTGroup const* right);
 
-    explicit RegexASTGroup(RegexASTLiteral<NFAStateType>* right);
+    RegexASTGroup(RegexASTGroup const* left, RegexASTLiteral<NFAStateType> const* right);
 
-    explicit RegexASTGroup(RegexASTGroup* right);
+    RegexASTGroup(RegexASTGroup const* left, RegexASTGroup const* right);
 
-    RegexASTGroup(RegexASTLiteral<NFAStateType>* left, RegexASTLiteral<NFAStateType>* right);
+    RegexASTGroup(
+            RegexASTLiteral<NFAStateType> const* left,
+            RegexASTLiteral<NFAStateType> const* right
+    );
 
     RegexASTGroup(uint32_t min, uint32_t max);
 

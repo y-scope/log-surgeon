@@ -2,6 +2,7 @@
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_TPP
 
 #include <cassert>
+#include <stdexcept>
 
 namespace log_surgeon::finite_automata {
 template <typename NFAStateType>
@@ -19,15 +20,17 @@ RegexASTInteger<NFAStateType>::RegexASTInteger(uint32_t digit) {
 }
 
 template <typename NFAStateType>
-RegexASTInteger<NFAStateType>::RegexASTInteger(RegexASTInteger<NFAStateType>* left, uint32_t digit)
+RegexASTInteger<NFAStateType>::RegexASTInteger(RegexASTInteger* left, uint32_t digit)
         : m_digits(std::move(left->m_digits)) {
     digit = digit - '0';
     m_digits.push_back(digit);
 }
 
 template <typename NFAStateType>
-void RegexASTInteger<
-        NFAStateType>::add(RegexNFA<NFAStateType>* /* nfa */, NFAStateType* /* end_state */) {
+void RegexASTInteger<NFAStateType>::add(
+        [[maybe_unused]] RegexNFA<NFAStateType>* nfa,
+        [[maybe_unused]] NFAStateType* end_state
+) {
     throw std::runtime_error("Unsupported");
 }
 
@@ -66,8 +69,8 @@ void RegexASTCat<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* e
 template <typename NFAStateType>
 RegexASTMultiplication<NFAStateType>::RegexASTMultiplication(
         std::unique_ptr<RegexAST<NFAStateType>> operand,
-        uint32_t min,
-        uint32_t max
+        uint32_t const min,
+        uint32_t const max
 )
         : m_operand(std::move(operand)),
           m_min(min),
@@ -119,8 +122,8 @@ RegexASTGroup<NFAStateType>::RegexASTGroup() = default;
 
 template <typename NFAStateType>
 RegexASTGroup<NFAStateType>::RegexASTGroup(
-        RegexASTGroup<NFAStateType>* left,
-        RegexASTLiteral<NFAStateType>* right
+        RegexASTGroup const* left,
+        RegexASTLiteral<NFAStateType> const* right
 ) {
     if (right == nullptr) {
         throw std::runtime_error("RegexASTGroup1: right == nullptr: A bracket expression in the "
@@ -133,10 +136,7 @@ RegexASTGroup<NFAStateType>::RegexASTGroup(
 }
 
 template <typename NFAStateType>
-RegexASTGroup<NFAStateType>::RegexASTGroup(
-        RegexASTGroup<NFAStateType> const* left,
-        RegexASTGroup<NFAStateType>* right
-)
+RegexASTGroup<NFAStateType>::RegexASTGroup(RegexASTGroup const* left, RegexASTGroup const* right)
         : m_negate(left->m_negate),
           m_ranges(left->m_ranges) {
     assert(right->m_ranges.size() == 1);  // Only add LiteralRange
@@ -144,7 +144,7 @@ RegexASTGroup<NFAStateType>::RegexASTGroup(
 }
 
 template <typename NFAStateType>
-RegexASTGroup<NFAStateType>::RegexASTGroup(RegexASTLiteral<NFAStateType>* right) {
+RegexASTGroup<NFAStateType>::RegexASTGroup(RegexASTLiteral<NFAStateType> const* right) {
     if (right == nullptr) {
         throw std::runtime_error("RegexASTGroup2: right == nullptr: A bracket expression in the "
                                  "schema contains illegal characters, remember to escape special "
@@ -155,15 +155,15 @@ RegexASTGroup<NFAStateType>::RegexASTGroup(RegexASTLiteral<NFAStateType>* right)
 }
 
 template <typename NFAStateType>
-RegexASTGroup<NFAStateType>::RegexASTGroup(RegexASTGroup<NFAStateType>* right) : m_negate(false) {
+RegexASTGroup<NFAStateType>::RegexASTGroup(RegexASTGroup const* right) : m_negate(false) {
     assert(right->m_ranges.size() == 1);  // Only add LiteralRange
     m_ranges.push_back(right->m_ranges[0]);
 }
 
 template <typename NFAStateType>
 RegexASTGroup<NFAStateType>::RegexASTGroup(
-        RegexASTLiteral<NFAStateType>* left,
-        RegexASTLiteral<NFAStateType>* right
+        RegexASTLiteral<NFAStateType> const* left,
+        RegexASTLiteral<NFAStateType> const* right
 ) {
     if (left == nullptr || right == nullptr) {
         throw std::runtime_error(
@@ -199,12 +199,12 @@ auto RegexASTGroup<NFAStateType>::merge(std::vector<Range> const& ranges) -> std
     }
     Range cur = ranges[0];
     for (size_t i = 1; i < ranges.size(); i++) {
-        Range r = ranges[i];
-        if (r.first <= cur.second + 1) {
-            cur.second = std::max(r.second, cur.second);
+        Range const& range = ranges[i];
+        if (range.first <= cur.second + 1) {
+            cur.second = std::max(range.second, cur.second);
         } else {
             merged.push_back(cur);
-            cur = r;
+            cur = range;
         }
     }
     merged.push_back(cur);
@@ -217,11 +217,11 @@ auto RegexASTGroup<NFAStateType>::complement(std::vector<Range> const& ranges
 ) -> std::vector<Range> {
     std::vector<Range> complemented;
     uint32_t low = 0;
-    for (Range const& r : ranges) {
-        if (r.first > 0) {
-            complemented.emplace_back(low, r.first - 1);
+    for (auto const& [begin, end] : ranges) {
+        if (begin > 0) {
+            complemented.emplace_back(low, begin - 1);
         }
-        low = r.second + 1;
+        low = end + 1;
     }
     if (low > 0) {
         complemented.emplace_back(low, cUnicodeMax);
@@ -234,10 +234,10 @@ void RegexASTGroup<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType*
     std::sort(this->m_ranges.begin(), this->m_ranges.end());
     std::vector<Range> merged = RegexASTGroup::merge(this->m_ranges);
     if (this->m_negate) {
-        merged = RegexASTGroup::complement(merged);
+        merged = complement(merged);
     }
-    for (Range const& r : merged) {
-        nfa->get_root()->add_interval(Interval(r.first, r.second), end_state);
+    for (auto const& [begin, end] : merged) {
+        nfa->get_root()->add_interval(Interval(begin, end), end_state);
     }
 }
 }  // namespace log_surgeon::finite_automata
