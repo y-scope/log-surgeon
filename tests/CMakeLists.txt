@@ -5,7 +5,6 @@ set(
         ../src/log_surgeon/finite_automata/RegexAST.hpp
         ../src/log_surgeon/finite_automata/RegexAST.tpp
         ../src/log_surgeon/finite_automata/RegexNFA.hpp
-        ../src/log_surgeon/finite_automata/RegexNFA.tpp
         ../src/log_surgeon/LALR1Parser.cpp
         ../src/log_surgeon/LALR1Parser.hpp
         ../src/log_surgeon/LALR1Parser.tpp
