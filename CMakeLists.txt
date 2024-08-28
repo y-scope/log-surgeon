@@ -17,13 +17,15 @@ include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 include(FetchContent)
 
-FetchContent_Declare(GSL
-                     GIT_REPOSITORY "https://github.com/microsoft/GSL"
-                     GIT_TAG "v4.0.0"
-                     GIT_SHALLOW ON
-)
-
-FetchContent_MakeAvailable(GSL)
+find_package(Microsoft.GSL QUIET CONFIG)
+if (NOT Microsoft.GSL_FOUND)
+    FetchContent_Declare(GSL
+                         GIT_REPOSITORY "https://github.com/microsoft/GSL"
+                         GIT_TAG "v4.0.0"
+                         GIT_SHALLOW ON
+    )
+    FetchContent_MakeAvailable(GSL)
+endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -78,21 +80,36 @@ set(SOURCE_FILES
 
 set(LCHIP_INSTALL_CONFIG_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/log_surgeon)
 set(LCHIP_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+# Directory for installing third-party includes that the user doesn't have installed.
+set(LCHIP_THIRD_PARTY_INCLUDE_DIR "${LCHIP_INSTALL_INCLUDE_DIR}/log_surgeon/third_party_include")
 
 add_library(log_surgeon ${SOURCE_FILES})
 add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
-target_link_libraries(log_surgeon
-                      PUBLIC
-                      Microsoft.GSL::GSL
-)
+if (Microsoft.GSL_FOUND)
+    target_link_libraries(log_surgeon
+                          PUBLIC
+                          Microsoft.GSL::GSL
+    )
+endif()
 target_include_directories(log_surgeon
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${GSL_SOURCE_DIR}/include
     )
+if (NOT Microsoft.GSL_FOUND)
+    # Since the user doesn't have GSL installed, use the GSL headers directly.
+    # NOTE:
+    # - We can't link against the `Microsoft.GSL::GSL` target since that would require adding `GSL`
+    #   to the `install` command and force the user to have GSL installed when using log-surgeon.
+    # - At install time, we'll copy GSL into log-surgeon's third-party includes directory.
+    target_include_directories(log_surgeon
+            PUBLIC
+            $<BUILD_INTERFACE:${GSL_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:${LCHIP_THIRD_PARTY_INCLUDE_DIR}>
+    )
+endif()
 
 target_compile_features(log_surgeon
     PRIVATE cxx_std_20
@@ -120,7 +137,6 @@ target_compile_definitions(log_surgeon
 install(
     TARGETS
     log_surgeon
-    GSL
     EXPORT
     log_surgeon-targets
     )
@@ -144,6 +160,16 @@ install(
     PATTERN "*.hpp"
     PATTERN "*.tpp"
     )
+if (NOT Microsoft.GSL_FOUND)
+    install(
+        DIRECTORY
+        # NOTE: We don't include a trailing slash so that the gsl directory is copied rather than
+        # its contents.
+        "${GSL_SOURCE_DIR}/include/gsl"
+        DESTINATION
+        "${LCHIP_THIRD_PARTY_INCLUDE_DIR}"
+        )
+endif ()
 
 configure_package_config_file(
     ${CMAKE_CURRENT_LIST_DIR}/cmake/log_surgeon-config.cmake.in
