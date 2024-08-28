@@ -193,9 +193,9 @@ RegexASTGroup<NFAStateType>::RegexASTGroup(uint32_t min, uint32_t max) : m_negat
 // ranges must be sorted
 template <typename NFAStateType>
 auto RegexASTGroup<NFAStateType>::merge(std::vector<Range> const& ranges) -> std::vector<Range> {
-    std::vector<Range> merged;
+    std::vector<Range> merged_ranges;
     if (ranges.empty()) {
-        return merged;
+        return merged_ranges;
     }
     Range cur = ranges[0];
     for (size_t i = 1; i < ranges.size(); i++) {
@@ -203,12 +203,12 @@ auto RegexASTGroup<NFAStateType>::merge(std::vector<Range> const& ranges) -> std
         if (range.first <= cur.second + 1) {
             cur.second = std::max(range.second, cur.second);
         } else {
-            merged.push_back(cur);
+            merged_ranges.push_back(cur);
             cur = range;
         }
     }
-    merged.push_back(cur);
-    return merged;
+    merged_ranges.push_back(cur);
+    return merged_ranges;
 }
 
 // ranges must be sorted and non-overlapping
@@ -232,11 +232,11 @@ auto RegexASTGroup<NFAStateType>::complement(std::vector<Range> const& ranges
 template <typename NFAStateType>
 void RegexASTGroup<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
     std::sort(this->m_ranges.begin(), this->m_ranges.end());
-    std::vector<Range> merged = RegexASTGroup::merge(this->m_ranges);
+    std::vector<Range> merged_ranges = RegexASTGroup::merge(this->m_ranges);
     if (this->m_negate) {
-        merged = complement(merged);
+        merged_ranges = complement(merged_ranges);
     }
-    for (auto const& [begin, end] : merged) {
+    for (auto const& [begin, end] : merged_ranges) {
         nfa->get_root()->add_interval(Interval(begin, end), end_state);
     }
 }
