@@ -5,7 +5,6 @@
 #include <array>
 #include <cstdint>
 #include <gsl/pointers>
-#include <gsl/util>
 #include <memory>
 #include <string>
 #include <utility>
@@ -19,12 +18,8 @@ namespace log_surgeon::finite_automata {
 template <typename NFAStateType>
 class RegexAST {
 public:
-    virtual ~RegexAST() = default;
     RegexAST() = default;
-    RegexAST(RegexAST const& rhs) = default;
-    auto operator=(RegexAST const& rhs) -> RegexAST& = default;
-    RegexAST(RegexAST&& rhs) noexcept = default;
-    auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = default;
+    virtual ~RegexAST() = default;
 
     /**
      * Used for cloning a unique_pointer of base type RegexAST
@@ -37,7 +32,7 @@ public:
      * lexer rule
      * @param is_possible_input
      */
-    virtual auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax> is_possible_input
+    virtual auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
     ) const -> void = 0;
 
     /**
@@ -53,6 +48,12 @@ public:
      * @param end_state
      */
     virtual auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void = 0;
+
+protected:
+    RegexAST(RegexAST const& rhs) = default;
+    auto operator=(RegexAST const& rhs) -> RegexAST& = default;
+    RegexAST(RegexAST&& rhs) noexcept = default;
+    auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = default;
 };
 
 template <typename NFAStateType>
@@ -73,7 +74,7 @@ public:
      * lexer rule containing RegexASTLiteral at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax> is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
     ) const -> void override {
         is_possible_input[m_character] = true;
     }
@@ -122,10 +123,10 @@ public:
      * lexer rule containing RegexASTInteger at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax> is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
     ) const -> void override {
         for (uint32_t const i : m_digits) {
-            gsl::at(is_possible_input, '0' + i) = true;
+            is_possible_input.at('0' + i) = true;
         }
     }
 
@@ -189,24 +190,24 @@ public:
      * lexer rule containing RegexASTGroup at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax> is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
     ) const -> void override {
         if (!m_negate) {
-            for (auto const& [fst, snd] : m_ranges) {
-                for (uint32_t i = fst; i <= snd; i++) {
-                    gsl::at(is_possible_input, i) = true;
+            for (auto const& [begin, end] : m_ranges) {
+                for (uint32_t i = begin; i <= end; i++) {
+                    is_possible_input.at(i) = true;
                 }
             }
         } else {
             std::vector<char> inputs(cUnicodeMax, 1);
-            for (auto const& [fst, snd] : m_ranges) {
-                for (uint32_t i = fst; i <= snd; i++) {
+            for (auto const& [begin, end] : m_ranges) {
+                for (uint32_t i = begin; i <= end; i++) {
                     inputs[i] = 0;
                 }
             }
             for (uint32_t i = 0; i < inputs.size(); i++) {
                 if (inputs[i] != 0) {
-                    gsl::at(is_possible_input, i) = true;
+                    is_possible_input.at(i) = true;
                 }
             }
         }
@@ -314,7 +315,7 @@ public:
      * lexer rule containing RegexASTOr at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax> is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
     ) const -> void override {
         m_left->set_possible_inputs_to_true(is_possible_input);
         m_right->set_possible_inputs_to_true(is_possible_input);
@@ -374,7 +375,7 @@ public:
      * lexer rule containing RegexASTCat at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax> is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
     ) const -> void override {
         m_left->set_possible_inputs_to_true(is_possible_input);
         m_right->set_possible_inputs_to_true(is_possible_input);
@@ -444,7 +445,7 @@ public:
      * lexer rule containing RegexASTMultiplication at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax> is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
     ) const -> void override {
         m_operand->set_possible_inputs_to_true(is_possible_input);
     }
@@ -515,7 +516,7 @@ public:
      * lexer rule containing `RegexASTCapture` at a leaf node in its AST.
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax> is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
     ) const -> void override {
         m_group_regex_ast->set_possible_inputs_to_true(is_possible_input);
     }
