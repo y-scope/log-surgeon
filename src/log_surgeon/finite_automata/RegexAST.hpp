@@ -2,7 +2,9 @@
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
+#include <gsl/pointers>
 #include <memory>
 #include <string>
 #include <utility>
@@ -10,27 +12,28 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/RegexNFA.hpp>
-#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
 
 template <typename NFAStateType>
 class RegexAST {
 public:
+    RegexAST() = default;
     virtual ~RegexAST() = default;
 
     /**
      * Used for cloning a unique_pointer of base type RegexAST
      * @return RegexAST*
      */
-    [[nodiscard]] virtual auto clone() const -> RegexAST* = 0;
+    [[nodiscard]] virtual auto clone() const -> gsl::owner<RegexAST*> = 0;
 
     /**
      * Sets is_possible_input to specify which utf8 characters are allowed in a
      * lexer rule
      * @param is_possible_input
      */
-    virtual auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void = 0;
+    virtual auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void = 0;
 
     /**
      * transform '.' from any-character into any non-delimiter in a lexer rule
@@ -45,6 +48,12 @@ public:
      * @param end_state
      */
     virtual auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void = 0;
+
+protected:
+    RegexAST(RegexAST const& rhs) = default;
+    auto operator=(RegexAST const& rhs) -> RegexAST& = default;
+    RegexAST(RegexAST&& rhs) noexcept = default;
+    auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = default;
 };
 
 template <typename NFAStateType>
@@ -56,7 +65,7 @@ public:
      * Used for cloning a unique_pointer of type RegexASTLiteral
      * @return RegexASTLiteral*
      */
-    [[nodiscard]] auto clone() const -> RegexASTLiteral* override {
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTLiteral*> override {
         return new RegexASTLiteral(*this);
     }
 
@@ -65,7 +74,8 @@ public:
      * lexer rule containing RegexASTLiteral at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
         is_possible_input[m_character] = true;
     }
 
@@ -74,7 +84,8 @@ public:
      * nothing as RegexASTLiteral is a leaf node that is not a RegexASTGroup
      * @param delimiters
      */
-    auto remove_delimiters_from_wildcard(std::vector<uint32_t>& /* delimiters */) -> void override {
+    auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters
+    ) -> void override {
         // Do nothing
     }
 
@@ -103,7 +114,7 @@ public:
      * Used for cloning a unique_pointer of type RegexASTInteger
      * @return RegexASTInteger*
      */
-    [[nodiscard]] auto clone() const -> RegexASTInteger* override {
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTInteger*> override {
         return new RegexASTInteger(*this);
     }
 
@@ -112,9 +123,10 @@ public:
      * lexer rule containing RegexASTInteger at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
-        for (uint32_t i : m_digits) {
-            is_possible_input[i + '0'] = true;
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
+        for (uint32_t const i : m_digits) {
+            is_possible_input.at('0' + i) = true;
         }
     }
 
@@ -123,7 +135,8 @@ public:
      * nothing as RegexASTInteger is a leaf node that is not a RegexASTGroup
      * @param delimiters
      */
-    auto remove_delimiters_from_wildcard(std::vector<uint32_t>& /* delimiters */) -> void override {
+    auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters
+    ) -> void override {
         // Do nothing
     }
 
@@ -171,30 +184,33 @@ public:
      * Used for cloning a unique_pointer of type RegexASTGroup
      * @return RegexASTGroup*
      */
-    [[nodiscard]] auto clone() const -> RegexASTGroup* override { return new RegexASTGroup(*this); }
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTGroup*> override {
+        return new RegexASTGroup(*this);
+    }
 
     /**
      * Sets is_possible_input to specify which utf8 characters are allowed in a
      * lexer rule containing RegexASTGroup at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
         if (!m_negate) {
-            for (Range range : m_ranges) {
-                for (uint32_t i = range.first; i <= range.second; i++) {
-                    is_possible_input[i] = true;
+            for (auto const& [begin, end] : m_ranges) {
+                for (uint32_t i = begin; i <= end; i++) {
+                    is_possible_input.at(i) = true;
                 }
             }
         } else {
             std::vector<char> inputs(cUnicodeMax, 1);
-            for (Range range : m_ranges) {
-                for (uint32_t i = range.first; i <= range.second; i++) {
+            for (auto const& [begin, end] : m_ranges) {
+                for (uint32_t i = begin; i <= end; i++) {
                     inputs[i] = 0;
                 }
             }
             for (uint32_t i = 0; i < inputs.size(); i++) {
                 if (inputs[i] != 0) {
-                    is_possible_input[i] = true;
+                    is_possible_input.at(i) = true;
                 }
             }
         }
@@ -213,19 +229,19 @@ public:
             return;
         }
         m_ranges.clear();
-        std::sort(delimiters.begin(), delimiters.end());
+        std::ranges::sort(delimiters);
         if (delimiters[0] != 0) {
-            Range range(0, delimiters[0] - 1);
+            Range const range(0, delimiters[0] - 1);
             m_ranges.push_back(range);
         }
         for (uint32_t i = 1; i < delimiters.size(); i++) {
             if (delimiters[i] - delimiters[i - 1] > 1) {
-                Range range(delimiters[i - 1] + 1, delimiters[i] - 1);
+                Range const range(delimiters[i - 1] + 1, delimiters[i] - 1);
                 m_ranges.push_back(range);
             }
         }
         if (delimiters.back() != cUnicodeMax) {
-            Range range(delimiters.back() + 1, cUnicodeMax);
+            Range const range(delimiters.back() + 1, cUnicodeMax);
             m_ranges.push_back(range);
         }
     }
@@ -274,27 +290,36 @@ private:
 template <typename NFAStateType>
 class RegexASTOr : public RegexAST<NFAStateType> {
 public:
+    ~RegexASTOr() override = default;
+
     RegexASTOr(
-            std::unique_ptr<RegexAST<NFAStateType>> /*left*/,
-            std::unique_ptr<RegexAST<NFAStateType>> /*right*/
+            std::unique_ptr<RegexAST<NFAStateType>> left,
+            std::unique_ptr<RegexAST<NFAStateType>> right
     );
 
     RegexASTOr(RegexASTOr const& rhs)
             : m_left(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone())),
               m_right(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone())) {}
 
+    auto operator=(RegexASTOr const& rhs) -> RegexASTOr& = default;
+    RegexASTOr(RegexASTOr&& rhs) noexcept = default;
+    auto operator=(RegexASTOr&& rhs) noexcept -> RegexASTOr& = default;
+
     /**
      * Used for cloning a unique_pointer of type RegexASTOr
      * @return RegexASTOr*
      */
-    [[nodiscard]] auto clone() const -> RegexASTOr* override { return new RegexASTOr(*this); }
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTOr*> override {
+        return new RegexASTOr(*this);
+    }
 
     /**
      * Sets is_possible_input to specify which utf8 characters are allowed in a
      * lexer rule containing RegexASTOr at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
         m_left->set_possible_inputs_to_true(is_possible_input);
         m_right->set_possible_inputs_to_true(is_possible_input);
     }
@@ -325,27 +350,36 @@ private:
 template <typename NFAStateType>
 class RegexASTCat : public RegexAST<NFAStateType> {
 public:
+    ~RegexASTCat() override = default;
+
     RegexASTCat(
-            std::unique_ptr<RegexAST<NFAStateType>> /*left*/,
-            std::unique_ptr<RegexAST<NFAStateType>> /*right*/
+            std::unique_ptr<RegexAST<NFAStateType>> left,
+            std::unique_ptr<RegexAST<NFAStateType>> right
     );
 
     RegexASTCat(RegexASTCat const& rhs)
             : m_left(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone())),
               m_right(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone())) {}
 
+    auto operator=(RegexASTCat const& rhs) -> RegexASTCat& = default;
+    RegexASTCat(RegexASTCat&& rhs) noexcept = default;
+    auto operator=(RegexASTCat&& rhs) noexcept -> RegexASTCat& = default;
+
     /**
      * Used for cloning a unique_pointer of type RegexASTCat
      * @return RegexASTCat*
      */
-    [[nodiscard]] auto clone() const -> RegexASTCat* override { return new RegexASTCat(*this); }
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTCat*> override {
+        return new RegexASTCat(*this);
+    }
 
     /**
      * Sets is_possible_input to specify which utf8 characters are allowed in a
      * lexer rule containing RegexASTCat at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
         m_left->set_possible_inputs_to_true(is_possible_input);
         m_right->set_possible_inputs_to_true(is_possible_input);
     }
@@ -384,6 +418,8 @@ private:
 template <typename NFAStateType>
 class RegexASTMultiplication : public RegexAST<NFAStateType> {
 public:
+    ~RegexASTMultiplication() override = default;
+
     RegexASTMultiplication(
             std::unique_ptr<RegexAST<NFAStateType>> operand,
             uint32_t min,
@@ -395,11 +431,15 @@ public:
               m_min(rhs.m_min),
               m_max(rhs.m_max) {}
 
+    auto operator=(RegexASTMultiplication const& rhs) -> RegexASTMultiplication& = default;
+    RegexASTMultiplication(RegexASTMultiplication&& rhs) noexcept = default;
+    auto operator=(RegexASTMultiplication&& rhs) noexcept -> RegexASTMultiplication& = default;
+
     /**
      * Used for cloning a unique_pointer of type RegexASTMultiplication
      * @return RegexASTMultiplication*
      */
-    [[nodiscard]] auto clone() const -> RegexASTMultiplication* override {
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTMultiplication*> override {
         return new RegexASTMultiplication(*this);
     }
 
@@ -408,7 +448,8 @@ public:
      * lexer rule containing RegexASTMultiplication at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
         m_operand->set_possible_inputs_to_true(is_possible_input);
     }
 
@@ -449,6 +490,8 @@ private:
 template <typename NFAStateType>
 class RegexASTCapture : public RegexAST<NFAStateType> {
 public:
+    ~RegexASTCapture() override = default;
+
     RegexASTCapture(std::string group_name, std::unique_ptr<RegexAST<NFAStateType>> group_regex_ast)
             : m_group_name(std::move(group_name)),
               m_group_regex_ast(std::move(group_regex_ast)) {}
@@ -459,11 +502,15 @@ public:
                       std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_group_regex_ast->clone())
               ) {}
 
+    auto operator=(RegexASTCapture const& rhs) -> RegexASTCapture& = default;
+    RegexASTCapture(RegexASTCapture&& rhs) noexcept = default;
+    auto operator=(RegexASTCapture&& rhs) noexcept -> RegexASTCapture& = default;
+
     /**
      * Used for cloning a `unique_pointer` of type `RegexASTCapture`.
      * @return RegexASTCapture*
      */
-    [[nodiscard]] auto clone() const -> RegexASTCapture* override {
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTCapture*> override {
         return new RegexASTCapture(*this);
     }
 
@@ -472,7 +519,8 @@ public:
      * lexer rule containing `RegexASTCapture` at a leaf node in its AST.
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(bool is_possible_input[]) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {
         m_group_regex_ast->set_possible_inputs_to_true(is_possible_input);
     }
 
