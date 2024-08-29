@@ -35,6 +35,38 @@ public:
 
     [[nodiscard]] auto get_matching_var_id() const -> int const& { return m_matching_var_id; }
 
+    auto set_positive_tagged_transitions(std::vector<RegexNFAState*>& positive_tagged_transitions
+    ) -> void {
+        m_positive_tagged_transitions = positive_tagged_transitions;
+    }
+
+    auto add_positive_tagged_transition(RegexNFAState* positive_tagged_transition) -> void {
+        m_positive_tagged_transitions.push_back(positive_tagged_transition);
+    }
+
+    auto clear_positive_tagged_transitions() -> void { m_positive_tagged_transitions.clear(); }
+
+    [[nodiscard]] auto get_positive_tagged_transitions(
+    ) const -> std::vector<RegexNFAState*> const& {
+        return m_positive_tagged_transitions;
+    }
+
+    auto set_negative_tagged_transitions(std::vector<RegexNFAState*>& negative_tagged_transitions
+    ) -> void {
+        m_negative_tagged_transitions = negative_tagged_transitions;
+    }
+
+    auto add_negative_tagged_transition(RegexNFAState* negative_tagged_transition) -> void {
+        m_negative_tagged_transitions.push_back(negative_tagged_transition);
+    }
+
+    auto clear_negative_tagged_transitions() -> void { m_negative_tagged_transitions.clear(); }
+
+    [[nodiscard]] auto get_negative_tagged_transitions(
+    ) const -> std::vector<RegexNFAState*> const& {
+        return m_negative_tagged_transitions;
+    }
+
     auto set_epsilon_transitions(std::vector<RegexNFAState*>& epsilon_transitions) -> void {
         m_epsilon_transitions = epsilon_transitions;
     }
@@ -79,6 +111,8 @@ public:
 private:
     bool m_accepting{false};
     int m_matching_var_id{0};
+    std::vector<RegexNFAState*> m_positive_tagged_transitions;
+    std::vector<RegexNFAState*> m_negative_tagged_transitions;
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
