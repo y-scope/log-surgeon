@@ -31,9 +31,9 @@ public:
      */
     struct Rule {
         // Constructor
-        Rule(uint32_t n, std::unique_ptr<finite_automata::RegexAST<NFAStateType>> r)
-                : m_name(n),
-                  m_regex(std::move(r)) {}
+        Rule(uint32_t const var_id, std::unique_ptr<finite_automata::RegexAST<NFAStateType>> regex)
+                : m_var_id(var_id),
+                  m_regex(std::move(regex)) {}
 
         /**
          * Adds AST representing the lexical rule to the NFA
@@ -41,7 +41,7 @@ public:
          */
         auto add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) const -> void;
 
-        uint32_t m_name;
+        uint32_t m_var_id;
         std::unique_ptr<finite_automata::RegexAST<NFAStateType>> m_regex;
     };
 
@@ -69,10 +69,10 @@ public:
 
     /**
      * Return regex pattern for a rule name
-     * @param name
+     * @param var_id
      * @return finite_automata::RegexAST*
      */
-    auto get_rule(uint32_t const& name) -> finite_automata::RegexAST<NFAStateType>*;
+    auto get_rule(uint32_t const& var_id) -> finite_automata::RegexAST<NFAStateType>*;
 
     /**
      * Generate DFA for lexer

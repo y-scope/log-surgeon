@@ -27,13 +27,13 @@ class RegexNFAState {
 public:
     using Tree = UnicodeIntervalTree<RegexNFAState*>;
 
-    auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
+    auto set_accepting(bool const accepting) -> void { m_accepting = accepting; }
 
     [[nodiscard]] auto is_accepting() const -> bool const& { return m_accepting; }
 
-    auto set_tag(int rule_name_id) -> void { m_tag = rule_name_id; }
+    auto set_matching_var_id(int const var_id) -> void { m_matching_var_id = var_id; }
 
-    [[nodiscard]] auto get_tag() const -> int const& { return m_tag; }
+    [[nodiscard]] auto get_matching_var_id() const -> int const& { return m_matching_var_id; }
 
     auto set_epsilon_transitions(std::vector<RegexNFAState*>& epsilon_transitions) -> void {
         m_epsilon_transitions = epsilon_transitions;
@@ -78,7 +78,7 @@ public:
 
 private:
     bool m_accepting{false};
-    int m_tag{0};
+    int m_matching_var_id{0};
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
@@ -217,15 +217,15 @@ void RegexNFA<NFAStateType>::reverse() {
         }
     }
 
-    // propagate tag from old accepting m_states
+    // propagate matching_var_id from old accepting m_states
     for (NFAStateType* old_accepting_state : new_end->get_epsilon_transitions()) {
-        int tag = old_accepting_state->get_tag();
+        int matching_var_id = old_accepting_state->get_matching_var_id();
         std::stack<NFAStateType*> unvisited_states;
         std::set<NFAStateType*> visited_states;
         unvisited_states.push(old_accepting_state);
         while (!unvisited_states.empty()) {
             NFAStateType* current_state = unvisited_states.top();
-            current_state->set_tag(tag);
+            current_state->set_matching_var_id(matching_var_id);
             unvisited_states.pop();
             visited_states.insert(current_state);
             for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
@@ -247,7 +247,7 @@ void RegexNFA<NFAStateType>::reverse() {
     for (int32_t i = m_states.size() - 1; i >= 0; --i) {
         std::unique_ptr<NFAStateType>& src_state_unique_ptr = m_states[i];
         NFAStateType* src_state = src_state_unique_ptr.get();
-        int tag = src_state->get_tag();
+        int matching_var_id = src_state->get_matching_var_id();
         for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
             std::vector<NFAStateType*> byte_transitions = src_state->get_byte_transitions(byte);
             for (int32_t j = byte_transitions.size() - 1; j >= 0; --j) {
@@ -255,7 +255,7 @@ void RegexNFA<NFAStateType>::reverse() {
                 if (dest_state == m_root) {
                     dest_state = new_state();
                     assert(dest_state != nullptr);
-                    dest_state->set_tag(tag);
+                    dest_state->set_matching_var_id(matching_var_id);
                     dest_state->set_accepting(true);
                 }
             }
@@ -267,7 +267,7 @@ void RegexNFA<NFAStateType>::reverse() {
             NFAStateType*& dest_state = epsilon_transitions[j];
             if (dest_state == m_root) {
                 dest_state = new_state();
-                dest_state->set_tag(src_state->get_tag());
+                dest_state->set_matching_var_id(src_state->get_matching_var_id());
                 dest_state->set_accepting(true);
             }
         }

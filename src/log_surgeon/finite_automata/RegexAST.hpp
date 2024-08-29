@@ -46,7 +46,7 @@ public:
 
     /**
      * Add the needed RegexNFA::states to the passed in nfa to handle the
-     * current node before transitioning to a pre-tagged end_state
+     * current node before transitioning to an accepting end_state
      * @param nfa
      * @param end_state
      */
@@ -94,7 +94,7 @@ public:
 
     /**
      * Add the needed RegexNFA::states to the passed in nfa to handle a
-     * RegexASTLiteral before transitioning to a pre-tagged end_state
+     * RegexASTLiteral before transitioning to an accepting end_state
      * @param nfa
      * @param end_state
      */
@@ -145,7 +145,7 @@ public:
 
     /**
      * Add the needed RegexNFA::states to the passed in nfa to handle a
-     * RegexASTInteger before transitioning to a pre-tagged end_state
+     * RegexASTInteger before transitioning to an accepting end_state
      * @param nfa
      * @param end_state
      */
@@ -251,7 +251,7 @@ public:
 
     /**
      * Add the needed RegexNFA::states to the passed in nfa to handle a
-     * RegexASTGroup before transitioning to a pre-tagged end_state
+     * RegexASTGroup before transitioning to an accepting end_state
      * @param nfa
      * @param end_state
      */
@@ -339,7 +339,7 @@ public:
 
     /**
      * Add the needed RegexNFA::states to the passed in nfa to handle a
-     * RegexASTOr before transitioning to a pre-tagged end_state
+     * RegexASTOr before transitioning to an accepting end_state
      * @param nfa
      * @param end_state
      */
@@ -399,7 +399,7 @@ public:
 
     /**
      * Add the needed RegexNFA::states to the passed in nfa to handle a
-     * RegexASTCat before transitioning to a pre-tagged end_state
+     * RegexASTCat before transitioning to an accepting end_state
      * @param nfa
      * @param end_state
      */
@@ -468,7 +468,7 @@ public:
 
     /**
      * Add the needed RegexNFA::states to the passed in nfa to handle a
-     * RegexASTMultiplication before transitioning to a pre-tagged end_state
+     * RegexASTMultiplication before transitioning to an accepting end_state
      * @param nfa
      * @param end_state
      */
@@ -538,7 +538,7 @@ public:
 
     /**
      * Adds the needed `RegexNFA::states` to the passed in nfa to handle a
-     * `RegexASTCapture` before transitioning to a pre-tagged `end_state`.
+     * `RegexASTCapture` before transitioning to an accepting `end_state`.
      * @param nfa
      * @param end_state
      */
