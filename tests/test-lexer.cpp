@@ -16,10 +16,19 @@ using RegexASTLiteralByte = log_surgeon::finite_automata::RegexASTLiteral<
 using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultiplication<
         log_surgeon::finite_automata::RegexNFAByteState>;
 
+TEST_CASE("Test the RegexAST class", "RegexAST") {
+    // TODO: write test for has_capture_groups
+}
+
+TEST_CASE("Test the LexcialRule class", "[LexicalRule]") {
+    //TODO: write test for add_ast()
+    
+}
+
 TEST_CASE("Test the Schema class", "[Schema]") {
-    log_surgeon::Schema schema;
 
     SECTION("Add a number variable to schema") {
+        log_surgeon::Schema schema;
         schema.add_variable("myNumber", "123", -1);
         auto const schema_ast = schema.release_schema_ast_ptr();
         REQUIRE(schema_ast->m_schema_vars.size() == 1);
@@ -36,6 +45,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     }
 
     SECTION("Add a capture variable to schema") {
+        log_surgeon::Schema schema;
         std::string const var_name = "capture";
         schema.add_variable(var_name, "u(?<uID>[0-9]+)", -1);
         auto const schema_ast = schema.release_schema_ast_ptr();

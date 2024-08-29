@@ -364,9 +364,9 @@ void Lexer<NFAStateType, DFAStateType>::add_rule(
 template <typename NFAStateType, typename DFAStateType>
 auto Lexer<NFAStateType, DFAStateType>::get_rule(uint32_t const& var_id
 ) -> finite_automata::RegexAST<NFAStateType>* {
-    for (Rule& rule : m_rules) {
-        if (rule.m_var_id == var_id) {
-            return rule.m_regex.get();
+    for (auto& rule : m_rules) {
+        if (rule.get_var_id() == var_id) {
+            return rule.get_regex();
         }
     }
     return nullptr;
@@ -375,8 +375,8 @@ auto Lexer<NFAStateType, DFAStateType>::get_rule(uint32_t const& var_id
 template <typename NFAStateType, typename DFAStateType>
 void Lexer<NFAStateType, DFAStateType>::generate() {
     finite_automata::RegexNFA<NFAStateType> nfa;
-    for (Rule const& r : m_rules) {
-        r.add_ast(&nfa);
+    for (auto& rule : m_rules) {
+        rule.add_ast(&nfa);
     }
     m_dfa = nfa_to_dfa(nfa);
     DFAStateType const* state = m_dfa->get_root();
@@ -389,11 +389,13 @@ void Lexer<NFAStateType, DFAStateType>::generate() {
     }
 }
 
+/*
+//TODO: needs to handle reversing tagged NFA
 template <typename NFAStateType, typename DFAStateType>
 void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
     finite_automata::RegexNFA<NFAStateType> nfa;
-    for (Rule const& r : m_rules) {
-        r.add_ast(&nfa);
+    for (auto& rule : m_rules) {
+        rule.add_ast(&nfa);
     }
     nfa.reverse();
     m_dfa = nfa_to_dfa(nfa);
@@ -406,13 +408,22 @@ void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
         }
     }
 }
+*/
 
-template <typename NFAStateType, typename DFAStateType>
-void Lexer<NFAStateType, DFAStateType>::Rule::add_ast(finite_automata::RegexNFA<NFAStateType>* nfa
-) const {
+template <typename NFAStateType>
+void LexicalRule<NFAStateType>::apply_tags() {}
+
+template <typename NFAStateType>
+void LexicalRule<NFAStateType>::add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) {
     NFAStateType* state = nfa->new_state();
     state->set_accepting(true);
     state->set_matching_var_id(m_var_id);
+
+    // If the regex contains capture groups, process them
+    if (m_regex->has_capture_groups()) {
+        apply_tags();
+    }
+
     m_regex->add(nfa, state);
 }
 
