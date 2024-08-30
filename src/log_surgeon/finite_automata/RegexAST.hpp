@@ -58,11 +58,78 @@ public:
      */
     virtual auto has_capture_groups() -> bool = 0;
 
+    /**
+     * Traverse the AST and add positive and negative tags.
+     */
+    virtual auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> = 0;
+
+    auto set_negative_tags(std::vector<uint32_t> const& negative_tags) -> void {
+        m_negative_tags = negative_tags;
+    }
+
 protected:
     RegexAST(RegexAST const& rhs) = default;
     auto operator=(RegexAST const& rhs) -> RegexAST& = default;
     RegexAST(RegexAST&& rhs) noexcept = default;
     auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = default;
+
+private:
+    std::vector<uint32_t> m_negative_tags;
+};
+
+template <typename NFAStateType>
+class RegexASTEmpty : public RegexAST<NFAStateType> {
+public:
+    RegexASTEmpty();
+
+    /**
+     * Used for cloning a unique_pointer of type RegexASTEmpty
+     * @return RegexASTEmpty*
+     */
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTEmpty*> override {
+        return new RegexASTEmpty(*this);
+    }
+
+    /**
+     * Sets is_possible_input to specify which utf8 characters are allowed in a
+     * lexer rule containing RegexASTEmpty at a leaf node in its AST, which is nothing
+     * @param is_possible_input
+     */
+    auto set_possible_inputs_to_true(
+            [[maybe_unused]] std::array<bool, cUnicodeMax>& is_possible_input
+    ) const -> void override {}
+
+    /**
+     * Transforms '.' to to be any non-delimiter in a lexer rule, which does
+     * nothing as RegexASTEmpty is a leaf node that is not a RegexASTGroup
+     * @param delimiters
+     */
+    auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters
+    ) -> void override {
+        // Do nothing
+    }
+
+    /**
+     * Add the needed RegexNFA::states to the passed in nfa to handle a
+     * RegexASTEmpty before transitioning to an accepting end_state
+     * @param nfa
+     * @param end_state
+     */
+    auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
+
+    /**
+     * Return false as RegexASTEmpty is a leaf node that is not a capture group
+     * @return false
+     */
+    auto has_capture_groups() -> bool override { return false; }
+
+    /**
+     * Do nothing as RegexASTEmpty is a leaf node that is not a capture group
+     */
+    auto add_tags([[maybe_unused]] std::vector<uint32_t>& all_tags
+    ) -> std::vector<uint32_t> override {
+        return {};
+    }
 };
 
 template <typename NFAStateType>
@@ -111,6 +178,14 @@ public:
      * @return false
      */
     auto has_capture_groups() -> bool override { return false; }
+
+    /**
+     * Do nothing as RegexASTLiteral is a leaf node that is not a capture group
+     */
+    auto add_tags([[maybe_unused]] std::vector<uint32_t>& all_tags
+    ) -> std::vector<uint32_t> override {
+        return {};
+    }
 
     [[nodiscard]] auto get_character() const -> uint32_t const& { return m_character; }
 
@@ -168,6 +243,14 @@ public:
      * @return false
      */
     auto has_capture_groups() -> bool override { return false; }
+
+    /**
+     * Do nothing as RegexASTInteger is a leaf node that is not a capture group
+     */
+    auto add_tags([[maybe_unused]] std::vector<uint32_t>& all_tags
+    ) -> std::vector<uint32_t> override {
+        return {};
+    }
 
     [[nodiscard]] auto get_digits() const -> std::vector<uint32_t> const& { return m_digits; }
 
@@ -281,6 +364,14 @@ public:
      */
     auto has_capture_groups() -> bool override { return false; }
 
+    /**
+     * Do nothing as RegexASTGroup is a leaf node that is not a capture group
+     */
+    auto add_tags([[maybe_unused]] std::vector<uint32_t>& all_tags
+    ) -> std::vector<uint32_t> override {
+        return {};
+    }
+
     auto add_range(uint32_t min, uint32_t max) -> void { m_ranges.emplace_back(min, max); }
 
     auto add_literal(uint32_t literal) -> void { m_ranges.emplace_back(literal, literal); }
@@ -374,7 +465,12 @@ public:
      * @return true if the AST contains a capture group, false otherwise
      */
     auto has_capture_groups() -> bool override;
-    
+
+    /**
+     * Traverse the AST and add positive and negative tags.
+     */
+    auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> override;
+
 private:
     std::unique_ptr<RegexAST<NFAStateType>> m_left;
     std::unique_ptr<RegexAST<NFAStateType>> m_right;
@@ -440,6 +536,11 @@ public:
      * @return true if the AST contains a capture group, false otherwise
      */
     auto has_capture_groups() -> bool override;
+
+    /**
+     * Traverse the AST and add positive and negative tags.
+     */
+    auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> override;
 
     [[nodiscard]] auto get_left() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
         return m_left;
@@ -515,7 +616,12 @@ public:
      * @return true if the AST contains a capture group, false otherwise
      */
     auto has_capture_groups() -> bool override;
-    
+
+    /**
+     * Traverse the AST and add positive and negative tags.
+     */
+    auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> override;
+
     [[nodiscard]] auto is_infinite() const -> bool { return this->m_max == 0; }
 
     [[nodiscard]] auto get_operand() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
@@ -590,10 +696,13 @@ public:
      * Return true as RegexASTCapture is a capture group
      * @return true
      */
-    auto has_capture_groups() -> bool override {
-        return true;
-    }
-    
+    auto has_capture_groups() -> bool override { return true; }
+
+    /**
+     * Traverse the AST and add positive and negative tags.
+     */
+    auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> override;
+
     [[nodiscard]] auto get_group_name() const -> std::string const& { return m_group_name; }
 
     [[nodiscard]] auto get_group_regex_ast(
@@ -604,7 +713,19 @@ public:
 private:
     std::string m_group_name;
     std::unique_ptr<RegexAST<NFAStateType>> m_group_regex_ast;
+    uint32_t m_tag;
 };
+
+template <typename NFAStateType>
+RegexASTEmpty<NFAStateType>::RegexASTEmpty() = default;
+
+template <typename NFAStateType>
+void RegexASTEmpty<NFAStateType>::add(
+        [[maybe_unused]] RegexNFA<NFAStateType>* nfa,
+        [[maybe_unused]] NFAStateType* end_state
+) {
+    // DO NOTHING
+}
 
 template <typename NFAStateType>
 RegexASTLiteral<NFAStateType>::RegexASTLiteral(uint32_t character) : m_character(character) {}
@@ -655,6 +776,20 @@ auto RegexASTOr<NFAStateType>::has_capture_groups() -> bool {
 }
 
 template <typename NFAStateType>
+auto RegexASTOr<NFAStateType>::add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> {
+    auto positive_left_tags = m_left->add_tags(all_tags);
+    auto positive_right_tags = m_right->add_tags(all_tags);
+    m_left->set_negative_tags(positive_right_tags);
+    m_right->set_negative_tags(positive_left_tags);
+    positive_left_tags.insert(
+            positive_left_tags.end(),
+            positive_right_tags.begin(),
+            positive_right_tags.end()
+    );
+    return positive_left_tags;
+}
+
+template <typename NFAStateType>
 RegexASTCat<NFAStateType>::RegexASTCat(
         std::unique_ptr<RegexAST<NFAStateType>> left,
         std::unique_ptr<RegexAST<NFAStateType>> right
@@ -675,6 +810,18 @@ void RegexASTCat<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* e
 template <typename NFAStateType>
 auto RegexASTCat<NFAStateType>::has_capture_groups() -> bool {
     return m_left->has_capture_groups() || m_right->has_capture_groups();
+}
+
+template <typename NFAStateType>
+auto RegexASTCat<NFAStateType>::add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> {
+    auto positive_left_tags = m_left->add_tags(all_tags);
+    auto positive_right_tags = m_right->add_tags(all_tags);
+    positive_left_tags.insert(
+            positive_left_tags.end(),
+            positive_right_tags.begin(),
+            positive_right_tags.end()
+    );
+    return positive_left_tags;
 }
 
 template <typename NFAStateType>
@@ -729,8 +876,22 @@ auto RegexASTMultiplication<NFAStateType>::has_capture_groups() -> bool {
 }
 
 template <typename NFAStateType>
+auto RegexASTMultiplication<NFAStateType>::add_tags(std::vector<uint32_t>& all_tags
+) -> std::vector<uint32_t> {
+    return m_operand->add_tags(all_tags);
+}
+
+template <typename NFAStateType>
 void RegexASTCapture<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
     m_group_regex_ast->add(nfa, end_state);
+}
+
+template <typename NFAStateType>
+auto RegexASTCapture<NFAStateType>::add_tags(std::vector<uint32_t>& all_tags
+) -> std::vector<uint32_t> {
+    m_tag = all_tags.size();
+    all_tags.push_back(m_tag);
+    return {m_tag};
 }
 
 template <typename NFAStateType>
