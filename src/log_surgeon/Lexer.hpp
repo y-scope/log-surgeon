@@ -30,11 +30,6 @@ public:
               m_regex(std::move(regex)) {}
 
     /**
-     * Apply positive and negative tags to the rules
-     */
-    auto apply_tags() -> void;
-
-    /**
      * Adds AST representing the lexical rule to the NFA
      * @param nfa
      */

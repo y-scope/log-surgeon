@@ -67,6 +67,10 @@ public:
         m_negative_tags = negative_tags;
     }
 
+    [[nodiscard]] auto get_negative_tags() const -> std::vector<uint32_t> const& {
+        return m_negative_tags;
+    }
+
 protected:
     RegexAST(RegexAST const& rhs) = default;
     auto operator=(RegexAST const& rhs) -> RegexAST& = default;
@@ -471,6 +475,14 @@ public:
      */
     auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> override;
 
+    [[nodiscard]] auto get_left() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
+        return m_left;
+    }
+
+    [[nodiscard]] auto get_right() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
+        return m_right;
+    }
+
 private:
     std::unique_ptr<RegexAST<NFAStateType>> m_left;
     std::unique_ptr<RegexAST<NFAStateType>> m_right;
@@ -710,6 +722,8 @@ public:
         return m_group_regex_ast;
     }
 
+    [[nodiscard]] auto get_tag() const -> uint32_t { return m_tag; }
+
 private:
     std::string m_group_name;
     std::unique_ptr<RegexAST<NFAStateType>> m_group_regex_ast;
@@ -891,7 +905,11 @@ auto RegexASTCapture<NFAStateType>::add_tags(std::vector<uint32_t>& all_tags
 ) -> std::vector<uint32_t> {
     m_tag = all_tags.size();
     all_tags.push_back(m_tag);
-    return {m_tag};
+    std::vector<uint32_t> child_tags = m_group_regex_ast->add_tags(all_tags);
+    std::vector<uint32_t> new_tags;
+    new_tags.push_back(m_tag);
+    new_tags.insert(new_tags.end(), child_tags.begin(), child_tags.end());
+    return new_tags;
 }
 
 template <typename NFAStateType>
