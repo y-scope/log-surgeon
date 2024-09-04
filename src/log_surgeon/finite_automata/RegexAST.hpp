@@ -59,6 +59,25 @@ public:
     virtual auto has_capture_groups() -> bool = 0;
 
     /**
+     * Serialize the AST into a string
+     * @param with_tags
+     * @return string representing the AST
+     */
+    virtual auto serialize(bool const with_tags) -> std::string = 0;
+
+    /**
+     * Serialize the negative tags
+     * @return
+     */
+    auto serialize_negative_tags() -> std::string {
+        std::string serialized_string;
+        for (auto const& negative_tag : m_negative_tags) {
+            serialized_string += "~" + std::to_string(negative_tag);
+        }
+        return serialized_string;
+    }
+
+    /**
      * Traverse the AST and add positive and negative tags.
      */
     virtual auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> = 0;
@@ -128,6 +147,13 @@ public:
     auto has_capture_groups() -> bool override { return false; }
 
     /**
+     * serialize the RegexASTEmpty into a string
+     * @param with_tags
+     * @return string representing the AST
+     */
+    auto serialize(bool const with_tags) -> std::string;
+
+    /**
      * Do nothing as RegexASTEmpty is a leaf node that is not a capture group
      */
     auto add_tags([[maybe_unused]] std::vector<uint32_t>& all_tags
@@ -182,6 +208,13 @@ public:
      * @return false
      */
     auto has_capture_groups() -> bool override { return false; }
+
+    /**
+     * serialize the RegexASTLiteral into a string
+     * @param with_tags
+     * @return string representing the AST
+     */
+    auto serialize(bool const with_tags) -> std::string;
 
     /**
      * Do nothing as RegexASTLiteral is a leaf node that is not a capture group
@@ -247,6 +280,13 @@ public:
      * @return false
      */
     auto has_capture_groups() -> bool override { return false; }
+
+    /**
+     * serialize the RegexASTInteger into a string
+     * @param with_tags
+     * @return string representing the AST
+     */
+    auto serialize(bool const with_tags) -> std::string;
 
     /**
      * Do nothing as RegexASTInteger is a leaf node that is not a capture group
@@ -369,6 +409,13 @@ public:
     auto has_capture_groups() -> bool override { return false; }
 
     /**
+     * serialize the RegexASTGroup into a string
+     * @param with_tags
+     * @return string representing the AST
+     */
+    auto serialize(bool const with_tags) -> std::string;
+
+    /**
      * Do nothing as RegexASTGroup is a leaf node that is not a capture group
      */
     auto add_tags([[maybe_unused]] std::vector<uint32_t>& all_tags
@@ -471,6 +518,13 @@ public:
     auto has_capture_groups() -> bool override;
 
     /**
+     * serialize the RegexASTOr into a string
+     * @param with_tags
+     * @return string representing the AST
+     */
+    auto serialize(bool const with_tags) -> std::string;
+
+    /**
      * Traverse the AST and add positive and negative tags.
      */
     auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> override;
@@ -548,6 +602,13 @@ public:
      * @return true if the AST contains a capture group, false otherwise
      */
     auto has_capture_groups() -> bool override;
+
+    /**
+     * serialize the RegexASTCat into a string
+     * @param with_tags
+     * @return string representing the AST
+     */
+    auto serialize(bool const with_tags) -> std::string;
 
     /**
      * Traverse the AST and add positive and negative tags.
@@ -628,6 +689,13 @@ public:
      * @return true if the AST contains a capture group, false otherwise
      */
     auto has_capture_groups() -> bool override;
+
+    /**
+     * serialize the RegexASTMultiplication into a string
+     * @param with_tags
+     * @return string representing the AST
+     */
+    auto serialize(bool const with_tags) -> std::string;
 
     /**
      * Traverse the AST and add positive and negative tags.
@@ -711,6 +779,13 @@ public:
     auto has_capture_groups() -> bool override { return true; }
 
     /**
+     * serialize the RegexASTCapture into a string
+     * @param with_tags
+     * @return string representing the AST
+     */
+    auto serialize(bool const with_tags) -> std::string;
+
+    /**
      * Traverse the AST and add positive and negative tags.
      */
     auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> override;
@@ -742,11 +817,29 @@ void RegexASTEmpty<NFAStateType>::add(
 }
 
 template <typename NFAStateType>
+auto RegexASTEmpty<NFAStateType>::serialize(bool const with_tags) -> std::string {
+    std::string serialized_string;
+    if (with_tags) {
+        serialized_string += this->serialize_negative_tags();
+    }
+    return serialized_string;
+}
+
+template <typename NFAStateType>
 RegexASTLiteral<NFAStateType>::RegexASTLiteral(uint32_t character) : m_character(character) {}
 
 template <typename NFAStateType>
 void RegexASTLiteral<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
     nfa->add_root_interval(Interval(m_character, m_character), end_state);
+}
+
+template <typename NFAStateType>
+auto RegexASTLiteral<NFAStateType>::serialize(bool const with_tags) -> std::string {
+    std::string serialized_string = std::string(1, static_cast<char>(m_character));
+    if (with_tags) {
+        serialized_string += this->serialize_negative_tags();
+    }
+    return serialized_string;
 }
 
 template <typename NFAStateType>
@@ -768,6 +861,18 @@ void RegexASTInteger<NFAStateType>::add(
         [[maybe_unused]] NFAStateType* end_state
 ) {
     throw std::runtime_error("Unsupported");
+}
+
+template <typename NFAStateType>
+auto RegexASTInteger<NFAStateType>::serialize(bool const with_tags) -> std::string {
+    std::string serialized_string;
+    for (auto const& digit : m_digits) {
+        serialized_string += std::to_string('0' + digit);
+    }
+    if (with_tags) {
+        serialized_string += this->serialize_negative_tags();
+    }
+    return serialized_string;
 }
 
 template <typename NFAStateType>
@@ -804,6 +909,16 @@ auto RegexASTOr<NFAStateType>::add_tags(std::vector<uint32_t>& all_tags) -> std:
 }
 
 template <typename NFAStateType>
+auto RegexASTOr<NFAStateType>::serialize(bool const with_tags) -> std::string {
+    std::string serialized_string
+            = "(" + m_left->serialize(with_tags) + ")|(" + m_right->serialize(with_tags) + ")";
+    if (with_tags) {
+        serialized_string += this->serialize_negative_tags();
+    }
+    return serialized_string;
+}
+
+template <typename NFAStateType>
 RegexASTCat<NFAStateType>::RegexASTCat(
         std::unique_ptr<RegexAST<NFAStateType>> left,
         std::unique_ptr<RegexAST<NFAStateType>> right
@@ -836,6 +951,15 @@ auto RegexASTCat<NFAStateType>::add_tags(std::vector<uint32_t>& all_tags) -> std
             positive_right_tags.end()
     );
     return positive_left_tags;
+}
+
+template <typename NFAStateType>
+auto RegexASTCat<NFAStateType>::serialize(bool const with_tags) -> std::string {
+    std::string serialized_string = m_left->serialize(with_tags) + m_right->serialize(with_tags);
+    if (with_tags) {
+        serialized_string += this->serialize_negative_tags();
+    }
+    return serialized_string;
 }
 
 template <typename NFAStateType>
@@ -896,6 +1020,22 @@ auto RegexASTMultiplication<NFAStateType>::add_tags(std::vector<uint32_t>& all_t
 }
 
 template <typename NFAStateType>
+auto RegexASTMultiplication<NFAStateType>::serialize(bool const with_tags) -> std::string {
+    std::string serialized_string
+            = m_operand->serialize(with_tags) + "{" + std::to_string(m_min) + ",";
+    if (is_infinite()) {
+        serialized_string += "inf";
+    } else {
+        serialized_string += std::to_string(m_max);
+    }
+    serialized_string += "}";
+    if (with_tags) {
+        serialized_string += this->serialize_negative_tags();
+    }
+    return serialized_string;
+}
+
+template <typename NFAStateType>
 void RegexASTCapture<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
     m_group_regex_ast->add(nfa, end_state);
 }
@@ -910,6 +1050,16 @@ auto RegexASTCapture<NFAStateType>::add_tags(std::vector<uint32_t>& all_tags
     new_tags.push_back(m_tag);
     new_tags.insert(new_tags.end(), child_tags.begin(), child_tags.end());
     return new_tags;
+}
+
+template <typename NFAStateType>
+auto RegexASTCapture<NFAStateType>::serialize(bool const with_tags) -> std::string {
+    std::string serialized_string
+            = "(?<" + m_group_name + ">" + m_group_regex_ast->serialize(with_tags) + ")";
+    if (with_tags) {
+        serialized_string += std::to_string(m_tag) + this->serialize_negative_tags();
+    }
+    return serialized_string;
 }
 
 template <typename NFAStateType>
@@ -1034,6 +1184,28 @@ void RegexASTGroup<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType*
     for (auto const& [begin, end] : merged_ranges) {
         nfa->get_root()->add_interval(Interval(begin, end), end_state);
     }
+}
+
+template <typename NFAStateType>
+auto RegexASTGroup<NFAStateType>::serialize(bool const with_tags) -> std::string {
+    std::string serialized_string;
+    serialized_string += "[";
+    if (m_negate) {
+        serialized_string += "^";
+    }
+    if (m_is_wildcard) {
+        serialized_string += "*";
+    } else {
+        for (auto const& [begin, end] : m_ranges) {
+            serialized_string += std::string(1, static_cast<char>(begin)) + "-"
+                                 + std::string(1, static_cast<char>(end));
+        }
+    }
+    serialized_string += "]";
+    if (with_tags) {
+        serialized_string += this->serialize_negative_tags();
+    }
+    return serialized_string;
 }
 }  // namespace log_surgeon::finite_automata
 
