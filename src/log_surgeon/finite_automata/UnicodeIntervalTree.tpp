@@ -2,7 +2,6 @@
 #define LOG_SURGEON_FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_TPP
 
 #include <cassert>
-#include <set>
 
 namespace log_surgeon::finite_automata {
 
@@ -32,7 +31,7 @@ auto UnicodeIntervalTree<T>::Node::insert(std::unique_ptr<Node> node, Interval i
 }
 
 template <typename T>
-auto UnicodeIntervalTree<T>::all() const -> std::vector<typename UnicodeIntervalTree<T>::Data> {
+auto UnicodeIntervalTree<T>::all() const -> std::vector<Data> {
     std::vector<Data> results;
     if (m_root != nullptr) {
         m_root->all(&results);
@@ -52,8 +51,7 @@ auto UnicodeIntervalTree<T>::Node::all(std::vector<Data>* results) -> void {
 }
 
 template <typename T>
-auto UnicodeIntervalTree<T>::find(Interval interval
-) -> std::unique_ptr<std::vector<typename UnicodeIntervalTree<T>::Data>> {
+auto UnicodeIntervalTree<T>::find(Interval interval) -> std::unique_ptr<std::vector<Data>> {
     std::unique_ptr<std::vector<Data>> results(new std::vector<Data>);
     m_root->find(interval, results.get());
     return results;
@@ -76,8 +74,7 @@ auto UnicodeIntervalTree<T>::Node::find(Interval interval, std::vector<Data>* re
 }
 
 template <class T>
-auto UnicodeIntervalTree<T>::pop(Interval interval
-) -> std::unique_ptr<std::vector<typename UnicodeIntervalTree<T>::Data>> {
+auto UnicodeIntervalTree<T>::pop(Interval interval) -> std::unique_ptr<std::vector<Data>> {
     std::unique_ptr<std::vector<Data>> results(new std::vector<Data>);
     while (true) {
         std::unique_ptr<Node> n;
@@ -95,7 +92,7 @@ auto UnicodeIntervalTree<T>::Node::pop(
         std::unique_ptr<Node> node,
         Interval interval,
         std::unique_ptr<Node>* ret
-) -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
+) -> std::unique_ptr<Node> {
     if (node == nullptr) {
         return nullptr;
     }
@@ -128,7 +125,7 @@ auto UnicodeIntervalTree<T>::Node::pop(
 
 template <class T>
 auto UnicodeIntervalTree<T>::Node::pop_min(std::unique_ptr<Node> node, std::unique_ptr<Node>* ret)
-        -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
+        -> std::unique_ptr<Node> {
     assert(node != nullptr);
     if (node->m_left == nullptr) {
         assert(node->m_right != nullptr);
@@ -168,8 +165,7 @@ auto UnicodeIntervalTree<T>::Node::balance_factor() -> int {
 }
 
 template <class T>
-auto UnicodeIntervalTree<T>::Node::balance(std::unique_ptr<Node> node
-) -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
+auto UnicodeIntervalTree<T>::Node::balance(std::unique_ptr<Node> node) -> std::unique_ptr<Node> {
     int factor = node->balance_factor();
     if (factor * factor <= 1) {
         return node;
@@ -189,7 +185,7 @@ auto UnicodeIntervalTree<T>::Node::balance(std::unique_ptr<Node> node
 
 template <class T>
 auto UnicodeIntervalTree<T>::Node::rotate(std::unique_ptr<Node> node, int factor)
-        -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
+        -> std::unique_ptr<Node> {
     if (factor < 0) {
         return Node::rotate_cw(std::move(node));
     }
@@ -200,8 +196,7 @@ auto UnicodeIntervalTree<T>::Node::rotate(std::unique_ptr<Node> node, int factor
 }
 
 template <class T>
-auto UnicodeIntervalTree<T>::Node::rotate_cw(std::unique_ptr<Node> node
-) -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
+auto UnicodeIntervalTree<T>::Node::rotate_cw(std::unique_ptr<Node> node) -> std::unique_ptr<Node> {
     std::unique_ptr<Node> n(std::move(node->m_left));
     node->m_left.reset(n->m_right.release());
     n->m_right.reset(node.release());
@@ -211,8 +206,7 @@ auto UnicodeIntervalTree<T>::Node::rotate_cw(std::unique_ptr<Node> node
 }
 
 template <class T>
-auto UnicodeIntervalTree<T>::Node::rotate_ccw(std::unique_ptr<Node> node
-) -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
+auto UnicodeIntervalTree<T>::Node::rotate_ccw(std::unique_ptr<Node> node) -> std::unique_ptr<Node> {
     std::unique_ptr<Node> n(std::move(node->m_right));
     node->m_right.reset(n->m_left.release());
     n->m_left.reset(node.release());
@@ -222,14 +216,14 @@ auto UnicodeIntervalTree<T>::Node::rotate_ccw(std::unique_ptr<Node> node
 }
 
 template <class T>
-auto UnicodeIntervalTree<T>::Node::overlaps_recursive(Interval i) -> bool {
+auto UnicodeIntervalTree<T>::Node::overlaps_recursive(Interval const& i) const -> bool {
     return ((m_lower <= i.first) && (i.first <= m_upper))
            || ((m_lower <= i.second) && (i.second <= m_upper))
            || ((i.first <= m_lower) && (m_lower <= i.second));
 }
 
 template <class T>
-auto UnicodeIntervalTree<T>::Node::overlaps(Interval i) -> bool {
+auto UnicodeIntervalTree<T>::Node::overlaps(Interval const& i) const -> bool {
     return ((m_interval.first <= i.first) && (i.first <= m_interval.second))
            || ((m_interval.first <= i.second) && (i.second <= m_interval.second))
            || ((i.first <= m_interval.first) && (m_interval.first <= i.second));
