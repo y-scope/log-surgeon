@@ -23,6 +23,21 @@ enum class RegexNFAStateType : uint8_t {
 };
 
 template <RegexNFAStateType state_type>
+class RegexNFAState;
+
+template <RegexNFAStateType state_type>
+struct PositiveTaggedTransition {
+    uint32_t tag{};
+    RegexNFAState<state_type> const* state{};
+};
+
+template <RegexNFAStateType state_type>
+struct NegativeTaggedTransition {
+    std::vector<uint32_t> tags;
+    RegexNFAState<state_type> const* state{};
+};
+
+template <RegexNFAStateType state_type>
 class RegexNFAState {
 public:
     using Tree = UnicodeIntervalTree<RegexNFAState*>;
@@ -35,35 +50,29 @@ public:
 
     [[nodiscard]] auto get_matching_var_id() const -> int const& { return m_matching_var_id; }
 
-    auto set_positive_tagged_transitions(std::vector<RegexNFAState*>& positive_tagged_transitions
-    ) -> void {
-        m_positive_tagged_transitions = positive_tagged_transitions;
+    auto
+    add_positive_tagged_transition(uint32_t const tag, RegexNFAState const* dest_state) -> void {
+        m_positive_tagged_transitions.push_back(
+                PositiveTaggedTransition<state_type>(tag, dest_state)
+        );
     }
-
-    auto add_positive_tagged_transition(RegexNFAState* positive_tagged_transition) -> void {
-        m_positive_tagged_transitions.push_back(positive_tagged_transition);
-    }
-
-    auto clear_positive_tagged_transitions() -> void { m_positive_tagged_transitions.clear(); }
 
     [[nodiscard]] auto get_positive_tagged_transitions(
-    ) const -> std::vector<RegexNFAState*> const& {
+    ) const -> std::vector<PositiveTaggedTransition<state_type>> const& {
         return m_positive_tagged_transitions;
     }
 
-    auto set_negative_tagged_transitions(std::vector<RegexNFAState*>& negative_tagged_transitions
+    auto add_negative_tagged_transition(
+            std::vector<uint32_t> const& tags,
+            RegexNFAState const* dest_state
     ) -> void {
-        m_negative_tagged_transitions = negative_tagged_transitions;
+        m_negative_tagged_transitions.push_back(
+                NegativeTaggedTransition<state_type>(tags, dest_state)
+        );
     }
-
-    auto add_negative_tagged_transition(RegexNFAState* negative_tagged_transition) -> void {
-        m_negative_tagged_transitions.push_back(negative_tagged_transition);
-    }
-
-    auto clear_negative_tagged_transitions() -> void { m_negative_tagged_transitions.clear(); }
 
     [[nodiscard]] auto get_negative_tagged_transitions(
-    ) const -> std::vector<RegexNFAState*> const& {
+    ) const -> std::vector<NegativeTaggedTransition<state_type>> const& {
         return m_negative_tagged_transitions;
     }
 
@@ -111,8 +120,8 @@ public:
 private:
     bool m_accepting{false};
     int m_matching_var_id{0};
-    std::vector<RegexNFAState*> m_positive_tagged_transitions;
-    std::vector<RegexNFAState*> m_negative_tagged_transitions;
+    std::vector<PositiveTaggedTransition<state_type>> m_positive_tagged_transitions;
+    std::vector<NegativeTaggedTransition<state_type>> m_negative_tagged_transitions;
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
@@ -125,6 +134,7 @@ private:
 using RegexNFAByteState = RegexNFAState<RegexNFAStateType::Byte>;
 using RegexNFAUTF8State = RegexNFAState<RegexNFAStateType::UTF8>;
 
+// TODO: rename RegexNFA to NFA and RegexDFA to DFA
 template <typename NFAStateType>
 class RegexNFA {
 public:

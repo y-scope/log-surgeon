@@ -23,13 +23,15 @@ class RegexDFAState {
 public:
     using Tree = UnicodeIntervalTree<RegexDFAState<stateType>*>;
 
-    auto add_matching_var_id(int const& var_id) -> void { m_matching_var_ids.push_back(var_id); }
-
-    [[nodiscard]] auto get_matching_var_ids() const -> std::vector<int> const& {
-        return m_matching_var_ids;
+    auto add_matching_var_id(int const& var_id) -> void {
+        m_matching_variable_ids.push_back(var_id);
     }
 
-    [[nodiscard]] auto is_accepting() const -> bool { return !m_matching_var_ids.empty(); }
+    [[nodiscard]] auto get_matching_variable_ids() const -> std::vector<int> const& {
+        return m_matching_variable_ids;
+    }
+
+    [[nodiscard]] auto is_accepting() const -> bool { return !m_matching_variable_ids.empty(); }
 
     auto add_byte_transition(uint8_t const& byte, RegexDFAState<stateType>* dest_state) -> void {
         m_bytes_transition[byte] = dest_state;
@@ -44,7 +46,7 @@ public:
     [[nodiscard]] auto next(uint32_t character) const -> RegexDFAState<stateType>*;
 
 private:
-    std::vector<int> m_matching_var_ids;
+    std::vector<int> m_matching_variable_ids;
     RegexDFAState<stateType>* m_bytes_transition[cSizeOfByte];
     // NOTE: We don't need m_tree_transitions for the `stateType ==
     // RegexDFAStateType::Byte` case, so we use an empty class (`std::tuple<>`)

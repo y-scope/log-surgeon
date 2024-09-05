@@ -75,7 +75,7 @@ auto Lexer<NFAStateType, DFAStateType>::scan(ParserInputBuffer& input_buffer, To
             && state->is_accepting())
         {
             m_match = true;
-            m_type_ids = &(state->get_matching_var_ids());
+            m_type_ids = &(state->get_matching_variable_ids());
             m_match_pos = prev_byte_buf_pos;
             m_match_line = m_line;
         }
@@ -85,7 +85,7 @@ auto Lexer<NFAStateType, DFAStateType>::scan(ParserInputBuffer& input_buffer, To
             if (m_has_delimiters && !m_match) {
                 next = m_dfa->get_root()->next(next_char);
                 m_match = true;
-                m_type_ids = &(next->get_matching_var_ids());
+                m_type_ids = &(next->get_matching_variable_ids());
                 m_start_pos = prev_byte_buf_pos;
                 m_match_pos = input_buffer.storage().pos();
                 m_match_line = m_line;
@@ -206,7 +206,7 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(
             && state->is_accepting())
         {
             m_match = true;
-            m_type_ids = &(state->get_matching_var_ids());
+            m_type_ids = &(state->get_matching_variable_ids());
             m_match_pos = prev_byte_buf_pos;
             m_match_line = m_line;
         }
@@ -216,7 +216,7 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(
             if (m_has_delimiters && !m_match) {
                 next = m_dfa->get_root()->next(next_char);
                 m_match = true;
-                m_type_ids = &(next->get_matching_var_ids());
+                m_type_ids = &(next->get_matching_variable_ids());
                 m_start_pos = prev_byte_buf_pos;
                 m_match_pos = input_buffer.storage().pos();
                 m_match_line = m_line;
@@ -378,6 +378,7 @@ void Lexer<NFAStateType, DFAStateType>::generate() {
     for (auto& rule : m_rules) {
         rule.add_ast(&nfa);
     }
+    // TODO: DFA ignores tags. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = nfa_to_dfa(nfa);
     DFAStateType const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
@@ -412,17 +413,25 @@ void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
 
 template <typename NFAStateType>
 void LexicalRule<NFAStateType>::add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) {
-    NFAStateType* state = nfa->new_state();
-    state->set_accepting(true);
-    state->set_matching_var_id(m_var_id);
-
-    // If the regex contains capture groups, process them
+    // Add tags if the rule contains capture groups
     if (m_regex->has_capture_groups()) {
         std::vector<uint32_t> all_tags;
         m_regex->add_tags(all_tags);
     }
 
-    m_regex->add(nfa, state);
+    NFAStateType* end_state = nfa->new_state();
+    end_state->set_accepting(true);
+    end_state->set_matching_var_id(m_var_id);
+
+    // Handle negative tags as:
+    // root --(regex transitions)--> intermediate_state --(negative tags)--> end_state
+    if (m_regex->has_negative_tags()) {
+        NFAStateType* intermediate_state = nfa->new_state();
+        m_regex->add(nfa, intermediate_state);
+        intermediate_state->add_negative_tagged_transition(m_regex->get_negative_tags(), end_state);
+    } else {
+        m_regex->add(nfa, end_state);
+    }
 }
 
 template <typename NFAStateType, typename DFAStateType>
@@ -437,6 +446,14 @@ auto Lexer<NFAStateType, DFAStateType>::epsilon_closure(NFAStateType const* stat
         if (closure_set.insert(t).second) {
             for (NFAStateType* const u : t->get_epsilon_transitions()) {
                 stack.push(u);
+            }
+
+            // TODO: currently treat tagged transitions as epsilon transitions
+            for (auto const& positive_tagged_transition : t->get_positive_tagged_transitions()) {
+                stack.push(positive_tagged_transition.state);
+            }
+            for (auto const& negative_tagged_transition : t->get_negative_tagged_transitions()) {
+                stack.push(negative_tagged_transition.state);
             }
         }
     }

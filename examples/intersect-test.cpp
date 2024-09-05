@@ -9,6 +9,7 @@ using log_surgeon::finite_automata::RegexDFAByteState;
 using log_surgeon::finite_automata::RegexNFA;
 using log_surgeon::finite_automata::RegexNFAByteState;
 using log_surgeon::lexers::ByteLexer;
+using log_surgeon::LexicalRule;
 using log_surgeon::ParserAST;
 using log_surgeon::SchemaVarAST;
 using std::string;
@@ -33,7 +34,7 @@ auto get_intersect_for_query(
     auto schema_ast = schema.release_schema_ast_ptr();
     for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-        ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
+        LexicalRule rule(0, std::move(schema_var_ast->m_regex_ptr));
         rule.add_ast(&nfa);
     }
     auto dfa2 = ByteLexer::nfa_to_dfa(nfa);
@@ -70,7 +71,7 @@ auto main() -> int {
         auto schema_ast = schema.release_schema_ast_ptr();
         for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
             auto* var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-            ByteLexer::Rule rule(m_id_symbol.size(), std::move(var_ast->m_regex_ptr));
+            LexicalRule rule(m_id_symbol.size(), std::move(var_ast->m_regex_ptr));
             m_id_symbol[m_id_symbol.size()] = var_ast->m_name;
             rule.add_ast(&nfa);
         }

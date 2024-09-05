@@ -63,7 +63,7 @@ public:
      * @param with_tags
      * @return string representing the AST
      */
-    virtual auto serialize(bool const with_tags) -> std::string = 0;
+    virtual auto serialize(bool with_tags) -> std::string = 0;
 
     /**
      * Serialize the negative tags
@@ -72,9 +72,13 @@ public:
     auto serialize_negative_tags() -> std::string {
         std::string serialized_string;
         for (auto const& negative_tag : m_negative_tags) {
-            serialized_string += "~" + std::to_string(negative_tag);
+            serialized_string += "<~" + std::to_string(negative_tag) + ">";
         }
         return serialized_string;
+    }
+
+    [[nodiscard]] auto has_negative_tags() const -> bool {
+        return false == m_negative_tags.empty();
     }
 
     /**
@@ -1037,7 +1041,9 @@ auto RegexASTMultiplication<NFAStateType>::serialize(bool const with_tags) -> st
 
 template <typename NFAStateType>
 void RegexASTCapture<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
-    m_group_regex_ast->add(nfa, end_state);
+    NFAStateType* intermediate_state = nfa->new_state();
+    m_group_regex_ast->add(nfa, intermediate_state);
+    intermediate_state->add_positive_tagged_transition(m_tag, end_state);
 }
 
 template <typename NFAStateType>
@@ -1054,10 +1060,13 @@ auto RegexASTCapture<NFAStateType>::add_tags(std::vector<uint32_t>& all_tags
 
 template <typename NFAStateType>
 auto RegexASTCapture<NFAStateType>::serialize(bool const with_tags) -> std::string {
-    std::string serialized_string
-            = "(?<" + m_group_name + ">" + m_group_regex_ast->serialize(with_tags) + ")";
+    std::string serialized_string = "(";
+    if (false == with_tags) {
+        serialized_string += "?<" + m_group_name + ">";
+    }
+    serialized_string += m_group_regex_ast->serialize(with_tags) + ")";
     if (with_tags) {
-        serialized_string += std::to_string(m_tag) + this->serialize_negative_tags();
+        serialized_string += "<" + std::to_string(m_tag) + ">" + this->serialize_negative_tags();
     }
     return serialized_string;
 }
