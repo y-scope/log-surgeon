@@ -282,15 +282,14 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE('Z' == regex_ast_literal8->get_character());
         REQUIRE(std::vector<uint32_t>{0, 1, 2, 3} == regex_ast_literal8->get_negative_tags());
 
-        
         std::string expected_serialized_string
                 = "(Z)|(A(?<letter>((?<letter1>(a)|(b)))|((?<letter2>(c)|"
                   "(d))))B(?<containerID>[0-9]{1,inf})C)";
         REQUIRE(capture_rule_ast.m_regex_ptr->serialize(false) == expected_serialized_string);
 
         std::string expected_serialized_string_with_tags
-                = "(Z~0~1~2~3)|(A(?<letter>((?<letter1>(a)|(b))1~2)|((?<letter2>(c)|"
-                  "(d))2~1))0B(?<containerID>[0-9]{1,inf})3C)";
+                = "(Z<~0><~1><~2><~3>)|(A((((a)|(b))<1><~2>)|(((c)|(d))<2><~1>))<0>B([0-9]{1,inf})<"
+                  "3>C)";
         REQUIRE(capture_rule_ast.m_regex_ptr->serialize(true)
                 == expected_serialized_string_with_tags);
     }
