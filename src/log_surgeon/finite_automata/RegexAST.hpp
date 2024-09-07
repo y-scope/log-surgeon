@@ -35,7 +35,7 @@ public:
      * lexer rule
      * @param is_possible_input
      */
-    virtual auto set_possible_inputs_to_true(std::array<bool, cUnicodeSize>& is_possible_input
+    virtual auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
     ) const -> void = 0;
 
     /**
@@ -77,8 +77,21 @@ public:
         return serialized_string;
     }
 
-    [[nodiscard]] auto has_negative_tags() const -> bool {
-        return false == m_negative_tags.empty();
+    /**
+     * Handles the addition of an intermediate state with negative transitions if needed.
+     * @param nfa
+     * @param end_state
+     */
+    void add_with_negative_tags(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
+        // Handle negative tags as:
+        // root --(regex transitions)--> intermediate_state --(negative tags)--> end_state
+        if (false == m_negative_tags.empty()) {
+            NFAStateType* intermediate_state = nfa->new_state();
+            add(nfa, intermediate_state);
+            intermediate_state->add_negative_tagged_transition(m_negative_tags, end_state);
+        } else {
+            add(nfa, end_state);
+        }
     }
 
     /**
@@ -123,7 +136,7 @@ public:
      * @param is_possible_input
      */
     auto set_possible_inputs_to_true(
-            [[maybe_unused]] std::array<bool, cUnicodeSize>& is_possible_input
+            [[maybe_unused]] std::array<bool, cSizeOfUnicode>& is_possible_input
     ) const -> void override {}
 
     /**
@@ -184,7 +197,7 @@ public:
      * lexer rule containing RegexASTLiteral at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeSize>& is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
     ) const -> void override {
         is_possible_input[m_character] = true;
     }
@@ -254,7 +267,7 @@ public:
      * lexer rule containing RegexASTInteger at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeSize>& is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
     ) const -> void override {
         for (uint32_t const i : m_digits) {
             is_possible_input.at('0' + i) = true;
@@ -345,7 +358,7 @@ public:
      * lexer rule containing RegexASTGroup at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeSize>& is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
     ) const -> void override {
         if (!m_negate) {
             for (auto const& [begin, end] : m_ranges) {
@@ -354,7 +367,7 @@ public:
                 }
             }
         } else {
-            std::vector<char> inputs(cUnicodeSize, 1);
+            std::vector<char> inputs(cSizeOfUnicode, 1);
             for (auto const& [begin, end] : m_ranges) {
                 for (uint32_t i = begin; i <= end; i++) {
                     inputs[i] = 0;
@@ -491,7 +504,7 @@ public:
      * lexer rule containing RegexASTOr at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeSize>& is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
     ) const -> void override {
         m_left->set_possible_inputs_to_true(is_possible_input);
         m_right->set_possible_inputs_to_true(is_possible_input);
@@ -577,7 +590,7 @@ public:
      * lexer rule containing RegexASTCat at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeSize>& is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
     ) const -> void override {
         m_left->set_possible_inputs_to_true(is_possible_input);
         m_right->set_possible_inputs_to_true(is_possible_input);
@@ -665,7 +678,7 @@ public:
      * lexer rule containing RegexASTMultiplication at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeSize>& is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
     ) const -> void override {
         m_operand->set_possible_inputs_to_true(is_possible_input);
     }
@@ -754,7 +767,7 @@ public:
      * lexer rule containing `RegexASTCapture` at a leaf node in its AST.
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cUnicodeSize>& is_possible_input
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
     ) const -> void override {
         m_group_regex_ast->set_possible_inputs_to_true(is_possible_input);
     }
@@ -889,8 +902,8 @@ RegexASTOr<NFAStateType>::RegexASTOr(
 
 template <typename NFAStateType>
 void RegexASTOr<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
-    m_left->add(nfa, end_state);
-    m_right->add(nfa, end_state);
+    m_left->add_with_negative_tags(nfa, end_state);
+    m_right->add_with_negative_tags(nfa, end_state);
 }
 
 template <typename NFAStateType>
@@ -934,9 +947,9 @@ template <typename NFAStateType>
 void RegexASTCat<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
     NFAStateType* saved_root = nfa->get_root();
     NFAStateType* intermediate_state = nfa->new_state();
-    m_left->add(nfa, intermediate_state);
+    m_left->add_with_negative_tags(nfa, intermediate_state);
     nfa->set_root(intermediate_state);
-    m_right->add(nfa, end_state);
+    m_right->add_with_negative_tags(nfa, end_state);
     nfa->set_root(saved_root);
 }
 
@@ -987,27 +1000,27 @@ void RegexASTMultiplication<NFAStateType>::add(
     } else {
         for (uint32_t i = 1; i < this->m_min; i++) {
             NFAStateType* intermediate_state = nfa->new_state();
-            m_operand->add(nfa, intermediate_state);
+            m_operand->add_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
-        m_operand->add(nfa, end_state);
+        m_operand->add_with_negative_tags(nfa, end_state);
     }
     if (this->is_infinite()) {
         nfa->set_root(end_state);
-        m_operand->add(nfa, end_state);
+        m_operand->add_with_negative_tags(nfa, end_state);
     } else if (this->m_max > this->m_min) {
         if (this->m_min != 0) {
             NFAStateType* intermediate_state = nfa->new_state();
-            m_operand->add(nfa, intermediate_state);
+            m_operand->add_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
         for (uint32_t i = this->m_min + 1; i < this->m_max; ++i) {
-            m_operand->add(nfa, end_state);
+            m_operand->add_with_negative_tags(nfa, end_state);
             NFAStateType* intermediate_state = nfa->new_state();
-            m_operand->add(nfa, intermediate_state);
+            m_operand->add_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
-        m_operand->add(nfa, end_state);
+        m_operand->add_with_negative_tags(nfa, end_state);
     }
     nfa->set_root(saved_root);
 }
@@ -1042,7 +1055,7 @@ auto RegexASTMultiplication<NFAStateType>::serialize(bool const with_tags) -> st
 template <typename NFAStateType>
 void RegexASTCapture<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
     NFAStateType* intermediate_state = nfa->new_state();
-    m_group_regex_ast->add(nfa, intermediate_state);
+    m_group_regex_ast->add_with_negative_tags(nfa, intermediate_state);
     intermediate_state->add_positive_tagged_transition(m_tag, end_state);
 }
 

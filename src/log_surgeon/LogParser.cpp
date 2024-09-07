@@ -93,7 +93,7 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
         rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters);
 
         // check if regex contains a delimiter
-        std::array<bool, cUnicodeSize> is_possible_input{};
+        std::array<bool, cSizeOfUnicode> is_possible_input{};
         rule->m_regex_ptr->set_possible_inputs_to_true(is_possible_input);
         bool contains_delimiter = false;
         uint32_t delimiter_name = 0;
