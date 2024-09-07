@@ -85,7 +85,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE('9' == regex_ast_group_ast->get_ranges()[0].second);
     }
 
-    SECTION("Check if AST varaible has capture group") {
+    SECTION("Check if AST variable has capture group") {
         log_surgeon::Schema schema;
         schema.add_variable("number", "123", -1);
         schema.add_variable("capture", "user_id=(?<userID>[0-9]+)", -1);
