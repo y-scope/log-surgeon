@@ -75,7 +75,7 @@ auto Lexer<NFAStateType, DFAStateType>::scan(ParserInputBuffer& input_buffer, To
             && state->is_accepting())
         {
             m_match = true;
-            m_type_ids = &(state->get_tags());
+            m_type_ids = &(state->get_matching_variable_ids());
             m_match_pos = prev_byte_buf_pos;
             m_match_line = m_line;
         }
@@ -85,7 +85,7 @@ auto Lexer<NFAStateType, DFAStateType>::scan(ParserInputBuffer& input_buffer, To
             if (m_has_delimiters && !m_match) {
                 next = m_dfa->get_root()->next(next_char);
                 m_match = true;
-                m_type_ids = &(next->get_tags());
+                m_type_ids = &(next->get_matching_variable_ids());
                 m_start_pos = prev_byte_buf_pos;
                 m_match_pos = input_buffer.storage().pos();
                 m_match_line = m_line;
@@ -206,7 +206,7 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(
             && state->is_accepting())
         {
             m_match = true;
-            m_type_ids = &(state->get_tags());
+            m_type_ids = &(state->get_matching_variable_ids());
             m_match_pos = prev_byte_buf_pos;
             m_match_line = m_line;
         }
@@ -216,7 +216,7 @@ auto Lexer<NFAStateType, DFAStateType>::scan_with_wildcard(
             if (m_has_delimiters && !m_match) {
                 next = m_dfa->get_root()->next(next_char);
                 m_match = true;
-                m_type_ids = &(next->get_tags());
+                m_type_ids = &(next->get_matching_variable_ids());
                 m_start_pos = prev_byte_buf_pos;
                 m_match_pos = input_buffer.storage().pos();
                 m_match_line = m_line;
@@ -362,11 +362,11 @@ void Lexer<NFAStateType, DFAStateType>::add_rule(
 }
 
 template <typename NFAStateType, typename DFAStateType>
-auto Lexer<NFAStateType, DFAStateType>::get_rule(uint32_t const& name
+auto Lexer<NFAStateType, DFAStateType>::get_rule(uint32_t const& variable_id
 ) -> finite_automata::RegexAST<NFAStateType>* {
-    for (Rule& rule : m_rules) {
-        if (rule.m_name == name) {
-            return rule.m_regex.get();
+    for (auto& rule : m_rules) {
+        if (rule.get_variable_id() == variable_id) {
+            return rule.get_regex();
         }
     }
     return nullptr;
@@ -375,8 +375,8 @@ auto Lexer<NFAStateType, DFAStateType>::get_rule(uint32_t const& name
 template <typename NFAStateType, typename DFAStateType>
 void Lexer<NFAStateType, DFAStateType>::generate() {
     finite_automata::RegexNFA<NFAStateType> nfa;
-    for (Rule const& r : m_rules) {
-        r.add_ast(&nfa);
+    for (auto& rule : m_rules) {
+        rule.add_ast(&nfa);
     }
     m_dfa = nfa_to_dfa(nfa);
     DFAStateType const* state = m_dfa->get_root();
@@ -392,8 +392,8 @@ void Lexer<NFAStateType, DFAStateType>::generate() {
 template <typename NFAStateType, typename DFAStateType>
 void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
     finite_automata::RegexNFA<NFAStateType> nfa;
-    for (Rule const& r : m_rules) {
-        r.add_ast(&nfa);
+    for (auto& rule : m_rules) {
+        rule.add_ast(&nfa);
     }
     nfa.reverse();
     m_dfa = nfa_to_dfa(nfa);
@@ -407,13 +407,12 @@ void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
     }
 }
 
-template <typename NFAStateType, typename DFAStateType>
-void Lexer<NFAStateType, DFAStateType>::Rule::add_ast(finite_automata::RegexNFA<NFAStateType>* nfa
-) const {
-    NFAStateType* s = nfa->new_state();
-    s->set_accepting(true);
-    s->set_tag(m_name);
-    m_regex->add(nfa, s);
+template <typename NFAStateType>
+void LexicalRule<NFAStateType>::add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) const {
+    NFAStateType* end_state = nfa->new_state();
+    end_state->set_accepting(true);
+    end_state->set_matching_variable_id(m_variable_id);
+    m_regex->add(nfa, end_state);
 }
 
 template <typename NFAStateType, typename DFAStateType>

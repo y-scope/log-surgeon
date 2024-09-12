@@ -47,11 +47,11 @@ public:
      * NOTE: Currently, the returned Token(s) cannot be const as calling
      * Token::to_string or Token::to_string_view may mutate Token (to handle the
      * case where a token is wraps from the end to the beginning of a buffer).
-     * @param var_id
-     * @return The tokens corresponding to var_id
+     * @param variable_id
+     * @return The tokens corresponding to variable_id
      */
-    [[nodiscard]] auto get_variables(size_t var_id) const -> std::vector<Token*> const& {
-        return m_log_var_occurrences[var_id];
+    [[nodiscard]] auto get_variables(size_t variable_id) const -> std::vector<Token*> const& {
+        return m_log_var_occurrences[variable_id];
     }
 
     /**

@@ -23,11 +23,15 @@ class RegexDFAState {
 public:
     using Tree = UnicodeIntervalTree<RegexDFAState<stateType>*>;
 
-    auto add_tag(int const& rule_name_id) -> void { m_tags.push_back(rule_name_id); }
+    auto add_matching_variable_id(int const& variable_id) -> void {
+        m_matching_variable_ids.push_back(variable_id);
+    }
 
-    [[nodiscard]] auto get_tags() const -> std::vector<int> const& { return m_tags; }
+    [[nodiscard]] auto get_matching_variable_ids() const -> std::vector<int> const& {
+        return m_matching_variable_ids;
+    }
 
-    [[nodiscard]] auto is_accepting() const -> bool { return !m_tags.empty(); }
+    [[nodiscard]] auto is_accepting() const -> bool { return !m_matching_variable_ids.empty(); }
 
     auto add_byte_transition(uint8_t const& byte, RegexDFAState<stateType>* dest_state) -> void {
         m_bytes_transition[byte] = dest_state;
@@ -42,7 +46,7 @@ public:
     [[nodiscard]] auto next(uint32_t character) const -> RegexDFAState<stateType>*;
 
 private:
-    std::vector<int> m_tags;
+    std::vector<int> m_matching_variable_ids;
     RegexDFAState<stateType>* m_bytes_transition[cSizeOfByte];
     // NOTE: We don't need m_tree_transitions for the `stateType ==
     // RegexDFAStateType::Byte` case, so we use an empty class (`std::tuple<>`)
@@ -89,10 +93,10 @@ public:
     }
 
     /**
-     * @return The tags of the first state of the pair
+     * @return The matching variable ids of the first state of the pair
      */
-    [[nodiscard]] auto get_first_tags() const -> std::vector<int> const& {
-        return m_state1->get_tags();
+    [[nodiscard]] auto get_first_matching_variable_ids() const -> std::vector<int> const& {
+        return m_state1->get_matching_variable_ids();
     }
 
 private:
