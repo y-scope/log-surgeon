@@ -46,7 +46,7 @@ public:
 
     /**
      * Add the needed RegexNFA::states to the passed in nfa to handle the
-     * current node before transitioning to a pre-tagged end_state
+     * current node before transitioning to an accepting end_state
      * @param nfa
      * @param end_state
      */
