@@ -23,10 +23,10 @@ class LexicalRule {
 public:
     // Constructor
     LexicalRule(
-            uint32_t const var_id,
+            uint32_t const variable_id,
             std::unique_ptr<finite_automata::RegexAST<NFAStateType>> regex
     )
-            : m_var_id(var_id),
+            : m_variable_id(variable_id),
               m_regex(std::move(regex)) {}
 
     /**
@@ -35,14 +35,14 @@ public:
      */
     auto add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) -> void;
 
-    [[nodiscard]] auto get_var_id() const -> uint32_t const& { return m_var_id; }
+    [[nodiscard]] auto get_variable_id() const -> uint32_t const& { return m_variable_id; }
 
     [[nodiscard]] auto get_regex() const -> finite_automata::RegexAST<NFAStateType>* {
         return m_regex.get();
     }
 
 private:
-    uint32_t m_var_id;
+    uint32_t m_variable_id;
     std::unique_ptr<finite_automata::RegexAST<NFAStateType>> m_regex;
 };
 
@@ -78,10 +78,10 @@ public:
 
     /**
      * Return regex pattern for a rule name
-     * @param var_id
+     * @param variable_id
      * @return finite_automata::RegexAST*
      */
-    auto get_rule(uint32_t const& var_id) -> finite_automata::RegexAST<NFAStateType>*;
+    auto get_rule(uint32_t const& variable_id) -> finite_automata::RegexAST<NFAStateType>*;
 
     /**
      * Generate DFA for lexer

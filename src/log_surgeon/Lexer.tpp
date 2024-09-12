@@ -362,10 +362,10 @@ void Lexer<NFAStateType, DFAStateType>::add_rule(
 }
 
 template <typename NFAStateType, typename DFAStateType>
-auto Lexer<NFAStateType, DFAStateType>::get_rule(uint32_t const& var_id
+auto Lexer<NFAStateType, DFAStateType>::get_rule(uint32_t const& variable_id
 ) -> finite_automata::RegexAST<NFAStateType>* {
     for (auto& rule : m_rules) {
-        if (rule.get_var_id() == var_id) {
+        if (rule.get_variable_id() == variable_id) {
             return rule.get_regex();
         }
     }
@@ -419,7 +419,7 @@ void LexicalRule<NFAStateType>::add_ast(finite_automata::RegexNFA<NFAStateType>*
     }
     NFAStateType* end_state = nfa->new_state();
     end_state->set_accepting(true);
-    end_state->set_matching_var_id(m_var_id);
+    end_state->set_matching_variable_id(m_variable_id);
     m_regex->add_with_negative_tags(nfa, end_state);
 }
 

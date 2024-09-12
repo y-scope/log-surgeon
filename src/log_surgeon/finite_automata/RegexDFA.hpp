@@ -23,8 +23,8 @@ class RegexDFAState {
 public:
     using Tree = UnicodeIntervalTree<RegexDFAState<stateType>*>;
 
-    auto add_matching_var_id(int const& var_id) -> void {
-        m_matching_variable_ids.push_back(var_id);
+    auto add_matching_variable_id(int const& variable_id) -> void {
+        m_matching_variable_ids.push_back(variable_id);
     }
 
     [[nodiscard]] auto get_matching_variable_ids() const -> std::vector<int> const& {

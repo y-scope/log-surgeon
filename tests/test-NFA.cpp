@@ -89,7 +89,7 @@ TEST_CASE("Test NFA", "[NFA]") {
         serialized_nfa += std::to_string(state_ids.find(current_state)->second) += ":";
         if (current_state->is_accepting()) {
             serialized_nfa += "accepting_tag="
-                              + std::to_string(current_state->get_matching_var_id()) + ",";
+                              + std::to_string(current_state->get_matching_variable_id()) + ",";
         }
         serialized_nfa += "byte_transitions={";
         for (uint32_t idx = 0; idx < cSizeOfByte; idx++) {
