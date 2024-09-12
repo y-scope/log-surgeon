@@ -145,7 +145,7 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
             );
         }
 
-        // Add delimiters as prefix to regex as variables require preceeding delimiters
+        // To make lexing log-specific: modify variable regex to contain a delimiter at the start.
         unique_ptr<RegexASTGroup<RegexNFAByteState>> delimiter_group
                 = make_unique<RegexASTGroup<RegexNFAByteState>>(
                         RegexASTGroup<RegexNFAByteState>(delimiters)
