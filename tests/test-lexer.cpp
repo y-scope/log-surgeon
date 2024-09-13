@@ -9,6 +9,9 @@
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
+using std::string;
+using std::vector;
+
 using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<
         log_surgeon::finite_automata::RegexNFAByteState>;
 using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<
@@ -19,27 +22,29 @@ using RegexASTLiteralByte = log_surgeon::finite_automata::RegexASTLiteral<
         log_surgeon::finite_automata::RegexNFAByteState>;
 using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultiplication<
         log_surgeon::finite_automata::RegexNFAByteState>;
+using RegexASTOrByte
+        = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::RegexNFAByteState>;
+using log_surgeon::SchemaVarAST;
 
 TEST_CASE("Test the Schema class", "[Schema]") {
-    log_surgeon::Schema schema;
-
     SECTION("Add a number variable to schema") {
-        schema.add_variable("myNumber", "123", -1);
+        log_surgeon::Schema schema;
+        string const var_name = "myNumber";
+        schema.add_variable(var_name, "123", -1);
         auto const schema_ast = schema.release_schema_ast_ptr();
         REQUIRE(schema_ast->m_schema_vars.size() == 1);
         REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());
 
         auto& schema_var_ast_ptr = schema_ast->m_schema_vars[0];
         REQUIRE(nullptr != schema_var_ast_ptr);
-        auto& schema_var_ast = dynamic_cast<log_surgeon::SchemaVarAST&>(*schema_var_ast_ptr);
-        REQUIRE("myNumber" == schema_var_ast.m_name);
+        auto& schema_var_ast = dynamic_cast<SchemaVarAST&>(*schema_var_ast_ptr);
+        REQUIRE(var_name == schema_var_ast.m_name);
 
-        REQUIRE_NOTHROW([&]() {
-            auto& regex_ast_cat = dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr);
-        }());
+        REQUIRE_NOTHROW([&]() { dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr); }());
     }
 
     SECTION("Add a capture variable to schema") {
+        log_surgeon::Schema schema;
         std::string const var_name = "capture";
         schema.add_variable(var_name, "u(?<uID>[0-9]+)", -1);
         auto const schema_ast = schema.release_schema_ast_ptr();
@@ -48,7 +53,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
 
         auto& schema_var_ast_ptr = schema_ast->m_schema_vars[0];
         REQUIRE(nullptr != schema_var_ast_ptr);
-        auto& schema_var_ast = dynamic_cast<log_surgeon::SchemaVarAST&>(*schema_var_ast_ptr);
+        auto& schema_var_ast = dynamic_cast<SchemaVarAST&>(*schema_var_ast_ptr);
         REQUIRE(var_name == schema_var_ast.m_name);
 
         auto* regex_ast_cat_ptr = dynamic_cast<RegexASTCatByte*>(schema_var_ast.m_regex_ptr.get());
@@ -84,23 +89,22 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     }
 
     SECTION("Test AST with tags") {
+        log_surgeon::Schema schema;
         schema.add_variable(
                 "capture",
                 "Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?<containerID>\\d+)C)",
                 -1
         );
         auto const schema_ast = schema.release_schema_ast_ptr();
-        auto& capture_rule_ast
-                = dynamic_cast<log_surgeon::SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
-        std::vector<uint32_t> all_tags;
+        auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+        vector<uint32_t> all_tags;
         capture_rule_ast.m_regex_ptr->add_tags(all_tags);
 
-        std::string expected_serialized_string
-                = "(Z)|(A(?<letter>((?<letter1>(a)|(b)))|((?<letter2>(c)|"
-                  "(d))))B(?<containerID>[0-9]{1,inf})C)";
+        string expected_serialized_string = "(Z)|(A(?<letter>((?<letter1>(a)|(b)))|((?<letter2>(c)|"
+                                            "(d))))B(?<containerID>[0-9]{1,inf})C)";
         REQUIRE(capture_rule_ast.m_regex_ptr->serialize(false) == expected_serialized_string);
 
-        std::string expected_serialized_string_with_tags
+        string expected_serialized_string_with_tags
                 = "(Z<~0><~1><~2><~3>)|(A((((a)|(b))<1><~2>)|(((c)|(d))<2><~1>))<0>B([0-9]{1,inf})<"
                   "3>C)";
         REQUIRE(capture_rule_ast.m_regex_ptr->serialize(true)
