@@ -231,7 +231,7 @@ public:
      * @param with_tags
      * @return string representing the AST
      */
-    auto serialize(bool const with_tags) -> std::string;
+    auto serialize(bool with_tags) -> std::string override;
 
     /**
      * Do nothing as RegexASTLiteral is a leaf node that is not a capture group
@@ -303,7 +303,7 @@ public:
      * @param with_tags
      * @return string representing the AST
      */
-    auto serialize(bool const with_tags) -> std::string;
+    auto serialize(bool with_tags) -> std::string override;
 
     /**
      * Do nothing as RegexASTInteger is a leaf node that is not a capture group
@@ -430,7 +430,7 @@ public:
      * @param with_tags
      * @return string representing the AST
      */
-    auto serialize(bool const with_tags) -> std::string;
+    auto serialize(bool with_tags) -> std::string override;
 
     /**
      * Do nothing as RegexASTGroup is a leaf node that is not a capture group
@@ -539,7 +539,7 @@ public:
      * @param with_tags
      * @return string representing the AST
      */
-    auto serialize(bool const with_tags) -> std::string;
+    auto serialize(bool with_tags) -> std::string override;
 
     /**
      * Traverse the AST and add positive and negative tags.
@@ -625,7 +625,7 @@ public:
      * @param with_tags
      * @return string representing the AST
      */
-    auto serialize(bool const with_tags) -> std::string;
+    auto serialize(bool with_tags) -> std::string override;
 
     /**
      * Traverse the AST and add positive and negative tags.
@@ -712,7 +712,7 @@ public:
      * @param with_tags
      * @return string representing the AST
      */
-    auto serialize(bool const with_tags) -> std::string;
+    auto serialize(bool with_tags) -> std::string override;
 
     /**
      * Traverse the AST and add positive and negative tags.
@@ -800,7 +800,7 @@ public:
      * @param with_tags
      * @return string representing the AST
      */
-    auto serialize(bool const with_tags) -> std::string;
+    auto serialize(bool with_tags) -> std::string override;
 
     /**
      * Traverse the AST and add positive and negative tags.

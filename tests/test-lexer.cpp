@@ -9,6 +9,9 @@
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
+using std::string;
+using std::vector;
+
 using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<
         log_surgeon::finite_automata::RegexNFAByteState>;
 using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<
@@ -26,7 +29,7 @@ using log_surgeon::SchemaVarAST;
 TEST_CASE("Test the Schema class", "[Schema]") {
     SECTION("Add a number variable to schema") {
         log_surgeon::Schema schema;
-        std::string const var_name = "myNumber";
+        string const var_name = "myNumber";
         schema.add_variable(var_name, "123", -1);
         auto const schema_ast = schema.release_schema_ast_ptr();
         REQUIRE(schema_ast->m_schema_vars.size() == 1);
@@ -96,7 +99,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE(capture_var_ast.m_regex_ptr->has_capture_groups());
     }
 
-    SECTION("Test AST structure after adding tags to capture AST") {
+    SECTION("Test AST with tags") {
         log_surgeon::Schema schema;
         schema.add_variable(
                 "capture",
@@ -105,15 +108,14 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         );
         auto const schema_ast = schema.release_schema_ast_ptr();
         auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
-        std::vector<uint32_t> all_tags;
+        vector<uint32_t> all_tags;
         capture_rule_ast.m_regex_ptr->add_tags(all_tags);
 
-        std::string expected_serialized_string
-                = "(Z)|(A(?<letter>((?<letter1>(a)|(b)))|((?<letter2>(c)|"
-                  "(d))))B(?<containerID>[0-9]{1,inf})C)";
+        string expected_serialized_string = "(Z)|(A(?<letter>((?<letter1>(a)|(b)))|((?<letter2>(c)|"
+                                            "(d))))B(?<containerID>[0-9]{1,inf})C)";
         REQUIRE(capture_rule_ast.m_regex_ptr->serialize(false) == expected_serialized_string);
 
-        std::string expected_serialized_string_with_tags
+        string expected_serialized_string_with_tags
                 = "(Z<~0><~1><~2><~3>)|(A((((a)|(b))<1><~2>)|(((c)|(d))<2><~1>))<0>B([0-9]{1,inf})<"
                   "3>C)";
         REQUIRE(capture_rule_ast.m_regex_ptr->serialize(true)
