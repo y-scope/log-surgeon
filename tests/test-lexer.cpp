@@ -121,4 +121,16 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE(capture_rule_ast.m_regex_ptr->serialize(true)
                 == expected_serialized_string_with_tags);
     }
+
+    SECTION("Test reptition regex with min=0") {
+        log_surgeon::Schema schema;
+        schema.add_variable("capture", "(?<letter>(a)){0,1}", -1);
+        auto const schema_ast = schema.release_schema_ast_ptr();
+        auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+        vector<uint32_t> all_tags;
+        capture_rule_ast.m_regex_ptr->add_tags(all_tags);
+        string expected_serialized_string_with_tags = "(<~0>)|((a)<0>{1,1})";
+        REQUIRE(capture_rule_ast.m_regex_ptr->serialize(true)
+                == expected_serialized_string_with_tags);
+    }
 }
