@@ -28,6 +28,8 @@ using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<
         log_surgeon::finite_automata::RegexNFAByteState>;
 using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<
         log_surgeon::finite_automata::RegexNFAByteState>;
+using RegexASTEmptyByte = log_surgeon::finite_automata::RegexASTEmpty<
+        log_surgeon::finite_automata::RegexNFAByteState>;
 
 using std::make_unique;
 using std::string;
@@ -186,8 +188,11 @@ static auto regex_or_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
 
 static auto regex_match_zero_or_more_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
-    return unique_ptr<ParserAST>(new ParserValueRegex(
-            unique_ptr<RegexASTByte>(new RegexASTMultiplicationByte(std::move(r1), 0, 0))
+
+    // To handle negative tags we need to split up the min == 0 and min > 0 case
+    return make_unique<ParserValueRegex>(make_unique<RegexASTOrByte>(
+            make_unique<RegexASTEmptyByte>(),
+            make_unique<RegexASTMultiplicationByte>(std::move(r1), 1, 0)
     ));
 }
 
@@ -228,6 +233,14 @@ static auto regex_match_range_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
         max += r5_ptr->get_digit(i) * (uint32_t)pow(10, r5_size - i - 1);
     }
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
+
+    if (min == 0) {
+        // To handle negative tags we need to split up the min == 0 and min > 0 case
+        return make_unique<ParserValueRegex>(make_unique<RegexASTOrByte>(
+                make_unique<RegexASTEmptyByte>(),
+                make_unique<RegexASTMultiplicationByte>(std::move(r1), 1, max)
+        ));
+    }
     return unique_ptr<ParserAST>(new ParserValueRegex(
             unique_ptr<RegexASTByte>(new RegexASTMultiplicationByte(std::move(r1), min, max))
     ));

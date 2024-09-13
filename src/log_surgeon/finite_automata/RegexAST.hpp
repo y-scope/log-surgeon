@@ -101,6 +101,68 @@ private:
 };
 
 template <typename NFAStateType>
+class RegexASTEmpty : public RegexAST<NFAStateType> {
+public:
+    RegexASTEmpty();
+
+    /**
+     * Used for cloning a unique_pointer of type RegexASTEmpty
+     * @return RegexASTEmpty*
+     */
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTEmpty*> override {
+        return new RegexASTEmpty(*this);
+    }
+
+    /**
+     * Sets is_possible_input to specify which utf8 characters are allowed in a
+     * lexer rule containing RegexASTEmpty at a leaf node in its AST, which is nothing
+     * @param is_possible_input
+     */
+    auto set_possible_inputs_to_true(
+            [[maybe_unused]] std::array<bool, cSizeOfUnicode>& is_possible_input
+    ) const -> void override {}
+
+    /**
+     * Transforms '.' to to be any non-delimiter in a lexer rule, which does
+     * nothing as RegexASTEmpty is a leaf node that is not a RegexASTGroup
+     * @param delimiters
+     */
+    auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters
+    ) -> void override {
+        // Do nothing
+    }
+
+    /**
+     * Add the needed RegexNFA::states to the passed in nfa to handle a
+     * RegexASTEmpty before transitioning to an accepting end_state
+     * @param nfa
+     * @param end_state
+     */
+    auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
+
+    /**
+     * Return false as RegexASTEmpty is a leaf node that is not a capture group
+     * @return false
+     */
+    auto has_capture_groups() -> bool override { return false; }
+
+    /**
+     * serialize the RegexASTEmpty into a string
+     * @param with_tags
+     * @return string representing the AST
+     */
+    auto serialize(bool const with_tags) -> std::string;
+
+    /**
+     * Do nothing as RegexASTEmpty is a leaf node that is not a capture group
+     */
+    auto add_tags([[maybe_unused]] std::vector<uint32_t>& all_tags
+    ) -> std::vector<uint32_t> override {
+        return {};
+    }
+};
+
+template <typename NFAStateType>
 class RegexASTLiteral : public RegexAST<NFAStateType> {
 public:
     explicit RegexASTLiteral(uint32_t character);
@@ -742,6 +804,26 @@ private:
     std::unique_ptr<RegexAST<NFAStateType>> m_group_regex_ast;
     uint32_t m_tag;
 };
+
+template <typename NFAStateType>
+RegexASTEmpty<NFAStateType>::RegexASTEmpty() = default;
+
+template <typename NFAStateType>
+void RegexASTEmpty<NFAStateType>::add(
+        [[maybe_unused]] RegexNFA<NFAStateType>* nfa,
+        [[maybe_unused]] NFAStateType* end_state
+) {
+    // DO NOTHING
+}
+
+template <typename NFAStateType>
+auto RegexASTEmpty<NFAStateType>::serialize(bool const with_tags) -> std::string {
+    std::string serialized_string;
+    if (with_tags) {
+        serialized_string += this->serialize_negative_tags();
+    }
+    return serialized_string;
+}
 
 template <typename NFAStateType>
 RegexASTLiteral<NFAStateType>::RegexASTLiteral(uint32_t character) : m_character(character) {}
