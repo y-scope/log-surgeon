@@ -26,6 +26,21 @@ using RegexASTOrByte
         = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::RegexNFAByteState>;
 using log_surgeon::SchemaVarAST;
 
+auto test_regex_ast(
+        string const& regex,
+        string const& expected_serialized_ast_without_tags,
+        string const& expected_serialized_ast_with_tags
+) -> void {
+    log_surgeon::Schema schema;
+    schema.add_variable("capture", regex, -1);
+    auto const schema_ast = schema.release_schema_ast_ptr();
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    vector<uint32_t> all_tags;
+    capture_rule_ast.m_regex_ptr->add_tags(all_tags);
+    REQUIRE(capture_rule_ast.m_regex_ptr->serialize(false) == expected_serialized_ast_without_tags);
+    REQUIRE(capture_rule_ast.m_regex_ptr->serialize(true) == expected_serialized_ast_with_tags);
+}
+
 TEST_CASE("Test the Schema class", "[Schema]") {
     SECTION("Add a number variable to schema") {
         log_surgeon::Schema schema;
@@ -100,37 +115,29 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     }
 
     SECTION("Test AST with tags") {
-        log_surgeon::Schema schema;
-        schema.add_variable(
-                "capture",
+        test_regex_ast(
                 "Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?<containerID>\\d+)C)",
-                -1
+                "(Z)|(A(?<letter>((?<letter1>(a)|(b)))|((?<letter2>(c)|(d))))B(?<containerID>[0-9]{"
+                "1,inf})C)",
+                "(Z<~0><~1><~2><~3>)|(A((((a)|(b))<1><~2>)|(((c)|(d))<2><~1>))<0>B([0-9]{1,inf})<3>"
+                "C)"
         );
-        auto const schema_ast = schema.release_schema_ast_ptr();
-        auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
-        vector<uint32_t> all_tags;
-        capture_rule_ast.m_regex_ptr->add_tags(all_tags);
-
-        string expected_serialized_string = "(Z)|(A(?<letter>((?<letter1>(a)|(b)))|((?<letter2>(c)|"
-                                            "(d))))B(?<containerID>[0-9]{1,inf})C)";
-        REQUIRE(capture_rule_ast.m_regex_ptr->serialize(false) == expected_serialized_string);
-
-        string expected_serialized_string_with_tags
-                = "(Z<~0><~1><~2><~3>)|(A((((a)|(b))<1><~2>)|(((c)|(d))<2><~1>))<0>B([0-9]{1,inf})<"
-                  "3>C)";
-        REQUIRE(capture_rule_ast.m_regex_ptr->serialize(true)
-                == expected_serialized_string_with_tags);
     }
 
-    SECTION("Test reptition regex with min=0") {
-        log_surgeon::Schema schema;
-        schema.add_variable("capture", "(?<letter>(a)){0,1}", -1);
-        auto const schema_ast = schema.release_schema_ast_ptr();
-        auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
-        vector<uint32_t> all_tags;
-        capture_rule_ast.m_regex_ptr->add_tags(all_tags);
-        string expected_serialized_string_with_tags = "(<~0>)|((a)<0>{1,1})";
-        REQUIRE(capture_rule_ast.m_regex_ptr->serialize(true)
-                == expected_serialized_string_with_tags);
+    SECTION("Test reptition regex") {
+        // Repetition without capture groups untagged and tagged AST are the same
+        test_regex_ast("a{0,10}","()|(a{1,10})","()|(a{1,10})");
+        test_regex_ast("a{5,10}","a{5,10}","a{5,10}");
+        test_regex_ast("a*","()|(a{1,inf})","()|(a{1,inf})");
+        test_regex_ast("a+","a{1,inf}","a{1,inf}");
+        
+        // Repetition with capture groups untagged and tagged AST are different
+        test_regex_ast("(?<letter>a){0,10}","()|((?<letter>a){1,10})","(<~0>)|((a)<0>{1,10})");
+        test_regex_ast("(?<letter>a){5,10}","(?<letter>a){5,10}","(a)<0>{5,10}");
+        test_regex_ast("(?<letter>a)*","()|((?<letter>a){1,inf})","(<~0>)|((a)<0>{1,inf})");
+        test_regex_ast("(?<letter>a)+","(?<letter>a){1,inf}","(a)<0>{1,inf}");
+
+        // Capture group with repetition
+        test_regex_ast("(?<letter>a{0,10})","(?<letter>()|(a{1,10}))","(()|(a{1,10}))<0>");
     }
 }
