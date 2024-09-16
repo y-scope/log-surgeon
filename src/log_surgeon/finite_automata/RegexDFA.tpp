@@ -43,7 +43,7 @@ template <typename NFAStateType>
 auto RegexDFA<DFAStateType>::new_state(std::set<NFAStateType*> const& nfa_state_set
 ) -> DFAStateType* {
     m_states.emplace_back(std::make_unique<DFAStateType>());
-    DFAStateType* dfa_state = m_states.back().get();
+    auto* dfa_state = m_states.back().get();
     for (auto const* nfa_state : nfa_state_set) {
         if (nfa_state->is_accepting()) {
             dfa_state->add_matching_variable_id(nfa_state->get_matching_variable_id());
