@@ -42,7 +42,7 @@ class RegexNFAState {
 public:
     using Tree = UnicodeIntervalTree<RegexNFAState*>;
 
-    auto set_accepting(bool const accepting) -> void { m_accepting = accepting; }
+    auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
 
     [[nodiscard]] auto is_accepting() const -> bool const& { return m_accepting; }
 
