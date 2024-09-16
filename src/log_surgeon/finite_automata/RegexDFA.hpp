@@ -113,11 +113,11 @@ public:
     /**
      * Creates a new DFA state based on a set of NFA states and adds it to
      * m_states
-     * @param set
+     * @param nfa_state_set
      * @return DFAStateType*
      */
     template <typename NFAStateType>
-    auto new_state(std::set<NFAStateType*> const& set) -> DFAStateType*;
+    auto new_state(std::set<NFAStateType*> const& nfa_state_set) -> DFAStateType*;
 
     auto get_root() const -> DFAStateType const* { return m_states.at(0).get(); }
 
