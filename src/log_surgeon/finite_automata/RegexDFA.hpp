@@ -92,16 +92,10 @@ public:
             std::set<RegexDFAStatePair<DFAState>>& unvisited_pairs
     ) const -> void;
 
-    /**
-     * @return Whether both states are accepting
-     */
     [[nodiscard]] auto is_accepting() const -> bool {
         return m_state1->is_accepting() && m_state2->is_accepting();
     }
 
-    /**
-     * @return The matching variable ids of the first state of the pair
-     */
     [[nodiscard]] auto get_matching_variable_ids() const -> std::vector<int> const& {
         return m_state1->get_matching_variable_ids();
     }
