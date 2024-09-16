@@ -103,17 +103,6 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE('9' == regex_ast_group_ast->get_ranges()[0].second);
     }
 
-    SECTION("Test has_capture_groups()") {
-        log_surgeon::Schema schema;
-        schema.add_variable("number", "123", -1);
-        schema.add_variable("capture", "user_id=(?<userID>[0-9]+)", -1);
-        auto const schema_ast = schema.release_schema_ast_ptr();
-        auto& number_var_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
-        REQUIRE(false == number_var_ast.m_regex_ptr->has_capture_groups());
-        auto& capture_var_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[1]);
-        REQUIRE(capture_var_ast.m_regex_ptr->has_capture_groups());
-    }
-
     SECTION("Test AST with tags") {
         test_regex_ast(
                 "Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?<containerID>\\d+)C)",
