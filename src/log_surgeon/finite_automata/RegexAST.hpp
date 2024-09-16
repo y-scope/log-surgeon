@@ -53,12 +53,6 @@ public:
     virtual auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void = 0;
 
     /**
-     * Traverse the AST and check if it contains a capture group
-     * @return true if the AST contains a capture group, false otherwise
-     */
-    virtual auto has_capture_groups() -> bool = 0;
-
-    /**
      * Serialize the AST into a string
      * @param with_tags
      * @return string representing the AST
@@ -158,12 +152,6 @@ public:
     auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
 
     /**
-     * Return false as RegexASTEmpty is a leaf node that is not a capture group
-     * @return false
-     */
-    auto has_capture_groups() -> bool override { return false; }
-
-    /**
      * serialize the RegexASTEmpty into a string
      * @param with_tags
      * @return string representing the AST
@@ -219,12 +207,6 @@ public:
      * @param end_state
      */
     auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
-
-    /**
-     * Return false as RegexASTLiteral is a leaf node that is not a capture group
-     * @return false
-     */
-    auto has_capture_groups() -> bool override { return false; }
 
     /**
      * serialize the RegexASTLiteral into a string
@@ -291,12 +273,6 @@ public:
      * @param end_state
      */
     auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
-
-    /**
-     * Return false as RegexASTInteger is a leaf node that is not a capture group
-     * @return false
-     */
-    auto has_capture_groups() -> bool override { return false; }
 
     /**
      * serialize the RegexASTInteger into a string
@@ -420,12 +396,6 @@ public:
     auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
 
     /**
-     * Return false as RegexASTGroup is a leaf node that is not a capture group
-     * @return false
-     */
-    auto has_capture_groups() -> bool override { return false; }
-
-    /**
      * serialize the RegexASTGroup into a string
      * @param with_tags
      * @return string representing the AST
@@ -529,12 +499,6 @@ public:
     auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
 
     /**
-     * Traverse the AST and check if RegexASTOr contains a capture group
-     * @return true if the AST contains a capture group, false otherwise
-     */
-    auto has_capture_groups() -> bool override;
-
-    /**
      * serialize the RegexASTOr into a string
      * @param with_tags
      * @return string representing the AST
@@ -613,12 +577,6 @@ public:
      * @param end_state
      */
     auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
-
-    /**
-     * Traverse the AST and check if it contains a capture group
-     * @return true if the AST contains a capture group, false otherwise
-     */
-    auto has_capture_groups() -> bool override;
 
     /**
      * serialize the RegexASTCat into a string
@@ -702,12 +660,6 @@ public:
     auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
 
     /**
-     * Traverse the AST and check if RegexASTMultiplication contains a capture group
-     * @return true if the AST contains a capture group, false otherwise
-     */
-    auto has_capture_groups() -> bool override;
-
-    /**
      * serialize the RegexASTMultiplication into a string
      * @param with_tags
      * @return string representing the AST
@@ -788,12 +740,6 @@ public:
      * @param end_state
      */
     auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
-
-    /**
-     * Return true as RegexASTCapture is a capture group
-     * @return true
-     */
-    auto has_capture_groups() -> bool override { return true; }
 
     /**
      * serialize the RegexASTCapture into a string
@@ -907,11 +853,6 @@ void RegexASTOr<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* en
 }
 
 template <typename NFAStateType>
-auto RegexASTOr<NFAStateType>::has_capture_groups() -> bool {
-    return m_left->has_capture_groups() || m_right->has_capture_groups();
-}
-
-template <typename NFAStateType>
 auto RegexASTOr<NFAStateType>::add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> {
     auto positive_left_tags = m_left->add_tags(all_tags);
     auto positive_right_tags = m_right->add_tags(all_tags);
@@ -951,11 +892,6 @@ void RegexASTCat<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* e
     nfa->set_root(intermediate_state);
     m_right->add_with_negative_tags(nfa, end_state);
     nfa->set_root(saved_root);
-}
-
-template <typename NFAStateType>
-auto RegexASTCat<NFAStateType>::has_capture_groups() -> bool {
-    return m_left->has_capture_groups() || m_right->has_capture_groups();
 }
 
 template <typename NFAStateType>
@@ -1023,11 +959,6 @@ void RegexASTMultiplication<NFAStateType>::add(
         m_operand->add_with_negative_tags(nfa, end_state);
     }
     nfa->set_root(saved_root);
-}
-
-template <typename NFAStateType>
-auto RegexASTMultiplication<NFAStateType>::has_capture_groups() -> bool {
-    return m_operand->has_capture_groups();
 }
 
 template <typename NFAStateType>

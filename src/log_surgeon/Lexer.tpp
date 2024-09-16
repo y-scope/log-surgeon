@@ -413,10 +413,8 @@ void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
 
 template <typename NFAStateType>
 void LexicalRule<NFAStateType>::add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) {
-    if (m_regex->has_capture_groups()) {
-        std::vector<uint32_t> all_tags;
-        m_regex->add_tags(all_tags);
-    }
+    std::vector<uint32_t> all_tags;
+    m_regex->add_tags(all_tags);
     NFAStateType* end_state = nfa->new_state();
     end_state->set_accepting(true);
     end_state->set_matching_variable_id(m_variable_id);
