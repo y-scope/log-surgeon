@@ -33,7 +33,7 @@ public:
      * Adds AST representing the lexical rule to the NFA
      * @param nfa
      */
-    auto add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) const -> void;
+    auto add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) -> void;
 
     [[nodiscard]] auto get_variable_id() const -> uint32_t const& { return m_variable_id; }
 
@@ -92,7 +92,7 @@ public:
      * Generate DFA for a reverse lexer matching the reverse of the words in the
      * original language
      */
-    auto generate_reverse() -> void;
+    // auto generate_reverse() -> void;
 
     /**
      * Reset the lexer to start a new lexing (reset buffers, reset vars tracking

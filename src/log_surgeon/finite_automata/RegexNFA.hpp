@@ -23,6 +23,21 @@ enum class RegexNFAStateType : uint8_t {
 };
 
 template <RegexNFAStateType state_type>
+class RegexNFAState;
+
+template <RegexNFAStateType state_type>
+struct PositiveTaggedTransition {
+    uint32_t tag{};
+    RegexNFAState<state_type> const* state{};
+};
+
+template <RegexNFAStateType state_type>
+struct NegativeTaggedTransition {
+    std::vector<uint32_t> tags;
+    RegexNFAState<state_type> const* state{};
+};
+
+template <RegexNFAStateType state_type>
 class RegexNFAState {
 public:
     using Tree = UnicodeIntervalTree<RegexNFAState*>;
@@ -37,6 +52,32 @@ public:
 
     [[nodiscard]] auto get_matching_variable_id() const -> int const& {
         return m_matching_variable_id;
+    }
+
+    auto
+    add_positive_tagged_transition(uint32_t const tag, RegexNFAState const* dest_state) -> void {
+        m_positive_tagged_transitions.push_back(
+                PositiveTaggedTransition<state_type>(tag, dest_state)
+        );
+    }
+
+    [[nodiscard]] auto get_positive_tagged_transitions(
+    ) const -> std::vector<PositiveTaggedTransition<state_type>> const& {
+        return m_positive_tagged_transitions;
+    }
+
+    auto add_negative_tagged_transition(
+            std::vector<uint32_t> const& tags,
+            RegexNFAState const* dest_state
+    ) -> void {
+        m_negative_tagged_transitions.push_back(
+                NegativeTaggedTransition<state_type>(tags, dest_state)
+        );
+    }
+
+    [[nodiscard]] auto get_negative_tagged_transitions(
+    ) const -> std::vector<NegativeTaggedTransition<state_type>> const& {
+        return m_negative_tagged_transitions;
     }
 
     auto set_epsilon_transitions(std::vector<RegexNFAState*>& epsilon_transitions) -> void {
@@ -83,6 +124,8 @@ public:
 private:
     bool m_accepting{false};
     int m_matching_variable_id{0};
+    std::vector<PositiveTaggedTransition<state_type>> m_positive_tagged_transitions;
+    std::vector<NegativeTaggedTransition<state_type>> m_negative_tagged_transitions;
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==

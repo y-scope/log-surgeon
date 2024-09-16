@@ -378,6 +378,7 @@ void Lexer<NFAStateType, DFAStateType>::generate() {
     for (auto& rule : m_rules) {
         rule.add_ast(&nfa);
     }
+    // TODO: DFA ignores tags. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = nfa_to_dfa(nfa);
     DFAStateType const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
@@ -389,6 +390,8 @@ void Lexer<NFAStateType, DFAStateType>::generate() {
     }
 }
 
+/*
+//TODO: needs to handle reversing tagged NFA
 template <typename NFAStateType, typename DFAStateType>
 void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
     finite_automata::RegexNFA<NFAStateType> nfa;
@@ -406,13 +409,16 @@ void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
         }
     }
 }
+*/
 
 template <typename NFAStateType>
-void LexicalRule<NFAStateType>::add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) const {
+void LexicalRule<NFAStateType>::add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) {
+    std::vector<uint32_t> all_tags;
+    m_regex->add_tags(all_tags);
     NFAStateType* end_state = nfa->new_state();
     end_state->set_accepting(true);
     end_state->set_matching_variable_id(m_variable_id);
-    m_regex->add(nfa, end_state);
+    m_regex->add_with_negative_tags(nfa, end_state);
 }
 
 template <typename NFAStateType, typename DFAStateType>
@@ -427,6 +433,14 @@ auto Lexer<NFAStateType, DFAStateType>::epsilon_closure(NFAStateType const* stat
         if (closure_set.insert(t).second) {
             for (NFAStateType* const u : t->get_epsilon_transitions()) {
                 stack.push(u);
+            }
+
+            // TODO: currently treat tagged transitions as epsilon transitions
+            for (auto const& positive_tagged_transition : t->get_positive_tagged_transitions()) {
+                stack.push(positive_tagged_transition.state);
+            }
+            for (auto const& negative_tagged_transition : t->get_negative_tagged_transitions()) {
+                stack.push(negative_tagged_transition.state);
             }
         }
     }
