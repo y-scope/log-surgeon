@@ -35,7 +35,7 @@ public:
      */
     auto add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) const -> void;
 
-    [[nodiscard]] auto get_variable_id() const -> uint32_t const& { return m_variable_id; }
+    [[nodiscard]] auto get_variable_id() const -> uint32_t { return m_variable_id; }
 
     [[nodiscard]] auto get_regex() const -> finite_automata::RegexAST<NFAStateType>* {
         return m_regex.get();
@@ -81,7 +81,7 @@ public:
      * @param variable_id
      * @return finite_automata::RegexAST*
      */
-    auto get_rule(uint32_t const& variable_id) -> finite_automata::RegexAST<NFAStateType>*;
+    auto get_rule(uint32_t variable_id) -> finite_automata::RegexAST<NFAStateType>*;
 
     /**
      * Generate DFA for lexer

@@ -23,7 +23,7 @@ class RegexDFAState {
 public:
     using Tree = UnicodeIntervalTree<RegexDFAState<stateType>*>;
 
-    auto add_matching_variable_id(int const& variable_id) -> void {
+    auto add_matching_variable_id(uint32_t const variable_id) -> void {
         m_matching_variable_ids.push_back(variable_id);
     }
 

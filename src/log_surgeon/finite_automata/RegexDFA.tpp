@@ -64,8 +64,8 @@ auto RegexDFA<DFAStateType>::get_intersect(std::unique_ptr<RegexDFA> const& dfa_
     while (false == unvisited_pairs.empty()) {
         auto current_pair_it = unvisited_pairs.begin();
         if (current_pair_it->is_accepting()) {
-            auto& matching_variable_ids = current_pair_it->get_first_matching_variable_ids();
-            schema_types.insert(matching_variable_ids.begin(), matching_variable_ids.end());
+            auto const& matching_variable_ids = current_pair_it->get_first_matching_variable_ids();
+            schema_types.insert(matching_variable_ids.cbegin(), matching_variable_ids.cend());
         }
         visited_pairs.insert(*current_pair_it);
         current_pair_it->get_reachable_pairs(visited_pairs, unvisited_pairs);
