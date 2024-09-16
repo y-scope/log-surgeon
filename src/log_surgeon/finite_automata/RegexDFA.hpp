@@ -54,6 +54,13 @@ private:
     std::conditional_t<stateType == RegexDFAStateType::UTF8, Tree, std::tuple<>> m_tree_transitions;
 };
 
+/**
+ * This class represents a pair of regex states. The intended use is for the two states in the pair
+ * to belong to unique DFAs. A pair is considered accepting if both states are accepting in
+ * their respective DFA. A different pair is considered reachable if both its states are reachable
+ * in their respective DFAs from this pair's states. The first state in the pair contains the
+ * variable types the pair matches.
+ */
 template <typename DFAState>
 class RegexDFAStatePair {
 public:
@@ -95,7 +102,7 @@ public:
     /**
      * @return The matching variable ids of the first state of the pair
      */
-    [[nodiscard]] auto get_first_matching_variable_ids() const -> std::vector<int> const& {
+    [[nodiscard]] auto get_matching_variable_ids() const -> std::vector<int> const& {
         return m_state1->get_matching_variable_ids();
     }
 
