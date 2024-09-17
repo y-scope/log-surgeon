@@ -42,6 +42,7 @@ TEST_CASE("Test NFA", "[NFA]") {
     auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
     ByteNFA nfa;
     ByteLexicalRule rule(0, std::move(capture_rule_ast.m_regex_ptr));
+    rule.add_tags();
     rule.add_to_nfa(&nfa);
 
     // Add helper for updating state_queue and visited_states
@@ -181,15 +182,5 @@ TEST_CASE("Test NFA", "[NFA]") {
                                "negative_tagged_transitions={}\n";
 
     // Compare expected and actual line-by-line
-    std::stringstream ss_actual(serialized_nfa);
-    std::stringstream ss_expected(expected_serialized_nfa);
-    std::string actual_line;
-    std::string expected_line;
-    while (std::getline(ss_actual, actual_line) && std::getline(ss_expected, expected_line)) {
-        REQUIRE(actual_line == expected_line);
-    }
-    std::getline(ss_actual, actual_line);
-    REQUIRE(actual_line.empty());
-    std::getline(ss_expected, expected_line);
-    REQUIRE(expected_line.empty());
+    REQUIRE(serialized_nfa == expected_serialized_nfa);
 }
