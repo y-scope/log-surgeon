@@ -376,7 +376,7 @@ template <typename NFAStateType, typename DFAStateType>
 void Lexer<NFAStateType, DFAStateType>::generate() {
     finite_automata::RegexNFA<NFAStateType> nfa;
     for (auto const& rule : m_rules) {
-        rule.add_ast(&nfa);
+        rule.add_to_nfa(&nfa);
     }
     m_dfa = nfa_to_dfa(nfa);
     DFAStateType const* state = m_dfa->get_root();
@@ -408,11 +408,11 @@ void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
 }
 
 template <typename NFAStateType>
-void LexicalRule<NFAStateType>::add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) const {
+void LexicalRule<NFAStateType>::add_to_nfa(finite_automata::RegexNFA<NFAStateType>* nfa) const {
     auto* end_state = nfa->new_state();
     end_state->set_accepting(true);
     end_state->set_matching_variable_id(m_variable_id);
-    m_regex->add(nfa, end_state);
+    m_regex->add_to_nfa(nfa, end_state);
 }
 
 template <typename NFAStateType, typename DFAStateType>

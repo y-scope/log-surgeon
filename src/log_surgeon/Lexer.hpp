@@ -33,7 +33,7 @@ public:
      * Adds AST representing the lexical rule to the NFA
      * @param nfa
      */
-    auto add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) const -> void;
+    auto add_to_nfa(finite_automata::RegexNFA<NFAStateType>* nfa) const -> void;
 
     [[nodiscard]] auto get_variable_id() const -> uint32_t { return m_variable_id; }
 
