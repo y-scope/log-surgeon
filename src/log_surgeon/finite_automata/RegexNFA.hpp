@@ -31,11 +31,11 @@ public:
 
     [[nodiscard]] auto is_accepting() const -> bool const& { return m_accepting; }
 
-    auto set_matching_variable_id(int const variable_id) -> void {
+    auto set_matching_variable_id(uint32_t const variable_id) -> void {
         m_matching_variable_id = variable_id;
     }
 
-    [[nodiscard]] auto get_matching_variable_id() const -> int const& {
+    [[nodiscard]] auto get_matching_variable_id() const -> uint32_t {
         return m_matching_variable_id;
     }
 
@@ -82,7 +82,7 @@ public:
 
 private:
     bool m_accepting{false};
-    int m_matching_variable_id{0};
+    uint32_t m_matching_variable_id{0};
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
@@ -224,7 +224,7 @@ void RegexNFA<NFAStateType>::reverse() {
 
     // propagate matching_variable_id from old accepting m_states
     for (NFAStateType* old_accepting_state : new_end->get_epsilon_transitions()) {
-        int matching_variable_id = old_accepting_state->get_matching_variable_id();
+        auto const matching_variable_id = old_accepting_state->get_matching_variable_id();
         std::stack<NFAStateType*> unvisited_states;
         std::set<NFAStateType*> visited_states;
         unvisited_states.push(old_accepting_state);
@@ -252,7 +252,7 @@ void RegexNFA<NFAStateType>::reverse() {
     for (int32_t i = m_states.size() - 1; i >= 0; --i) {
         std::unique_ptr<NFAStateType>& src_state_unique_ptr = m_states[i];
         NFAStateType* src_state = src_state_unique_ptr.get();
-        int matching_variable_id = src_state->get_matching_variable_id();
+        auto const matching_variable_id = src_state->get_matching_variable_id();
         for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
             std::vector<NFAStateType*> byte_transitions = src_state->get_byte_transitions(byte);
             for (int32_t j = byte_transitions.size() - 1; j >= 0; --j) {
