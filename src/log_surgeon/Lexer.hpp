@@ -30,10 +30,18 @@ public:
               m_regex(std::move(regex)) {}
 
     /**
+     * Adds positive and negative tags needed by capture groups to the AST nodes.
+     */
+    auto add_tags() -> void {
+        std::vector<uint32_t> all_tags;
+        m_regex->add_tags(all_tags);
+    }
+
+    /**
      * Adds AST representing the lexical rule to the NFA
      * @param nfa
      */
-    auto add_ast(finite_automata::RegexNFA<NFAStateType>* nfa) -> void;
+    auto add_to_nfa(finite_automata::RegexNFA<NFAStateType>* nfa) const -> void;
 
     [[nodiscard]] auto get_variable_id() const -> uint32_t const& { return m_variable_id; }
 
