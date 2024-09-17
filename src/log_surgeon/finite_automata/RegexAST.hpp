@@ -50,7 +50,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    virtual auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void = 0;
+    virtual auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void = 0;
 
     /**
      * Serialize the AST into a string
@@ -189,7 +189,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
+    auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
     /**
      * serialize the RegexASTLiteral into a string
@@ -255,7 +255,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
+    auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
     /**
      * serialize the RegexASTInteger into a string
@@ -376,7 +376,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
+    auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
     /**
      * serialize the RegexASTGroup into a string
@@ -479,7 +479,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
+    auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
     /**
      * serialize the RegexASTOr into a string
@@ -559,7 +559,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
+    auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
     /**
      * serialize the RegexASTCat into a string
@@ -640,7 +640,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
+    auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
     /**
      * serialize the RegexASTMultiplication into a string
@@ -722,7 +722,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
+    auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
     /**
      * serialize the RegexASTCapture into a string
@@ -775,7 +775,8 @@ template <typename NFAStateType>
 RegexASTLiteral<NFAStateType>::RegexASTLiteral(uint32_t character) : m_character(character) {}
 
 template <typename NFAStateType>
-void RegexASTLiteral<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
+void RegexASTLiteral<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state)
+        const {
     nfa->add_root_interval(Interval(m_character, m_character), end_state);
 }
 
@@ -802,10 +803,10 @@ RegexASTInteger<NFAStateType>::RegexASTInteger(RegexASTInteger* left, uint32_t d
 }
 
 template <typename NFAStateType>
-void RegexASTInteger<NFAStateType>::add(
+void RegexASTInteger<NFAStateType>::add_to_nfa(
         [[maybe_unused]] RegexNFA<NFAStateType>* nfa,
         [[maybe_unused]] NFAStateType* end_state
-) {
+) const {
     throw std::runtime_error("Unsupported");
 }
 
@@ -830,9 +831,10 @@ RegexASTOr<NFAStateType>::RegexASTOr(
           m_right(std::move(right)) {}
 
 template <typename NFAStateType>
-void RegexASTOr<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
-    m_left->add(nfa, end_state);
-    m_right->add(nfa, end_state);
+void RegexASTOr<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state)
+        const {
+    m_left->add_to_nfa(nfa, end_state);
+    m_right->add_to_nfa(nfa, end_state);
 }
 
 template <typename NFAStateType>
@@ -868,12 +870,13 @@ RegexASTCat<NFAStateType>::RegexASTCat(
           m_right(std::move(right)) {}
 
 template <typename NFAStateType>
-void RegexASTCat<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
+void RegexASTCat<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state)
+        const {
     NFAStateType* saved_root = nfa->get_root();
     NFAStateType* intermediate_state = nfa->new_state();
-    m_left->add(nfa, intermediate_state);
+    m_left->add_to_nfa(nfa, intermediate_state);
     nfa->set_root(intermediate_state);
-    m_right->add(nfa, end_state);
+    m_right->add_to_nfa(nfa, end_state);
     nfa->set_root(saved_root);
 }
 
@@ -909,37 +912,37 @@ RegexASTMultiplication<NFAStateType>::RegexASTMultiplication(
           m_max(max) {}
 
 template <typename NFAStateType>
-void RegexASTMultiplication<NFAStateType>::add(
+void RegexASTMultiplication<NFAStateType>::add_to_nfa(
         RegexNFA<NFAStateType>* nfa,
         NFAStateType* end_state
-) {
+) const {
     NFAStateType* saved_root = nfa->get_root();
     if (this->m_min == 0) {
         nfa->get_root()->add_epsilon_transition(end_state);
     } else {
         for (uint32_t i = 1; i < this->m_min; i++) {
             NFAStateType* intermediate_state = nfa->new_state();
-            m_operand->add(nfa, intermediate_state);
+            m_operand->add_to_nfa(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
-        m_operand->add(nfa, end_state);
+        m_operand->add_to_nfa(nfa, end_state);
     }
     if (this->is_infinite()) {
         nfa->set_root(end_state);
-        m_operand->add(nfa, end_state);
+        m_operand->add_to_nfa(nfa, end_state);
     } else if (this->m_max > this->m_min) {
         if (this->m_min != 0) {
             NFAStateType* intermediate_state = nfa->new_state();
-            m_operand->add(nfa, intermediate_state);
+            m_operand->add_to_nfa(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
         for (uint32_t i = this->m_min + 1; i < this->m_max; ++i) {
-            m_operand->add(nfa, end_state);
+            m_operand->add_to_nfa(nfa, end_state);
             NFAStateType* intermediate_state = nfa->new_state();
-            m_operand->add(nfa, intermediate_state);
+            m_operand->add_to_nfa(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
-        m_operand->add(nfa, end_state);
+        m_operand->add_to_nfa(nfa, end_state);
     }
     nfa->set_root(saved_root);
 }
@@ -967,8 +970,9 @@ auto RegexASTMultiplication<NFAStateType>::serialize(bool const with_tags) -> st
 }
 
 template <typename NFAStateType>
-void RegexASTCapture<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
-    m_group_regex_ast->add(nfa, end_state);
+void RegexASTCapture<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state)
+        const {
+    m_group_regex_ast->add_to_nfa(nfa, end_state);
 }
 
 template <typename NFAStateType>
@@ -1109,9 +1113,13 @@ auto RegexASTGroup<NFAStateType>::complement(std::vector<Range> const& ranges
 }
 
 template <typename NFAStateType>
-void RegexASTGroup<NFAStateType>::add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
-    std::sort(this->m_ranges.begin(), this->m_ranges.end());
-    std::vector<Range> merged_ranges = RegexASTGroup::merge(this->m_ranges);
+void RegexASTGroup<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state)
+        const {
+    // TODO: there should be a better way to do this with a set and keep m_ranges sorted, but we
+    // have to consider removing overlap + taking the compliment.
+    std::vector<Range> merged_ranges = m_ranges;
+    std::sort(merged_ranges.begin(), merged_ranges.end());
+    merged_ranges = merge(merged_ranges);
     if (this->m_negate) {
         merged_ranges = complement(merged_ranges);
     }

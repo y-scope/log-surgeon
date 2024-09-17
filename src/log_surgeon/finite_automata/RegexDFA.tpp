@@ -42,10 +42,9 @@ template <typename DFAStateType>
 template <typename NFAStateType>
 auto RegexDFA<DFAStateType>::new_state(std::set<NFAStateType*> const& nfa_state_set
 ) -> DFAStateType* {
-    std::unique_ptr<DFAStateType> ptr = std::make_unique<DFAStateType>();
-    m_states.push_back(std::move(ptr));
-    DFAStateType* dfa_state = m_states.back().get();
-    for (NFAStateType const* nfa_state : nfa_state_set) {
+    m_states.emplace_back(std::make_unique<DFAStateType>());
+    auto* dfa_state = m_states.back().get();
+    for (auto const* nfa_state : nfa_state_set) {
         if (nfa_state->is_accepting()) {
             dfa_state->add_matching_variable_id(nfa_state->get_matching_variable_id());
         }
@@ -64,8 +63,8 @@ auto RegexDFA<DFAStateType>::get_intersect(std::unique_ptr<RegexDFA> const& dfa_
     while (false == unvisited_pairs.empty()) {
         auto current_pair_it = unvisited_pairs.begin();
         if (current_pair_it->is_accepting()) {
-            auto& matching_variable_ids = current_pair_it->get_first_matching_variable_ids();
-            schema_types.insert(matching_variable_ids.begin(), matching_variable_ids.end());
+            auto const& matching_variable_ids = current_pair_it->get_matching_variable_ids();
+            schema_types.insert(matching_variable_ids.cbegin(), matching_variable_ids.cend());
         }
         visited_pairs.insert(*current_pair_it);
         current_pair_it->get_reachable_pairs(visited_pairs, unvisited_pairs);
