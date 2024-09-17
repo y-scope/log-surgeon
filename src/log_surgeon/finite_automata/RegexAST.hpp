@@ -132,7 +132,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) -> void override;
+    auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
     /**
      * serialize the RegexASTEmpty into a string
@@ -755,10 +755,10 @@ template <typename NFAStateType>
 RegexASTEmpty<NFAStateType>::RegexASTEmpty() = default;
 
 template <typename NFAStateType>
-void RegexASTEmpty<NFAStateType>::add(
+void RegexASTEmpty<NFAStateType>::add_to_nfa(
         [[maybe_unused]] RegexNFA<NFAStateType>* nfa,
         [[maybe_unused]] NFAStateType* end_state
-) {
+) const {
     // DO NOTHING
 }
 
