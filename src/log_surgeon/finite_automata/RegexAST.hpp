@@ -18,7 +18,7 @@
 
 namespace log_surgeon::finite_automata {
 
-// TODO: renamed RegexAST to RegexASTNode
+// TODO: rename `RegexAST` to `RegexASTNode`
 template <typename NFAStateType>
 class RegexAST {
 public:
