@@ -393,7 +393,7 @@ template <typename NFAStateType, typename DFAStateType>
 void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
     finite_automata::RegexNFA<NFAStateType> nfa;
     for (auto const& rule : m_rules) {
-        rule.add_ast(&nfa);
+        rule.add_to_nfa(&nfa);
     }
     nfa.reverse();
     m_dfa = nfa_to_dfa(nfa);
