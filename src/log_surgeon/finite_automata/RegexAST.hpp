@@ -789,7 +789,7 @@ void RegexASTGroup<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFASta
         const {
     // TODO: there should be a better way to do this with a set and keep m_ranges sorted, but we
     // have to consider removing overlap + taking the compliment.
-    std::vector<Range> merged_ranges = m_ranges;
+    auto merged_ranges = m_ranges;
     std::sort(merged_ranges.begin(), merged_ranges.end());
     merged_ranges = merge(merged_ranges);
     if (this->m_negate) {
