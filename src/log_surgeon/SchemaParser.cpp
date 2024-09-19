@@ -37,6 +37,7 @@ namespace log_surgeon {
 SchemaParser::SchemaParser() {
     add_lexical_rules();
     add_productions();
+    RegexASTCaptureByte::reset_next_tag_id();
     generate();
 }
 

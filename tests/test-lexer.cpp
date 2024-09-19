@@ -92,8 +92,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         auto const schema_ast = schema.release_schema_ast_ptr();
         auto& capture_rule_ast
                 = dynamic_cast<log_surgeon::SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
-        std::vector<uint32_t> all_tags;
-        capture_rule_ast.m_regex_ptr->add_tags(all_tags);
+        capture_rule_ast.m_regex_ptr->assign_negative_and_collect_positive_descendent_tags();
 
         std::string expected_serialized_string
                 = "(Z)|(A(?<letter>((?<letter1>(a)|(b)))|((?<letter2>(c)|"
@@ -101,7 +100,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE(capture_rule_ast.m_regex_ptr->serialize(false) == expected_serialized_string);
 
         std::string expected_serialized_string_with_tags
-                = "(Z<~0><~1><~2><~3>)|(A((((a)|(b))<1><~2>)|(((c)|(d))<2><~1>))<0>B([0-9]{1,inf})<"
+                = "(Z<~0><~1><~2><~3>)|(A((((a)|(b))<0><~1>)|(((c)|(d))<1><~0>))<2>B([0-9]{1,inf})<"
                   "3>C)";
         REQUIRE(capture_rule_ast.m_regex_ptr->serialize(true)
                 == expected_serialized_string_with_tags);
