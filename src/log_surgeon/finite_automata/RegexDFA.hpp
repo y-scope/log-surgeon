@@ -108,6 +108,7 @@ private:
 using RegexDFAByteState = RegexDFAState<RegexDFAStateType::Byte>;
 using RegexDFAUTF8State = RegexDFAState<RegexDFAStateType::UTF8>;
 
+// TODO: rename `RegexDFA` to `DFA`
 template <typename DFAStateType>
 class RegexDFA {
 public:
