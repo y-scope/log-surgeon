@@ -35,7 +35,7 @@ auto get_intersect_for_query(
     for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
         LexicalRule rule(0, std::move(schema_var_ast->m_regex_ptr));
-        rule.add_ast(&nfa);
+        rule.add_to_nfa(&nfa);
     }
     auto dfa2 = ByteLexer::nfa_to_dfa(nfa);
     auto schema_types = dfa1->get_intersect(dfa2);
@@ -73,7 +73,7 @@ auto main() -> int {
             auto* var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
             LexicalRule rule(m_id_symbol.size(), std::move(var_ast->m_regex_ptr));
             m_id_symbol[m_id_symbol.size()] = var_ast->m_name;
-            rule.add_ast(&nfa);
+            rule.add_to_nfa(&nfa);
         }
         auto dfa = ByteLexer::nfa_to_dfa(nfa);
         get_intersect_for_query(m_id_symbol, dfa, "*1*");
