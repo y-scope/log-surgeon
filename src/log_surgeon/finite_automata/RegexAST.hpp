@@ -54,9 +54,9 @@ public:
     virtual auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void = 0;
 
     /**
-     * Serialize the AST into a string
+     * Serialize the AST with this node as the root.
      * @param with_tags
-     * @return string representing the AST
+     * @return A string representing the serialized AST.
      */
     virtual auto serialize(bool with_tags) -> std::string = 0;
 
@@ -74,6 +74,8 @@ public:
 
     /**
      * Traverse the AST and add positive and negative tags.
+     * @param all_tags
+     * @return The tags assigned to any descendant capture groups.
      */
     virtual auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> = 0;
 
@@ -136,18 +138,11 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    /**
-     * serialize the RegexASTLiteral into a string
-     * @param with_tags
-     * @return string representing the AST
-     */
     auto serialize(bool with_tags) -> std::string override;
 
-    /**
-     * Do nothing as RegexASTLiteral is a leaf node that is not a capture group
-     */
     auto add_tags([[maybe_unused]] std::vector<uint32_t>& all_tags
     ) -> std::vector<uint32_t> override {
+        // Do nothing as RegexASTLiteral is a leaf node that is not a capture group.
         return {};
     }
 
@@ -202,18 +197,11 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    /**
-     * serialize the RegexASTInteger into a string
-     * @param with_tags
-     * @return string representing the AST
-     */
     auto serialize(bool with_tags) -> std::string override;
 
-    /**
-     * Do nothing as RegexASTInteger is a leaf node that is not a capture group
-     */
     auto add_tags([[maybe_unused]] std::vector<uint32_t>& all_tags
     ) -> std::vector<uint32_t> override {
+        // Do nothing as RegexASTInteger is a leaf node that is not a capture group.
         return {};
     }
 
@@ -323,18 +311,11 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    /**
-     * serialize the RegexASTGroup into a string
-     * @param with_tags
-     * @return string representing the AST
-     */
     auto serialize(bool with_tags) -> std::string override;
 
-    /**
-     * Do nothing as RegexASTGroup is a leaf node that is not a capture group
-     */
     auto add_tags([[maybe_unused]] std::vector<uint32_t>& all_tags
     ) -> std::vector<uint32_t> override {
+        // Do nothing as RegexASTGroup is a leaf node that is not a capture group.
         return {};
     }
 
@@ -426,16 +407,8 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    /**
-     * serialize the RegexASTOr into a string
-     * @param with_tags
-     * @return string representing the AST
-     */
     auto serialize(bool with_tags) -> std::string override;
 
-    /**
-     * Traverse the AST and add positive and negative tags.
-     */
     auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> override;
 
     [[nodiscard]] auto get_left() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
@@ -506,16 +479,8 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    /**
-     * serialize the RegexASTCat into a string
-     * @param with_tags
-     * @return string representing the AST
-     */
     auto serialize(bool with_tags) -> std::string override;
 
-    /**
-     * Traverse the AST and add positive and negative tags.
-     */
     auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> override;
 
     [[nodiscard]] auto get_left() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
@@ -587,16 +552,8 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    /**
-     * serialize the RegexASTMultiplication into a string
-     * @param with_tags
-     * @return string representing the AST
-     */
     auto serialize(bool with_tags) -> std::string override;
 
-    /**
-     * Traverse the AST and add positive and negative tags.
-     */
     auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> override;
 
     [[nodiscard]] auto is_infinite() const -> bool { return this->m_max == 0; }
@@ -669,16 +626,8 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    /**
-     * serialize the RegexASTCapture into a string
-     * @param with_tags
-     * @return string representing the AST
-     */
     auto serialize(bool with_tags) -> std::string override;
 
-    /**
-     * Traverse the AST and add positive and negative tags.
-     */
     auto add_tags(std::vector<uint32_t>& all_tags) -> std::vector<uint32_t> override;
 
     [[nodiscard]] auto get_group_name() const -> std::string const& { return m_group_name; }
