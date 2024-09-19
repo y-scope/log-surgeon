@@ -95,6 +95,7 @@ private:
 using RegexNFAByteState = RegexNFAState<RegexNFAStateType::Byte>;
 using RegexNFAUTF8State = RegexNFAState<RegexNFAStateType::UTF8>;
 
+// TODO: rename `RegexNFA` to `NFA`
 template <typename NFAStateType>
 class RegexNFA {
 public:
