@@ -55,11 +55,13 @@ private:
 };
 
 /**
- * This class represents a pair of regex states. The intended use is for the two states in the pair
- * to belong to unique DFAs. A pair is considered accepting if both states are accepting in
- * their respective DFA. A different pair is considered reachable if both its states are reachable
- * in their respective DFAs from this pair's states. The first state in the pair contains the
- * variable types the pair matches.
+ * Class for a pair of DFA states, where each state in the pair belongs to a different DFA. It is
+ * intended to facilitate the creation of a intersection DFA from two separate DFAs. Each instance
+ * indicates a state in the intersection DFA with the following rules apply:
+ * - A pair is considered accepting if both states are accepting in their respective DFA.
+ * - A different pair is considered reachable if both its states are reachable in their respective
+ *   DFAs from this pair's states.
+ * NOTE: only the first state in the pair contains the variable types the pair matches.
  */
 template <typename DFAState>
 class RegexDFAStatePair {
