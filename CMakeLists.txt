@@ -193,14 +193,6 @@ if (NOT Microsoft.GSL_FOUND)
         "${LCHIP_THIRD_PARTY_INCLUDE_DIR}"
         )
 endif ()
-if (NOT fmt_FOUND)
-    install(
-            DIRECTORY
-            "${fmt_SOURCE_DIR}/include/fmt"
-            DESTINATION
-            "${LCHIP_THIRD_PARTY_INCLUDE_DIR}"
-    )
-endif ()
 
 configure_package_config_file(
     ${CMAKE_CURRENT_LIST_DIR}/cmake/log_surgeon-config.cmake.in
