@@ -28,13 +28,6 @@ if (NOT Microsoft.GSL_FOUND)
 endif()
 
 find_package(fmt 8.0.1 REQUIRED QUIET)
-if (NOT fmt_FOUND)
-    FetchContent_Declare(fmt
-                         GIT_REPOSITORY https://github.com/fmtlib/fmt
-                         GIT_TAG 8.0.1
-    )
-    FetchContent_MakeAvailable(fmt)
-endif()
 if(fmt_FOUND)
     message(STATUS "Found fmt ${fmt_VERSION}")
 else()
