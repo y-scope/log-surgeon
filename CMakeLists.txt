@@ -124,7 +124,6 @@ if (fmt_FOUND)
     target_link_libraries(log_surgeon PUBLIC fmt::fmt)
 else()
     target_link_libraries(log_surgeon PUBLIC fmt)
-    )
 endif()
 
 target_include_directories(log_surgeon
