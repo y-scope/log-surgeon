@@ -73,14 +73,6 @@ public:
      */
     [[nodiscard]] virtual auto serialize() const -> std::string = 0;
 
-    [[nodiscard]] auto serialize_negative_tags() const -> std::string {
-        std::string serialized_string;
-        for (auto const negative_tag : m_negative_tags) {
-            serialized_string += "<~" + std::to_string(negative_tag) + ">";
-        }
-        return serialized_string;
-    }
-
     [[nodiscard]] auto get_subtree_positive_tags() const -> std::set<uint32_t> const& {
         return m_subtree_positive_tags;
     }
@@ -102,6 +94,14 @@ protected:
     auto operator=(RegexAST const& rhs) -> RegexAST& = default;
     RegexAST(RegexAST&& rhs) noexcept = default;
     auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = default;
+
+    [[nodiscard]] auto serialize_negative_tags() const -> std::string {
+        std::string serialized_string;
+        for (auto const negative_tag : m_negative_tags) {
+            serialized_string += "<~" + std::to_string(negative_tag) + ">";
+        }
+        return serialized_string;
+    }
 
 private:
     std::set<uint32_t> m_subtree_positive_tags;
