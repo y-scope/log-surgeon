@@ -40,6 +40,8 @@ if (NOT Microsoft.GSL_FOUND)
 endif()
 
 if (NOT fmt_FOUND)
+    # Force fmt to generate install rules
+    set(FMT_INSTALL ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(fmt)
 endif()
 
