@@ -7,6 +7,10 @@ project(log_surgeon
     LANGUAGES CXX
     )
 
+if (POLICY CMP0077)
+    cmake_policy(SET CMP0077 NEW)
+endif()
+
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
     find_package(Catch2 3 REQUIRED)
     include(Catch)
