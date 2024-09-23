@@ -68,18 +68,14 @@ public:
     virtual auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void = 0;
 
     /**
-     * Serialize the AST with this node as the root.
+     * Serializes the AST with this node as the root.
      * @return A string representing the serialized AST.
      */
-    virtual auto serialize() -> std::string = 0;
+    [[nodiscard]] virtual auto serialize() const -> std::string = 0;
 
-    /**
-     * Serialize the negative tags
-     * @return
-     */
-    auto serialize_negative_tags() -> std::string {
+    [[nodiscard]] auto serialize_negative_tags() const -> std::string {
         std::string serialized_string;
-        for (auto const& negative_tag : m_negative_tags) {
+        for (auto const negative_tag : m_negative_tags) {
             serialized_string += "<~" + std::to_string(negative_tag) + ">";
         }
         return serialized_string;
@@ -153,7 +149,7 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    auto serialize() -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::string override;
 
     [[nodiscard]] auto get_character() const -> uint32_t const& { return m_character; }
 
@@ -206,7 +202,7 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    auto serialize() -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::string override;
 
     [[nodiscard]] auto get_digits() const -> std::vector<uint32_t> const& { return m_digits; }
 
@@ -314,7 +310,7 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    auto serialize() -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::string override;
 
     auto add_range(uint32_t min, uint32_t max) -> void { m_ranges.emplace_back(min, max); }
 
@@ -405,14 +401,14 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    auto serialize() -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::string override;
 
-    [[nodiscard]] auto get_left() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
-        return m_left;
+    [[nodiscard]] auto get_left() const -> RegexAST<NFAStateType> const* {
+        return m_left.get();
     }
 
-    [[nodiscard]] auto get_right() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
-        return m_right;
+    [[nodiscard]] auto get_right() const -> RegexAST<NFAStateType> const* {
+        return m_right.get();
     }
 
 private:
@@ -476,7 +472,7 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    auto serialize() -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::string override;
 
     [[nodiscard]] auto get_left() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
         return m_left;
@@ -548,7 +544,7 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    auto serialize() -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::string override;
 
     [[nodiscard]] auto is_infinite() const -> bool { return this->m_max == 0; }
 
@@ -628,7 +624,7 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    auto serialize() -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::string override;
 
     [[nodiscard]] auto get_group_name() const -> std::string const& { return m_group_name; }
 
@@ -659,7 +655,7 @@ void RegexASTLiteral<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAS
 }
 
 template <typename NFAStateType>
-auto RegexASTLiteral<NFAStateType>::serialize() -> std::string {
+[[nodiscard]] auto RegexASTLiteral<NFAStateType>::serialize() const -> std::string {
     auto serialized_string = std::string(1, static_cast<char>(m_character));
     serialized_string += this->serialize_negative_tags();
     return serialized_string;
@@ -687,10 +683,10 @@ void RegexASTInteger<NFAStateType>::add_to_nfa(
 }
 
 template <typename NFAStateType>
-auto RegexASTInteger<NFAStateType>::serialize() -> std::string {
+[[nodiscard]] auto RegexASTInteger<NFAStateType>::serialize() const -> std::string {
     std::string serialized_string;
     for (auto const& digit : m_digits) {
-        serialized_string += std::to_string('0' + digit);
+        serialized_string.push_back(static_cast<char>('0' + digit));
     }
     serialized_string += this->serialize_negative_tags();
     return serialized_string;
@@ -717,7 +713,7 @@ void RegexASTOr<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateT
 }
 
 template <typename NFAStateType>
-auto RegexASTOr<NFAStateType>::serialize() -> std::string {
+[[nodiscard]] auto RegexASTOr<NFAStateType>::serialize() const -> std::string {
     std::string serialized_string = "(" + m_left->serialize() + ")|(" + m_right->serialize() + ")";
     serialized_string += this->serialize_negative_tags();
     return serialized_string;
@@ -746,7 +742,7 @@ void RegexASTCat<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAState
 }
 
 template <typename NFAStateType>
-auto RegexASTCat<NFAStateType>::serialize() -> std::string {
+[[nodiscard]] auto RegexASTCat<NFAStateType>::serialize() const -> std::string {
     std::string serialized_string = m_left->serialize() + m_right->serialize();
     serialized_string += this->serialize_negative_tags();
     return serialized_string;
@@ -801,7 +797,7 @@ void RegexASTMultiplication<NFAStateType>::add_to_nfa(
 }
 
 template <typename NFAStateType>
-auto RegexASTMultiplication<NFAStateType>::serialize() -> std::string {
+[[nodiscard]] auto RegexASTMultiplication<NFAStateType>::serialize() const -> std::string {
     std::string serialized_string = m_operand->serialize() + "{" + std::to_string(m_min) + ",";
     if (is_infinite()) {
         serialized_string += "inf";
@@ -820,7 +816,7 @@ void RegexASTCapture<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAS
 }
 
 template <typename NFAStateType>
-auto RegexASTCapture<NFAStateType>::serialize() -> std::string {
+[[nodiscard]] auto RegexASTCapture<NFAStateType>::serialize() const -> std::string {
     std::string serialized_string = "(";
     serialized_string += m_group_regex_ast->serialize() + ")";
     serialized_string += "<" + std::to_string(m_tag) + ">" + this->serialize_negative_tags();
@@ -956,7 +952,7 @@ void RegexASTGroup<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFASta
 }
 
 template <typename NFAStateType>
-auto RegexASTGroup<NFAStateType>::serialize() -> std::string {
+[[nodiscard]] auto RegexASTGroup<NFAStateType>::serialize() const -> std::string {
     std::string serialized_string;
     serialized_string += "[";
     if (m_negate) {
