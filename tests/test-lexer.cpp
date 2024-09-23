@@ -93,15 +93,10 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         auto& capture_rule_ast
                 = dynamic_cast<log_surgeon::SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
 
-        std::string expected_serialized_string
-                = "(Z)|(A(?<letter>((?<letter1>(a)|(b)))|((?<letter2>(c)|"
-                  "(d))))B(?<containerID>[0-9]{1,inf})C)";
-        REQUIRE(capture_rule_ast.m_regex_ptr->serialize(false) == expected_serialized_string);
-
         std::string expected_serialized_string_with_tags
                 = "(Z<~0><~1><~2><~3>)|(A((((a)|(b))<0><~1>)|(((c)|(d))<1><~0>))<2>B([0-9]{1,inf})<"
                   "3>C)";
-        REQUIRE(capture_rule_ast.m_regex_ptr->serialize(true)
+        REQUIRE(capture_rule_ast.m_regex_ptr->serialize()
                 == expected_serialized_string_with_tags);
     }
 }
