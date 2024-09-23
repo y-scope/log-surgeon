@@ -101,14 +101,30 @@ set(LCHIP_THIRD_PARTY_INCLUDE_DIR "${LCHIP_INSTALL_INCLUDE_DIR}/log_surgeon/thir
 
 add_library(log_surgeon ${SOURCE_FILES})
 add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
+
 if (Microsoft.GSL_FOUND)
     target_link_libraries(log_surgeon
                           PUBLIC
                           Microsoft.GSL::GSL
     )
+else()
+    # Since the user doesn't have GSL installed, use the GSL headers directly.
+    # NOTE:
+    # - We can't link against the `Microsoft.GSL::GSL` target since that would require adding `GSL`
+    #   to the `install` command and force the user to have GSL installed when using log-surgeon.
+    # - At install time, we'll copy GSL into log-surgeon's third-party includes directory.
+    target_include_directories(log_surgeon
+                               PUBLIC
+                               $<BUILD_INTERFACE:${GSL_SOURCE_DIR}/include>
+                               $<INSTALL_INTERFACE:${LCHIP_THIRD_PARTY_INCLUDE_DIR}>
+    )
 endif()
+
 if (fmt_FOUND)
     target_link_libraries(log_surgeon PUBLIC fmt::fmt)
+else()
+    target_link_libraries(log_surgeon PUBLIC fmt)
+    )
 endif()
 
 target_include_directories(log_surgeon
@@ -118,25 +134,6 @@ target_include_directories(log_surgeon
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     )
-if (NOT Microsoft.GSL_FOUND)
-    # Since the user doesn't have GSL installed, use the GSL headers directly.
-    # NOTE:
-    # - We can't link against the `Microsoft.GSL::GSL` target since that would require adding `GSL`
-    #   to the `install` command and force the user to have GSL installed when using log-surgeon.
-    # - At install time, we'll copy GSL into log-surgeon's third-party includes directory.
-    target_include_directories(log_surgeon
-            PUBLIC
-            $<BUILD_INTERFACE:${GSL_SOURCE_DIR}/include>
-            $<INSTALL_INTERFACE:${LCHIP_THIRD_PARTY_INCLUDE_DIR}>
-    )
-endif()
-if (NOT fmt_FOUND)
-    target_include_directories(log_surgeon
-                               PUBLIC
-                               $<BUILD_INTERFACE:${fmt_SOURCE_DIR}/include>
-                               $<INSTALL_INTERFACE:${LCHIP_THIRD_PARTY_INCLUDE_DIR}>
-    )
-endif()
 
 target_compile_features(log_surgeon
     PRIVATE cxx_std_20
