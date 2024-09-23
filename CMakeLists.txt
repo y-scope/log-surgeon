@@ -35,9 +35,6 @@ if (NOT fmt_FOUND)
     )
     FetchContent_MakeAvailable(fmt)
 endif()
-if (NOT fmt_FOUND)
-    message(FATAL_ERROR "Could not find fmt.")
-endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
