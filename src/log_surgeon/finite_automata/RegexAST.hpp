@@ -403,13 +403,9 @@ public:
 
     [[nodiscard]] auto serialize() const -> std::string override;
 
-    [[nodiscard]] auto get_left() const -> RegexAST<NFAStateType> const* {
-        return m_left.get();
-    }
+    [[nodiscard]] auto get_left() const -> RegexAST<NFAStateType> const* { return m_left.get(); }
 
-    [[nodiscard]] auto get_right() const -> RegexAST<NFAStateType> const* {
-        return m_right.get();
-    }
+    [[nodiscard]] auto get_right() const -> RegexAST<NFAStateType> const* { return m_right.get(); }
 
 private:
     std::unique_ptr<RegexAST<NFAStateType>> m_left;
