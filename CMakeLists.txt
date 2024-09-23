@@ -142,6 +142,13 @@ target_compile_definitions(log_surgeon
     _FILE_OFFSET_BITS=64
     )
 
+# Check if fmt::fmt is available after fetching
+if (TARGET fmt::fmt)
+    message(STATUS "fmt::fmt target is available.")
+else()
+    message(FATAL_ERROR "fmt::fmt target is not available.")
+endif()
+
 install(
     TARGETS
     log_surgeon
