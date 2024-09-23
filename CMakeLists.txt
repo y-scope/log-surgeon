@@ -118,7 +118,7 @@ else()
     #   to the `install` command and force the user to have GSL installed when using log-surgeon.
     # - At install time, we'll copy GSL into log-surgeon's third-party includes directory.
     target_include_directories(log_surgeon
-            PUBLIC 
+            PUBLIC
             $<BUILD_INTERFACE:${GSL_SOURCE_DIR}/include>
             $<INSTALL_INTERFACE:${LCHIP_THIRD_PARTY_INCLUDE_DIR}>
             )
