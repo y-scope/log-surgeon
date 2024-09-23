@@ -101,13 +101,16 @@ set(LCHIP_THIRD_PARTY_INCLUDE_DIR "${LCHIP_INSTALL_INCLUDE_DIR}/log_surgeon/thir
 
 add_library(log_surgeon ${SOURCE_FILES})
 add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
-target_link_libraries(log_surgeon PRIVATE fmt::fmt)
+if (fmt_FOUND)
+    target_link_libraries(log_surgeon PRIVATE fmt::fmt)
+endif()
 if (Microsoft.GSL_FOUND)
     target_link_libraries(log_surgeon
                           PUBLIC
                           Microsoft.GSL::GSL
     )
 endif()
+
 target_include_directories(log_surgeon
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
@@ -125,6 +128,13 @@ if (NOT Microsoft.GSL_FOUND)
             PUBLIC
             $<BUILD_INTERFACE:${GSL_SOURCE_DIR}/include>
             $<INSTALL_INTERFACE:${LCHIP_THIRD_PARTY_INCLUDE_DIR}>
+    )
+endif()
+if (NOT fmt_FOUND)
+    target_include_directories(log_surgeon
+                               PUBLIC
+                               $<BUILD_INTERFACE:${fmt_SOURCE_DIR}/include>
+                               $<INSTALL_INTERFACE:${LCHIP_THIRD_PARTY_INCLUDE_DIR}>
     )
 endif()
 
@@ -186,6 +196,14 @@ if (NOT Microsoft.GSL_FOUND)
         DESTINATION
         "${LCHIP_THIRD_PARTY_INCLUDE_DIR}"
         )
+endif ()
+if (NOT fmt_FOUND)
+    install(
+            DIRECTORY
+            "${fmt_SOURCE_DIR}/include/gsl"
+            DESTINATION
+            "${LCHIP_THIRD_PARTY_INCLUDE_DIR}"
+    )
 endif ()
 
 configure_package_config_file(
