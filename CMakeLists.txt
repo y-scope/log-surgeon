@@ -101,14 +101,14 @@ set(LCHIP_THIRD_PARTY_INCLUDE_DIR "${LCHIP_INSTALL_INCLUDE_DIR}/log_surgeon/thir
 
 add_library(log_surgeon ${SOURCE_FILES})
 add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
-if (fmt_FOUND)
-    target_link_libraries(log_surgeon PRIVATE fmt::fmt)
-endif()
 if (Microsoft.GSL_FOUND)
     target_link_libraries(log_surgeon
                           PUBLIC
                           Microsoft.GSL::GSL
     )
+endif()
+if (fmt_FOUND)
+    target_link_libraries(log_surgeon PUBLIC fmt::fmt)
 endif()
 
 target_include_directories(log_surgeon
@@ -200,7 +200,7 @@ endif ()
 if (NOT fmt_FOUND)
     install(
             DIRECTORY
-            "${fmt_SOURCE_DIR}/include/gsl"
+            "${fmt_SOURCE_DIR}/include/fmt"
             DESTINATION
             "${LCHIP_THIRD_PARTY_INCLUDE_DIR}"
     )
