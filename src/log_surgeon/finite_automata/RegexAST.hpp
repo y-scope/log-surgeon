@@ -572,10 +572,14 @@ class RegexASTCapture : public RegexAST<NFAStateType> {
 public:
     ~RegexASTCapture() override = default;
 
-    RegexASTCapture(std::string group_name, std::unique_ptr<RegexAST<NFAStateType>> group_regex_ast)
+    RegexASTCapture(
+            std::string group_name,
+            std::unique_ptr<RegexAST<NFAStateType>> group_regex_ast,
+            uint32_t const tag
+    )
             : m_group_name(std::move(group_name)),
               m_group_regex_ast(std::move(group_regex_ast)),
-              m_tag(m_next_tag_id++) {
+              m_tag(tag) {
         RegexAST<NFAStateType>::set_subtree_positive_tags(
                 m_group_regex_ast->get_subtree_positive_tags()
         );
@@ -642,11 +646,7 @@ public:
 
     [[nodiscard]] auto get_tag() const -> uint32_t { return m_tag; }
 
-    static auto reset_next_tag_id() -> void { m_next_tag_id = 0; }
-
 private:
-    static inline uint32_t m_next_tag_id{0};
-
     std::string m_group_name;
     std::unique_ptr<RegexAST<NFAStateType>> m_group_regex_ast;
     uint32_t m_tag;

@@ -12,6 +12,8 @@
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/utils.hpp>
 
+using ParserValueRegex = log_surgeon::ParserValue<std::unique_ptr<
+        log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::RegexNFAByteState>>>;
 using RegexASTByte
         = log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::RegexNFAByteState>;
 using RegexASTGroupByte = log_surgeon::finite_automata::RegexASTGroup<
@@ -37,7 +39,6 @@ namespace log_surgeon {
 SchemaParser::SchemaParser() {
     add_lexical_rules();
     add_productions();
-    RegexASTCaptureByte::reset_next_tag_id();
     generate();
 }
 
@@ -155,13 +156,21 @@ auto SchemaParser::existing_schema_rule(NonTerminal* m) -> unique_ptr<SchemaAST>
     return schema_ast;
 }
 
+auto SchemaParser::regex_capture_rule(NonTerminal* m) -> std::unique_ptr<ParserAST> {
+    auto* r4 = dynamic_cast<IdentifierAST*>(m->non_terminal_cast(3)->get_parser_ast().get());
+    auto& r6 = m->non_terminal_cast(5)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
+    return std::make_unique<ParserValueRegex>(make_unique<RegexASTCaptureByte>(
+            r4->m_name,
+            std::move(r6),
+            m_capture_group_id_generator.assign_next_id()
+    ));
+}
+
 static auto identity_rule_ParserASTSchema(NonTerminal* m) -> unique_ptr<SchemaAST> {
     unique_ptr<ParserAST>& r1 = m->non_terminal_cast(0)->get_parser_ast();
     std::unique_ptr<SchemaAST> schema_ast(dynamic_cast<SchemaAST*>(r1.release()));
     return schema_ast;
 }
-
-using ParserValueRegex = ParserValue<unique_ptr<RegexASTByte>>;
 
 static auto regex_identity_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     return unique_ptr<ParserAST>(new ParserValueRegex(
@@ -281,14 +290,6 @@ static auto regex_range_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto* r2_ptr = dynamic_cast<RegexASTLiteralByte*>(r2.get());
     return unique_ptr<ParserAST>(
             new ParserValueRegex(unique_ptr<RegexASTByte>(new RegexASTGroupByte(r1_ptr, r2_ptr)))
-    );
-}
-
-static auto regex_capture_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
-    auto* r4 = dynamic_cast<IdentifierAST*>(m->non_terminal_cast(3)->get_parser_ast().get());
-    auto& r6 = m->non_terminal_cast(5)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
-    return std::make_unique<ParserValueRegex>(
-            make_unique<RegexASTCaptureByte>(r4->m_name, std::move(r6))
     );
 }
 
@@ -604,7 +605,7 @@ void SchemaParser::add_productions() {
     add_production(
             "Literal",
             {"Lparen", "QuestionMark", "Langle", "Identifier", "Rangle", "Regex", "Rparen"},
-            regex_capture_rule
+            std::bind(&SchemaParser::regex_capture_rule, this, std::placeholders::_1)
     );
     add_production("Literal", {"Lparen", "Regex", "Rparen"}, regex_middle_identity_rule);
     for (auto const& [special_regex_char, special_regex_name] : m_special_regex_characters) {
