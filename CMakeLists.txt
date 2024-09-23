@@ -27,20 +27,16 @@ if (NOT Microsoft.GSL_FOUND)
     FetchContent_MakeAvailable(GSL)
 endif()
 
-find_package(fmt 8.0.1 QUIET)
+find_package(fmt QUIET CONFIG)
 if (NOT fmt_FOUND)
-    message(STATUS "fmt not found, fetching...")
     FetchContent_Declare(fmt
                          GIT_REPOSITORY https://github.com/fmtlib/fmt
-                         GIT_TAG 8.0.1
+                         GIT_TAG "v8.0.1"
+                         GIT_SHALLOW ON
     )
-    message(STATUS "Fetched fmt.")
     FetchContent_MakeAvailable(fmt)
-    find_package(fmt 8.0.1 REQUIRED)
 endif()
-if(fmt_FOUND)
-    message(STATUS "Found fmt ${fmt_VERSION}.")
-else()
+if (NOT fmt_FOUND)
     message(FATAL_ERROR "Could not find fmt.")
 endif()
 
