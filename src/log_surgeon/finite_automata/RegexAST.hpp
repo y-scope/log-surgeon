@@ -567,8 +567,10 @@ public:
             : m_group_name(std::move(group_name)),
               m_group_regex_ast(std::move(group_regex_ast)),
               m_tag(m_next_tag_id++) {
-        this->set_subtree_positive_tags(m_group_regex_ast->get_subtree_positive_tags());
-        this->add_subtree_positive_tags({m_tag});
+        RegexAST<NFAStateType>::set_subtree_positive_tags(
+                m_group_regex_ast->get_subtree_positive_tags()
+        );
+        RegexAST<NFAStateType>::add_subtree_positive_tags({m_tag});
     }
 
     RegexASTCapture(RegexASTCapture const& rhs)
@@ -578,7 +580,7 @@ public:
                       std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_group_regex_ast->clone())
               ),
               m_tag(rhs.m_tag) {
-        this->set_subtree_positive_tags(rhs.get_subtree_positive_tags());
+        RegexAST<NFAStateType>::set_subtree_positive_tags(rhs.get_subtree_positive_tags());
     }
 
     auto operator=(RegexASTCapture const& rhs) -> RegexASTCapture& = default;
@@ -653,7 +655,7 @@ void RegexASTLiteral<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAS
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTLiteral<NFAStateType>::serialize() const -> std::string {
     auto serialized_string = std::string(1, static_cast<char>(m_character));
-    serialized_string += this->serialize_negative_tags();
+    serialized_string += RegexAST<NFAStateType>::serialize_negative_tags();
     return serialized_string;
 }
 
@@ -684,7 +686,7 @@ template <typename NFAStateType>
     for (auto const& digit : m_digits) {
         serialized_string.push_back(static_cast<char>('0' + digit));
     }
-    serialized_string += this->serialize_negative_tags();
+    serialized_string += RegexAST<NFAStateType>::serialize_negative_tags();
     return serialized_string;
 }
 
@@ -697,8 +699,8 @@ RegexASTOr<NFAStateType>::RegexASTOr(
           m_right(std::move(right)) {
     m_left->set_negative_tags(m_right->get_subtree_positive_tags());
     m_right->set_negative_tags(m_left->get_subtree_positive_tags());
-    this->set_subtree_positive_tags(m_left->get_subtree_positive_tags());
-    this->add_subtree_positive_tags(m_right->get_subtree_positive_tags());
+    RegexAST<NFAStateType>::set_subtree_positive_tags(m_left->get_subtree_positive_tags());
+    RegexAST<NFAStateType>::add_subtree_positive_tags(m_right->get_subtree_positive_tags());
 }
 
 template <typename NFAStateType>
@@ -711,7 +713,7 @@ void RegexASTOr<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateT
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTOr<NFAStateType>::serialize() const -> std::string {
     std::string serialized_string = "(" + m_left->serialize() + ")|(" + m_right->serialize() + ")";
-    serialized_string += this->serialize_negative_tags();
+    serialized_string += RegexAST<NFAStateType>::serialize_negative_tags();
     return serialized_string;
 }
 
@@ -722,8 +724,8 @@ RegexASTCat<NFAStateType>::RegexASTCat(
 )
         : m_left(std::move(left)),
           m_right(std::move(right)) {
-    this->set_subtree_positive_tags(m_left->get_subtree_positive_tags());
-    this->add_subtree_positive_tags(m_right->get_subtree_positive_tags());
+    RegexAST<NFAStateType>::set_subtree_positive_tags(m_left->get_subtree_positive_tags());
+    RegexAST<NFAStateType>::add_subtree_positive_tags(m_right->get_subtree_positive_tags());
 }
 
 template <typename NFAStateType>
@@ -740,7 +742,7 @@ void RegexASTCat<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAState
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTCat<NFAStateType>::serialize() const -> std::string {
     std::string serialized_string = m_left->serialize() + m_right->serialize();
-    serialized_string += this->serialize_negative_tags();
+    serialized_string += RegexAST<NFAStateType>::serialize_negative_tags();
     return serialized_string;
 }
 
@@ -753,7 +755,7 @@ RegexASTMultiplication<NFAStateType>::RegexASTMultiplication(
         : m_operand(std::move(operand)),
           m_min(min),
           m_max(max) {
-    this->set_subtree_positive_tags(m_operand->get_subtree_positive_tags());
+    RegexAST<NFAStateType>::set_subtree_positive_tags(m_operand->get_subtree_positive_tags());
 }
 
 template <typename NFAStateType>
@@ -801,7 +803,7 @@ template <typename NFAStateType>
         serialized_string += std::to_string(m_max);
     }
     serialized_string += "}";
-    serialized_string += this->serialize_negative_tags();
+    serialized_string += RegexAST<NFAStateType>::serialize_negative_tags();
     return serialized_string;
 }
 
@@ -815,7 +817,7 @@ template <typename NFAStateType>
 [[nodiscard]] auto RegexASTCapture<NFAStateType>::serialize() const -> std::string {
     std::string serialized_string = "(";
     serialized_string += m_group_regex_ast->serialize() + ")";
-    serialized_string += "<" + std::to_string(m_tag) + ">" + this->serialize_negative_tags();
+    serialized_string += "<" + std::to_string(m_tag) + ">" + RegexAST<NFAStateType>::serialize_negative_tags();
     return serialized_string;
 }
 
@@ -963,7 +965,7 @@ template <typename NFAStateType>
         }
     }
     serialized_string += "]";
-    serialized_string += this->serialize_negative_tags();
+    serialized_string += RegexAST<NFAStateType>::serialize_negative_tags();
     return serialized_string;
 }
 }  // namespace log_surgeon::finite_automata
