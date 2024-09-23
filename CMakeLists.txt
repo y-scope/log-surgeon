@@ -27,11 +27,18 @@ if (NOT Microsoft.GSL_FOUND)
     FetchContent_MakeAvailable(GSL)
 endif()
 
-find_package(fmt 8.0.1 REQUIRED)
+find_package(fmt 8.0.1 REQUIRED QUIET)
+if (NOT fmt_FOUND)
+    FetchContent_Declare(fmt
+                         GIT_REPOSITORY https://github.com/fmtlib/fmt
+                         GIT_TAG 8.0.1
+    )
+    FetchContent_MakeAvailable(fmt)
+endif()
 if(fmt_FOUND)
     message(STATUS "Found fmt ${fmt_VERSION}")
 else()
-    message(FATAL_ERROR "Could not find static libraries for fmt")
+    message(FATAL_ERROR "Could not find fmt")
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
