@@ -108,9 +108,9 @@ add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
 
 if (Microsoft.GSL_FOUND)
     target_link_libraries(log_surgeon
-                          PUBLIC
-                          Microsoft.GSL::GSL
-    )
+            PUBLIC
+            Microsoft.GSL::GSL
+            )
 else()
     # Since the user doesn't have GSL installed, use the GSL headers directly.
     # NOTE:
@@ -118,21 +118,21 @@ else()
     #   to the `install` command and force the user to have GSL installed when using log-surgeon.
     # - At install time, we'll copy GSL into log-surgeon's third-party includes directory.
     target_include_directories(log_surgeon
-                               PUBLIC
-                               $<BUILD_INTERFACE:${GSL_SOURCE_DIR}/include>
-                               $<INSTALL_INTERFACE:${LCHIP_THIRD_PARTY_INCLUDE_DIR}>
-    )
+           PUBLIC
+           $<BUILD_INTERFACE:${GSL_SOURCE_DIR}/include>
+           $<INSTALL_INTERFACE:${LCHIP_THIRD_PARTY_INCLUDE_DIR}>
+            )
 endif()
 
 target_link_libraries(log_surgeon PUBLIC fmt::fmt)
 
 target_include_directories(log_surgeon
-    PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-    PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    )
+        PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        )
 
 target_compile_features(log_surgeon
     PRIVATE cxx_std_20
