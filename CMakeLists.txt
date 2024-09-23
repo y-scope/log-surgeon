@@ -41,7 +41,7 @@ endif()
 
 if (NOT fmt_FOUND)
     # Force fmt to generate install rules
-    set(FMT_INSTALL ON CACHE BOOL "" FORCE)
+    set(FMT_INSTALL ON CACHE BOOL "Enable installation for fmt." FORCE)
     FetchContent_MakeAvailable(fmt)
 endif()
 
@@ -150,13 +150,6 @@ target_compile_definitions(log_surgeon
     PRIVATE
     _FILE_OFFSET_BITS=64
     )
-
-# Check if fmt::fmt is available after fetching
-if (TARGET fmt::fmt)
-    message(STATUS "fmt::fmt target is available.")
-else()
-    message(FATAL_ERROR "fmt::fmt target is not available.")
-endif()
 
 install(
     TARGETS
