@@ -1,6 +1,10 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
 
+// C++20 has <format>
+#include <fmt/core.h>
+#include <fmt/ranges.h>
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -96,11 +100,16 @@ protected:
     auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = default;
 
     [[nodiscard]] auto serialize_negative_tags() const -> std::string {
-        std::string serialized_string;
-        for (auto const negative_tag : m_negative_tags) {
-            serialized_string += "<~" + std::to_string(negative_tag) + ">";
+        if (m_negative_tags.empty()) {
+            return "";
         }
-        return serialized_string;
+
+        std::vector<std::string> formatted_tags;
+        for (auto const tag : m_negative_tags) {
+            formatted_tags.push_back(fmt::format("<~{}>", tag));
+        }
+
+        return fmt::format("{}", fmt::join(formatted_tags, ""));
     }
 
 private:
@@ -654,8 +663,11 @@ void RegexASTLiteral<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAS
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTLiteral<NFAStateType>::serialize() const -> std::string {
-    auto serialized_string = std::string(1, static_cast<char>(m_character));
-    serialized_string += RegexAST<NFAStateType>::serialize_negative_tags();
+    auto serialized_string = fmt::format(
+            "{}{}",
+            static_cast<char>(m_character),
+            RegexAST<NFAStateType>::serialize_negative_tags()
+    );
     return serialized_string;
 }
 
@@ -682,11 +694,11 @@ void RegexASTInteger<NFAStateType>::add_to_nfa(
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTInteger<NFAStateType>::serialize() const -> std::string {
-    std::string serialized_string;
-    for (auto const& digit : m_digits) {
-        serialized_string.push_back(static_cast<char>('0' + digit));
-    }
-    serialized_string += RegexAST<NFAStateType>::serialize_negative_tags();
+    auto serialized_string = fmt::format(
+            "{}{}",
+            fmt::join(m_digits, ""),
+            RegexAST<NFAStateType>::serialize_negative_tags()
+    );
     return serialized_string;
 }
 
@@ -712,9 +724,15 @@ void RegexASTOr<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateT
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTOr<NFAStateType>::serialize() const -> std::string {
-    std::string serialized_string = "(" + m_left->serialize() + ")|(" + m_right->serialize() + ")";
-    serialized_string += RegexAST<NFAStateType>::serialize_negative_tags();
-    return serialized_string;
+    auto left_serialized = m_left ? m_left->serialize() : "null";
+    auto right_serialized = m_right ? m_right->serialize() : "null";
+
+    return fmt::format(
+            "({})|({}){}",
+            left_serialized,
+            right_serialized,
+            RegexAST<NFAStateType>::serialize_negative_tags()
+    );
 }
 
 template <typename NFAStateType>
@@ -741,9 +759,15 @@ void RegexASTCat<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAState
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTCat<NFAStateType>::serialize() const -> std::string {
-    std::string serialized_string = m_left->serialize() + m_right->serialize();
-    serialized_string += RegexAST<NFAStateType>::serialize_negative_tags();
-    return serialized_string;
+    auto left_serialized = m_left ? m_left->serialize() : "null";
+    auto right_serialized = m_right ? m_right->serialize() : "null";
+
+    return fmt::format(
+            "{}{}{}",
+            left_serialized,
+            right_serialized,
+            RegexAST<NFAStateType>::serialize_negative_tags()
+    );
 }
 
 template <typename NFAStateType>
@@ -796,15 +820,16 @@ void RegexASTMultiplication<NFAStateType>::add_to_nfa(
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTMultiplication<NFAStateType>::serialize() const -> std::string {
-    std::string serialized_string = m_operand->serialize() + "{" + std::to_string(m_min) + ",";
-    if (is_infinite()) {
-        serialized_string += "inf";
-    } else {
-        serialized_string += std::to_string(m_max);
-    }
-    serialized_string += "}";
-    serialized_string += RegexAST<NFAStateType>::serialize_negative_tags();
-    return serialized_string;
+    auto operand_serialized = m_operand ? m_operand->serialize() : "null";
+    auto max_string = is_infinite() ? "inf" : std::to_string(m_max);
+
+    return fmt::format(
+            "{}{{{},{}}}{}",
+            operand_serialized,
+            m_min,
+            max_string,
+            RegexAST<NFAStateType>::serialize_negative_tags()
+    );
 }
 
 template <typename NFAStateType>
@@ -815,10 +840,14 @@ void RegexASTCapture<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAS
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTCapture<NFAStateType>::serialize() const -> std::string {
-    std::string serialized_string = "(";
-    serialized_string += m_group_regex_ast->serialize() + ")";
-    serialized_string += "<" + std::to_string(m_tag) + ">" + RegexAST<NFAStateType>::serialize_negative_tags();
-    return serialized_string;
+    auto group_serialized = m_group_regex_ast ? m_group_regex_ast->serialize() : "null";
+
+    return fmt::format(
+            "({})<{}>{}",
+            group_serialized,
+            m_tag,
+            RegexAST<NFAStateType>::serialize_negative_tags()
+    );
 }
 
 template <typename NFAStateType>
@@ -951,22 +980,21 @@ void RegexASTGroup<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFASta
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTGroup<NFAStateType>::serialize() const -> std::string {
-    std::string serialized_string;
-    serialized_string += "[";
-    if (m_negate) {
-        serialized_string += "^";
-    }
+    std::string ranges_serialized;
     if (m_is_wildcard) {
-        serialized_string += "*";
+        ranges_serialized += "*";
     } else {
         for (auto const& [begin, end] : m_ranges) {
-            serialized_string += std::string(1, static_cast<char>(begin)) + "-"
-                                 + std::string(1, static_cast<char>(end));
+            ranges_serialized
+                    += fmt::format("{}-{}", static_cast<char>(begin), static_cast<char>(end));
         }
     }
-    serialized_string += "]";
-    serialized_string += RegexAST<NFAStateType>::serialize_negative_tags();
-    return serialized_string;
+    return fmt::format(
+            "[{}{}]{}",
+            m_negate ? "^" : "",
+            ranges_serialized,
+            RegexAST<NFAStateType>::serialize_negative_tags()
+    );
 }
 }  // namespace log_surgeon::finite_automata
 

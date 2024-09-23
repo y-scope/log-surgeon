@@ -27,6 +27,13 @@ if (NOT Microsoft.GSL_FOUND)
     FetchContent_MakeAvailable(GSL)
 endif()
 
+find_package(fmt 8.0.1 REQUIRED)
+if(fmt_FOUND)
+    message(STATUS "Found fmt ${fmt_VERSION}")
+else()
+    message(FATAL_ERROR "Could not find static libraries for fmt")
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -83,6 +90,7 @@ set(LCHIP_THIRD_PARTY_INCLUDE_DIR "${LCHIP_INSTALL_INCLUDE_DIR}/log_surgeon/thir
 
 add_library(log_surgeon ${SOURCE_FILES})
 add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
+target_link_libraries(log_surgeon PRIVATE fmt::fmt)
 if (Microsoft.GSL_FOUND)
     target_link_libraries(log_surgeon
                           PUBLIC
