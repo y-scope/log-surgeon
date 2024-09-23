@@ -24,7 +24,6 @@ if (NOT Microsoft.GSL_FOUND)
                          GIT_TAG "v4.0.0"
                          GIT_SHALLOW ON
     )
-    FetchContent_MakeAvailable(GSL)
 endif()
 
 find_package(fmt 8.0.1 QUIET)
@@ -33,6 +32,14 @@ if (NOT fmt_FOUND)
                          GIT_REPOSITORY https://github.com/fmtlib/fmt
                          GIT_TAG "8.0.1"
     )
+endif()
+
+# Declare the details of all fetched content before making them available.
+if (NOT Microsoft.GSL_FOUND)
+    FetchContent_MakeAvailable(GSL)
+endif()
+
+if (NOT fmt_FOUND)
     FetchContent_MakeAvailable(fmt)
 endif()
 
