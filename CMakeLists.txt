@@ -29,16 +29,18 @@ endif()
 
 find_package(fmt 8.0.1 QUIET)
 if (NOT fmt_FOUND)
+    message(STATUS "fmt not found, fetching...")
     FetchContent_Declare(fmt
                          GIT_REPOSITORY https://github.com/fmtlib/fmt
                          GIT_TAG 8.0.1
     )
+    message(STATUS "Fetched fmt.")
     FetchContent_MakeAvailable(fmt)
 endif()
 if(fmt_FOUND)
-    message(STATUS "Found fmt ${fmt_VERSION}")
+    message(STATUS "Found fmt ${fmt_VERSION}.")
 else()
-    message(FATAL_ERROR "Could not find fmt")
+    message(FATAL_ERROR "Could not find fmt.")
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
