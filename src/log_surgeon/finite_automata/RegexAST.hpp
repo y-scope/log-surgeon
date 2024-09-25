@@ -24,8 +24,9 @@ namespace log_surgeon::finite_automata {
 
 // TODO: rename `RegexAST` to `RegexASTNode`
 /**
- * Represents a node in an AST. Every capture group node contains a unique tag. Every node
- * also maintains two sets of tags:
+ * Base class for a Regex AST node.
+ * Unique integer tags are used to differentiate each capture group node. Every node will maintain
+ * two sets of tags:
  * 1. `m_subtree_positive_tags`: the set of tags matched by all capture groups within the subtree
  *    rooted at this node.
  * 2. `m_negative_tags`: the set of tags that are guaranteed to be unmatched when traversing this
@@ -34,7 +35,7 @@ namespace log_surgeon::finite_automata {
  * ASTs built using this class are assumed to be constructed in a bottom-up manner, where all
  * descendant nodes are created first.
  *
- * @tparam NFAStateType Determines whether this AST is used for byte lexing or UTF-8 lexing.
+ * @tparam NFAStateType Whether this AST is used for byte lexing or UTF-8 lexing.
  */
 template <typename NFAStateType>
 class RegexAST {
