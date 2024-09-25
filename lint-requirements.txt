@@ -1,2 +1,2 @@
-clang-format>=18.1.5
+clang-format~=18.1
 yamllint>=1.35.1
