@@ -57,12 +57,12 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE(nullptr != regex_ast_cat_ptr->get_right());
 
         auto* regex_ast_literal
-                = dynamic_cast<RegexASTLiteralByte*>(regex_ast_cat_ptr->get_left().get());
+                = dynamic_cast<RegexASTLiteralByte const*>(regex_ast_cat_ptr->get_left());
         REQUIRE(nullptr != regex_ast_literal);
         REQUIRE('u' == regex_ast_literal->get_character());
 
         auto* regex_ast_capture
-                = dynamic_cast<RegexASTCaptureByte*>(regex_ast_cat_ptr->get_right().get());
+                = dynamic_cast<RegexASTCaptureByte const*>(regex_ast_cat_ptr->get_right());
         REQUIRE(nullptr != regex_ast_capture);
         REQUIRE("uID" == regex_ast_capture->get_group_name());
 
