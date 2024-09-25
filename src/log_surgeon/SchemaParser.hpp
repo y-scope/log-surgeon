@@ -6,6 +6,9 @@
 #include <log_surgeon/LALR1Parser.hpp>
 
 namespace log_surgeon {
+/**
+ * Class for generating monotonically increasing integer IDs.
+ */
 class UniqueIdGenerator {
 public:
     [[nodiscard]] auto assign_next_id() -> uint32_t { return m_next_id++; }
@@ -111,7 +114,7 @@ private:
     /**
      * A semantic rule for regex capture groups that needs access to `m_capture_group_id_generator`.
      * @param m
-     * @return std::unique_ptr<SchemaAST>
+     * @return A unique pointer to the parsed regex capture group.
      */
     auto regex_capture_rule(NonTerminal* m) -> std::unique_ptr<ParserAST>;
 

@@ -81,12 +81,12 @@ public:
         return m_subtree_positive_tags;
     }
 
-    auto set_subtree_positive_tags(std::set<uint32_t> const& subtree_positive_tags) -> void {
-        m_subtree_positive_tags = subtree_positive_tags;
+    auto set_subtree_positive_tags(std::set<uint32_t> subtree_positive_tags) -> void {
+        m_subtree_positive_tags = std::move(subtree_positive_tags);
     }
 
-    auto add_subtree_positive_tags(std::set<uint32_t> const& subtree_positive_tags) -> void {
-        m_subtree_positive_tags.insert(subtree_positive_tags.begin(), subtree_positive_tags.end());
+    auto add_subtree_positive_tags(std::set<uint32_t> subtree_positive_tags) -> void {
+        m_subtree_positive_tags.merge(subtree_positive_tags);
     }
 
     auto set_negative_tags(std::set<uint32_t> negative_tags) -> void {
