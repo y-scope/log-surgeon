@@ -605,7 +605,7 @@ void SchemaParser::add_productions() {
     add_production(
             "Literal",
             {"Lparen", "QuestionMark", "Langle", "Identifier", "Rangle", "Regex", "Rparen"},
-            std::bind(&SchemaParser::regex_capture_rule, this, std::placeholders::_1)
+            [this](NonTerminal* m) { return regex_capture_rule(m); }
     );
     add_production("Literal", {"Lparen", "Regex", "Rparen"}, regex_middle_identity_rule);
     for (auto const& [special_regex_char, special_regex_name] : m_special_regex_characters) {
