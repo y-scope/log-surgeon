@@ -84,6 +84,10 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     }
 
     SECTION("Test AST with tags") {
+        // This test validates the serialization of a regex AST with named capture groups. The
+        // serialized output includes tags (<n> for positive matches, <~n> for negative matches) to
+        // indicate which capture groups are matched or unmatched at each node.
+
         schema.add_variable(
                 "capture",
                 "Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?<containerID>\\d+)C)",
