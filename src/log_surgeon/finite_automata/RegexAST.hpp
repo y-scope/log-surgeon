@@ -1,9 +1,6 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
 
-#include <fmt/core.h>
-#include <fmt/ranges.h>
-
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -15,6 +12,9 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <fmt/core.h>
+#include <fmt/ranges.h>
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/RegexNFA.hpp>
@@ -480,13 +480,9 @@ public:
 
     [[nodiscard]] auto serialize() const -> std::string override;
 
-    [[nodiscard]] auto get_left() const -> RegexAST<NFAStateType> const* {
-        return m_left.get();
-    }
+    [[nodiscard]] auto get_left() const -> RegexAST<NFAStateType> const* { return m_left.get(); }
 
-    [[nodiscard]] auto get_right() const -> RegexAST<NFAStateType> const* {
-        return m_right.get();
-    }
+    [[nodiscard]] auto get_right() const -> RegexAST<NFAStateType> const* { return m_right.get(); }
 
 private:
     std::unique_ptr<RegexAST<NFAStateType>> m_left;
