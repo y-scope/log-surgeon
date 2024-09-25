@@ -1,7 +1,6 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
 
-// C++20 has <format>
 #include <fmt/core.h>
 #include <fmt/ranges.h>
 
