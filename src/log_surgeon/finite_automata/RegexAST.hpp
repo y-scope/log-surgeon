@@ -105,8 +105,9 @@ protected:
         }
 
         std::vector<std::string> formatted_tags;
+        formatted_tags.reserve(m_negative_tags.size());
         for (auto const tag : m_negative_tags) {
-            formatted_tags.push_back(fmt::format("<~{}>", tag));
+            formatted_tags.emplace_back(fmt::format("<~{}>", tag));
         }
 
         return fmt::format("{}", fmt::join(formatted_tags, ""));
@@ -724,8 +725,8 @@ void RegexASTOr<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateT
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTOr<NFAStateType>::serialize() const -> std::string {
-    auto left_serialized = m_left ? m_left->serialize() : "null";
-    auto right_serialized = m_right ? m_right->serialize() : "null";
+    auto const left_serialized = (nullptr != m_left) ? m_left->serialize() : "null";
+    auto const right_serialized = (nullptr != m_right) ? m_right->serialize() : "null";
 
     return fmt::format(
             "({})|({}){}",
@@ -759,8 +760,8 @@ void RegexASTCat<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAState
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTCat<NFAStateType>::serialize() const -> std::string {
-    auto left_serialized = m_left ? m_left->serialize() : "null";
-    auto right_serialized = m_right ? m_right->serialize() : "null";
+    auto const left_serialized = (nullptr != m_left) ? m_left->serialize() : "null";
+    auto const right_serialized = (nullptr != m_right) ? m_right->serialize() : "null";
 
     return fmt::format(
             "{}{}{}",
@@ -820,8 +821,8 @@ void RegexASTMultiplication<NFAStateType>::add_to_nfa(
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTMultiplication<NFAStateType>::serialize() const -> std::string {
-    auto operand_serialized = m_operand ? m_operand->serialize() : "null";
-    auto max_string = is_infinite() ? "inf" : std::to_string(m_max);
+    auto const operand_serialized = (nullptr != m_operand) ? m_operand->serialize() : "null";
+    auto const max_string = is_infinite() ? "inf" : std::to_string(m_max);
 
     return fmt::format(
             "{}{{{},{}}}{}",
@@ -840,7 +841,8 @@ void RegexASTCapture<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAS
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTCapture<NFAStateType>::serialize() const -> std::string {
-    auto group_serialized = m_group_regex_ast ? m_group_regex_ast->serialize() : "null";
+    auto const group_serialized
+            = (nullptr != m_group_regex_ast) ? m_group_regex_ast->serialize() : "null";
 
     return fmt::format(
             "({})<{}>{}",
