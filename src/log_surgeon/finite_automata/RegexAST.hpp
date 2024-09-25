@@ -481,11 +481,11 @@ public:
 
     [[nodiscard]] auto serialize() const -> std::string override;
 
-    [[nodiscard]] auto get_left() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
+    [[nodiscard]] auto get_left() const -> RegexAST<NFAStateType> const* {
         return m_left;
     }
 
-    [[nodiscard]] auto get_right() const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
+    [[nodiscard]] auto get_right() const -> RegexAST<NFAStateType> const* {
         return m_right;
     }
 
