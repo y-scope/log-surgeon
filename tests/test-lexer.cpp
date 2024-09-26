@@ -97,11 +97,11 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         auto& capture_rule_ast
                 = dynamic_cast<log_surgeon::SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
 
-        constexpr std::string_view cExpectedSerializedStringWithTags{
-                "(Z<~0><~1><~2><~3>)|(A((((a)|(b))<0><~1>)|(((c)|(d))<1><~0>))<2>B([0-9]{1,inf})<"
+        constexpr std::u32string_view cExpectedSerializedU32StringWithTags{
+                U"(Z<~0><~1><~2><~3>)|(A((((a)|(b))<0><~1>)|(((c)|(d))<1><~0>))<2>B([0-9]{1,inf})<"
                 "3>C)"
         };
         REQUIRE(capture_rule_ast.m_regex_ptr->serialize()
-                == std::string(cExpectedSerializedStringWithTags));
+                == std::u32string(cExpectedSerializedU32StringWithTags));
     }
 }

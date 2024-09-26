@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <gsl/pointers>
 #include <memory>
+#include <ranges>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -15,6 +16,7 @@
 
 #include <fmt/core.h>
 #include <fmt/ranges.h>
+#include <fmt/xchar.h>
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/RegexNFA.hpp>
@@ -75,7 +77,7 @@ public:
      * Serializes the AST with this node as the root.
      * @return A string representing the serialized AST.
      */
-    [[nodiscard]] virtual auto serialize() const -> std::string = 0;
+    [[nodiscard]] virtual auto serialize() const -> std::u32string = 0;
 
     [[nodiscard]] auto get_subtree_positive_tags() const -> std::set<uint32_t> const& {
         return m_subtree_positive_tags;
@@ -99,18 +101,22 @@ protected:
     RegexAST(RegexAST&& rhs) noexcept = default;
     auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = default;
 
-    [[nodiscard]] auto serialize_negative_tags() const -> std::string {
+    [[nodiscard]] auto serialize_negative_tags() const -> std::u32string {
         if (m_negative_tags.empty()) {
-            return "";
+            return U"";
         }
 
-        std::vector<std::string> formatted_tags;
-        formatted_tags.reserve(m_negative_tags.size());
-        for (auto const tag : m_negative_tags) {
-            formatted_tags.emplace_back(fmt::format("<~{}>", tag));
-        }
+        auto const transformed_negative_tags
+                = m_negative_tags | std::ranges::views::transform([](uint32_t tag) {
+                      return fmt::format("<~{}>", tag);
+                  });
+        auto const negative_tags_string
+                = fmt::format("{}", fmt::join(transformed_negative_tags, ""));
 
-        return fmt::format("{}", fmt::join(formatted_tags, ""));
+        return fmt::format(
+                U"{}",
+                std::u32string(negative_tags_string.begin(), negative_tags_string.end())
+        );
     }
 
 private:
@@ -159,7 +165,7 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    [[nodiscard]] auto serialize() const -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::u32string override;
 
     [[nodiscard]] auto get_character() const -> uint32_t const& { return m_character; }
 
@@ -212,7 +218,7 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    [[nodiscard]] auto serialize() const -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::u32string override;
 
     [[nodiscard]] auto get_digits() const -> std::vector<uint32_t> const& { return m_digits; }
 
@@ -320,7 +326,7 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    [[nodiscard]] auto serialize() const -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::u32string override;
 
     auto add_range(uint32_t min, uint32_t max) -> void { m_ranges.emplace_back(min, max); }
 
@@ -411,7 +417,7 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    [[nodiscard]] auto serialize() const -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::u32string override;
 
     [[nodiscard]] auto get_left() const -> RegexAST<NFAStateType> const* { return m_left.get(); }
 
@@ -478,7 +484,7 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    [[nodiscard]] auto serialize() const -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::u32string override;
 
     [[nodiscard]] auto get_left() const -> RegexAST<NFAStateType> const* { return m_left.get(); }
 
@@ -546,7 +552,7 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    [[nodiscard]] auto serialize() const -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::u32string override;
 
     [[nodiscard]] auto is_infinite() const -> bool { return this->m_max == 0; }
 
@@ -632,7 +638,7 @@ public:
      */
     auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
 
-    [[nodiscard]] auto serialize() const -> std::string override;
+    [[nodiscard]] auto serialize() const -> std::u32string override;
 
     [[nodiscard]] auto get_group_name() const -> std::string const& { return m_group_name; }
 
@@ -659,13 +665,12 @@ void RegexASTLiteral<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAS
 }
 
 template <typename NFAStateType>
-[[nodiscard]] auto RegexASTLiteral<NFAStateType>::serialize() const -> std::string {
-    auto serialized_string = fmt::format(
-            "{}{}",
-            static_cast<char>(m_character),
+[[nodiscard]] auto RegexASTLiteral<NFAStateType>::serialize() const -> std::u32string {
+    return fmt::format(
+            U"{}{}",
+            static_cast<char32_t>(m_character),
             RegexAST<NFAStateType>::serialize_negative_tags()
     );
-    return serialized_string;
 }
 
 template <typename NFAStateType>
@@ -690,13 +695,13 @@ void RegexASTInteger<NFAStateType>::add_to_nfa(
 }
 
 template <typename NFAStateType>
-[[nodiscard]] auto RegexASTInteger<NFAStateType>::serialize() const -> std::string {
-    auto serialized_string = fmt::format(
-            "{}{}",
-            fmt::join(m_digits, ""),
+[[nodiscard]] auto RegexASTInteger<NFAStateType>::serialize() const -> std::u32string {
+    auto const digits_string = fmt::format("{}", fmt::join(m_digits, ""));
+    return fmt::format(
+            U"{}{}",
+            std::u32string(digits_string.begin(), digits_string.end()),
             RegexAST<NFAStateType>::serialize_negative_tags()
     );
-    return serialized_string;
 }
 
 template <typename NFAStateType>
@@ -720,14 +725,11 @@ void RegexASTOr<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateT
 }
 
 template <typename NFAStateType>
-[[nodiscard]] auto RegexASTOr<NFAStateType>::serialize() const -> std::string {
-    auto const left_serialized = (nullptr != m_left) ? m_left->serialize() : "null";
-    auto const right_serialized = (nullptr != m_right) ? m_right->serialize() : "null";
-
+[[nodiscard]] auto RegexASTOr<NFAStateType>::serialize() const -> std::u32string {
     return fmt::format(
-            "({})|({}){}",
-            left_serialized,
-            right_serialized,
+            U"({})|({}){}",
+            nullptr != m_left ? m_left->serialize() : U"null",
+            nullptr != m_right ? m_right->serialize() : U"null",
             RegexAST<NFAStateType>::serialize_negative_tags()
     );
 }
@@ -755,14 +757,11 @@ void RegexASTCat<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAState
 }
 
 template <typename NFAStateType>
-[[nodiscard]] auto RegexASTCat<NFAStateType>::serialize() const -> std::string {
-    auto const left_serialized = (nullptr != m_left) ? m_left->serialize() : "null";
-    auto const right_serialized = (nullptr != m_right) ? m_right->serialize() : "null";
-
+[[nodiscard]] auto RegexASTCat<NFAStateType>::serialize() const -> std::u32string {
     return fmt::format(
-            "{}{}{}",
-            left_serialized,
-            right_serialized,
+            U"{}{}{}",
+            nullptr != m_left ? m_left->serialize() : U"null",
+            nullptr != m_right ? m_right->serialize() : U"null",
             RegexAST<NFAStateType>::serialize_negative_tags()
     );
 }
@@ -816,15 +815,15 @@ void RegexASTMultiplication<NFAStateType>::add_to_nfa(
 }
 
 template <typename NFAStateType>
-[[nodiscard]] auto RegexASTMultiplication<NFAStateType>::serialize() const -> std::string {
-    auto const operand_serialized = (nullptr != m_operand) ? m_operand->serialize() : "null";
-    auto const max_string = is_infinite() ? "inf" : std::to_string(m_max);
+[[nodiscard]] auto RegexASTMultiplication<NFAStateType>::serialize() const -> std::u32string {
+    auto const min_string = std::to_string(m_min);
+    auto const max_string = std::to_string(m_max);
 
     return fmt::format(
-            "{}{{{},{}}}{}",
-            operand_serialized,
-            m_min,
-            max_string,
+            U"{}{{{},{}}}{}",
+            nullptr != m_operand ? m_operand->serialize() : U"null",
+            std::u32string(min_string.begin(), min_string.end()),
+            is_infinite() ? U"inf" : std::u32string(max_string.begin(), max_string.end()),
             RegexAST<NFAStateType>::serialize_negative_tags()
     );
 }
@@ -836,13 +835,10 @@ void RegexASTCapture<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAS
 }
 
 template <typename NFAStateType>
-[[nodiscard]] auto RegexASTCapture<NFAStateType>::serialize() const -> std::string {
-    auto const group_serialized
-            = (nullptr != m_group_regex_ast) ? m_group_regex_ast->serialize() : "null";
-
+[[nodiscard]] auto RegexASTCapture<NFAStateType>::serialize() const -> std::u32string {
     return fmt::format(
-            "({})<{}>{}",
-            group_serialized,
+            U"({})<{}>{}",
+            nullptr != m_group_regex_ast ? m_group_regex_ast->serialize() : U"null",
             m_tag,
             RegexAST<NFAStateType>::serialize_negative_tags()
     );
@@ -977,19 +973,31 @@ void RegexASTGroup<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFASta
 }
 
 template <typename NFAStateType>
-[[nodiscard]] auto RegexASTGroup<NFAStateType>::serialize() const -> std::string {
-    std::string ranges_serialized;
+[[nodiscard]] auto RegexASTGroup<NFAStateType>::serialize() const -> std::u32string {
+    std::u32string ranges_serialized;
     if (m_is_wildcard) {
-        ranges_serialized += "*";
+        ranges_serialized += U"*";
     } else {
-        for (auto const& [begin, end] : m_ranges) {
-            ranges_serialized
-                    += fmt::format("{}-{}", static_cast<char>(begin), static_cast<char>(end));
+        auto const transformed_ranges
+                = m_ranges
+                  | std::ranges::views::transform([](std::pair<uint32_t, uint32_t> const& range) {
+                        auto const [begin, end] = range;
+                        return fmt::format(
+                                U"{}-{}",
+                                static_cast<char32_t>(begin),
+                                static_cast<char32_t>(end)
+                        );
+                    });
+        for (auto const& range_u32string : transformed_ranges) {
+            if (false == ranges_serialized.empty()) {
+                ranges_serialized += U", ";  // Add separator
+            }
+            ranges_serialized += range_u32string;
         }
     }
     return fmt::format(
-            "[{}{}]{}",
-            m_negate ? "^" : "",
+            U"[{}{}]{}",
+            m_negate ? U"^" : U"",
             ranges_serialized,
             RegexAST<NFAStateType>::serialize_negative_tags()
     );
