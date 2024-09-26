@@ -199,7 +199,7 @@ static auto regex_or_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
 static auto regex_match_zero_or_more_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
 
-    // To handle negative tags we need to split up the min == 0 and min > 0 case
+    // To handle negative tags we treat `R{0,N}` as `R{1,N} | ∅`.
     return make_unique<ParserValueRegex>(make_unique<RegexASTOrByte>(
             make_unique<RegexASTEmptyByte>(),
             make_unique<RegexASTMultiplicationByte>(std::move(r1), 1, 0)
@@ -245,7 +245,7 @@ static auto regex_match_range_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
 
     if (min == 0) {
-        // To handle negative tags we need to split up the min == 0 and min > 0 case
+        // To handle negative tags we treat `R{0,N}` as `R{1,N} | ∅`.
         return make_unique<ParserValueRegex>(make_unique<RegexASTOrByte>(
                 make_unique<RegexASTEmptyByte>(),
                 make_unique<RegexASTMultiplicationByte>(std::move(r1), 1, max)
