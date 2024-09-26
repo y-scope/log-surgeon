@@ -1,4 +1,6 @@
 #include <cstdint>
+#include <numeric>
+#include <ranges>
 #include <string>
 #include <vector>
 
@@ -10,6 +12,7 @@
 #include <log_surgeon/SchemaParser.hpp>
 
 using std::string;
+using std::u32string;
 using std::vector;
 
 using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<
@@ -26,19 +29,44 @@ using RegexASTOrByte
         = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::RegexNFAByteState>;
 using log_surgeon::SchemaVarAST;
 
-auto test_regex_ast(
-        string const& regex,
-        string const& expected_serialized_ast_without_tags,
-        string const& expected_serialized_ast_with_tags
-) -> void {
+auto test_regex_ast(string const& regex, u32string const& expected_serialized_ast) -> void {
     log_surgeon::Schema schema;
     schema.add_variable("capture", regex, -1);
     auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
-    vector<uint32_t> all_tags;
-    capture_rule_ast.m_regex_ptr->add_tags(all_tags);
-    REQUIRE(capture_rule_ast.m_regex_ptr->serialize(false) == expected_serialized_ast_without_tags);
-    REQUIRE(capture_rule_ast.m_regex_ptr->serialize(true) == expected_serialized_ast_with_tags);
+    auto const& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+
+    auto u32_to_u8 = [](char32_t c) -> std::string {
+        std::string u8;
+        if (c <= 0x7F) {
+            u8 += static_cast<char>(c);
+        } else if (c <= 0x7FF) {
+            u8 += static_cast<char>((c >> 6) | 0xC0);
+            u8 += static_cast<char>((c & 0x3F) | 0x80);
+        } else if (c <= 0xFFFF) {
+            u8 += static_cast<char>((c >> 12) | 0xE0);
+            u8 += static_cast<char>(((c >> 6) & 0x3F) | 0x80);
+            u8 += static_cast<char>((c & 0x3F) | 0x80);
+        } else {
+            u8 += static_cast<char>((c >> 18) | 0xF0);
+            u8 += static_cast<char>(((c >> 12) & 0x3F) | 0x80);
+            u8 += static_cast<char>(((c >> 6) & 0x3F) | 0x80);
+            u8 += static_cast<char>((c & 0x3F) | 0x80);
+        }
+        return u8;
+    };
+
+    auto const actual_u32string = capture_rule_ast.m_regex_ptr->serialize();
+    auto const actual_string = fmt::format(
+            "{}",
+            fmt::join(actual_u32string | std::ranges::views::transform(u32_to_u8), "")
+    );
+
+    auto const expected_string = fmt::format(
+            "{}",
+            fmt::join(expected_serialized_ast | std::ranges::views::transform(u32_to_u8), "")
+    );
+
+    REQUIRE(actual_string == expected_string);
 }
 
 TEST_CASE("Test the Schema class", "[Schema]") {
@@ -77,12 +105,12 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE(nullptr != regex_ast_cat_ptr->get_right());
 
         auto* regex_ast_literal
-                = dynamic_cast<RegexASTLiteralByte*>(regex_ast_cat_ptr->get_left().get());
+                = dynamic_cast<RegexASTLiteralByte const*>(regex_ast_cat_ptr->get_left());
         REQUIRE(nullptr != regex_ast_literal);
         REQUIRE('u' == regex_ast_literal->get_character());
 
         auto* regex_ast_capture
-                = dynamic_cast<RegexASTCaptureByte*>(regex_ast_cat_ptr->get_right().get());
+                = dynamic_cast<RegexASTCaptureByte const*>(regex_ast_cat_ptr->get_right());
         REQUIRE(nullptr != regex_ast_capture);
         REQUIRE("uID" == regex_ast_capture->get_group_name());
 
@@ -104,29 +132,30 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     }
 
     SECTION("Test AST with tags") {
+        // This test validates the serialization of a regex AST with named capture groups. The
+        // serialized output includes tags (<n> for positive matches, <~n> for negative matches) to
+        // indicate which capture groups are matched or unmatched at each node.
         test_regex_ast(
                 "Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?<containerID>\\d+)C)",
-                "(Z)|(A(?<letter>((?<letter1>(a)|(b)))|((?<letter2>(c)|(d))))B(?<containerID>[0-9]{"
-                "1,inf})C)",
-                "(Z<~0><~1><~2><~3>)|(A((((a)|(b))<1><~2>)|(((c)|(d))<2><~1>))<0>B([0-9]{1,inf})<3>"
-                "C)"
+                U"(Z<~0><~1><~2><~3>)|(A((((a)|(b))<0><~1>)|(((c)|(d))<1><~0>))<2>B([0-9]{1,inf})<"
+                "3>C)"
         );
     }
 
     SECTION("Test reptition regex") {
         // Repetition without capture groups untagged and tagged AST are the same
-        test_regex_ast("a{0,10}","()|(a{1,10})","()|(a{1,10})");
-        test_regex_ast("a{5,10}","a{5,10}","a{5,10}");
-        test_regex_ast("a*","()|(a{1,inf})","()|(a{1,inf})");
-        test_regex_ast("a+","a{1,inf}","a{1,inf}");
-        
+        test_regex_ast("a{0,10}", U"()|(a{1,10})");
+        test_regex_ast("a{5,10}", U"a{5,10}");
+        test_regex_ast("a*", U"()|(a{1,inf})");
+        test_regex_ast("a+", U"a{1,inf}");
+
         // Repetition with capture groups untagged and tagged AST are different
-        test_regex_ast("(?<letter>a){0,10}","()|((?<letter>a){1,10})","(<~0>)|((a)<0>{1,10})");
-        test_regex_ast("(?<letter>a){5,10}","(?<letter>a){5,10}","(a)<0>{5,10}");
-        test_regex_ast("(?<letter>a)*","()|((?<letter>a){1,inf})","(<~0>)|((a)<0>{1,inf})");
-        test_regex_ast("(?<letter>a)+","(?<letter>a){1,inf}","(a)<0>{1,inf}");
+        test_regex_ast("(?<letter>a){0,10}", U"(<~0>)|((a)<0>{1,10})");
+        test_regex_ast("(?<letter>a){5,10}", U"(a)<0>{5,10}");
+        test_regex_ast("(?<letter>a)*", U"(<~0>)|((a)<0>{1,inf})");
+        test_regex_ast("(?<letter>a)+", U"(a)<0>{1,inf}");
 
         // Capture group with repetition
-        test_regex_ast("(?<letter>a{0,10})","(?<letter>()|(a{1,10}))","(()|(a{1,10}))<0>");
+        test_regex_ast("(?<letter>a{0,10})", U"(()|(a{1,10}))<0>");
     }
 }
