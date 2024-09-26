@@ -30,6 +30,7 @@ if (NOT Microsoft.GSL_FOUND)
     )
 endif()
 
+# Use <fmt/*.h> as <format> is unsupported in gcc-10.
 find_package(fmt 8.0.1 QUIET)
 if (NOT fmt_FOUND)
     FetchContent_Declare(fmt
