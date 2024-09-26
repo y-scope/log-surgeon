@@ -73,8 +73,7 @@ IncludeBlocks: "Regroup"
 IncludeCategories:
   # NOTE: A header is grouped by first matching regex
   # Library headers. Update when adding new libraries.
-  # NOTE: clang-format retains leading white-space on a line in violation of the YAML spec.
-  - Regex: "<Catch2"
+  - Regex: "<(Catch2|fmt)"
     Priority: 3
   # Project headers
   - Regex: "^<log_surgeon"

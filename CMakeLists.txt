@@ -7,6 +7,10 @@ project(log_surgeon
     LANGUAGES CXX
     )
 
+if (POLICY CMP0077)
+    cmake_policy(SET CMP0077 NEW)
+endif()
+
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
     find_package(Catch2 3 REQUIRED)
     include(Catch)
@@ -24,7 +28,27 @@ if (NOT Microsoft.GSL_FOUND)
                          GIT_TAG "v4.0.0"
                          GIT_SHALLOW ON
     )
+endif()
+
+# Use <fmt/*.h> as <format> is unsupported in gcc-10.
+find_package(fmt 8.0.1 QUIET)
+if (NOT fmt_FOUND)
+    FetchContent_Declare(fmt
+                         GIT_REPOSITORY https://github.com/fmtlib/fmt
+                         GIT_TAG "8.0.1"
+                         GIT_SHALLOW ON
+    )
+endif()
+
+# Declare the details of all fetched content before making them available.
+if (NOT Microsoft.GSL_FOUND)
     FetchContent_MakeAvailable(GSL)
+endif()
+
+if (NOT fmt_FOUND)
+    # Force fmt to generate install rules
+    set(FMT_INSTALL ON CACHE BOOL "Enable installation for fmt." FORCE)
+    FetchContent_MakeAvailable(fmt)
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -83,20 +107,13 @@ set(LCHIP_THIRD_PARTY_INCLUDE_DIR "${LCHIP_INSTALL_INCLUDE_DIR}/log_surgeon/thir
 
 add_library(log_surgeon ${SOURCE_FILES})
 add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
+
 if (Microsoft.GSL_FOUND)
     target_link_libraries(log_surgeon
-                          PUBLIC
-                          Microsoft.GSL::GSL
-    )
-endif()
-target_include_directories(log_surgeon
-    PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-    PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    )
-if (NOT Microsoft.GSL_FOUND)
+            PUBLIC
+            Microsoft.GSL::GSL
+            )
+else()
     # Since the user doesn't have GSL installed, use the GSL headers directly.
     # NOTE:
     # - We can't link against the `Microsoft.GSL::GSL` target since that would require adding `GSL`
@@ -106,8 +123,18 @@ if (NOT Microsoft.GSL_FOUND)
             PUBLIC
             $<BUILD_INTERFACE:${GSL_SOURCE_DIR}/include>
             $<INSTALL_INTERFACE:${LCHIP_THIRD_PARTY_INCLUDE_DIR}>
-    )
+            )
 endif()
+
+target_link_libraries(log_surgeon PUBLIC fmt::fmt)
+
+target_include_directories(log_surgeon
+        PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        )
 
 target_compile_features(log_surgeon
     PRIVATE cxx_std_20

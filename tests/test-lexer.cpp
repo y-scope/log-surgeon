@@ -62,12 +62,12 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE(nullptr != regex_ast_cat_ptr->get_right());
 
         auto* regex_ast_literal
-                = dynamic_cast<RegexASTLiteralByte*>(regex_ast_cat_ptr->get_left().get());
+                = dynamic_cast<RegexASTLiteralByte const*>(regex_ast_cat_ptr->get_left());
         REQUIRE(nullptr != regex_ast_literal);
         REQUIRE('u' == regex_ast_literal->get_character());
 
         auto* regex_ast_capture
-                = dynamic_cast<RegexASTCaptureByte*>(regex_ast_cat_ptr->get_right().get());
+                = dynamic_cast<RegexASTCaptureByte const*>(regex_ast_cat_ptr->get_right());
         REQUIRE(nullptr != regex_ast_capture);
         REQUIRE("uID" == regex_ast_capture->get_group_name());
 
@@ -89,6 +89,10 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     }
 
     SECTION("Test AST with tags") {
+        // This test validates the serialization of a regex AST with named capture groups. The
+        // serialized output includes tags (<n> for positive matches, <~n> for negative matches) to
+        // indicate which capture groups are matched or unmatched at each node.
+
         log_surgeon::Schema schema;
         schema.add_variable(
                 "capture",
@@ -97,17 +101,12 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         );
         auto const schema_ast = schema.release_schema_ast_ptr();
         auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
-        vector<uint32_t> all_tags;
-        capture_rule_ast.m_regex_ptr->add_tags(all_tags);
 
-        string expected_serialized_string = "(Z)|(A(?<letter>((?<letter1>(a)|(b)))|((?<letter2>(c)|"
-                                            "(d))))B(?<containerID>[0-9]{1,inf})C)";
-        REQUIRE(capture_rule_ast.m_regex_ptr->serialize(false) == expected_serialized_string);
-
-        string expected_serialized_string_with_tags
-                = "(Z<~0><~1><~2><~3>)|(A((((a)|(b))<1><~2>)|(((c)|(d))<2><~1>))<0>B([0-9]{1,inf})<"
-                  "3>C)";
-        REQUIRE(capture_rule_ast.m_regex_ptr->serialize(true)
-                == expected_serialized_string_with_tags);
+        constexpr std::u32string_view cExpectedSerializedU32StringWithTags{
+                U"(Z<~0><~1><~2><~3>)|(A((((a)|(b))<0><~1>)|(((c)|(d))<1><~0>))<2>B([0-9]{1,inf})<"
+                "3>C)"
+        };
+        REQUIRE(capture_rule_ast.m_regex_ptr->serialize()
+                == std::u32string(cExpectedSerializedU32StringWithTags));
     }
 }
