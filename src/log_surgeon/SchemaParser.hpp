@@ -6,6 +6,17 @@
 #include <log_surgeon/LALR1Parser.hpp>
 
 namespace log_surgeon {
+/**
+ * Class for generating monotonically increasing integer IDs.
+ */
+class UniqueIdGenerator {
+public:
+    [[nodiscard]] auto assign_next_id() -> uint32_t { return m_next_id++; }
+
+private:
+    uint32_t m_next_id{0};
+};
+
 // ASTs used in SchemaParser AST
 class SchemaAST : public ParserAST {
 public:
@@ -101,6 +112,13 @@ private:
     auto existing_schema_rule(NonTerminal* m) -> std::unique_ptr<SchemaAST>;
 
     /**
+     * A semantic rule for regex capture groups that needs access to `m_capture_group_id_generator`.
+     * @param m
+     * @return A unique pointer to the parsed regex capture group.
+     */
+    auto regex_capture_rule(NonTerminal* m) -> std::unique_ptr<ParserAST>;
+
+    /**
      * After lexing half of the buffer, reads into that half of the buffer and
      * changes variables accordingly
      * @param next_children_start
@@ -126,6 +144,8 @@ private:
     auto generate_schema_ast(Reader& reader) -> std::unique_ptr<SchemaAST>;
 
     static inline std::unordered_map<char, std::string> m_special_regex_characters;
+
+    UniqueIdGenerator m_capture_group_id_generator;
 };
 }  // namespace log_surgeon
 
