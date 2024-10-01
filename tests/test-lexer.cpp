@@ -121,21 +121,22 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         // serialized output includes tags (<n> for positive matches, <~n> for negative matches) to
         // indicate which capture groups are matched or unmatched at each node.
         test_regex_ast(
+                // clang-format off
                 "Z|("
-                "A(?<letter>("
-                "(?<letter1>(a)|(b))|"
-                "(?<letter2>(c)|(d))"
-                "))B("
-                "?<containerID>\\d+"
-                ")C"
+                    "A(?<letter>("
+                        "(?<letter1>(a)|(b))|"
+                        "(?<letter2>(c)|(d))"
+                    "))B("
+                        "?<containerID>\\d+"
+                    ")C"
                 ")",
                 U"(Z<~0><~1><~2><~3>)|("
-                "A("
-                "(((a)|(b))<0><~1>)|"
-                "(((c)|(d))<1><~0>)"
-                ")<2>B("
-                "[0-9]{1,inf}"
-                ")<3>C"
+                    "A("
+                        "(((a)|(b))<0><~1>)|"
+                        "(((c)|(d))<1><~0>)"
+                    ")<2>B("
+                        "[0-9]{1,inf}"
+                    ")<3>C"
                 ")"
                 // clang-format on
         );
