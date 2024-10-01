@@ -124,6 +124,13 @@ private:
     std::set<uint32_t> m_negative_tags;
 };
 
+/**
+ * Class for an empty AST node. This is used to simplify tagged-NFA creation when using regex
+ * repeition with a minimum repetition of 0. Namely, we treat `R{0,N}` as `R{1,N} | ∅`. Then, the
+ * NFA handles the 0 repetition case using the logic in `RegexASTOR` (i.e., adding a negative
+ * transition for every capture group matched in `R{1,N}`).
+ * @tparam NFAStateType Whether this AST is used for byte lexing or UTF-8 lexing.
+ */
 template <typename NFAStateType>
 class RegexASTEmpty : public RegexAST<NFAStateType> {
 public:
