@@ -123,10 +123,7 @@ add_library(log_surgeon ${SOURCE_FILES})
 add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
 
 if (Microsoft.GSL_FOUND)
-    target_link_libraries(log_surgeon
-            PUBLIC
-            Microsoft.GSL::GSL
-            )
+    target_link_libraries(log_surgeon PUBLIC Microsoft.GSL::GSL)
 else()
     # Since the user doesn't have GSL installed, use the GSL headers directly.
     # NOTE:
@@ -140,7 +137,7 @@ else()
             )
 endif()
 
-target_link_libraries(log_surgeon PUBLIC fmt::fmt)
+target_link_libraries(log_surgeon PUBLIC Boost::locale fmt::fmt)
 
 target_include_directories(log_surgeon
         PUBLIC
