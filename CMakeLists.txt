@@ -51,6 +51,13 @@ if (NOT fmt_FOUND)
     FetchContent_MakeAvailable(fmt)
 endif()
 
+find_package(Boost 1.74 REQUIRED locale)
+if(Boost_FOUND)
+    message(STATUS "Found Boost ${Boost_VERSION}")
+else()
+    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
