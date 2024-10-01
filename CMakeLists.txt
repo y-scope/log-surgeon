@@ -44,7 +44,7 @@ find_package(Boost 1.74 COMPONENTS locale)
 if(NOT Boost_FOUND)
     FetchContent_Declare(boost
                          GIT_REPOSITORY https://github.com/boostorg/boost.git
-                         GIT_TAG boost_1_74_0
+                         GIT_TAG boost-1.74.0
                          GIT_SHALLOW ON
     )
 endif()
