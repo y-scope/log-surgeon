@@ -1,9 +1,10 @@
+#include <codecvt>
 #include <cstdint>
+#include <locale>
 #include <ranges>
 #include <string>
 #include <vector>
 
-#include <boost/locale.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <log_surgeon/finite_automata/RegexAST.hpp>
@@ -37,7 +38,9 @@ auto test_regex_ast(string const& regex, u32string const& expected_serialized_as
     REQUIRE(capture_rule_ast != nullptr);
 
     auto u32_to_u8 = [](char32_t const u32_char) -> std::string {
-        return boost::locale::conv::utf_to_utf<char>(std::u32string(1, u32_char));
+        std::u32string const u32_str{1, u32_char};
+        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
+        return converter.to_bytes(u32_str.data(), u32_str.data() + u32_str.size());
     };
 
     auto const actual_u32string = capture_rule_ast->m_regex_ptr->serialize();

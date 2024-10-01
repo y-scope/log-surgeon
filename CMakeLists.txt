@@ -40,15 +40,6 @@ if (NOT fmt_FOUND)
     )
 endif()
 
-find_package(Boost 1.74 COMPONENTS locale)
-if(NOT Boost_FOUND)
-    FetchContent_Declare(boost
-                         GIT_REPOSITORY https://github.com/boostorg/boost.git
-                         GIT_TAG boost-1.74.0
-                         GIT_SHALLOW ON
-    )
-endif()
-
 # Declare the details of all fetched content before making them available.
 if (NOT Microsoft.GSL_FOUND)
     FetchContent_MakeAvailable(GSL)
@@ -58,21 +49,6 @@ if (NOT fmt_FOUND)
     # Force fmt to generate install rules
     set(FMT_INSTALL ON CACHE BOOL "Enable installation for fmt." FORCE)
     FetchContent_MakeAvailable(fmt)
-endif()
-
-
-if(NOT Boost_FOUND)
-    set(BOOST_ENABLE_CMAKE ON CACHE BOOL "Enable CMake support in Boost")
-    FetchContent_MakeAvailable(Boost)
-    FetchContent_GetProperties(build_boost)
-    if(NOT build_boost_POPULATED)
-        FetchContent_Populate(build_boost)
-        add_subdirectory(
-                ${build_boost_SOURCE_DIR}
-                ${build_boost_BINARY_DIR}
-                EXCLUDE_FROM_ALL
-        )
-    endif()
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -147,7 +123,7 @@ else()
             )
 endif()
 
-target_link_libraries(log_surgeon PUBLIC Boost::locale fmt::fmt)
+target_link_libraries(log_surgeon PUBLIC fmt::fmt)
 
 target_include_directories(log_surgeon
         PUBLIC
