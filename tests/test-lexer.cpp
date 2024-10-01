@@ -140,6 +140,38 @@ TEST_CASE("Test the Schema class", "[Schema]") {
                 U"(Z<~0><~1><~2><~3>)|(A((((a)|(b))<0><~1>)|(((c)|(d))<1><~0>))<2>B([0-9]{1,inf})<"
                 "3>C)"
         );
+        log_surgeon::Schema schema;
+        schema.add_variable(
+                // clang-format off
+                "capture",
+                "Z|("
+                    "A(?<letter>("
+                            "(?<letter1>(a)|(b))|"
+                            "(?<letter2>(c)|(d))"
+                    "))B("
+                        "?<containerID>\\d+"
+                    ")C"
+                ")",
+                // clang-format on
+                -1
+        );
+        auto const schema_ast = schema.release_schema_ast_ptr();
+        auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+
+        constexpr std::u32string_view cExpectedSerializedU32StringWithTags{
+            // clang-format off
+            U"(Z<~0><~1><~2><~3>)|("
+                "A("
+                    "(((a)|(b))<0><~1>)|"
+                    "(((c)|(d))<1><~0>)"
+                ")<2>B("
+                    "[0-9]{1,inf}"
+                ")<3>C"
+            ")"
+            // clang-format on
+        };
+        REQUIRE(capture_rule_ast.m_regex_ptr->serialize()
+                == std::u32string(cExpectedSerializedU32StringWithTags));
     }
 
     SECTION("Test reptition regex") {
