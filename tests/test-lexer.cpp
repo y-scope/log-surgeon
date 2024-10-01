@@ -40,7 +40,7 @@ auto test_regex_ast(string const& regex, u32string const& expected_serialized_as
         return boost::locale::conv::utf_to_utf<char>(std::u32string(1, u32_char));
     };
 
-    auto const actual_u32string = capture_rule_ast.m_regex_ptr->serialize();
+    auto const actual_u32string = capture_rule_ast->m_regex_ptr->serialize();
     auto const actual_string = fmt::format(
             "{}",
             fmt::join(actual_u32string | std::ranges::views::transform(u32_to_u8), "")

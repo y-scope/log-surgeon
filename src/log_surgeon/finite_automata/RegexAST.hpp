@@ -150,7 +150,10 @@ public:
     ) -> void override {}
 
     // Do nothing as adding an empty node to the NFA is a null operation.
-    auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override {}
+    auto add_to_nfa(
+            [[maybe_unused]] RegexNFA<NFAStateType>* nfa,
+            [[maybe_unused]] NFAStateType* end_state
+    ) const -> void override {}
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 };
