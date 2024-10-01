@@ -127,7 +127,7 @@ private:
 template <typename NFAStateType>
 class RegexASTEmpty : public RegexAST<NFAStateType> {
 public:
-    RegexASTEmpty();
+    RegexASTEmpty() = default;
 
     /**
      * Used for cloning a unique_pointer of type RegexASTEmpty
