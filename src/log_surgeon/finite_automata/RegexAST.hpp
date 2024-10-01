@@ -276,7 +276,7 @@ class RegexASTGroup : public RegexAST<NFAStateType> {
 public:
     using Range = std::pair<uint32_t, uint32_t>;
 
-    RegexASTGroup();
+    RegexASTGroup() = default;
 
     explicit RegexASTGroup(RegexASTLiteral<NFAStateType> const* right);
 
@@ -699,9 +699,6 @@ private:
 };
 
 template <typename NFAStateType>
-RegexASTEmpty<NFAStateType>::RegexASTEmpty() = default;
-
-template <typename NFAStateType>
 void RegexASTEmpty<NFAStateType>::add_to_nfa(
         [[maybe_unused]] RegexNFA<NFAStateType>* nfa,
         [[maybe_unused]] NFAStateType* end_state
@@ -902,9 +899,6 @@ template <typename NFAStateType>
             RegexAST<NFAStateType>::serialize_negative_tags()
     );
 }
-
-template <typename NFAStateType>
-RegexASTGroup<NFAStateType>::RegexASTGroup() = default;
 
 template <typename NFAStateType>
 RegexASTGroup<NFAStateType>::RegexASTGroup(
