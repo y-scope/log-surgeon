@@ -62,6 +62,7 @@ endif()
 
 
 if(NOT Boost_FOUND)
+    set(BOOST_ENABLE_CMAKE ON CACHE BOOL "Enable CMake support in Boost")
     FetchContent_MakeAvailable(Boost)
 endif()
 
