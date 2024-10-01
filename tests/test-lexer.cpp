@@ -1,5 +1,4 @@
 #include <cstdint>
-#include <numeric>
 #include <ranges>
 #include <string>
 #include <vector>
@@ -36,7 +35,7 @@ auto test_regex_ast(string const& regex, u32string const& expected_serialized_as
     auto const schema_ast = schema.release_schema_ast_ptr();
     auto const& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
 
-    auto u32_to_u8 = [](char32_t const32_char) -> std::string {
+    auto u32_to_u8 = [](char32_t const u32_char) -> std::string {
         return boost::locale::conv::utf_to_utf<char>(std::u32string(1, u32_char));
     };
 
