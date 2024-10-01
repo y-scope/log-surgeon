@@ -40,6 +40,15 @@ if (NOT fmt_FOUND)
     )
 endif()
 
+find_package(Boost 1.74 REQUIRED locale)
+if(NOT Boost_FOUND)
+    FetchContent_Declare(boost
+                         GIT_REPOSITORY https://github.com/boostorg/boost.git
+                         GIT_TAG boost-1.74
+                         GIT_SHALLOW ON
+    )
+endif()
+
 # Declare the details of all fetched content before making them available.
 if (NOT Microsoft.GSL_FOUND)
     FetchContent_MakeAvailable(GSL)
@@ -51,11 +60,9 @@ if (NOT fmt_FOUND)
     FetchContent_MakeAvailable(fmt)
 endif()
 
-find_package(Boost 1.74 REQUIRED locale)
-if(Boost_FOUND)
-    message(STATUS "Found Boost ${Boost_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
+
+if(NOT Boost_FOUND)
+    FetchContent_MakeAvailable(Boost)
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
