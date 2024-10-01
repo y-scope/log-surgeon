@@ -136,40 +136,21 @@ class RegexASTEmpty : public RegexAST<NFAStateType> {
 public:
     RegexASTEmpty() = default;
 
-    /**
-     * Used for cloning a unique_pointer of type RegexASTEmpty
-     * @return RegexASTEmpty*
-     */
     [[nodiscard]] auto clone() const -> gsl::owner<RegexASTEmpty*> override {
         return new RegexASTEmpty(*this);
     }
 
-    /**
-     * Sets is_possible_input to specify which utf8 characters are allowed in a
-     * lexer rule containing RegexASTEmpty at a leaf node in its AST, which is nothing
-     * @param is_possible_input
-     */
+    // Do nothing as an empty node contains no utf8 characters.
     auto set_possible_inputs_to_true(
             [[maybe_unused]] std::array<bool, cSizeOfUnicode>& is_possible_input
     ) const -> void override {}
 
-    /**
-     * Transforms '.' to to be any non-delimiter in a lexer rule, which does
-     * nothing as RegexASTEmpty is a leaf node that is not a RegexASTGroup
-     * @param delimiters
-     */
+    // Do nothing as an empty node contains no delimiters.
     auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters
-    ) -> void override {
-        // Do nothing
-    }
+    ) -> void override {}
 
-    /**
-     * Add the needed RegexNFA::states to the passed in nfa to handle a
-     * RegexASTEmpty before transitioning to an accepting end_state
-     * @param nfa
-     * @param end_state
-     */
-    auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
+    // Do nothing as adding an empty node to the NFA is a null operation.
+    auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override {}
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 };
@@ -704,14 +685,6 @@ private:
     std::unique_ptr<RegexAST<NFAStateType>> m_group_regex_ast;
     uint32_t m_tag;
 };
-
-template <typename NFAStateType>
-void RegexASTEmpty<NFAStateType>::add_to_nfa(
-        [[maybe_unused]] RegexNFA<NFAStateType>* nfa,
-        [[maybe_unused]] NFAStateType* end_state
-) const {
-    // DO NOTHING
-}
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTEmpty<NFAStateType>::serialize() const -> std::u32string {

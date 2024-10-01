@@ -33,7 +33,8 @@ auto test_regex_ast(string const& regex, u32string const& expected_serialized_as
     log_surgeon::Schema schema;
     schema.add_variable("capture", regex, -1);
     auto const schema_ast = schema.release_schema_ast_ptr();
-    auto const& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    auto const* capture_rule_ast = dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars[0].get());
+    REQUIRE(capture_rule_ast != nullptr);
 
     auto u32_to_u8 = [](char32_t const u32_char) -> std::string {
         return boost::locale::conv::utf_to_utf<char>(std::u32string(1, u32_char));
@@ -141,7 +142,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         );
     }
 
-    SECTION("Test reptition regex") {
+    SECTION("Test repetition regex") {
         // Repetition without capture groups untagged and tagged AST are the same
         test_regex_ast("a{0,10}", U"()|(a{1,10})");
         test_regex_ast("a{5,10}", U"a{5,10}");
