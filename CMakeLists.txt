@@ -64,7 +64,15 @@ endif()
 if(NOT Boost_FOUND)
     set(BOOST_ENABLE_CMAKE ON CACHE BOOL "Enable CMake support in Boost")
     FetchContent_MakeAvailable(Boost)
-    find_package(Boost 1.74 REQUIRED COMPONENTS locale)
+    FetchContent_GetProperties(build_boost)
+    if(NOT build_boost_POPULATED)
+        FetchContent_Populate(build_boost)
+        add_subdirectory(
+                ${build_boost_SOURCE_DIR}
+                ${build_boost_BINARY_DIR}
+                EXCLUDE_FROM_ALL
+        )
+    endif()
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
