@@ -50,6 +50,24 @@ auto test_regex_ast(string_view var_schema, u32string const& expected_serialized
  * @return The resulting utf8 string.
  */
 [[nodiscard]] auto u32string_to_string(u32string const& u32_str) -> string;
+
+auto test_regex_ast(string_view const var_schema, u32string const& expected_serialized_ast)
+        -> void {
+    log_surgeon::Schema schema;
+    schema.add_variable(var_schema, -1);
+    auto const schema_ast = schema.release_schema_ast_ptr();
+    auto const* capture_rule_ast = dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars[0].get());
+    REQUIRE(capture_rule_ast != nullptr);
+
+    auto const actual_string = u32string_to_string(capture_rule_ast->m_regex_ptr->serialize());
+    auto const expected_string = u32string_to_string(expected_serialized_ast);
+    REQUIRE(actual_string == expected_string);
+}
+
+auto u32string_to_string(u32string const& u32_str) -> string {
+    wstring_convert<codecvt_utf8<char32_t>, char32_t> converter;
+    return converter.to_bytes(u32_str.data(), u32_str.data() + u32_str.size());
+}
 }  // namespace
 
 TEST_CASE("Test the Schema class", "[Schema]") {
@@ -189,24 +207,3 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         );
     }
 }
-
-namespace {
-auto test_regex_ast(string_view const var_schema, u32string const& expected_serialized_ast)
-        -> void {
-    log_surgeon::Schema schema;
-    schema.add_variable(var_schema, -1);
-    auto const schema_ast = schema.release_schema_ast_ptr();
-    auto const* capture_rule_ast = dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars[0].get());
-    REQUIRE(capture_rule_ast != nullptr);
-
-    auto const actual_string = u32string_to_string(capture_rule_ast->m_regex_ptr->serialize());
-    auto const expected_string = u32string_to_string(expected_serialized_ast);
-    REQUIRE(actual_string == expected_string);
-}
-
-auto u32string_to_string(u32string const& u32_str) -> string {
-    wstring_convert<codecvt_utf8<char32_t>, char32_t> converter;
-    return converter.to_bytes(u32_str.data(), u32_str.data() + u32_str.size());
-}
-
-}  // namespace
