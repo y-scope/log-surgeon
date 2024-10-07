@@ -44,7 +44,7 @@ namespace {
 auto test_regex_ast(string_view var_schema, u32string const& expected_serialized_ast) -> void;
 
 /**
- * Convert the characters in a 32-byte unicode string into 4 bytes to generate a 8-byte unciode
+ * Converts the characters in a 32-byte unicode string into 4 bytes to generate a 8-byte unicode
  * string.
  * @param u32_str
  * @return The resulting utf8 string.
