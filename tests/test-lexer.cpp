@@ -161,6 +161,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
 
         // Complex repetition
         test_regex_ast(
+                // clang-format off
                 "capture:"
                 "("
                     "("
@@ -184,6 +185,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
                         U"((d)<3><~2>)"
                     U"){1,10})"
                 U"<~0><~1>)"
+                // clang-format on
         );
     }
 }
