@@ -13,10 +13,12 @@
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
+using std::codecvt_utf8;
 using std::string;
 using std::string_view;
 using std::u32string;
 using std::vector;
+using std::wstring_convert;
 
 using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<
         log_surgeon::finite_automata::RegexNFAByteState>;
@@ -40,6 +42,14 @@ namespace {
  * @param expected_serialized_ast
  */
 auto test_regex_ast(string_view var_schema, u32string const& expected_serialized_ast) -> void;
+
+/**
+ * Convert the characters in a 32-byte unicode string into 4 bytes to generate a 8-byte unciode
+ * string.
+ * @param u32_str
+ * @return The resulting utf8 string.
+ */
+auto u32string_to_string(u32string const& u32_str) -> string;
 }  // namespace
 
 TEST_CASE("Test the Schema class", "[Schema]") {
@@ -160,23 +170,15 @@ auto test_regex_ast(string_view const var_schema, u32string const& expected_seri
     auto const* capture_rule_ast = dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars[0].get());
     REQUIRE(capture_rule_ast != nullptr);
 
-    auto u32_to_u8 = [](char32_t const u32_char) -> std::string {
-        std::u32string const u32_str{1, u32_char};
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
-        return converter.to_bytes(u32_str.data(), u32_str.data() + u32_str.size());
-    };
-
-    auto const actual_u32string = capture_rule_ast->m_regex_ptr->serialize();
-    auto const actual_string = fmt::format(
-            "{}",
-            fmt::join(actual_u32string | std::ranges::views::transform(u32_to_u8), "")
-    );
-
-    auto const expected_string = fmt::format(
-            "{}",
-            fmt::join(expected_serialized_ast | std::ranges::views::transform(u32_to_u8), "")
-    );
-
+    auto const actual_string
+            = fmt::format("{}", u32string_to_string(capture_rule_ast->m_regex_ptr->serialize()));
+    auto const expected_string = fmt::format("{}", u32string_to_string(expected_serialized_ast));
     REQUIRE(actual_string == expected_string);
 }
+
+auto u32string_to_string(u32string const& u32_str) -> string {
+    wstring_convert<codecvt_utf8<char32_t>, char32_t> converter;
+    return converter.to_bytes(u32_str.data(), u32_str.data() + u32_str.size());
+}
+
 }  // namespace
