@@ -124,6 +124,43 @@ private:
     std::set<uint32_t> m_negative_tags;
 };
 
+/**
+ * Class for an empty AST node. This is used to simplify tagged-NFA creation when using regex
+ * repetition with a minimum repetition of 0. Namely, we treat `R{0,N}` as `R{1,N} | ∅`. Then, the
+ * NFA handles the 0 repetition case using the logic in `RegexASTOR` (i.e., adding a negative
+ * transition for every capture group matched in `R{1,N}`).
+ * @tparam NFAStateType Whether this AST is used for byte lexing or UTF-8 lexing.
+ */
+template <typename NFAStateType>
+class RegexASTEmpty : public RegexAST<NFAStateType> {
+public:
+    RegexASTEmpty() = default;
+
+    [[nodiscard]] auto clone() const -> gsl::owner<RegexASTEmpty*> override {
+        return new RegexASTEmpty(*this);
+    }
+
+    auto set_possible_inputs_to_true(
+            [[maybe_unused]] std::array<bool, cSizeOfUnicode>& is_possible_input
+    ) const -> void override {
+        // Do nothing as an empty node contains no utf8 characters.
+    }
+
+    auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters
+    ) -> void override {
+        // Do nothing as an empty node contains no delimiters.
+    }
+
+    auto add_to_nfa(
+            [[maybe_unused]] RegexNFA<NFAStateType>* nfa,
+            [[maybe_unused]] NFAStateType* end_state
+    ) const -> void override {
+        // Do nothing as adding an empty node to the NFA is a null operation.
+    }
+
+    [[nodiscard]] auto serialize() const -> std::u32string override;
+};
+
 template <typename NFAStateType>
 class RegexASTLiteral : public RegexAST<NFAStateType> {
 public:
@@ -233,7 +270,7 @@ class RegexASTGroup : public RegexAST<NFAStateType> {
 public:
     using Range = std::pair<uint32_t, uint32_t>;
 
-    RegexASTGroup();
+    RegexASTGroup() = default;
 
     explicit RegexASTGroup(RegexASTLiteral<NFAStateType> const* right);
 
@@ -656,6 +693,11 @@ private:
 };
 
 template <typename NFAStateType>
+[[nodiscard]] auto RegexASTEmpty<NFAStateType>::serialize() const -> std::u32string {
+    return fmt::format(U"{}", RegexAST<NFAStateType>::serialize_negative_tags());
+}
+
+template <typename NFAStateType>
 RegexASTLiteral<NFAStateType>::RegexASTLiteral(uint32_t character) : m_character(character) {}
 
 template <typename NFAStateType>
@@ -820,7 +862,7 @@ template <typename NFAStateType>
     auto const max_string = std::to_string(m_max);
 
     return fmt::format(
-            U"{}{{{},{}}}{}",
+            U"({}){{{},{}}}{}",
             nullptr != m_operand ? m_operand->serialize() : U"null",
             std::u32string(min_string.begin(), min_string.end()),
             is_infinite() ? U"inf" : std::u32string(max_string.begin(), max_string.end()),
@@ -843,9 +885,6 @@ template <typename NFAStateType>
             RegexAST<NFAStateType>::serialize_negative_tags()
     );
 }
-
-template <typename NFAStateType>
-RegexASTGroup<NFAStateType>::RegexASTGroup() = default;
 
 template <typename NFAStateType>
 RegexASTGroup<NFAStateType>::RegexASTGroup(

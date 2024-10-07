@@ -1,6 +1,8 @@
 #ifndef LOG_SURGEON_SCHEMA_PARSER_HPP
 #define LOG_SURGEON_SCHEMA_PARSER_HPP
 
+#include <string>
+#include <string_view>
 #include <utility>
 
 #include <log_surgeon/LALR1Parser.hpp>
@@ -94,7 +96,7 @@ public:
      * @param schema_string
      * @return std::unique_ptr<SchemaAST>
      */
-    static auto try_schema_string(std::string const& schema_string) -> std::unique_ptr<SchemaAST>;
+    static auto try_schema_string(std::string_view schema_string) -> std::unique_ptr<SchemaAST>;
 
     static auto get_special_regex_characters() -> std::unordered_map<char, std::string> const& {
         return m_special_regex_characters;

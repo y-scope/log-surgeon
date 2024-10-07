@@ -4,6 +4,8 @@
 #include <memory>
 #include <span>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/FileReader.hpp>
@@ -30,9 +32,12 @@ using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<
         log_surgeon::finite_automata::RegexNFAByteState>;
 using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<
         log_surgeon::finite_automata::RegexNFAByteState>;
+using RegexASTEmptyByte = log_surgeon::finite_automata::RegexASTEmpty<
+        log_surgeon::finite_automata::RegexNFAByteState>;
 
 using std::make_unique;
 using std::string;
+using std::string_view;
 using std::unique_ptr;
 
 namespace log_surgeon {
@@ -77,7 +82,7 @@ auto SchemaParser::try_schema_file(string const& schema_file_path) -> unique_ptr
     return schema_ast;
 }
 
-auto SchemaParser::try_schema_string(string const& schema_string) -> unique_ptr<SchemaAST> {
+auto SchemaParser::try_schema_string(string_view const schema_string) -> unique_ptr<SchemaAST> {
     Reader reader{[&](char* dst_buf, size_t count, size_t& read_to) -> ErrorCode {
         uint32_t unparsed_string_pos = 0;
         std::span<char> const buf{dst_buf, count};
@@ -196,8 +201,11 @@ static auto regex_or_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
 
 static auto regex_match_zero_or_more_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
-    return unique_ptr<ParserAST>(new ParserValueRegex(
-            unique_ptr<RegexASTByte>(new RegexASTMultiplicationByte(std::move(r1), 0, 0))
+
+    // To handle negative tags we treat `R*` as `R+ | ∅`.
+    return make_unique<ParserValueRegex>(make_unique<RegexASTOrByte>(
+            make_unique<RegexASTEmptyByte>(),
+            make_unique<RegexASTMultiplicationByte>(std::move(r1), 1, 0)
     ));
 }
 
@@ -238,6 +246,15 @@ static auto regex_match_range_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
         max += r5_ptr->get_digit(i) * (uint32_t)pow(10, r5_size - i - 1);
     }
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
+
+    if (0 == min) {
+        // To handle negative tags we treat `R*` as `R+ | ∅`.
+        return make_unique<ParserValueRegex>(make_unique<RegexASTOrByte>(
+                make_unique<RegexASTEmptyByte>(),
+                make_unique<RegexASTMultiplicationByte>(std::move(r1), 1, max)
+        ));
+    }
+
     return unique_ptr<ParserAST>(new ParserValueRegex(
             unique_ptr<RegexASTByte>(new RegexASTMultiplicationByte(std::move(r1), min, max))
     ));
