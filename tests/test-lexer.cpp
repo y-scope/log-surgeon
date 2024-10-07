@@ -158,6 +158,15 @@ TEST_CASE("Test the Schema class", "[Schema]") {
 
         // Capture group with repetition
         test_regex_ast("capture:(?<letter>a{0,10})", U"(()|(a{1,10}))<0>");
+
+        // Complex repetition
+        test_regex_ast(
+                "capture:"
+                "(((?<letterA>a)|(?<letterB>b))*)|"
+                "(((?<letterC>c)|(?<letterD>d)){0,10})",
+                U"((<~0><~1>)|(((a)<0><~1>)|((b)<1><~0>){1,inf})<~2><~3>)|"
+                U"((<~2><~3>)|(((c)<2><~3>)|((d)<3><~2>){1,10})<~0><~1>)"
+        );
     }
 }
 
