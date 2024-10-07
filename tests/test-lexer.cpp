@@ -36,8 +36,8 @@ using log_surgeon::SchemaVarAST;
 
 namespace {
 /**
- * Generate an AST for the given `var_schema` string. Then serialize the AST and compare it with the
- * `expected_serialize_ast`.
+ * Generates an AST for the given `var_schema` string. Then serialize the AST and compare it with
+ * the `expected_serialize_ast`.
  * @param var_schema
  * @param expected_serialized_ast
  */
