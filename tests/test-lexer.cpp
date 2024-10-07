@@ -136,7 +136,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
                         "(((a)|(b))<0><~1>)|"
                         "(((c)|(d))<1><~0>)"
                     ")<2>B("
-                        "[0-9]{1,inf}"
+                        "([0-9]){1,inf}"
                     ")<3>C"
                 ")"
                 // clang-format on
@@ -145,27 +145,45 @@ TEST_CASE("Test the Schema class", "[Schema]") {
 
     SECTION("Test repetition regex") {
         // Repetition without capture groups untagged and tagged AST are the same
-        test_regex_ast("capture:a{0,10}", U"()|(a{1,10})");
-        test_regex_ast("capture:a{5,10}", U"a{5,10}");
-        test_regex_ast("capture:a*", U"()|(a{1,inf})");
-        test_regex_ast("capture:a+", U"a{1,inf}");
+        test_regex_ast("capture:a{0,10}", U"()|((a){1,10})");
+        test_regex_ast("capture:a{5,10}", U"(a){5,10}");
+        test_regex_ast("capture:a*", U"()|((a){1,inf})");
+        test_regex_ast("capture:a+", U"(a){1,inf}");
 
         // Repetition with capture groups untagged and tagged AST are different
-        test_regex_ast("capture:(?<letter>a){0,10}", U"(<~0>)|((a)<0>{1,10})");
-        test_regex_ast("capture:(?<letter>a){5,10}", U"(a)<0>{5,10}");
-        test_regex_ast("capture:(?<letter>a)*", U"(<~0>)|((a)<0>{1,inf})");
-        test_regex_ast("capture:(?<letter>a)+", U"(a)<0>{1,inf}");
+        test_regex_ast("capture:(?<letter>a){0,10}", U"(<~0>)|(((a)<0>){1,10})");
+        test_regex_ast("capture:(?<letter>a){5,10}", U"((a)<0>){5,10}");
+        test_regex_ast("capture:(?<letter>a)*", U"(<~0>)|(((a)<0>){1,inf})");
+        test_regex_ast("capture:(?<letter>a)+", U"((a)<0>){1,inf}");
 
         // Capture group with repetition
-        test_regex_ast("capture:(?<letter>a{0,10})", U"(()|(a{1,10}))<0>");
+        test_regex_ast("capture:(?<letter>a{0,10})", U"(()|((a){1,10}))<0>");
 
         // Complex repetition
         test_regex_ast(
                 "capture:"
-                "(((?<letterA>a)|(?<letterB>b))*)|"
-                "(((?<letterC>c)|(?<letterD>d)){0,10})",
-                U"((<~0><~1>)|(((a)<0><~1>)|((b)<1><~0>){1,inf})<~2><~3>)|"
-                U"((<~2><~3>)|(((c)<2><~3>)|((d)<3><~2>){1,10})<~0><~1>)"
+                "("
+                    "("
+                        "(?<letterA>a)|"
+                        "(?<letterB>b)"
+                    ")*"
+                ")|("
+                    "("
+                        "(?<letterC>c)|"
+                        "(?<letterD>d)"
+                    "){0,10}"
+                ")",
+                U"("
+                    U"(<~0><~1>)|(("
+                        U"((a)<0><~1>)|"
+                        U"((b)<1><~0>)"
+                    U"){1,inf})"
+                U"<~2><~3>)|("
+                    U"(<~2><~3>)|(("
+                        U"((c)<2><~3>)|"
+                        U"((d)<3><~2>)"
+                    U"){1,10})"
+                U"<~0><~1>)"
         );
     }
 }

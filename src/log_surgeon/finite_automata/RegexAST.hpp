@@ -862,7 +862,7 @@ template <typename NFAStateType>
     auto const max_string = std::to_string(m_max);
 
     return fmt::format(
-            U"{}{{{},{}}}{}",
+            U"({}){{{},{}}}{}",
             nullptr != m_operand ? m_operand->serialize() : U"null",
             std::u32string(min_string.begin(), min_string.end()),
             is_infinite() ? U"inf" : std::u32string(max_string.begin(), max_string.end()),
