@@ -199,9 +199,8 @@ auto test_regex_ast(string_view const var_schema, u32string const& expected_seri
     auto const* capture_rule_ast = dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars[0].get());
     REQUIRE(capture_rule_ast != nullptr);
 
-    auto const actual_string
-            = fmt::format("{}", u32string_to_string(capture_rule_ast->m_regex_ptr->serialize()));
-    auto const expected_string = fmt::format("{}", u32string_to_string(expected_serialized_ast));
+    auto const actual_string = u32string_to_string(capture_rule_ast->m_regex_ptr->serialize());
+    auto const expected_string = u32string_to_string(expected_serialized_ast);
     REQUIRE(actual_string == expected_string);
 }
 
