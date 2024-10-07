@@ -49,7 +49,7 @@ auto test_regex_ast(string_view var_schema, u32string const& expected_serialized
  * @param u32_str
  * @return The resulting utf8 string.
  */
-auto u32string_to_string(u32string const& u32_str) -> string;
+[[nodiscard]] auto u32string_to_string(u32string const& u32_str) -> string;
 }  // namespace
 
 TEST_CASE("Test the Schema class", "[Schema]") {
