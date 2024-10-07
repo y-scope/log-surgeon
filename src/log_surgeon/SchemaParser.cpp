@@ -4,6 +4,8 @@
 #include <memory>
 #include <span>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/FileReader.hpp>
@@ -35,6 +37,7 @@ using RegexASTEmptyByte = log_surgeon::finite_automata::RegexASTEmpty<
 
 using std::make_unique;
 using std::string;
+using std::string_view;
 using std::unique_ptr;
 
 namespace log_surgeon {
@@ -79,7 +82,7 @@ auto SchemaParser::try_schema_file(string const& schema_file_path) -> unique_ptr
     return schema_ast;
 }
 
-auto SchemaParser::try_schema_string(string const& schema_string) -> unique_ptr<SchemaAST> {
+auto SchemaParser::try_schema_string(string_view const schema_string) -> unique_ptr<SchemaAST> {
     Reader reader{[&](char* dst_buf, size_t count, size_t& read_to) -> ErrorCode {
         uint32_t unparsed_string_pos = 0;
         std::span<char> const buf{dst_buf, count};
