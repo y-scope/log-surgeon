@@ -23,6 +23,7 @@ enum class ErrorCode {
     Truncated,
 };
 
+// Using uint32_t as the underlying type to ensure consistency with token identifier types.
 enum class SymbolID : uint32_t {
     TokenEndID,
     TokenUncaughtStringID,
