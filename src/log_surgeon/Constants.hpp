@@ -23,7 +23,7 @@ enum class ErrorCode {
     Truncated,
 };
 
-enum class SymbolID {
+enum class SymbolID : uint32_t {
     TokenEndID,
     TokenUncaughtStringID,
     TokenIntId,

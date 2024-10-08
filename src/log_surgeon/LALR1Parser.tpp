@@ -55,14 +55,14 @@ namespace {
 
 template <typename NFAStateType, typename DFAStateType>
 LALR1Parser<NFAStateType, DFAStateType>::LALR1Parser() {
-    m_terminals.insert((int)SymbolID::TokenEndID);
-    m_terminals.insert((int)SymbolID::TokenUncaughtStringID);
-    m_terminals.insert((int)SymbolID::TokenIntId);
-    m_terminals.insert((int)SymbolID::TokenFloatId);
-    m_terminals.insert((int)SymbolID::TokenHexId);
-    m_terminals.insert((int)SymbolID::TokenFirstTimestampId);
-    m_terminals.insert((int)SymbolID::TokenNewlineTimestampId);
-    m_terminals.insert((int)SymbolID::TokenNewlineId);
+    m_terminals.insert((uint32_t)SymbolID::TokenEndID);
+    m_terminals.insert((uint32_t)SymbolID::TokenUncaughtStringID);
+    m_terminals.insert((uint32_t)SymbolID::TokenIntId);
+    m_terminals.insert((uint32_t)SymbolID::TokenFloatId);
+    m_terminals.insert((uint32_t)SymbolID::TokenHexId);
+    m_terminals.insert((uint32_t)SymbolID::TokenFirstTimestampId);
+    m_terminals.insert((uint32_t)SymbolID::TokenNewlineTimestampId);
+    m_terminals.insert((uint32_t)SymbolID::TokenNewlineId);
 }
 
 template <typename NFAStateType, typename DFAStateType>
@@ -327,7 +327,7 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lr1_item_sets() {
                     m_spontaneous_map[l0_item.m_production].end()
             );
             if (l0_item.m_production == m_productions[m_root_production_id].get()) {
-                lookaheads[l0_item].insert((int)SymbolID::TokenEndID);
+                lookaheads[l0_item].insert((uint32_t)SymbolID::TokenEndID);
             }
         }
     }
@@ -480,7 +480,7 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lalr1_action() {
             if (item.has_dot_at_end()) {
                 if (item.m_production == m_productions[m_root_production_id].get()) {
                     Action action = true;
-                    item_set_ptr->m_actions[(int)SymbolID::TokenEndID] = action;
+                    item_set_ptr->m_actions[(uint32_t)SymbolID::TokenEndID] = action;
                 } else {
                     Action& action = item_set_ptr->m_actions[item.m_lookahead];
                     if (!std::holds_alternative<bool>(action)) {

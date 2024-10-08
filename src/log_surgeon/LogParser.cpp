@@ -235,14 +235,14 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
         int token_type = next_token.m_type_ids_ptr->at(0);
         bool found_start_of_next_message
                 = (output_buffer->has_timestamp()
-                   && token_type == (int)SymbolID::TokenNewlineTimestampId)
+                   && token_type == (uint32_t)SymbolID::TokenNewlineTimestampId)
                   || (!output_buffer->has_timestamp() && next_token.get_char(0) == '\n'
-                      && token_type != (int)SymbolID::TokenNewlineId);
-        if (token_type == (int)SymbolID::TokenEndID) {
+                      && token_type != (uint32_t)SymbolID::TokenNewlineId);
+        if (token_type == (uint32_t)SymbolID::TokenEndID) {
             parsing_action = ParsingAction::CompressAndFinish;
             return ErrorCode::Success;
         }
-        if (false == output_buffer->has_timestamp() && token_type == (int)SymbolID::TokenNewlineId)
+        if (false == output_buffer->has_timestamp() && token_type == (uint32_t)SymbolID::TokenNewlineId)
         {
             m_input_buffer.set_consumed_pos(output_buffer->get_curr_token().m_end_pos);
             output_buffer->advance_to_next_token();
