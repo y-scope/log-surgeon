@@ -77,6 +77,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         string const var_name = "myNumber";
         string const var_schema = var_name + string(":") + string("123");
         schema.add_variable(string_view(var_schema), -1);
+
         auto const schema_ast = schema.release_schema_ast_ptr();
         REQUIRE(schema_ast->m_schema_vars.size() == 1);
         REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());
