@@ -122,7 +122,7 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
             for (uint32_t i = 0; i <= rule->m_line_num; i++) {
                 schema_reader.try_read_to_delimiter('\n', false, false, line);
             }
-            int colon_pos = 0;
+            uint32_t colon_pos = 0;
             for (char i : line) {
                 colon_pos++;
                 if (i == ':') {
@@ -232,7 +232,7 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
             return err;
         }
         output_buffer->set_curr_token(next_token);
-        int token_type = next_token.m_type_ids_ptr->at(0);
+        auto token_type = next_token.m_type_ids_ptr->at(0);
         bool found_start_of_next_message
                 = (output_buffer->has_timestamp()
                    && token_type == (uint32_t)SymbolID::TokenNewlineTimestampId)
