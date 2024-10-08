@@ -242,7 +242,8 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
             parsing_action = ParsingAction::CompressAndFinish;
             return ErrorCode::Success;
         }
-        if (false == output_buffer->has_timestamp() && token_type == (uint32_t)SymbolID::TokenNewlineId)
+        if (false == output_buffer->has_timestamp()
+            && token_type == (uint32_t)SymbolID::TokenNewlineId)
         {
             m_input_buffer.set_consumed_pos(output_buffer->get_curr_token().m_end_pos);
             output_buffer->advance_to_next_token();
