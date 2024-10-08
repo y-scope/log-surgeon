@@ -682,9 +682,9 @@ auto LALR1Parser<NFAStateType, DFAStateType>::get_next_symbol() -> Token {
 template <typename NFAStateType, typename DFAStateType>
 auto LALR1Parser<NFAStateType, DFAStateType>::parse_advance(Token& next_token, bool* accept)
         -> bool {
-    for (int const& type : *(next_token.m_type_ids_ptr)) {
+    for (auto const type : *next_token.m_type_ids_ptr) {
         if (parse_symbol(type, next_token, accept)) {
-            return (*accept);
+            return *accept;
         }
     }
     assert(*accept == false);
