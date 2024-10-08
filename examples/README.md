@@ -1,9 +1,12 @@
 # Examples
 
-There are two example programs in this directory, `buffer-parser` and
+The first two example programs in this directory are `buffer-parser` and
 `reader-parser` corresponding to the [two API styles][1]. They demonstrate
 parsing a log file and printing out the timestamp and log-level of each message,
-as well as any multiline log messages. 
+as well as any multiline log messages.
+
+The third example is `intersect-test` which demonstrates the result of taking
+the intersection between a schema DFA and a search query DFA.
 
 ## Building
 
@@ -24,6 +27,7 @@ The example programs can be run as follows:
 ```shell
 ./examples/build/buffer-parser ./examples/schema.txt log.txt
 ./examples/build/reader-parser ./examples/schema.txt log.txt
+./examples/build/intersect-test
 ```
 
 where:

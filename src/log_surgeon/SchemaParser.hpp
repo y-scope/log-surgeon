@@ -1,11 +1,24 @@
 #ifndef LOG_SURGEON_SCHEMA_PARSER_HPP
 #define LOG_SURGEON_SCHEMA_PARSER_HPP
 
+#include <string>
+#include <string_view>
 #include <utility>
 
 #include <log_surgeon/LALR1Parser.hpp>
 
 namespace log_surgeon {
+/**
+ * Class for generating monotonically increasing integer IDs.
+ */
+class UniqueIdGenerator {
+public:
+    [[nodiscard]] auto assign_next_id() -> uint32_t { return m_next_id++; }
+
+private:
+    uint32_t m_next_id{0};
+};
+
 // ASTs used in SchemaParser AST
 class SchemaAST : public ParserAST {
 public:
@@ -83,7 +96,7 @@ public:
      * @param schema_string
      * @return std::unique_ptr<SchemaAST>
      */
-    static auto try_schema_string(std::string const& schema_string) -> std::unique_ptr<SchemaAST>;
+    static auto try_schema_string(std::string_view schema_string) -> std::unique_ptr<SchemaAST>;
 
     static auto get_special_regex_characters() -> std::unordered_map<char, std::string> const& {
         return m_special_regex_characters;
@@ -99,6 +112,13 @@ private:
      * @return std::unique_ptr<SchemaAST>
      */
     auto existing_schema_rule(NonTerminal* m) -> std::unique_ptr<SchemaAST>;
+
+    /**
+     * A semantic rule for regex capture groups that needs access to `m_capture_group_id_generator`.
+     * @param m
+     * @return A unique pointer to the parsed regex capture group.
+     */
+    auto regex_capture_rule(NonTerminal* m) -> std::unique_ptr<ParserAST>;
 
     /**
      * After lexing half of the buffer, reads into that half of the buffer and
@@ -126,6 +146,8 @@ private:
     auto generate_schema_ast(Reader& reader) -> std::unique_ptr<SchemaAST>;
 
     static inline std::unordered_map<char, std::string> m_special_regex_characters;
+
+    UniqueIdGenerator m_capture_group_id_generator;
 };
 }  // namespace log_surgeon
 

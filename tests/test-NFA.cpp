@@ -33,16 +33,15 @@ using RegexASTOrByte = log_surgeon::finite_automata::RegexASTOr<RegexNFAByteStat
 TEST_CASE("Test NFA", "[NFA]") {
     Schema schema;
     string const var_name = "capture";
-    schema.add_variable(
-            var_name,
-            "Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?<containerID>\\d+)C)",
-            -1
-    );
+    string const var_schema = var_name + string(":")
+                              + string("Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?"
+                                       "<containerID>\\d+)C)");
+    schema.add_variable(var_schema, -1);
+
     auto const schema_ast = schema.release_schema_ast_ptr();
     auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
     ByteNFA nfa;
     ByteLexicalRule rule(0, std::move(capture_rule_ast.m_regex_ptr));
-    rule.add_tags();
     rule.add_to_nfa(&nfa);
 
     // Add helper for updating state_queue and visited_states
@@ -140,11 +139,11 @@ TEST_CASE("Test NFA", "[NFA]") {
                                "negative_tagged_transitions={5[0,1,2,3,],}\n";
     expected_serialized_nfa += "3:byte_transitions={},"
                                "epsilon_transitions={},"
-                               "positive_tagged_transitions={6[1],},"
+                               "positive_tagged_transitions={6[0],},"
                                "negative_tagged_transitions={}\n";
     expected_serialized_nfa += "4:byte_transitions={},"
                                "epsilon_transitions={},"
-                               "positive_tagged_transitions={7[2],},"
+                               "positive_tagged_transitions={7[1],},"
                                "negative_tagged_transitions={}\n";
     expected_serialized_nfa += "5:accepting_tag=0,byte_transitions={},"
                                "epsilon_transitions={},"
@@ -153,14 +152,14 @@ TEST_CASE("Test NFA", "[NFA]") {
     expected_serialized_nfa += "6:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
-                               "negative_tagged_transitions={8[2,],}\n";
+                               "negative_tagged_transitions={8[1,],}\n";
     expected_serialized_nfa += "7:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
-                               "negative_tagged_transitions={8[1,],}\n";
+                               "negative_tagged_transitions={8[0,],}\n";
     expected_serialized_nfa += "8:byte_transitions={},"
                                "epsilon_transitions={},"
-                               "positive_tagged_transitions={9[0],},"
+                               "positive_tagged_transitions={9[2],},"
                                "negative_tagged_transitions={}\n";
     expected_serialized_nfa += "9:byte_transitions={B-->10,},"
                                "epsilon_transitions={},"
@@ -182,5 +181,15 @@ TEST_CASE("Test NFA", "[NFA]") {
                                "negative_tagged_transitions={}\n";
 
     // Compare expected and actual line-by-line
-    REQUIRE(serialized_nfa == expected_serialized_nfa);
+    std::stringstream ss_actual(serialized_nfa);
+    std::stringstream ss_expected(expected_serialized_nfa);
+    std::string actual_line;
+    std::string expected_line;
+    while (std::getline(ss_actual, actual_line) && std::getline(ss_expected, expected_line)) {
+        REQUIRE(actual_line == expected_line);
+    }
+    std::getline(ss_actual, actual_line);
+    REQUIRE(actual_line.empty());
+    std::getline(ss_expected, expected_line);
+    REQUIRE(expected_line.empty());
 }

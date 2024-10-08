@@ -27,7 +27,7 @@ public:
         m_matching_variable_ids.push_back(variable_id);
     }
 
-    [[nodiscard]] auto get_matching_variable_ids() const -> std::vector<int> const& {
+    [[nodiscard]] auto get_matching_variable_ids() const -> std::vector<uint32_t> const& {
         return m_matching_variable_ids;
     }
 
@@ -46,7 +46,7 @@ public:
     [[nodiscard]] auto next(uint32_t character) const -> RegexDFAState<stateType>*;
 
 private:
-    std::vector<int> m_matching_variable_ids;
+    std::vector<uint32_t> m_matching_variable_ids;
     RegexDFAState<stateType>* m_bytes_transition[cSizeOfByte];
     // NOTE: We don't need m_tree_transitions for the `stateType ==
     // RegexDFAStateType::Byte` case, so we use an empty class (`std::tuple<>`)
@@ -55,11 +55,15 @@ private:
 };
 
 /**
- * This class represents a pair of regex states. The intended use is for the two states in the pair
- * to belong to unique DFAs. A pair is considered accepting if both states are accepting in
- * their respective DFA. A different pair is considered reachable if both its states are reachable
- * in their respective DFAs from this pair's states. The first state in the pair contains the
- * variable types the pair matches.
+ * Class for a pair of DFA states, where each state in the pair belongs to a different DFA.
+ * This class is used to facilitate the construction of an intersection DFA from two separate DFAs.
+ * Each instance represents a state in the intersection DFA and follows these rules:
+ *
+ * - A pair is considered accepting if both states are accepting in their respective DFAs.
+ * - A pair is considered reachable if both its states are reachable in their respective DFAs
+ *   from this pair's states.
+ *
+ * NOTE: Only the first state in the pair contains the variable types matched by the pair.
  */
 template <typename DFAState>
 class RegexDFAStatePair {
@@ -96,7 +100,7 @@ public:
         return m_state1->is_accepting() && m_state2->is_accepting();
     }
 
-    [[nodiscard]] auto get_matching_variable_ids() const -> std::vector<int> const& {
+    [[nodiscard]] auto get_matching_variable_ids() const -> std::vector<uint32_t> const& {
         return m_state1->get_matching_variable_ids();
     }
 
@@ -108,6 +112,7 @@ private:
 using RegexDFAByteState = RegexDFAState<RegexDFAStateType::Byte>;
 using RegexDFAUTF8State = RegexDFAState<RegexDFAStateType::UTF8>;
 
+// TODO: rename `RegexDFA` to `DFA`
 template <typename DFAStateType>
 class RegexDFA {
 public:

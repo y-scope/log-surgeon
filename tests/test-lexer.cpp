@@ -1,5 +1,9 @@
+#include <codecvt>
 #include <cstdint>
+#include <locale>
+#include <ranges>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -9,8 +13,12 @@
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
+using std::codecvt_utf8;
 using std::string;
+using std::string_view;
+using std::u32string;
 using std::vector;
+using std::wstring_convert;
 
 using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<
         log_surgeon::finite_automata::RegexNFAByteState>;
@@ -26,26 +34,49 @@ using RegexASTOrByte
         = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::RegexNFAByteState>;
 using log_surgeon::SchemaVarAST;
 
-auto test_regex_ast(
-        string const& regex,
-        string const& expected_serialized_ast_without_tags,
-        string const& expected_serialized_ast_with_tags
-) -> void {
+namespace {
+/**
+ * Generates an AST for the given `var_schema` string. Then serialize the AST and compare it with
+ * the `expected_serialize_ast`.
+ * @param var_schema
+ * @param expected_serialized_ast
+ */
+auto test_regex_ast(string_view var_schema, u32string const& expected_serialized_ast) -> void;
+
+/**
+ * Converts the characters in a 32-byte unicode string into 4 bytes to generate a 8-byte unicode
+ * string.
+ * @param u32_str
+ * @return The resulting utf8 string.
+ */
+[[nodiscard]] auto u32string_to_string(u32string const& u32_str) -> string;
+
+auto test_regex_ast(string_view const var_schema, u32string const& expected_serialized_ast)
+        -> void {
     log_surgeon::Schema schema;
-    schema.add_variable("capture", regex, -1);
+    schema.add_variable(var_schema, -1);
+
     auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
-    vector<uint32_t> all_tags;
-    capture_rule_ast.m_regex_ptr->add_tags(all_tags);
-    REQUIRE(capture_rule_ast.m_regex_ptr->serialize(false) == expected_serialized_ast_without_tags);
-    REQUIRE(capture_rule_ast.m_regex_ptr->serialize(true) == expected_serialized_ast_with_tags);
+    auto const* capture_rule_ast = dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars[0].get());
+    REQUIRE(capture_rule_ast != nullptr);
+
+    auto const actual_string = u32string_to_string(capture_rule_ast->m_regex_ptr->serialize());
+    auto const expected_string = u32string_to_string(expected_serialized_ast);
+    REQUIRE(actual_string == expected_string);
 }
+
+auto u32string_to_string(u32string const& u32_str) -> string {
+    wstring_convert<codecvt_utf8<char32_t>, char32_t> converter;
+    return converter.to_bytes(u32_str.data(), u32_str.data() + u32_str.size());
+}
+}  // namespace
 
 TEST_CASE("Test the Schema class", "[Schema]") {
     SECTION("Add a number variable to schema") {
         log_surgeon::Schema schema;
         string const var_name = "myNumber";
-        schema.add_variable(var_name, "123", -1);
+        string const var_schema = var_name + string(":") + string("123");
+        schema.add_variable(string_view(var_schema), -1);
         auto const schema_ast = schema.release_schema_ast_ptr();
         REQUIRE(schema_ast->m_schema_vars.size() == 1);
         REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());
@@ -61,7 +92,9 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     SECTION("Add a capture variable to schema") {
         log_surgeon::Schema schema;
         std::string const var_name = "capture";
-        schema.add_variable(var_name, "u(?<uID>[0-9]+)", -1);
+        string const var_schema = var_name + string(":") + string("u(?<uID>[0-9]+)");
+        schema.add_variable(var_schema, -1);
+
         auto const schema_ast = schema.release_schema_ast_ptr();
         REQUIRE(schema_ast->m_schema_vars.size() == 1);
         REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());
@@ -77,12 +110,12 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE(nullptr != regex_ast_cat_ptr->get_right());
 
         auto* regex_ast_literal
-                = dynamic_cast<RegexASTLiteralByte*>(regex_ast_cat_ptr->get_left().get());
+                = dynamic_cast<RegexASTLiteralByte const*>(regex_ast_cat_ptr->get_left());
         REQUIRE(nullptr != regex_ast_literal);
         REQUIRE('u' == regex_ast_literal->get_character());
 
         auto* regex_ast_capture
-                = dynamic_cast<RegexASTCaptureByte*>(regex_ast_cat_ptr->get_right().get());
+                = dynamic_cast<RegexASTCaptureByte const*>(regex_ast_cat_ptr->get_right());
         REQUIRE(nullptr != regex_ast_capture);
         REQUIRE("uID" == regex_ast_capture->get_group_name());
 
@@ -104,29 +137,75 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     }
 
     SECTION("Test AST with tags") {
+        // This test validates the serialization of a regex AST with named capture groups. The
+        // serialized output includes tags (<n> for positive matches, <~n> for negative matches) to
+        // indicate which capture groups are matched or unmatched at each node.
         test_regex_ast(
-                "Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?<containerID>\\d+)C)",
-                "(Z)|(A(?<letter>((?<letter1>(a)|(b)))|((?<letter2>(c)|(d))))B(?<containerID>[0-9]{"
-                "1,inf})C)",
-                "(Z<~0><~1><~2><~3>)|(A((((a)|(b))<1><~2>)|(((c)|(d))<2><~1>))<0>B([0-9]{1,inf})<3>"
-                "C)"
+                // clang-format off
+                "capture:"
+                "Z|("
+                    "A(?<letter>("
+                        "(?<letter1>(a)|(b))|"
+                        "(?<letter2>(c)|(d))"
+                    "))B("
+                        "?<containerID>\\d+"
+                    ")C"
+                ")",
+                U"(Z<~0><~1><~2><~3>)|("
+                    "A("
+                        "(((a)|(b))<0><~1>)|"
+                        "(((c)|(d))<1><~0>)"
+                    ")<2>B("
+                        "([0-9]){1,inf}"
+                    ")<3>C"
+                ")"
+                // clang-format on
         );
     }
 
-    SECTION("Test reptition regex") {
+    SECTION("Test repetition regex") {
         // Repetition without capture groups untagged and tagged AST are the same
-        test_regex_ast("a{0,10}","()|(a{1,10})","()|(a{1,10})");
-        test_regex_ast("a{5,10}","a{5,10}","a{5,10}");
-        test_regex_ast("a*","()|(a{1,inf})","()|(a{1,inf})");
-        test_regex_ast("a+","a{1,inf}","a{1,inf}");
-        
+        test_regex_ast("capture:a{0,10}", U"()|((a){1,10})");
+        test_regex_ast("capture:a{5,10}", U"(a){5,10}");
+        test_regex_ast("capture:a*", U"()|((a){1,inf})");
+        test_regex_ast("capture:a+", U"(a){1,inf}");
+
         // Repetition with capture groups untagged and tagged AST are different
-        test_regex_ast("(?<letter>a){0,10}","()|((?<letter>a){1,10})","(<~0>)|((a)<0>{1,10})");
-        test_regex_ast("(?<letter>a){5,10}","(?<letter>a){5,10}","(a)<0>{5,10}");
-        test_regex_ast("(?<letter>a)*","()|((?<letter>a){1,inf})","(<~0>)|((a)<0>{1,inf})");
-        test_regex_ast("(?<letter>a)+","(?<letter>a){1,inf}","(a)<0>{1,inf}");
+        test_regex_ast("capture:(?<letter>a){0,10}", U"(<~0>)|(((a)<0>){1,10})");
+        test_regex_ast("capture:(?<letter>a){5,10}", U"((a)<0>){5,10}");
+        test_regex_ast("capture:(?<letter>a)*", U"(<~0>)|(((a)<0>){1,inf})");
+        test_regex_ast("capture:(?<letter>a)+", U"((a)<0>){1,inf}");
 
         // Capture group with repetition
-        test_regex_ast("(?<letter>a{0,10})","(?<letter>()|(a{1,10}))","(()|(a{1,10}))<0>");
+        test_regex_ast("capture:(?<letter>a{0,10})", U"(()|((a){1,10}))<0>");
+
+        // Complex repetition
+        test_regex_ast(
+                // clang-format off
+                "capture:"
+                "("
+                    "("
+                        "(?<letterA>a)|"
+                        "(?<letterB>b)"
+                    ")*"
+                ")|("
+                    "("
+                        "(?<letterC>c)|"
+                        "(?<letterD>d)"
+                    "){0,10}"
+                ")",
+                U"("
+                    U"(<~0><~1>)|(("
+                        U"((a)<0><~1>)|"
+                        U"((b)<1><~0>)"
+                    U"){1,inf})"
+                U"<~2><~3>)|("
+                    U"(<~2><~3>)|(("
+                        U"((c)<2><~3>)|"
+                        U"((d)<3><~2>)"
+                    U"){1,10})"
+                U"<~0><~1>)"
+                // clang-format on
+        );
     }
 }

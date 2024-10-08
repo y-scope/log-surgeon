@@ -52,10 +52,10 @@ auto LogEventView::get_logtype() const -> std::string {
     std::string logtype;
     for (uint32_t i = 1; i < m_log_output_buffer->pos(); i++) {
         Token& token = m_log_output_buffer->get_mutable_token(i);
-        if (token.m_type_ids_ptr->at(0) == (int)log_surgeon::SymbolID::TokenUncaughtStringID) {
+        if (token.m_type_ids_ptr->at(0) == (uint32_t)log_surgeon::SymbolID::TokenUncaughtStringID) {
             logtype += token.to_string_view();
         } else {
-            if ((int)log_surgeon::SymbolID::TokenNewlineId != token.m_type_ids_ptr->at(0)) {
+            if ((uint32_t)log_surgeon::SymbolID::TokenNewlineId != token.m_type_ids_ptr->at(0)) {
                 logtype += token.get_delimiter();
             }
             logtype += "<";
@@ -104,7 +104,7 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
     }
     for (uint32_t i = 0; i < get_log_output_buffer()->pos(); i++) {
         Token& token = get_log_output_buffer()->get_mutable_token(i);
-        std::vector<int> const& token_types = *token.m_type_ids_ptr;
+        std::vector<uint32_t> const& token_types = *token.m_type_ids_ptr;
         add_token(token_types[0], &token);
     }
 }

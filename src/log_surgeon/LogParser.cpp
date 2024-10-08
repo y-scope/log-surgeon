@@ -141,7 +141,7 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
             );
         }
 
-        // To make lexing log-specific: modify variable regex to contain a delimiter at the start.
+        // For log-specific lexing: modify variable regex to contain a delimiter at the start.
         unique_ptr<RegexASTGroup<RegexNFAByteState>> delimiter_group
                 = make_unique<RegexASTGroup<RegexNFAByteState>>(
                         RegexASTGroup<RegexNFAByteState>(delimiters)
@@ -181,7 +181,7 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
                 return err;
             }
             if (false == output_buffer->has_timestamp()
-                && next_token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenNewlineTimestampId)
+                && next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolID::TokenNewlineTimestampId)
             {
                 // TODO: combine the below with found_start_of_next_message
                 // into 1 function
@@ -206,14 +206,14 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
                 return ErrorCode::Success;
             }
         }
-        if (next_token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenEndID) {
+        if (next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolID::TokenEndID) {
             output_buffer->set_token(0, next_token);
             output_buffer->set_pos(1);
             parsing_action = ParsingAction::CompressAndFinish;
             return ErrorCode::Success;
         }
-        if (next_token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenFirstTimestampId
-            || next_token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenNewlineTimestampId)
+        if (next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolID::TokenFirstTimestampId
+            || next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolID::TokenNewlineTimestampId)
         {
             output_buffer->set_has_timestamp(true);
             output_buffer->set_token(0, next_token);

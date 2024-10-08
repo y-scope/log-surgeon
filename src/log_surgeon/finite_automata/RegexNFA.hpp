@@ -33,7 +33,7 @@ struct PositiveTaggedTransition {
 
 template <RegexNFAStateType state_type>
 struct NegativeTaggedTransition {
-    std::vector<uint32_t> tags;
+    std::set<uint32_t> tags;
     RegexNFAState<state_type> const* state{};
 };
 
@@ -67,7 +67,7 @@ public:
     }
 
     auto add_negative_tagged_transition(
-            std::vector<uint32_t> const& tags,
+            std::set<uint32_t> const& tags,
             RegexNFAState const* dest_state
     ) -> void {
         m_negative_tagged_transitions.push_back(
@@ -138,7 +138,7 @@ private:
 using RegexNFAByteState = RegexNFAState<RegexNFAStateType::Byte>;
 using RegexNFAUTF8State = RegexNFAState<RegexNFAStateType::UTF8>;
 
-// TODO: rename RegexNFA to NFA and RegexDFA to DFA
+// TODO: rename `RegexNFA` to `NFA`
 template <typename NFAStateType>
 class RegexNFA {
 public:

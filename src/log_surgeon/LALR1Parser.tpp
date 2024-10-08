@@ -561,7 +561,7 @@ template <typename NFAStateType, typename DFAStateType>
 auto LALR1Parser<NFAStateType, DFAStateType>::get_input_until_next_newline(Token* error_token
 ) -> std::string {
     std::string rest_of_line;
-    bool next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (int)SymbolID::TokenEndID);
+    bool next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (uint32_t)SymbolID::TokenEndID);
     bool next_has_newline = (error_token->to_string().find('\n') != std::string::npos)
                             || (error_token->to_string().find('\r') != std::string::npos);
     while (!next_has_newline && !next_is_end_token) {
@@ -570,7 +570,7 @@ auto LALR1Parser<NFAStateType, DFAStateType>::get_input_until_next_newline(Token
                            || (token.to_string().find('\r') != std::string::npos);
         if (!next_has_newline) {
             rest_of_line += token.to_string();
-            next_is_end_token = (token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenEndID);
+            next_is_end_token = (token.m_type_ids_ptr->at(0) == (uint32_t)SymbolID::TokenEndID);
         }
     }
     rest_of_line += "\n";
@@ -594,7 +594,7 @@ auto LALR1Parser<NFAStateType, DFAStateType>::report_error() -> std::string {
         error_indicator += " ";
     }
     error_indicator += "^\n";
-    if (token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenEndID && consumed_input.empty()) {
+    if (token.m_type_ids_ptr->at(0) == (uint32_t)SymbolID::TokenEndID && consumed_input.empty()) {
         error_type = "empty file";
         error_indicator = "^\n";
     } else {

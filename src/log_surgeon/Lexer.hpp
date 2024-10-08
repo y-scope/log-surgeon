@@ -30,14 +30,6 @@ public:
               m_regex(std::move(regex)) {}
 
     /**
-     * Adds positive and negative tags needed by capture groups to the AST nodes.
-     */
-    auto add_tags() -> void {
-        std::vector<uint32_t> all_tags;
-        m_regex->add_tags(all_tags);
-    }
-
-    /**
      * Adds AST representing the lexical rule to the NFA
      * @param nfa
      */
@@ -58,9 +50,9 @@ template <typename NFAStateType, typename DFAStateType>
 class Lexer {
 public:
     // std::vector<int> can be declared as constexpr in c++20
-    static inline std::vector<int> const cTokenEndTypes = {(int)SymbolID::TokenEndID};
-    static inline std::vector<int> const cTokenUncaughtStringTypes
-            = {(int)SymbolID::TokenUncaughtStringID};
+    static inline std::vector<uint32_t> const cTokenEndTypes = {(uint32_t)SymbolID::TokenEndID};
+    static inline std::vector<uint32_t> const cTokenUncaughtStringTypes
+            = {(uint32_t)SymbolID::TokenUncaughtStringID};
 
     /**
      * Generate a DFA from an NFA
@@ -191,8 +183,8 @@ private:
     uint32_t m_last_match_pos{0};
     uint32_t m_last_match_line{0};
     bool m_match{false};
-    std::vector<int> const* m_type_ids{nullptr};
-    std::set<int> m_type_ids_set;
+    std::vector<uint32_t> const* m_type_ids{nullptr};
+    std::set<uint32_t> m_type_ids_set;
     std::array<bool, cSizeOfByte> m_is_delimiter{false};
     std::array<bool, cSizeOfByte> m_is_first_char{false};
     std::vector<LexicalRule<NFAStateType>> m_rules;
