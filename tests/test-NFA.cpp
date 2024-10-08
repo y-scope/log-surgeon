@@ -53,7 +53,7 @@ TEST_CASE("Test NFA", "[NFA]") {
         }
     };
 
-    // Assigne state ids
+    // Assign state IDs
     std::map<RegexNFAByteState const*, uint32_t> state_ids;
     auto const* root = nfa.get_root();
     state_queue.push(root);
