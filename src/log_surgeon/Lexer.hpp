@@ -89,12 +89,6 @@ public:
     auto generate() -> void;
 
     /**
-     * Generate DFA for a reverse lexer matching the reverse of the words in the
-     * original language
-     */
-    // auto generate_reverse() -> void;
-
-    /**
      * Reset the lexer to start a new lexing (reset buffers, reset vars tracking
      * positions)
      */

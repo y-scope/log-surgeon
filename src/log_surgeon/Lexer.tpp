@@ -390,27 +390,6 @@ void Lexer<NFAStateType, DFAStateType>::generate() {
     }
 }
 
-/*
-//TODO: needs to handle reversing tagged NFA
-template <typename NFAStateType, typename DFAStateType>
-void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
-    finite_automata::RegexNFA<NFAStateType> nfa;
-    for (auto const& rule : m_rules) {
-        rule.add_to_nfa(&nfa);
-    }
-    nfa.reverse();
-    m_dfa = nfa_to_dfa(nfa);
-    DFAStateType const* state = m_dfa->get_root();
-    for (uint32_t i = 0; i < cSizeOfByte; i++) {
-        if (state->next(i) != nullptr) {
-            m_is_first_char[i] = true;
-        } else {
-            m_is_first_char[i] = false;
-        }
-    }
-}
-*/
-
 template <typename NFAStateType>
 void LexicalRule<NFAStateType>::add_to_nfa(finite_automata::RegexNFA<NFAStateType>* nfa) const {
     auto* end_state = nfa->new_state();
