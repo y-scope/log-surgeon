@@ -65,8 +65,10 @@ public:
         return m_matching_variable_id;
     }
 
-    auto
-    add_positive_tagged_transition(uint32_t const tag, RegexNFAState const* dest_state) -> void {
+    auto add_positive_tagged_transition(
+            uint32_t const tag,
+            RegexNFAState<state_type> const* dest_state
+    ) -> void {
         m_positive_tagged_transitions.push_back(
                 PositiveTaggedTransition<state_type>(tag, dest_state)
         );
