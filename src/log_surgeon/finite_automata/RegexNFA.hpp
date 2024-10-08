@@ -79,7 +79,7 @@ public:
 
     auto add_negative_tagged_transition(
             std::set<uint32_t> const& tags,
-            RegexNFAState const* dest_state
+            RegexNFAState<state_type> const* dest_state
     ) -> void {
         m_negative_tagged_transitions.push_back(
                 NegativeTaggedTransition<state_type>(tags, dest_state)
