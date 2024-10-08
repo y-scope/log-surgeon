@@ -27,23 +27,12 @@ class RegexNFAState;
 
 template <RegexNFAStateType state_type>
 struct PositiveTaggedTransition {
-    PositiveTaggedTransition(uint32_t const tag, RegexNFAState<state_type> const* dest_state)
-            : m_tag(tag),
-              m_dest_state(dest_state) {}
-
     uint32_t m_tag{};
     RegexNFAState<state_type> const* m_dest_state{};
 };
 
 template <RegexNFAStateType state_type>
 struct NegativeTaggedTransition {
-    NegativeTaggedTransition(
-            std::set<uint32_t> const& tags,
-            RegexNFAState<state_type> const* dest_state
-    )
-            : m_tags(tags),
-              m_dest_state(dest_state) {}
-
     std::set<uint32_t> m_tags;
     RegexNFAState<state_type> const* m_dest_state{};
 };
@@ -70,7 +59,7 @@ public:
             RegexNFAState<state_type> const* dest_state
     ) -> void {
         m_positive_tagged_transitions.push_back(
-                PositiveTaggedTransition<state_type>(tag, dest_state)
+                PositiveTaggedTransition<state_type>{tag, dest_state}
         );
     }
 
@@ -84,7 +73,7 @@ public:
             RegexNFAState<state_type> const* dest_state
     ) -> void {
         m_negative_tagged_transitions.push_back(
-                NegativeTaggedTransition<state_type>(tags, dest_state)
+                NegativeTaggedTransition<state_type>{tags, dest_state}
         );
     }
 
