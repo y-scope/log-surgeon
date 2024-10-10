@@ -47,10 +47,10 @@ template <RegexNFAStateType state_type>
 class NegativeTaggedTransition {
 public:
     NegativeTaggedTransition(
-            std::set<uint32_t> const& tags,
+            std::set<uint32_t> tags,
             RegexNFAState<state_type> const* dest_state
     )
-            : m_tags(tags),
+            : m_tags(std::move(tags)),
               m_dest_state(dest_state) {}
 
     [[nodiscard]] auto get_tags() const -> std::set<uint32_t> const& { return m_tags; }
@@ -94,10 +94,10 @@ public:
     }
 
     auto add_negative_tagged_transition(
-            std::set<uint32_t> const& tags,
+            std::set<uint32_t> tags,
             RegexNFAState<state_type> const* dest_state
     ) -> void {
-        m_negative_tagged_transitions.emplace_back(tags, dest_state);
+        m_negative_tagged_transitions.emplace_back(std::move(tags), dest_state);
     }
 
     [[nodiscard]] auto get_negative_tagged_transitions(
