@@ -891,7 +891,7 @@ template <typename NFAStateType>
 template <typename NFAStateType>
 void RegexASTCapture<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state)
         const {
-    NFAStateType* intermediate_state = nfa->new_state();
+    auto* intermediate_state = nfa->new_state();
     m_group_regex_ast->add_to_nfa_with_negative_tags(nfa, intermediate_state);
     intermediate_state->add_positive_tagged_transition(m_tag, end_state);
 }
