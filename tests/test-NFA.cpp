@@ -19,6 +19,7 @@ using log_surgeon::finite_automata::RegexNFAByteState;
 using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
 using std::string;
+using std::unordered_map;
 
 using ByteLexicalRule = log_surgeon::LexicalRule<RegexNFAByteState>;
 using ByteNFA = log_surgeon::finite_automata::RegexNFA<RegexNFAByteState>;
@@ -56,7 +57,7 @@ TEST_CASE("Test NFA", "[NFA]") {
     };
 
     // Assign state IDs
-    std::map<RegexNFAByteState const*, uint32_t> state_ids;
+    unordered_map<RegexNFAByteState const*, uint32_t> state_ids;
     auto const* root = nfa.get_root();
     state_queue.push(root);
     visited_states.insert(root);
