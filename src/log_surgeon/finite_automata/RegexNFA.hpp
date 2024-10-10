@@ -85,9 +85,7 @@ public:
             uint32_t const tag,
             RegexNFAState<state_type> const* dest_state
     ) -> void {
-        m_positive_tagged_transitions.push_back(
-                PositiveTaggedTransition<state_type>{tag, dest_state}
-        );
+        m_positive_tagged_transitions.emplace_back(tag, dest_state);
     }
 
     [[nodiscard]] auto get_positive_tagged_transitions(
@@ -99,9 +97,7 @@ public:
             std::set<uint32_t> const& tags,
             RegexNFAState<state_type> const* dest_state
     ) -> void {
-        m_negative_tagged_transitions.push_back(
-                NegativeTaggedTransition<state_type>{tags, dest_state}
-        );
+        m_negative_tagged_transitions.emplace_back(tags, dest_state);
     }
 
     [[nodiscard]] auto get_negative_tagged_transitions(
