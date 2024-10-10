@@ -86,7 +86,7 @@ TEST_CASE("Test NFA", "[NFA]") {
     while (false == state_queue.empty()) {
         auto const* current_state = state_queue.front();
         state_queue.pop();
-        serialized_nfa += std::to_string(state_ids.find(current_state)->second) + ":";
+        serialized_nfa += std::to_string(state_ids.at(current_state)) + ":";
         if (current_state->is_accepting()) {
             serialized_nfa += "accepting_tag="
                               + std::to_string(current_state->get_matching_variable_id()) + ",";
