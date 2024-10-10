@@ -32,10 +32,12 @@ using RegexASTOrByte = log_surgeon::finite_automata::RegexASTOr<RegexNFAByteStat
 
 TEST_CASE("Test NFA", "[NFA]") {
     Schema schema;
-    string const var_name = "capture";
-    string const var_schema = var_name + string(":")
-                              + string("Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?"
-                                       "<containerID>\\d+)C)");
+    string const var_name{"capture"};
+    string const var_schema{
+            var_name + ":"
+            + "Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?"
+              "<containerID>\\d+)C)"
+    };
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
