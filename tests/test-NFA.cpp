@@ -18,8 +18,10 @@ using log_surgeon::cSizeOfByte;
 using log_surgeon::finite_automata::RegexNFAByteState;
 using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
+using std::queue;
 using std::string;
 using std::unordered_map;
+using std::unordered_set;
 
 using ByteLexicalRule = log_surgeon::LexicalRule<RegexNFAByteState>;
 using ByteNFA = log_surgeon::finite_automata::RegexNFA<RegexNFAByteState>;
@@ -30,6 +32,30 @@ using RegexASTLiteralByte = log_surgeon::finite_automata::RegexASTLiteral<RegexN
 using RegexASTMultiplicationByte
         = log_surgeon::finite_automata::RegexASTMultiplication<RegexNFAByteState>;
 using RegexASTOrByte = log_surgeon::finite_automata::RegexASTOr<RegexNFAByteState>;
+
+namespace {
+/**
+ * Add a destination state to the queue and set of visited states if it has not yet been visited.
+ * @param dest_state
+ * @param visited_states
+ * @param state_queue
+ */
+auto add_to_queue_and_visited(
+        RegexNFAByteState const* dest_state,
+        queue<RegexNFAByteState const*>& state_queue,
+        unordered_set<RegexNFAByteState const*>& visited_states
+) -> void;
+
+auto add_to_queue_and_visited(
+        RegexNFAByteState const* dest_state,
+        queue<RegexNFAByteState const*>& state_queue,
+        unordered_set<RegexNFAByteState const*>& visited_states
+) -> void {
+    if (visited_states.insert(dest_state).second) {
+        state_queue.push(dest_state);
+    }
+}
+}  // namespace
 
 TEST_CASE("Test NFA", "[NFA]") {
     Schema schema;
@@ -47,14 +73,8 @@ TEST_CASE("Test NFA", "[NFA]") {
     ByteLexicalRule rule{0, std::move(capture_rule_ast.m_regex_ptr)};
     rule.add_to_nfa(&nfa);
 
-    // Add helper for updating state_queue and visited_states
     std::queue<RegexNFAByteState const*> state_queue;
     std::unordered_set<RegexNFAByteState const*> visited_states;
-    auto add_to_queue = [&](auto const* dest_state) {
-        if (visited_states.insert(dest_state).second) {
-            state_queue.push(dest_state);
-        }
-    };
 
     // Assign state IDs
     unordered_map<RegexNFAByteState const*, uint32_t> state_ids;
@@ -67,21 +87,29 @@ TEST_CASE("Test NFA", "[NFA]") {
         state_ids.insert({current_state, state_ids.size()});
         for (uint32_t idx = 0; idx < cSizeOfByte; idx++) {
             for (auto const* dest_state : current_state->get_byte_transitions(idx)) {
-                add_to_queue(dest_state);
+                add_to_queue_and_visited(dest_state, state_queue, visited_states);
             }
         }
         for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-            add_to_queue(dest_state);
+            add_to_queue_and_visited(dest_state, state_queue, visited_states);
         }
         for (auto const& positive_tagged_transition :
              current_state->get_positive_tagged_transitions())
         {
-            add_to_queue(positive_tagged_transition.get_dest_state());
+            add_to_queue_and_visited(
+                    positive_tagged_transition.get_dest_state(),
+                    state_queue,
+                    visited_states
+            );
         }
         for (auto const& negative_tagged_transition :
              current_state->get_negative_tagged_transitions())
         {
-            add_to_queue(negative_tagged_transition.get_dest_state());
+            add_to_queue_and_visited(
+                    negative_tagged_transition.get_dest_state(),
+                    state_queue,
+                    visited_states
+            );
         }
     }
 
@@ -103,13 +131,13 @@ TEST_CASE("Test NFA", "[NFA]") {
             for (auto const* dest_state : current_state->get_byte_transitions(idx)) {
                 serialized_nfa += std::string(1, static_cast<char>(idx)) + "-->"
                                   + std::to_string(state_ids.find(dest_state)->second) + ",";
-                add_to_queue(dest_state);
+                add_to_queue_and_visited(dest_state, state_queue, visited_states);
             }
         }
         serialized_nfa += "},epsilon_transitions={";
         for (auto const* dest_state : current_state->get_epsilon_transitions()) {
             serialized_nfa += std::to_string(state_ids.at(dest_state)) + ",";
-            add_to_queue(dest_state);
+            add_to_queue_and_visited(dest_state, state_queue, visited_states);
         }
         serialized_nfa += "},positive_tagged_transitions={";
         for (auto const& positive_tagged_transition :
@@ -118,7 +146,11 @@ TEST_CASE("Test NFA", "[NFA]") {
             serialized_nfa
                     += std::to_string(state_ids.at(positive_tagged_transition.get_dest_state()));
             serialized_nfa += "[" + std::to_string(positive_tagged_transition.get_tag()) + "],";
-            add_to_queue(positive_tagged_transition.get_dest_state());
+            add_to_queue_and_visited(
+                    positive_tagged_transition.get_dest_state(),
+                    state_queue,
+                    visited_states
+            );
         }
         serialized_nfa += "},negative_tagged_transitions={";
         for (auto const& negative_tagged_transition :
@@ -131,7 +163,11 @@ TEST_CASE("Test NFA", "[NFA]") {
                 serialized_nfa += std::to_string(tag) + ",";
             }
             serialized_nfa += "],";
-            add_to_queue(negative_tagged_transition.get_dest_state());
+            add_to_queue_and_visited(
+                    negative_tagged_transition.get_dest_state(),
+                    state_queue,
+                    visited_states
+            );
         }
         serialized_nfa += "}";
         serialized_nfa += "\n";
