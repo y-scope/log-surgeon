@@ -89,10 +89,6 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
             // prevent timestamps from going into the dictionary
             continue;
         }
-        // currently capture groups are not yet supported
-        if ("capture" == rule->m_name) {
-            continue;
-        }
         // transform '.' from any-character into any non-delimiter character
         rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters);
 
@@ -126,7 +122,7 @@ void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
             for (uint32_t i = 0; i <= rule->m_line_num; i++) {
                 schema_reader.try_read_to_delimiter('\n', false, false, line);
             }
-            int colon_pos = 0;
+            uint32_t colon_pos = 0;
             for (char i : line) {
                 colon_pos++;
                 if (i == ':') {
@@ -185,7 +181,7 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
                 return err;
             }
             if (false == output_buffer->has_timestamp()
-                && next_token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenNewlineTimestampId)
+                && next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenNewlineTimestamp)
             {
                 // TODO: combine the below with found_start_of_next_message
                 // into 1 function
@@ -210,14 +206,14 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
                 return ErrorCode::Success;
             }
         }
-        if (next_token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenEndID) {
+        if (next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd) {
             output_buffer->set_token(0, next_token);
             output_buffer->set_pos(1);
             parsing_action = ParsingAction::CompressAndFinish;
             return ErrorCode::Success;
         }
-        if (next_token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenFirstTimestampId
-            || next_token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenNewlineTimestampId)
+        if (next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenFirstTimestamp
+            || next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenNewlineTimestamp)
         {
             output_buffer->set_has_timestamp(true);
             output_buffer->set_token(0, next_token);
@@ -236,17 +232,18 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
             return err;
         }
         output_buffer->set_curr_token(next_token);
-        int token_type = next_token.m_type_ids_ptr->at(0);
+        auto token_type = next_token.m_type_ids_ptr->at(0);
         bool found_start_of_next_message
                 = (output_buffer->has_timestamp()
-                   && token_type == (int)SymbolID::TokenNewlineTimestampId)
+                   && token_type == (uint32_t)SymbolId::TokenNewlineTimestamp)
                   || (!output_buffer->has_timestamp() && next_token.get_char(0) == '\n'
-                      && token_type != (int)SymbolID::TokenNewlineId);
-        if (token_type == (int)SymbolID::TokenEndID) {
+                      && token_type != (uint32_t)SymbolId::TokenNewline);
+        if (token_type == (uint32_t)SymbolId::TokenEnd) {
             parsing_action = ParsingAction::CompressAndFinish;
             return ErrorCode::Success;
         }
-        if (false == output_buffer->has_timestamp() && token_type == (int)SymbolID::TokenNewlineId)
+        if (false == output_buffer->has_timestamp()
+            && token_type == (uint32_t)SymbolId::TokenNewline)
         {
             m_input_buffer.set_consumed_pos(output_buffer->get_curr_token().m_end_pos);
             output_buffer->advance_to_next_token();

@@ -95,6 +95,24 @@ public:
         m_negative_tags = std::move(negative_tags);
     }
 
+    /**
+     * Handles the addition of an intermediate state with negative transitions if needed.
+     * @param nfa
+     * @param end_state
+     */
+    auto add_to_nfa_with_negative_tags(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const
+            -> void {
+        // Handle negative tags as:
+        // root --(regex transitions)--> intermediate_state --(negative tags)--> end_state
+        if (false == m_negative_tags.empty()) {
+            auto* intermediate_state = nfa->new_state();
+            add_to_nfa(nfa, intermediate_state);
+            intermediate_state->add_negative_tagged_transition(m_negative_tags, end_state);
+        } else {
+            add_to_nfa(nfa, end_state);
+        }
+    }
+
 protected:
     RegexAST(RegexAST const& rhs) = default;
     auto operator=(RegexAST const& rhs) -> RegexAST& = default;
@@ -762,8 +780,8 @@ RegexASTOr<NFAStateType>::RegexASTOr(
 template <typename NFAStateType>
 void RegexASTOr<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state)
         const {
-    m_left->add_to_nfa(nfa, end_state);
-    m_right->add_to_nfa(nfa, end_state);
+    m_left->add_to_nfa_with_negative_tags(nfa, end_state);
+    m_right->add_to_nfa_with_negative_tags(nfa, end_state);
 }
 
 template <typename NFAStateType>
@@ -792,9 +810,9 @@ void RegexASTCat<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAState
         const {
     NFAStateType* saved_root = nfa->get_root();
     NFAStateType* intermediate_state = nfa->new_state();
-    m_left->add_to_nfa(nfa, intermediate_state);
+    m_left->add_to_nfa_with_negative_tags(nfa, intermediate_state);
     nfa->set_root(intermediate_state);
-    m_right->add_to_nfa(nfa, end_state);
+    m_right->add_to_nfa_with_negative_tags(nfa, end_state);
     nfa->set_root(saved_root);
 }
 
@@ -831,27 +849,27 @@ void RegexASTMultiplication<NFAStateType>::add_to_nfa(
     } else {
         for (uint32_t i = 1; i < this->m_min; i++) {
             NFAStateType* intermediate_state = nfa->new_state();
-            m_operand->add_to_nfa(nfa, intermediate_state);
+            m_operand->add_to_nfa_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
-        m_operand->add_to_nfa(nfa, end_state);
+        m_operand->add_to_nfa_with_negative_tags(nfa, end_state);
     }
     if (this->is_infinite()) {
         nfa->set_root(end_state);
-        m_operand->add_to_nfa(nfa, end_state);
+        m_operand->add_to_nfa_with_negative_tags(nfa, end_state);
     } else if (this->m_max > this->m_min) {
         if (this->m_min != 0) {
             NFAStateType* intermediate_state = nfa->new_state();
-            m_operand->add_to_nfa(nfa, intermediate_state);
+            m_operand->add_to_nfa_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
         for (uint32_t i = this->m_min + 1; i < this->m_max; ++i) {
-            m_operand->add_to_nfa(nfa, end_state);
+            m_operand->add_to_nfa_with_negative_tags(nfa, end_state);
             NFAStateType* intermediate_state = nfa->new_state();
-            m_operand->add_to_nfa(nfa, intermediate_state);
+            m_operand->add_to_nfa_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
-        m_operand->add_to_nfa(nfa, end_state);
+        m_operand->add_to_nfa_with_negative_tags(nfa, end_state);
     }
     nfa->set_root(saved_root);
 }
@@ -873,7 +891,9 @@ template <typename NFAStateType>
 template <typename NFAStateType>
 void RegexASTCapture<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state)
         const {
-    m_group_regex_ast->add_to_nfa(nfa, end_state);
+    auto* intermediate_state = nfa->new_state();
+    m_group_regex_ast->add_to_nfa_with_negative_tags(nfa, intermediate_state);
+    intermediate_state->add_positive_tagged_transition(m_tag, end_state);
 }
 
 template <typename NFAStateType>

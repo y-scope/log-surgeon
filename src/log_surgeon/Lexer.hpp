@@ -50,9 +50,9 @@ template <typename NFAStateType, typename DFAStateType>
 class Lexer {
 public:
     // std::vector<int> can be declared as constexpr in c++20
-    static inline std::vector<int> const cTokenEndTypes = {(int)SymbolID::TokenEndID};
-    static inline std::vector<int> const cTokenUncaughtStringTypes
-            = {(int)SymbolID::TokenUncaughtStringID};
+    static inline std::vector<uint32_t> const cTokenEndTypes = {(uint32_t)SymbolId::TokenEnd};
+    static inline std::vector<uint32_t> const cTokenUncaughtStringTypes
+            = {(uint32_t)SymbolId::TokenUncaughtString};
 
     /**
      * Generate a DFA from an NFA
@@ -87,12 +87,6 @@ public:
      * Generate DFA for lexer
      */
     auto generate() -> void;
-
-    /**
-     * Generate DFA for a reverse lexer matching the reverse of the words in the
-     * original language
-     */
-    auto generate_reverse() -> void;
 
     /**
      * Reset the lexer to start a new lexing (reset buffers, reset vars tracking
@@ -183,8 +177,8 @@ private:
     uint32_t m_last_match_pos{0};
     uint32_t m_last_match_line{0};
     bool m_match{false};
-    std::vector<int> const* m_type_ids{nullptr};
-    std::set<int> m_type_ids_set;
+    std::vector<uint32_t> const* m_type_ids{nullptr};
+    std::set<uint32_t> m_type_ids_set;
     std::array<bool, cSizeOfByte> m_is_delimiter{false};
     std::array<bool, cSizeOfByte> m_is_first_char{false};
     std::vector<LexicalRule<NFAStateType>> m_rules;

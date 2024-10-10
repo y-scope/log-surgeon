@@ -8,7 +8,7 @@
 
 template <typename... Args>
 auto strfmt(std::string const& fmt, Args... args) -> std::string {
-    int size = std::snprintf(nullptr, 0, fmt.c_str(), args...);
+    auto size = std::snprintf(nullptr, 0, fmt.c_str(), args...);
     if (size <= 0) {
         throw std::runtime_error("Error during formatting.");
     }

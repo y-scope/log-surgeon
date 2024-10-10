@@ -23,6 +23,45 @@ enum class RegexNFAStateType : uint8_t {
 };
 
 template <RegexNFAStateType state_type>
+class RegexNFAState;
+
+template <RegexNFAStateType state_type>
+class PositiveTaggedTransition {
+public:
+    PositiveTaggedTransition(uint32_t const tag, RegexNFAState<state_type> const* dest_state)
+            : m_tag(tag),
+              m_dest_state(dest_state) {}
+
+    [[nodiscard]] auto get_tag() const -> uint32_t { return m_tag; }
+
+    [[nodiscard]] auto get_dest_state() const -> RegexNFAState<state_type> const* {
+        return m_dest_state;
+    }
+
+private:
+    uint32_t m_tag{};
+    RegexNFAState<state_type> const* m_dest_state{};
+};
+
+template <RegexNFAStateType state_type>
+class NegativeTaggedTransition {
+public:
+    NegativeTaggedTransition(std::set<uint32_t> tags, RegexNFAState<state_type> const* dest_state)
+            : m_tags(std::move(tags)),
+              m_dest_state(dest_state) {}
+
+    [[nodiscard]] auto get_tags() const -> std::set<uint32_t> const& { return m_tags; }
+
+    [[nodiscard]] auto get_dest_state() const -> RegexNFAState<state_type> const* {
+        return m_dest_state;
+    }
+
+private:
+    std::set<uint32_t> m_tags;
+    RegexNFAState<state_type> const* m_dest_state{};
+};
+
+template <RegexNFAStateType state_type>
 class RegexNFAState {
 public:
     using Tree = UnicodeIntervalTree<RegexNFAState*>;
@@ -37,6 +76,30 @@ public:
 
     [[nodiscard]] auto get_matching_variable_id() const -> uint32_t {
         return m_matching_variable_id;
+    }
+
+    auto add_positive_tagged_transition(
+            uint32_t const tag,
+            RegexNFAState<state_type> const* dest_state
+    ) -> void {
+        m_positive_tagged_transitions.emplace_back(tag, dest_state);
+    }
+
+    [[nodiscard]] auto get_positive_tagged_transitions(
+    ) const -> std::vector<PositiveTaggedTransition<state_type>> const& {
+        return m_positive_tagged_transitions;
+    }
+
+    auto add_negative_tagged_transition(
+            std::set<uint32_t> tags,
+            RegexNFAState<state_type> const* dest_state
+    ) -> void {
+        m_negative_tagged_transitions.emplace_back(std::move(tags), dest_state);
+    }
+
+    [[nodiscard]] auto get_negative_tagged_transitions(
+    ) const -> std::vector<NegativeTaggedTransition<state_type>> const& {
+        return m_negative_tagged_transitions;
     }
 
     auto set_epsilon_transitions(std::vector<RegexNFAState*>& epsilon_transitions) -> void {
@@ -83,6 +146,8 @@ public:
 private:
     bool m_accepting{false};
     uint32_t m_matching_variable_id{0};
+    std::vector<PositiveTaggedTransition<state_type>> m_positive_tagged_transitions;
+    std::vector<NegativeTaggedTransition<state_type>> m_negative_tagged_transitions;
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==

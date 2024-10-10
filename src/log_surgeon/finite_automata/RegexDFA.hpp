@@ -27,7 +27,7 @@ public:
         m_matching_variable_ids.push_back(variable_id);
     }
 
-    [[nodiscard]] auto get_matching_variable_ids() const -> std::vector<int> const& {
+    [[nodiscard]] auto get_matching_variable_ids() const -> std::vector<uint32_t> const& {
         return m_matching_variable_ids;
     }
 
@@ -46,7 +46,7 @@ public:
     [[nodiscard]] auto next(uint32_t character) const -> RegexDFAState<stateType>*;
 
 private:
-    std::vector<int> m_matching_variable_ids;
+    std::vector<uint32_t> m_matching_variable_ids;
     RegexDFAState<stateType>* m_bytes_transition[cSizeOfByte];
     // NOTE: We don't need m_tree_transitions for the `stateType ==
     // RegexDFAStateType::Byte` case, so we use an empty class (`std::tuple<>`)
@@ -100,7 +100,7 @@ public:
         return m_state1->is_accepting() && m_state2->is_accepting();
     }
 
-    [[nodiscard]] auto get_matching_variable_ids() const -> std::vector<int> const& {
+    [[nodiscard]] auto get_matching_variable_ids() const -> std::vector<uint32_t> const& {
         return m_state1->get_matching_variable_ids();
     }
 

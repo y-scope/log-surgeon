@@ -64,7 +64,7 @@ auto SchemaParser::try_schema_file(string const& schema_file_path) -> unique_ptr
                     strfmt("Failed to read '%s', errno=%d", schema_file_path.c_str(), errno)
             );
         }
-        int code{static_cast<std::underlying_type_t<ErrorCode>>(error_code)};
+        auto const code{static_cast<std::underlying_type_t<ErrorCode>>(error_code)};
         throw std::runtime_error(
                 strfmt("Failed to read '%s', error_code=%d", schema_file_path.c_str(), code)
         );

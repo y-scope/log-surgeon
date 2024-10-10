@@ -163,7 +163,7 @@ private:
         T m_value;
         uint32_t m_lower{};
         uint32_t m_upper{};
-        int m_height{};
+        uint32_t m_height{};
         std::unique_ptr<Node> m_left;
         std::unique_ptr<Node> m_right;
     };
