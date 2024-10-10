@@ -86,8 +86,8 @@ TEST_CASE("Test NFA", "[NFA]") {
 
     // Serialize NFA
     std::string serialized_nfa;
-    visited_states.clear();
     state_queue.push(root);
+    visited_states.clear();
     visited_states.insert(root);
     while (false == state_queue.empty()) {
         auto const* current_state = state_queue.front();
