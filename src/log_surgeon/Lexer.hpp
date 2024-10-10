@@ -50,9 +50,9 @@ template <typename NFAStateType, typename DFAStateType>
 class Lexer {
 public:
     // std::vector<int> can be declared as constexpr in c++20
-    static inline std::vector<uint32_t> const cTokenEndTypes = {(uint32_t)SymbolID::TokenEndID};
+    static inline std::vector<uint32_t> const cTokenEndTypes = {(uint32_t)SymbolId::TokenEnd};
     static inline std::vector<uint32_t> const cTokenUncaughtStringTypes
-            = {(uint32_t)SymbolID::TokenUncaughtStringID};
+            = {(uint32_t)SymbolId::TokenUncaughtString};
 
     /**
      * Generate a DFA from an NFA

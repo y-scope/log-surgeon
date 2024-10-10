@@ -24,15 +24,15 @@ enum class ErrorCode {
 };
 
 // Using uint32_t as the underlying type to ensure consistency with token identifier types.
-enum class SymbolID : uint32_t {
-    TokenEndID,
-    TokenUncaughtStringID,
-    TokenIntId,
-    TokenFloatId,
-    TokenHexId,
-    TokenFirstTimestampId,
-    TokenNewlineTimestampId,
-    TokenNewlineId
+enum class SymbolId : uint32_t {
+    TokenEnd,
+    TokenUncaughtString,
+    TokenInt,
+    TokenFloat,
+    TokenHex,
+    TokenFirstTimestamp,
+    TokenNewlineTimestamp,
+    TokenNewline
 };
 
 constexpr char cTokenEnd[] = "$end";

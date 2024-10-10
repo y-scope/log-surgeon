@@ -181,7 +181,7 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
                 return err;
             }
             if (false == output_buffer->has_timestamp()
-                && next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolID::TokenNewlineTimestampId)
+                && next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenNewlineTimestamp)
             {
                 // TODO: combine the below with found_start_of_next_message
                 // into 1 function
@@ -206,14 +206,14 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
                 return ErrorCode::Success;
             }
         }
-        if (next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolID::TokenEndID) {
+        if (next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd) {
             output_buffer->set_token(0, next_token);
             output_buffer->set_pos(1);
             parsing_action = ParsingAction::CompressAndFinish;
             return ErrorCode::Success;
         }
-        if (next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolID::TokenFirstTimestampId
-            || next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolID::TokenNewlineTimestampId)
+        if (next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenFirstTimestamp
+            || next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenNewlineTimestamp)
         {
             output_buffer->set_has_timestamp(true);
             output_buffer->set_token(0, next_token);
@@ -235,15 +235,15 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
         auto token_type = next_token.m_type_ids_ptr->at(0);
         bool found_start_of_next_message
                 = (output_buffer->has_timestamp()
-                   && token_type == (uint32_t)SymbolID::TokenNewlineTimestampId)
+                   && token_type == (uint32_t)SymbolId::TokenNewlineTimestamp)
                   || (!output_buffer->has_timestamp() && next_token.get_char(0) == '\n'
-                      && token_type != (uint32_t)SymbolID::TokenNewlineId);
-        if (token_type == (uint32_t)SymbolID::TokenEndID) {
+                      && token_type != (uint32_t)SymbolId::TokenNewline);
+        if (token_type == (uint32_t)SymbolId::TokenEnd) {
             parsing_action = ParsingAction::CompressAndFinish;
             return ErrorCode::Success;
         }
         if (false == output_buffer->has_timestamp()
-            && token_type == (uint32_t)SymbolID::TokenNewlineId)
+            && token_type == (uint32_t)SymbolId::TokenNewline)
         {
             m_input_buffer.set_consumed_pos(output_buffer->get_curr_token().m_end_pos);
             output_buffer->advance_to_next_token();
