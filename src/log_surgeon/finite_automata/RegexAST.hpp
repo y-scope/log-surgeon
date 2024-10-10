@@ -105,7 +105,7 @@ public:
         // Handle negative tags as:
         // root --(regex transitions)--> intermediate_state --(negative tags)--> end_state
         if (false == m_negative_tags.empty()) {
-            NFAStateType* intermediate_state = nfa->new_state();
+            auto* intermediate_state = nfa->new_state();
             add_to_nfa(nfa, intermediate_state);
             intermediate_state->add_negative_tagged_transition(m_negative_tags, end_state);
         } else {
