@@ -104,7 +104,7 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
     }
     for (uint32_t i = 0; i < get_log_output_buffer()->pos(); i++) {
         Token& token = get_log_output_buffer()->get_mutable_token(i);
-        std::vector<uint32_t> const& token_types = *token.m_type_ids_ptr;
+        auto const& token_types = *token.m_type_ids_ptr;
         add_token(token_types[0], &token);
     }
 }
