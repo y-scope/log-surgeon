@@ -170,7 +170,7 @@ auto UnicodeIntervalTree<T>::Node::balance_factor() -> int {
 template <class T>
 auto UnicodeIntervalTree<T>::Node::balance(std::unique_ptr<Node> node
 ) -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
-    auto factor = node->balance_factor();
+    auto const factor = node->balance_factor();
     if (factor * factor <= 1) {
         return node;
     }
