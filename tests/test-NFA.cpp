@@ -70,11 +70,15 @@ TEST_CASE("Test NFA", "[NFA]") {
         for (auto const* dest_state : current_state->get_epsilon_transitions()) {
             add_to_queue(dest_state);
         }
-        for (auto const& [tag, dest_state] : current_state->get_positive_tagged_transitions()) {
-            add_to_queue(dest_state);
+        for (auto const& positive_tagged_transition :
+             current_state->get_positive_tagged_transitions())
+        {
+            add_to_queue(positive_tagged_transition.get_dest_state());
         }
-        for (auto const& [tags, dest_state] : current_state->get_negative_tagged_transitions()) {
-            add_to_queue(dest_state);
+        for (auto const& negative_tagged_transition :
+             current_state->get_negative_tagged_transitions())
+        {
+            add_to_queue(negative_tagged_transition.get_dest_state());
         }
     }
 
@@ -101,24 +105,30 @@ TEST_CASE("Test NFA", "[NFA]") {
         }
         serialized_nfa += "},epsilon_transitions={";
         for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-            serialized_nfa += std::to_string(state_ids.find(dest_state)->second) + ",";
+            serialized_nfa += std::to_string(state_ids.at(dest_state)) + ",";
             add_to_queue(dest_state);
         }
         serialized_nfa += "},positive_tagged_transitions={";
-        for (auto const& [tag, dest_state] : current_state->get_positive_tagged_transitions()) {
-            serialized_nfa += std::to_string(state_ids.find(dest_state)->second);
-            serialized_nfa += "[" + std::to_string(tag) + "],";
-            add_to_queue(dest_state);
+        for (auto const& positive_tagged_transition :
+             current_state->get_positive_tagged_transitions())
+        {
+            serialized_nfa
+                    += std::to_string(state_ids.at(positive_tagged_transition.get_dest_state()));
+            serialized_nfa += "[" + std::to_string(positive_tagged_transition.get_tag()) + "],";
+            add_to_queue(positive_tagged_transition.get_dest_state());
         }
         serialized_nfa += "},negative_tagged_transitions={";
-        for (auto const& [tags, dest_state] : current_state->get_negative_tagged_transitions()) {
-            serialized_nfa += std::to_string(state_ids.find(dest_state)->second);
+        for (auto const& negative_tagged_transition :
+             current_state->get_negative_tagged_transitions())
+        {
+            serialized_nfa
+                    += std::to_string(state_ids.at(negative_tagged_transition.get_dest_state()));
             serialized_nfa += "[";
-            for (auto const& tag : tags) {
+            for (auto const& tag : negative_tagged_transition.get_tags()) {
                 serialized_nfa += std::to_string(tag) + ",";
             }
             serialized_nfa += "],";
-            add_to_queue(dest_state);
+            add_to_queue(negative_tagged_transition.get_dest_state());
         }
         serialized_nfa += "}";
         serialized_nfa += "\n";
