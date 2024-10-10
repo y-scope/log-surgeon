@@ -41,7 +41,7 @@ TEST_CASE("Test NFA", "[NFA]") {
     auto const schema_ast = schema.release_schema_ast_ptr();
     auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
     ByteNFA nfa;
-    ByteLexicalRule rule(0, std::move(capture_rule_ast.m_regex_ptr));
+    ByteLexicalRule rule{0, std::move(capture_rule_ast.m_regex_ptr)};
     rule.add_to_nfa(&nfa);
 
     // Add helper for updating state_queue and visited_states
