@@ -100,7 +100,8 @@ public:
      * @param nfa
      * @param end_state
      */
-    void add_to_nfa_with_negative_tags(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) {
+    auto add_to_nfa_with_negative_tags(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const
+            -> void {
         // Handle negative tags as:
         // root --(regex transitions)--> intermediate_state --(negative tags)--> end_state
         if (false == m_negative_tags.empty()) {
