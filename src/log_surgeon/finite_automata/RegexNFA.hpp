@@ -429,7 +429,7 @@ auto RegexNFA<NFAStateType>::serialize() const -> std::string {
         serialized_states.emplace_back(current_state->serialize(state_ids));
     }
 
-    return format("{}\n", fmt::join(serialized_states, "\n"));
+    return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
 }
 }  // namespace log_surgeon::finite_automata
 
