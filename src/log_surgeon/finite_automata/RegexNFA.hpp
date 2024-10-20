@@ -47,6 +47,8 @@ public:
 
     /**
      * Serialize the positive tagged transition into a string.
+     * @param state_ids A map of states to their unique identifiers.
+     * @return A string representation of the positive tagged transitions.
      */
     [[nodiscard]] auto serialize(
             std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
@@ -72,6 +74,8 @@ public:
 
     /**
      * Serialize the negative tagged transitions into a string.
+     * @param state_ids A map of states to their unique identifiers.
+     * @return A string representation of the negative tagged transitions.
      */
     [[nodiscard]] auto serialize(
             std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
@@ -148,6 +152,8 @@ public:
 
     /**
      * Serialize the NFA state into a string.
+     * @param state_ids A map of states to their unique identifiers.
+     * @return A string representation of the NFA state.
      */
     [[nodiscard]] auto serialize(
             std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
@@ -200,6 +206,7 @@ public:
 
     /**
      * Serialize the NFA into a string.
+     * @return A string representation of the NFA.
      */
     [[nodiscard]] auto serialize() const -> std::string;
 
