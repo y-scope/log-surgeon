@@ -1,6 +1,4 @@
 #include <cstdint>
-#include <map>
-#include <queue>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -18,12 +16,9 @@ using log_surgeon::cSizeOfByte;
 using log_surgeon::finite_automata::RegexNFAByteState;
 using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
-using std::queue;
 using std::string;
 using std::stringstream;
 using std::to_string;
-using std::unordered_map;
-using std::unordered_set;
 using std::vector;
 
 using ByteLexicalRule = log_surgeon::LexicalRule<RegexNFAByteState>;
@@ -37,27 +32,7 @@ using RegexASTMultiplicationByte
 using RegexASTOrByte = log_surgeon::finite_automata::RegexASTOr<RegexNFAByteState>;
 
 namespace {
-/**
- * Add a destination state to the queue and set of visited states if it has not yet been visited.
- * @param dest_state
- * @param visited_states
- * @param state_queue
- */
-auto add_to_queue_and_visited(
-        RegexNFAByteState const* dest_state,
-        queue<RegexNFAByteState const*>& state_queue,
-        unordered_set<RegexNFAByteState const*>& visited_states
-) -> void;
 
-auto add_to_queue_and_visited(
-        RegexNFAByteState const* dest_state,
-        queue<RegexNFAByteState const*>& state_queue,
-        unordered_set<RegexNFAByteState const*>& visited_states
-) -> void {
-    if (visited_states.insert(dest_state).second) {
-        state_queue.push(dest_state);
-    }
-}
 }  // namespace
 
 TEST_CASE("Test NFA", "[NFA]") {
@@ -76,124 +51,26 @@ TEST_CASE("Test NFA", "[NFA]") {
     rules.emplace_back(0, move(capture_rule_ast.m_regex_ptr));
     ByteNFA nfa(rules);
 
-    queue<RegexNFAByteState const*> state_queue;
-    unordered_set<RegexNFAByteState const*> visited_states;
-
-    // Assign state IDs
-    unordered_map<RegexNFAByteState const*, uint32_t> state_ids;
-    auto const* root = nfa.get_root();
-    state_queue.push(root);
-    visited_states.insert(root);
-    while (false == state_queue.empty()) {
-        auto const* current_state = state_queue.front();
-        state_queue.pop();
-        state_ids.insert({current_state, state_ids.size()});
-        for (uint32_t idx = 0; idx < cSizeOfByte; idx++) {
-            for (auto const* dest_state : current_state->get_byte_transitions(idx)) {
-                add_to_queue_and_visited(dest_state, state_queue, visited_states);
-            }
-        }
-        for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-            add_to_queue_and_visited(dest_state, state_queue, visited_states);
-        }
-        for (auto const& positive_tagged_transition :
-             current_state->get_positive_tagged_transitions())
-        {
-            add_to_queue_and_visited(
-                    positive_tagged_transition.get_dest_state(),
-                    state_queue,
-                    visited_states
-            );
-        }
-        for (auto const& negative_tagged_transition :
-             current_state->get_negative_tagged_transitions())
-        {
-            add_to_queue_and_visited(
-                    negative_tagged_transition.get_dest_state(),
-                    state_queue,
-                    visited_states
-            );
-        }
-    }
-
-    // Serialize NFA
-    string serialized_nfa;
-    state_queue.push(root);
-    visited_states.clear();
-    visited_states.insert(root);
-    while (false == state_queue.empty()) {
-        auto const* current_state = state_queue.front();
-        state_queue.pop();
-        serialized_nfa += to_string(state_ids.at(current_state)) + ":";
-        if (current_state->is_accepting()) {
-            serialized_nfa += "accepting_tag="
-                              + to_string(current_state->get_matching_variable_id()) + ",";
-        }
-        serialized_nfa += "byte_transitions={";
-        for (uint32_t idx = 0; idx < cSizeOfByte; idx++) {
-            for (auto const* dest_state : current_state->get_byte_transitions(idx)) {
-                serialized_nfa += string(1, static_cast<char>(idx)) + "-->"
-                                  + to_string(state_ids.find(dest_state)->second) + ",";
-                add_to_queue_and_visited(dest_state, state_queue, visited_states);
-            }
-        }
-        serialized_nfa += "},epsilon_transitions={";
-        for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-            serialized_nfa += to_string(state_ids.at(dest_state)) + ",";
-            add_to_queue_and_visited(dest_state, state_queue, visited_states);
-        }
-        serialized_nfa += "},positive_tagged_transitions={";
-        for (auto const& positive_tagged_transition :
-             current_state->get_positive_tagged_transitions())
-        {
-            serialized_nfa += to_string(state_ids.at(positive_tagged_transition.get_dest_state()));
-            serialized_nfa += "[" + to_string(positive_tagged_transition.get_tag()) + "],";
-            add_to_queue_and_visited(
-                    positive_tagged_transition.get_dest_state(),
-                    state_queue,
-                    visited_states
-            );
-        }
-        serialized_nfa += "},negative_tagged_transitions={";
-        for (auto const& negative_tagged_transition :
-             current_state->get_negative_tagged_transitions())
-        {
-            serialized_nfa += to_string(state_ids.at(negative_tagged_transition.get_dest_state()));
-            serialized_nfa += "[";
-            for (auto const& tag : negative_tagged_transition.get_tags()) {
-                serialized_nfa += to_string(tag) + ",";
-            }
-            serialized_nfa += "],";
-            add_to_queue_and_visited(
-                    negative_tagged_transition.get_dest_state(),
-                    state_queue,
-                    visited_states
-            );
-        }
-        serialized_nfa += "}";
-        serialized_nfa += "\n";
-    }
-
     // Compare against expected output
-    string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2,},"
+    string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2},"
                                      "epsilon_transitions={},"
                                      "positive_tagged_transitions={},"
                                      "negative_tagged_transitions={}\n";
-    expected_serialized_nfa += "1:byte_transitions={a-->3,b-->3,c-->4,d-->4,},"
+    expected_serialized_nfa += "1:byte_transitions={a-->3,b-->3,c-->4,d-->4},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
                                "negative_tagged_transitions={}\n";
     expected_serialized_nfa += "2:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
-                               "negative_tagged_transitions={5[0,1,2,3,],}\n";
+                               "negative_tagged_transitions={5[0,1,2,3]}\n";
     expected_serialized_nfa += "3:byte_transitions={},"
                                "epsilon_transitions={},"
-                               "positive_tagged_transitions={6[0],},"
+                               "positive_tagged_transitions={6[0]},"
                                "negative_tagged_transitions={}\n";
     expected_serialized_nfa += "4:byte_transitions={},"
                                "epsilon_transitions={},"
-                               "positive_tagged_transitions={7[1],},"
+                               "positive_tagged_transitions={7[1]},"
                                "negative_tagged_transitions={}\n";
     expected_serialized_nfa += "5:accepting_tag=0,byte_transitions={},"
                                "epsilon_transitions={},"
@@ -202,39 +79,43 @@ TEST_CASE("Test NFA", "[NFA]") {
     expected_serialized_nfa += "6:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
-                               "negative_tagged_transitions={8[1,],}\n";
+                               "negative_tagged_transitions={8[1]}\n";
     expected_serialized_nfa += "7:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
-                               "negative_tagged_transitions={8[0,],}\n";
+                               "negative_tagged_transitions={8[0]}\n";
     expected_serialized_nfa += "8:byte_transitions={},"
                                "epsilon_transitions={},"
-                               "positive_tagged_transitions={9[2],},"
+                               "positive_tagged_transitions={9[2]},"
                                "negative_tagged_transitions={}\n";
-    expected_serialized_nfa += "9:byte_transitions={B-->10,},"
+    expected_serialized_nfa += "9:byte_transitions={B-->10},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
                                "negative_tagged_transitions={}\n";
     expected_serialized_nfa += "10:byte_transitions={0-->11,1-->11,2-->11,3-->11,4-->11,5-->11,6-->"
-                               "11,7-->11,8-->11,9-->11,},"
+                               "11,7-->11,8-->11,9-->11},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
                                "negative_tagged_transitions={}\n";
     expected_serialized_nfa += "11:byte_transitions={0-->11,1-->11,2-->11,3-->11,4-->11,5-->11,6-->"
-                               "11,7-->11,8-->11,9-->11,},"
+                               "11,7-->11,8-->11,9-->11},"
                                "epsilon_transitions={},"
-                               "positive_tagged_transitions={12[3],},"
+                               "positive_tagged_transitions={12[3]},"
                                "negative_tagged_transitions={}\n";
-    expected_serialized_nfa += "12:byte_transitions={C-->5,},"
+    expected_serialized_nfa += "12:byte_transitions={C-->5},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
                                "negative_tagged_transitions={}\n";
 
     // Compare expected and actual line-by-line
-    stringstream ss_actual(serialized_nfa);
+    auto actual_serialized_nfa = nfa.serialize();
+    stringstream ss_actual(actual_serialized_nfa);
     stringstream ss_expected(expected_serialized_nfa);
     string actual_line;
     string expected_line;
+
+    CAPTURE(actual_serialized_nfa);
+    CAPTURE(expected_serialized_nfa);
     while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
         REQUIRE(actual_line == expected_line);
     }
