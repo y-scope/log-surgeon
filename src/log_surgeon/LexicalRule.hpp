@@ -43,4 +43,4 @@ void LexicalRule<NFAStateType>::add_to_nfa(finite_automata::RegexNFA<NFAStateTyp
 }
 }  // namespace log_surgeon
 
-#endif  // LOG_SURGEON_LEXER_HPP
+#endif  // LOG_SURGEON_LEXICAL_RULE_HPP
