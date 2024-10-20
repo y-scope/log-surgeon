@@ -186,7 +186,7 @@ public:
      * m_states.
      * @return NFAStateType*
      */
-    auto new_state_with_a_positive_tagged_transition(uint32_t tag, NFAStateType const* dest_state)
+    auto new_state_with_positive_tagged_transition(uint32_t tag, NFAStateType const* dest_state)
             -> NFAStateType*;
 
     /**
@@ -213,8 +213,8 @@ public:
 
 private:
     /**
-     * Add a destination state to the queue and set of visited states if it has not yet been
-     * visited.
+     * Helper method for breadth-first traversal of the NFA.
+     * Adds a state to the queue and visited set if it hasn't been visited before.
      * @param dest_state
      * @param visited_states
      * @param state_queue
@@ -347,7 +347,7 @@ auto RegexNFA<NFAStateType>::new_state() -> NFAStateType* {
 }
 
 template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::new_state_with_a_positive_tagged_transition(
+auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_transition(
         uint32_t const tag,
         NFAStateType const* dest_state
 ) -> NFAStateType* {
