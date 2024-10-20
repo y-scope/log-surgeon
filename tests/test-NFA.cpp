@@ -146,8 +146,7 @@ TEST_CASE("Test NFA", "[NFA]") {
         for (auto const& positive_tagged_transition :
              current_state->get_positive_tagged_transitions())
         {
-            serialized_nfa
-                    += to_string(state_ids.at(positive_tagged_transition.get_dest_state()));
+            serialized_nfa += to_string(state_ids.at(positive_tagged_transition.get_dest_state()));
             serialized_nfa += "[" + to_string(positive_tagged_transition.get_tag()) + "],";
             add_to_queue_and_visited(
                     positive_tagged_transition.get_dest_state(),
@@ -159,8 +158,7 @@ TEST_CASE("Test NFA", "[NFA]") {
         for (auto const& negative_tagged_transition :
              current_state->get_negative_tagged_transitions())
         {
-            serialized_nfa
-                    += to_string(state_ids.at(negative_tagged_transition.get_dest_state()));
+            serialized_nfa += to_string(state_ids.at(negative_tagged_transition.get_dest_state()));
             serialized_nfa += "[";
             for (auto const& tag : negative_tagged_transition.get_tags()) {
                 serialized_nfa += to_string(tag) + ",";
@@ -178,9 +176,9 @@ TEST_CASE("Test NFA", "[NFA]") {
 
     // Compare against expected output
     string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2,},"
-                                          "epsilon_transitions={},"
-                                          "positive_tagged_transitions={},"
-                                          "negative_tagged_transitions={}\n";
+                                     "epsilon_transitions={},"
+                                     "positive_tagged_transitions={},"
+                                     "negative_tagged_transitions={}\n";
     expected_serialized_nfa += "1:byte_transitions={a-->3,b-->3,c-->4,d-->4,},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
