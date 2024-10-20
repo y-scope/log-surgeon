@@ -105,11 +105,11 @@ public:
     auto add_to_nfa_with_negative_tags(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const
             -> void {
         // Handle negative tags as:
-        // root --(regex transitions)--> intermediate_state --(negative tags)--> end_state
+        // root --(regex)--> state_with_negative_tagged_transitions --(negative tags)--> end_state
         if (false == m_negative_tags.empty()) {
-            auto* intermediate_state
+            auto* state_with_negative_tagged_transitions
                     = nfa->new_state_with_negative_tagged_transitions(m_negative_tags, end_state);
-            add_to_nfa(nfa, intermediate_state);
+            add_to_nfa(nfa, state_with_negative_tagged_transitions);
         } else {
             add_to_nfa(nfa, end_state);
         }
@@ -893,8 +893,9 @@ template <typename NFAStateType>
 template <typename NFAStateType>
 void RegexASTCapture<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state)
         const {
-    auto* intermediate_state = nfa->new_state_with_a_positive_tagged_transition(m_tag, end_state);
-    m_group_regex_ast->add_to_nfa_with_negative_tags(nfa, intermediate_state);
+    auto* state_with_a_positive_tagged_transition
+            = nfa->new_state_with_a_positive_tagged_transition(m_tag, end_state);
+    m_group_regex_ast->add_to_nfa_with_negative_tags(nfa, state_with_a_positive_tagged_transition);
 }
 
 template <typename NFAStateType>
