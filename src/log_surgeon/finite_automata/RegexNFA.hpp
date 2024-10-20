@@ -15,6 +15,7 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
+#include <log_surgeon/LexicalRule.hpp>
 
 namespace log_surgeon::finite_automata {
 enum class RegexNFAStateType : uint8_t {
@@ -166,7 +167,7 @@ class RegexNFA {
 public:
     using StateVec = std::vector<NFAStateType*>;
 
-    RegexNFA() : m_root{new_state()} {}
+    explicit RegexNFA(std::vector<LexicalRule<NFAStateType>> const& m_rules);
 
     /**
      * Create a unique_ptr for an NFA state and add it to m_states
@@ -236,6 +237,14 @@ void RegexNFAState<state_type>::add_interval(Interval interval, RegexNFAState* d
         if (interval.first != 0 && interval.first <= interval.second) {
             m_tree_transitions.insert(interval, {dest_state});
         }
+    }
+}
+
+template <typename NFAStateType>
+RegexNFA<NFAStateType>::RegexNFA(std::vector<LexicalRule<NFAStateType>> const& m_rules)
+        : m_root{new_state()} {
+    for (auto const& rule : m_rules) {
+        rule.add_to_nfa(this);
     }
 }
 

@@ -73,6 +73,7 @@ set(SOURCE_FILES
     src/log_surgeon/LALR1Parser.tpp
     src/log_surgeon/Lexer.hpp
     src/log_surgeon/Lexer.tpp
+    src/log_surgeon/LexicalRule.hpp
     src/log_surgeon/LogEvent.cpp
     src/log_surgeon/LogEvent.hpp
     src/log_surgeon/LogParser.cpp

@@ -19,9 +19,11 @@
 #include <fmt/xchar.h>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/RegexNFA.hpp>
+#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
+template <typename NFAStateType>
+class RegexNFA;
 
 // TODO: rename `RegexAST` to `RegexASTNode`
 /**

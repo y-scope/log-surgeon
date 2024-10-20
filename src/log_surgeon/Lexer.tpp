@@ -374,10 +374,7 @@ auto Lexer<NFAStateType, DFAStateType>::get_rule(uint32_t const variable_id
 
 template <typename NFAStateType, typename DFAStateType>
 void Lexer<NFAStateType, DFAStateType>::generate() {
-    finite_automata::RegexNFA<NFAStateType> nfa;
-    for (auto const& rule : m_rules) {
-        rule.add_to_nfa(&nfa);
-    }
+    finite_automata::RegexNFA<NFAStateType> nfa(m_rules);
     // TODO: DFA ignores tags. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = nfa_to_dfa(nfa);
     DFAStateType const* state = m_dfa->get_root();
@@ -388,14 +385,6 @@ void Lexer<NFAStateType, DFAStateType>::generate() {
             m_is_first_char[i] = false;
         }
     }
-}
-
-template <typename NFAStateType>
-void LexicalRule<NFAStateType>::add_to_nfa(finite_automata::RegexNFA<NFAStateType>* nfa) const {
-    auto* end_state = nfa->new_state();
-    end_state->set_accepting(true);
-    end_state->set_matching_variable_id(m_variable_id);
-    m_regex->add_to_nfa_with_negative_tags(nfa, end_state);
 }
 
 template <typename NFAStateType, typename DFAStateType>

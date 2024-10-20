@@ -20,8 +20,11 @@ using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
 using std::queue;
 using std::string;
+using std::stringstream;
+using std::to_string;
 using std::unordered_map;
 using std::unordered_set;
+using std::vector;
 
 using ByteLexicalRule = log_surgeon::LexicalRule<RegexNFAByteState>;
 using ByteNFA = log_surgeon::finite_automata::RegexNFA<RegexNFAByteState>;
@@ -69,12 +72,12 @@ TEST_CASE("Test NFA", "[NFA]") {
 
     auto const schema_ast = schema.release_schema_ast_ptr();
     auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
-    ByteNFA nfa;
-    ByteLexicalRule rule{0, std::move(capture_rule_ast.m_regex_ptr)};
-    rule.add_to_nfa(&nfa);
+    vector<ByteLexicalRule> rules;
+    rules.emplace_back(0, move(capture_rule_ast.m_regex_ptr));
+    ByteNFA nfa(rules);
 
-    std::queue<RegexNFAByteState const*> state_queue;
-    std::unordered_set<RegexNFAByteState const*> visited_states;
+    queue<RegexNFAByteState const*> state_queue;
+    unordered_set<RegexNFAByteState const*> visited_states;
 
     // Assign state IDs
     unordered_map<RegexNFAByteState const*, uint32_t> state_ids;
@@ -114,29 +117,29 @@ TEST_CASE("Test NFA", "[NFA]") {
     }
 
     // Serialize NFA
-    std::string serialized_nfa;
+    string serialized_nfa;
     state_queue.push(root);
     visited_states.clear();
     visited_states.insert(root);
     while (false == state_queue.empty()) {
         auto const* current_state = state_queue.front();
         state_queue.pop();
-        serialized_nfa += std::to_string(state_ids.at(current_state)) + ":";
+        serialized_nfa += to_string(state_ids.at(current_state)) + ":";
         if (current_state->is_accepting()) {
             serialized_nfa += "accepting_tag="
-                              + std::to_string(current_state->get_matching_variable_id()) + ",";
+                              + to_string(current_state->get_matching_variable_id()) + ",";
         }
         serialized_nfa += "byte_transitions={";
         for (uint32_t idx = 0; idx < cSizeOfByte; idx++) {
             for (auto const* dest_state : current_state->get_byte_transitions(idx)) {
-                serialized_nfa += std::string(1, static_cast<char>(idx)) + "-->"
-                                  + std::to_string(state_ids.find(dest_state)->second) + ",";
+                serialized_nfa += string(1, static_cast<char>(idx)) + "-->"
+                                  + to_string(state_ids.find(dest_state)->second) + ",";
                 add_to_queue_and_visited(dest_state, state_queue, visited_states);
             }
         }
         serialized_nfa += "},epsilon_transitions={";
         for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-            serialized_nfa += std::to_string(state_ids.at(dest_state)) + ",";
+            serialized_nfa += to_string(state_ids.at(dest_state)) + ",";
             add_to_queue_and_visited(dest_state, state_queue, visited_states);
         }
         serialized_nfa += "},positive_tagged_transitions={";
@@ -144,8 +147,8 @@ TEST_CASE("Test NFA", "[NFA]") {
              current_state->get_positive_tagged_transitions())
         {
             serialized_nfa
-                    += std::to_string(state_ids.at(positive_tagged_transition.get_dest_state()));
-            serialized_nfa += "[" + std::to_string(positive_tagged_transition.get_tag()) + "],";
+                    += to_string(state_ids.at(positive_tagged_transition.get_dest_state()));
+            serialized_nfa += "[" + to_string(positive_tagged_transition.get_tag()) + "],";
             add_to_queue_and_visited(
                     positive_tagged_transition.get_dest_state(),
                     state_queue,
@@ -157,10 +160,10 @@ TEST_CASE("Test NFA", "[NFA]") {
              current_state->get_negative_tagged_transitions())
         {
             serialized_nfa
-                    += std::to_string(state_ids.at(negative_tagged_transition.get_dest_state()));
+                    += to_string(state_ids.at(negative_tagged_transition.get_dest_state()));
             serialized_nfa += "[";
             for (auto const& tag : negative_tagged_transition.get_tags()) {
-                serialized_nfa += std::to_string(tag) + ",";
+                serialized_nfa += to_string(tag) + ",";
             }
             serialized_nfa += "],";
             add_to_queue_and_visited(
@@ -174,7 +177,7 @@ TEST_CASE("Test NFA", "[NFA]") {
     }
 
     // Compare against expected output
-    std::string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2,},"
+    string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2,},"
                                           "epsilon_transitions={},"
                                           "positive_tagged_transitions={},"
                                           "negative_tagged_transitions={}\n";
@@ -230,15 +233,15 @@ TEST_CASE("Test NFA", "[NFA]") {
                                "negative_tagged_transitions={}\n";
 
     // Compare expected and actual line-by-line
-    std::stringstream ss_actual(serialized_nfa);
-    std::stringstream ss_expected(expected_serialized_nfa);
-    std::string actual_line;
-    std::string expected_line;
-    while (std::getline(ss_actual, actual_line) && std::getline(ss_expected, expected_line)) {
+    stringstream ss_actual(serialized_nfa);
+    stringstream ss_expected(expected_serialized_nfa);
+    string actual_line;
+    string expected_line;
+    while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
         REQUIRE(actual_line == expected_line);
     }
-    std::getline(ss_actual, actual_line);
+    getline(ss_actual, actual_line);
     REQUIRE(actual_line.empty());
-    std::getline(ss_expected, expected_line);
+    getline(ss_expected, expected_line);
     REQUIRE(expected_line.empty());
 }
