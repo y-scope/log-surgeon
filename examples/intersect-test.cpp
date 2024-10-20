@@ -14,6 +14,9 @@ using log_surgeon::ParserAST;
 using log_surgeon::SchemaVarAST;
 using std::string;
 using std::unique_ptr;
+using std::vector;
+
+using ByteLexicalRule = log_surgeon::LexicalRule<RegexNFAByteState>;
 
 auto get_intersect_for_query(
         std::map<uint32_t, std::string>& m_id_symbol,
@@ -30,13 +33,13 @@ auto get_intersect_for_query(
     }
     log_surgeon::Schema schema;
     schema.add_variable(string("search:") + processed_search_string, -1);
-    RegexNFA<RegexNFAByteState> nfa;
     auto schema_ast = schema.release_schema_ast_ptr();
+    vector<ByteLexicalRule> rules;
     for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-        LexicalRule rule(0, std::move(schema_var_ast->m_regex_ptr));
-        rule.add_to_nfa(&nfa);
+        rules.emplace_back(0, std::move(schema_var_ast->m_regex_ptr));
     }
+    RegexNFA<RegexNFAByteState> nfa(rules);
     auto dfa2 = ByteLexer::nfa_to_dfa(nfa);
     auto schema_types = dfa1->get_intersect(dfa2);
     std::cout << search_string << ":";
@@ -67,14 +70,14 @@ auto main() -> int {
             schema.add_variable("v6:123", -1);
         }
         std::map<uint32_t, std::string> m_id_symbol;
-        RegexNFA<RegexNFAByteState> nfa;
         auto schema_ast = schema.release_schema_ast_ptr();
+        vector<ByteLexicalRule> rules;
         for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
             auto* var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-            LexicalRule rule(m_id_symbol.size(), std::move(var_ast->m_regex_ptr));
+            rules.emplace_back(m_id_symbol.size(), std::move(var_ast->m_regex_ptr));
             m_id_symbol[m_id_symbol.size()] = var_ast->m_name;
-            rule.add_to_nfa(&nfa);
         }
+        RegexNFA<RegexNFAByteState> nfa(rules);
         auto dfa = ByteLexer::nfa_to_dfa(nfa);
         get_intersect_for_query(m_id_symbol, dfa, "*1*");
         get_intersect_for_query(m_id_symbol, dfa, "*a*");
