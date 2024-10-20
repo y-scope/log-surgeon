@@ -190,6 +190,8 @@ public:
     /**
      * Create a unique_ptr for an NFA state with a positive tagged transition and add it to
      * m_states.
+     * @param tag
+     * @param dest_state
      * @return NFAStateType*
      */
     auto new_state_with_positive_tagged_transition(uint32_t tag, NFAStateType const* dest_state)
@@ -197,12 +199,20 @@ public:
 
     /**
      * Create a unique_ptr for an NFA state with negative tagged transitions and add it to m_states.
+     * @param tags
+     * @param dest_state
      * @return NFAStateType*
      */
     auto new_state_with_negative_tagged_transitions(
             std::set<uint32_t> tags,
             NFAStateType const* dest_state
     ) -> NFAStateType*;
+
+    /**
+     * Traverse the NFA using a BFS and keep track of the order states are visited in.
+     * @return A vector that performs a BFS of the NFA.
+     */
+    [[nodiscard]] auto get_traversal_order() const -> std::vector<RegexNFAByteState const*>;
 
     /**
      * Serialize the NFA into a string.
@@ -387,19 +397,16 @@ auto RegexNFA<NFAStateType>::add_to_queue_and_visited(
 }
 
 template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::serialize() const -> std::string {
+auto RegexNFA<NFAStateType>::get_traversal_order() const -> std::vector<RegexNFAByteState const*> {
     std::queue<RegexNFAByteState const*> state_queue;
-    std::queue<RegexNFAByteState const*> state_queue_copy;
     std::unordered_set<RegexNFAByteState const*> visited_states;
+    std::vector<RegexNFAByteState const*> visited_order;
 
-    // Assign state IDs
-    std::unordered_map<RegexNFAByteState const*, uint32_t> state_ids;
     add_to_queue_and_visited(m_root, state_queue, visited_states);
     while (false == state_queue.empty()) {
         auto const* current_state = state_queue.front();
-        state_queue_copy.push(current_state);
+        visited_order.push_back(current_state);
         state_queue.pop();
-        state_ids.insert({current_state, state_ids.size()});
         for (uint32_t idx = 0; idx < cSizeOfByte; idx++) {
             for (auto const* dest_state : current_state->get_byte_transitions(idx)) {
                 add_to_queue_and_visited(dest_state, state_queue, visited_states);
@@ -427,15 +434,22 @@ auto RegexNFA<NFAStateType>::serialize() const -> std::string {
             );
         }
     }
+    return visited_order;
+}
 
-    // Serialize NFA
-    std::vector<std::string> serialized_states;
-    while (false == state_queue_copy.empty()) {
-        auto const* current_state = state_queue_copy.front();
-        state_queue_copy.pop();
-        serialized_states.emplace_back(current_state->serialize(state_ids));
+template <typename NFAStateType>
+auto RegexNFA<NFAStateType>::serialize() const -> std::string {
+    auto traversal_order = get_traversal_order();
+
+    std::unordered_map<RegexNFAByteState const*, uint32_t> state_ids;
+    for (auto const* state : traversal_order) {
+        state_ids.insert({state, state_ids.size()});
     }
 
+    std::vector<std::string> serialized_states;
+    for (auto const* state : traversal_order) {
+        serialized_states.emplace_back(state->serialize(state_ids));
+    }
     return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
 }
 }  // namespace log_surgeon::finite_automata
