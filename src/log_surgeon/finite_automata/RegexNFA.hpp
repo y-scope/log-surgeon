@@ -209,11 +209,11 @@ public:
     ) -> NFAStateType*;
 
     /**
-     * Traverse the NFA using a BFS and keep track of the order states are visited in.
-     * @return A vector representing the traversal order of the NFA states using breadth-first
-     * search.
+     * Traverse the NFA using a breadth-first search (BFS) and keep track of the order states are
+     * visited in.
+     * @return A vector representing the traversal order of the NFA states using BFS.
      */
-    [[nodiscard]] auto get_traversal_order() const -> std::vector<RegexNFAByteState const*>;
+    [[nodiscard]] auto get_bfs_traversal_order() const -> std::vector<RegexNFAByteState const*>;
 
     /**
      * @return A string representation of the NFA.
@@ -397,7 +397,8 @@ auto RegexNFA<NFAStateType>::add_to_queue_and_visited(
 }
 
 template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::get_traversal_order() const -> std::vector<RegexNFAByteState const*> {
+auto RegexNFA<NFAStateType>::get_bfs_traversal_order(
+) const -> std::vector<RegexNFAByteState const*> {
     std::queue<RegexNFAByteState const*> state_queue;
     std::unordered_set<RegexNFAByteState const*> visited_states;
     std::vector<RegexNFAByteState const*> visited_order;
@@ -439,7 +440,7 @@ auto RegexNFA<NFAStateType>::get_traversal_order() const -> std::vector<RegexNFA
 
 template <typename NFAStateType>
 auto RegexNFA<NFAStateType>::serialize() const -> std::string {
-    auto traversal_order = get_traversal_order();
+    auto traversal_order = get_bfs_traversal_order();
 
     std::unordered_map<RegexNFAByteState const*, uint32_t> state_ids;
     for (auto const* state : traversal_order) {
