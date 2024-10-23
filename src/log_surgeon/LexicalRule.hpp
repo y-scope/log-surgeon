@@ -26,6 +26,7 @@ public:
     [[nodiscard]] auto get_variable_id() const -> uint32_t { return m_variable_id; }
 
     [[nodiscard]] auto get_regex() const -> finite_automata::RegexAST<NFAStateType>* {
+        // TODO: make the returned pointer constant
         return m_regex.get();
     }
 
