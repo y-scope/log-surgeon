@@ -335,7 +335,7 @@ auto RegexNFAState<state_type>::serialize(
         negative_tagged_transitions.emplace_back(negative_tagged_transition.serialize(state_ids));
     }
 
-    auto accepting_tag_string
+    auto const accepting_tag_string
             = m_accepting ? fmt::format("accepting_tag={},", m_matching_variable_id) : "";
 
     return fmt::format(
