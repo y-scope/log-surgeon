@@ -250,7 +250,7 @@ template <RegexNFAStateType state_type>
 auto PositiveTaggedTransition<state_type>::serialize(
         std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
 ) const -> std::string {
-    return fmt::format("{}[{}]", state_ids.at(get_dest_state()), get_tag());
+    return fmt::format("{}[{}]", state_ids.at(m_dest_state), m_tag);
 }
 
 template <RegexNFAStateType state_type>
