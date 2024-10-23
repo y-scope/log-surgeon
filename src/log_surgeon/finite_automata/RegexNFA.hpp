@@ -443,7 +443,7 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order(
 
 template <typename NFAStateType>
 auto RegexNFA<NFAStateType>::serialize() const -> std::string {
-    auto traversal_order = get_bfs_traversal_order();
+    auto const traversal_order = get_bfs_traversal_order();
 
     std::unordered_map<RegexNFAByteState const*, uint32_t> state_ids;
     for (auto const* state : traversal_order) {
