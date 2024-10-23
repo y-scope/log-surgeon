@@ -40,7 +40,7 @@ auto get_intersect_for_query(
         auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
         rules.emplace_back(0, std::move(schema_var_ast->m_regex_ptr));
     }
-    RegexNFA<RegexNFAByteState> nfa(rules);
+    RegexNFA<RegexNFAByteState> nfa(move(rules));
     auto dfa2 = ByteLexer::nfa_to_dfa(nfa);
     auto schema_types = dfa1->get_intersect(dfa2);
     std::cout << search_string << ":";
@@ -78,7 +78,7 @@ auto main() -> int {
             rules.emplace_back(m_id_symbol.size(), std::move(var_ast->m_regex_ptr));
             m_id_symbol[m_id_symbol.size()] = var_ast->m_name;
         }
-        RegexNFA<RegexNFAByteState> nfa(rules);
+        RegexNFA<RegexNFAByteState> nfa(move(rules));
         auto dfa = ByteLexer::nfa_to_dfa(nfa);
         get_intersect_for_query(m_id_symbol, dfa, "*1*");
         get_intersect_for_query(m_id_symbol, dfa, "*a*");
