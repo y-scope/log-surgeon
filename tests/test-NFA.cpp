@@ -108,9 +108,9 @@ TEST_CASE("Test NFA", "[NFA]") {
                                "negative_tagged_transitions={}\n";
 
     // Compare expected and actual line-by-line
-    auto actual_serialized_nfa = nfa.serialize();
-    stringstream ss_actual(actual_serialized_nfa);
-    stringstream ss_expected(expected_serialized_nfa);
+    auto const actual_serialized_nfa = nfa.serialize();
+    stringstream ss_actual{actual_serialized_nfa};
+    stringstream ss_expected{expected_serialized_nfa};
     string actual_line;
     string expected_line;
 
