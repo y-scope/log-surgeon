@@ -205,7 +205,7 @@ public:
      * @param dest_state
      * @return NFAStateType*
      */
-    auto new_state_with_negative_tagged_transitions(
+    [[nodiscard]] auto new_state_with_negative_tagged_transitions(
             std::set<uint32_t> tags,
             NFAStateType const* dest_state
     ) -> NFAStateType*;
