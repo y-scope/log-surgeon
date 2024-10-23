@@ -314,7 +314,7 @@ auto RegexNFAState<state_type>::serialize(
     std::vector<std::string> byte_transitions;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
         for (auto const* dest_state : m_bytes_transitions[idx]) {
-            byte_transitions.push_back(
+            byte_transitions.emplace_back(
                     fmt::format("{}-->{}", static_cast<char>(idx), state_ids.at(dest_state))
             );
         }
