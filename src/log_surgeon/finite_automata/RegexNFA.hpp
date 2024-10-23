@@ -73,7 +73,6 @@ public:
     }
 
     /**
-     * Serialize the negative tagged transitions into a string.
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the negative tagged transitions.
      */
