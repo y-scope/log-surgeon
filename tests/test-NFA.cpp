@@ -18,7 +18,6 @@ using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
 using std::string;
 using std::stringstream;
-using std::to_string;
 using std::vector;
 
 using ByteLexicalRule = log_surgeon::LexicalRule<RegexNFAByteState>;
