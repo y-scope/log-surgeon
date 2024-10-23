@@ -13,6 +13,7 @@ using log_surgeon::lexers::ByteLexer;
 using log_surgeon::LexicalRule;
 using log_surgeon::ParserAST;
 using log_surgeon::SchemaVarAST;
+using std::move;
 using std::string;
 using std::unique_ptr;
 using std::vector;
