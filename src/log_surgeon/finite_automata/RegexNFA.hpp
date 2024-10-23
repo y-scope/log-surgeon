@@ -329,6 +329,7 @@ auto RegexNFAState<state_type>::serialize(
     for (auto const& positive_tagged_transition : m_positive_tagged_transitions) {
         positive_tagged_transitions.emplace_back(positive_tagged_transition.serialize(state_ids));
     }
+
     std::vector<std::string> negative_tagged_transitions;
     for (auto const& negative_tagged_transition : m_negative_tagged_transitions) {
         negative_tagged_transitions.push_back(negative_tagged_transition.serialize(state_ids));
