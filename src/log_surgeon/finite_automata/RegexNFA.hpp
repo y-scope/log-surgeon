@@ -380,10 +380,8 @@ auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transitions(
         std::set<uint32_t> tags,
         NFAStateType const* dest_state
 ) -> NFAStateType* {
-    std::unique_ptr<NFAStateType> ptr = std::make_unique<NFAStateType>(tags, dest_state);
-    NFAStateType* state = ptr.get();
-    m_states.push_back(std::move(ptr));
-    return state;
+    m_states.emplace_back(std::make_unique<NFAStateType>(tags, dest_state));
+    return m_states.back().get();
 }
 
 template <typename NFAStateType>
@@ -409,7 +407,7 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order(
         auto const* current_state = state_queue.front();
         visited_order.push_back(current_state);
         state_queue.pop();
-        for (uint32_t idx = 0; idx < cSizeOfByte; idx++) {
+        for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
             for (auto const* dest_state : current_state->get_byte_transitions(idx)) {
                 add_to_queue_and_visited(dest_state, state_queue, visited_states);
             }
