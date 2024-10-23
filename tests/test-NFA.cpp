@@ -49,7 +49,7 @@ TEST_CASE("Test NFA", "[NFA]") {
     auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, move(capture_rule_ast.m_regex_ptr));
-    ByteNFA nfa(rules);
+    ByteNFA const nfa(rules);
 
     // Compare against expected output
     string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2},"
