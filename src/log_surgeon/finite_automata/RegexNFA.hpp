@@ -36,8 +36,8 @@ template <RegexNFAStateType state_type>
 class PositiveTaggedTransition {
 public:
     PositiveTaggedTransition(uint32_t const tag, RegexNFAState<state_type> const* dest_state)
-            : m_tag(tag),
-              m_dest_state(dest_state) {}
+            : m_tag{tag},
+              m_dest_state{dest_state} {}
 
     [[nodiscard]] auto get_tag() const -> uint32_t { return m_tag; }
 
