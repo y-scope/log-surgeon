@@ -371,10 +371,8 @@ auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_transition(
         uint32_t const tag,
         NFAStateType const* dest_state
 ) -> NFAStateType* {
-    std::unique_ptr<NFAStateType> ptr = std::make_unique<NFAStateType>(tag, dest_state);
-    NFAStateType* state = ptr.get();
-    m_states.push_back(std::move(ptr));
-    return state;
+    m_states.emplace_back(std::make_unique<NFAStateType>(tag, dest_state));
+    return m_states.back().get();
 }
 
 template <typename NFAStateType>
