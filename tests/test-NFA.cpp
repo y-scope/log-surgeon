@@ -16,6 +16,7 @@ using log_surgeon::cSizeOfByte;
 using log_surgeon::finite_automata::RegexNFAByteState;
 using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
+using std::move;
 using std::string;
 using std::stringstream;
 using std::vector;
