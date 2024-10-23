@@ -185,7 +185,7 @@ public:
      * Create a unique_ptr for an NFA state with no tagged transitions and add it to m_states.
      * @return NFAStateType*
      */
-    auto new_state() -> NFAStateType*;
+    [[nodiscard]] auto new_state() -> NFAStateType*;
 
     /**
      * Create a unique_ptr for an NFA state with a positive tagged transition and add it to
