@@ -194,8 +194,10 @@ public:
      * @param dest_state
      * @return NFAStateType*
      */
-    auto new_state_with_positive_tagged_transition(uint32_t tag, NFAStateType const* dest_state)
-            -> NFAStateType*;
+    [[nodiscard]] auto new_state_with_positive_tagged_transition(
+            uint32_t tag,
+            NFAStateType const* dest_state
+    ) -> NFAStateType*;
 
     /**
      * Create a unique_ptr for an NFA state with negative tagged transitions and add it to m_states.
