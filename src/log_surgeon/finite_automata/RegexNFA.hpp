@@ -322,7 +322,7 @@ auto RegexNFAState<state_type>::serialize(
 
     std::vector<std::string> epsilon_transitions;
     for (auto const* dest_state : m_epsilon_transitions) {
-        epsilon_transitions.push_back(std::to_string(state_ids.at(dest_state)));
+        epsilon_transitions.emplace_back(std::to_string(state_ids.at(dest_state)));
     }
     std::vector<std::string> positive_tagged_transitions;
     for (auto const& positive_tagged_transition : m_positive_tagged_transitions) {
