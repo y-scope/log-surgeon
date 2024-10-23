@@ -319,6 +319,7 @@ auto RegexNFAState<state_type>::serialize(
             );
         }
     }
+
     std::vector<std::string> epsilon_transitions;
     for (auto const* dest_state : m_epsilon_transitions) {
         epsilon_transitions.push_back(std::to_string(state_ids.at(dest_state)));
