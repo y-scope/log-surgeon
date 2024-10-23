@@ -30,10 +30,6 @@ using RegexASTMultiplicationByte
         = log_surgeon::finite_automata::RegexASTMultiplication<RegexNFAByteState>;
 using RegexASTOrByte = log_surgeon::finite_automata::RegexASTOr<RegexNFAByteState>;
 
-namespace {
-
-}  // namespace
-
 TEST_CASE("Test NFA", "[NFA]") {
     Schema schema;
     string const var_name{"capture"};
