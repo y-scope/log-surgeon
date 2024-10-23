@@ -188,8 +188,8 @@ public:
     [[nodiscard]] auto new_state() -> NFAStateType*;
 
     /**
-     * Create a unique_ptr for an NFA state with a positive tagged transition and add it to
-     * m_states.
+     * Creates a unique_ptr for an NFA state with a positive tagged transition and adds it to
+     * `m_states`.
      * @param tag
      * @param dest_state
      * @return NFAStateType*
