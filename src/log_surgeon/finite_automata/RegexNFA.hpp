@@ -182,7 +182,7 @@ public:
     explicit RegexNFA(std::vector<LexicalRule<NFAStateType>> const& m_rules);
 
     /**
-     * Create a unique_ptr for an NFA state with no tagged transitions and add it to m_states.
+     * Creates a unique_ptr for an NFA state with no tagged transitions and adds it to `m_states`.
      * @return NFAStateType*
      */
     [[nodiscard]] auto new_state() -> NFAStateType*;
