@@ -229,19 +229,6 @@ public:
     auto get_root() -> NFAStateType* { return m_root; }
 
 private:
-    /**
-     * Helper method for breadth-first traversal of the NFA.
-     * Adds a state to the queue and visited set if it hasn't been visited before.
-     * @param dest_state
-     * @param visited_states
-     * @param state_queue
-     */
-    static auto add_to_queue_and_visited(
-            RegexNFAByteState const* dest_state,
-            std::queue<RegexNFAByteState const*>& state_queue,
-            std::unordered_set<RegexNFAByteState const*>& visited_states
-    ) -> void;
-
     std::vector<std::unique_ptr<NFAStateType>> m_states;
     NFAStateType* m_root;
 };
@@ -385,53 +372,41 @@ auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transitions(
 }
 
 template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::add_to_queue_and_visited(
-        RegexNFAByteState const* dest_state,
-        std::queue<RegexNFAByteState const*>& state_queue,
-        std::unordered_set<RegexNFAByteState const*>& visited_states
-) -> void {
-    if (visited_states.insert(dest_state).second) {
-        state_queue.push(dest_state);
-    }
-}
-
-template <typename NFAStateType>
 auto RegexNFA<NFAStateType>::get_bfs_traversal_order(
 ) const -> std::vector<RegexNFAByteState const*> {
     std::queue<RegexNFAByteState const*> state_queue;
     std::unordered_set<RegexNFAByteState const*> visited_states;
     std::vector<RegexNFAByteState const*> visited_order;
 
-    add_to_queue_and_visited(m_root, state_queue, visited_states);
+    auto add_to_queue_and_visited
+            = [&state_queue, &visited_states](RegexNFAByteState const* dest_state) {
+                  if (visited_states.insert(dest_state).second) {
+                      state_queue.push(dest_state);
+                  }
+              };
+
+    add_to_queue_and_visited(m_root);
     while (false == state_queue.empty()) {
         auto const* current_state = state_queue.front();
         visited_order.push_back(current_state);
         state_queue.pop();
         for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
             for (auto const* dest_state : current_state->get_byte_transitions(idx)) {
-                add_to_queue_and_visited(dest_state, state_queue, visited_states);
+                add_to_queue_and_visited(dest_state);
             }
         }
         for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-            add_to_queue_and_visited(dest_state, state_queue, visited_states);
+            add_to_queue_and_visited(dest_state);
         }
         for (auto const& positive_tagged_transition :
              current_state->get_positive_tagged_transitions())
         {
-            add_to_queue_and_visited(
-                    positive_tagged_transition.get_dest_state(),
-                    state_queue,
-                    visited_states
-            );
+            add_to_queue_and_visited(positive_tagged_transition.get_dest_state());
         }
         for (auto const& negative_tagged_transition :
              current_state->get_negative_tagged_transitions())
         {
-            add_to_queue_and_visited(
-                    negative_tagged_transition.get_dest_state(),
-                    state_queue,
-                    visited_states
-            );
+            add_to_queue_and_visited(negative_tagged_transition.get_dest_state());
         }
     }
     return visited_order;
