@@ -46,7 +46,6 @@ public:
     }
 
     /**
-     * Serialize the positive tagged transition into a string.
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the positive tagged transitions.
      */
