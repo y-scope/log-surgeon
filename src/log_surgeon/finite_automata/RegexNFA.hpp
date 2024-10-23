@@ -443,7 +443,7 @@ auto RegexNFA<NFAStateType>::serialize() const -> std::string {
 
     std::unordered_map<RegexNFAByteState const*, uint32_t> state_ids;
     for (auto const* state : traversal_order) {
-        state_ids.insert({state, state_ids.size()});
+        state_ids.emplace(state, state_ids.size());
     }
 
     std::vector<std::string> serialized_states;
