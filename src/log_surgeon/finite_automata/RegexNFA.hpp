@@ -200,8 +200,8 @@ public:
     ) -> NFAStateType*;
 
     /**
-     * Create a unique_ptr for an NFA state with negative tagged transitions and add it to m_states.
-     * @param tags
+     * Creates a unique_ptr for an NFA state with negative tagged transitions and adds it to
+     * `m_states`.
      * @param dest_state
      * @return NFAStateType*
      */
