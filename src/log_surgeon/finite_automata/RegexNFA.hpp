@@ -93,11 +93,11 @@ public:
 
     RegexNFAState() = default;
 
-    explicit RegexNFAState(uint32_t const tag, RegexNFAState const* dest_state) {
+    RegexNFAState(uint32_t const tag, RegexNFAState const* dest_state) {
         m_positive_tagged_transitions.emplace_back(tag, dest_state);
     }
 
-    explicit RegexNFAState(std::set<uint32_t> tags, RegexNFAState const* dest_state) {
+    RegexNFAState(std::set<uint32_t> tags, RegexNFAState const* dest_state) {
         m_negative_tagged_transitions.emplace_back(std::move(tags), dest_state);
     }
 
