@@ -328,7 +328,8 @@ auto RegexNFAState<state_type>::serialize(
 
     std::vector<std::string> positive_tagged_transitions;
     for (auto const& positive_tagged_transition : m_positive_tagged_transitions) {
-        auto const serialized_positive_transition_it = positive_tagged_transition.serialize(state_ids);
+        auto const serialized_positive_transition_it
+                = positive_tagged_transition.serialize(state_ids);
         if (serialized_positive_transition_it.has_value()) {
             positive_tagged_transitions.emplace_back(serialized_positive_transition_it.value());
         } else {
@@ -338,7 +339,8 @@ auto RegexNFAState<state_type>::serialize(
 
     std::vector<std::string> negative_tagged_transitions;
     for (auto const& negative_tagged_transition : m_negative_tagged_transitions) {
-        auto const serialized_negative_transition_it = negative_tagged_transition.serialize(state_ids);
+        auto const serialized_negative_transition_it
+                = negative_tagged_transition.serialize(state_ids);
         if (serialized_negative_transition_it.has_value()) {
             negative_tagged_transitions.emplace_back(serialized_negative_transition_it.value());
         } else {
@@ -399,6 +401,8 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order(
     std::queue<RegexNFAByteState const*> state_queue;
     std::unordered_set<RegexNFAByteState const*> visited_states;
     std::vector<RegexNFAByteState const*> visited_order;
+    visited_states.reserve(m_states.size());
+    visited_order.reserve(m_states.size());
 
     auto add_to_queue_and_visited
             = [&state_queue, &visited_states](RegexNFAByteState const* dest_state) {
