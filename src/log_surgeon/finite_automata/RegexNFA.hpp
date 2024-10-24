@@ -149,7 +149,6 @@ public:
     auto add_interval(Interval interval, RegexNFAState* dest_state) -> void;
 
     /**
-     * Serialize the NFA state into a string.
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the NFA state.
      */
