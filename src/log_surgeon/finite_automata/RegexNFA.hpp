@@ -347,10 +347,8 @@ RegexNFA<NFAStateType>::RegexNFA(std::vector<LexicalRule<NFAStateType>> rules)
 
 template <typename NFAStateType>
 auto RegexNFA<NFAStateType>::new_state() -> NFAStateType* {
-    std::unique_ptr<NFAStateType> ptr = std::make_unique<NFAStateType>();
-    NFAStateType* state = ptr.get();
-    m_states.push_back(std::move(ptr));
-    return state;
+    m_states.emplace_back(std::make_unique<NFAStateType>());
+    return m_states.back().get();
 }
 
 template <typename NFAStateType>
