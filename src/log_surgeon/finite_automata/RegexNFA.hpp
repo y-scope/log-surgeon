@@ -48,9 +48,8 @@ public:
 
     /**
      * @param state_ids A map of states to their unique identifiers.
-     * @return A string representation of the positive tagged transitions if `m_dest_state` is in
-     *         `state_ids`;
-     *         nullopt otherwise.
+     * @return A string representation of the positive tagged transitions on success.
+     * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(
             std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
