@@ -218,7 +218,7 @@ public:
     [[nodiscard]] auto get_bfs_traversal_order() const -> std::vector<RegexNFAByteState const*>;
 
     /**
-     * @return A string representation of the NFA. This function should always succeeed.
+     * @return A string representation of the NFA.
      */
     [[nodiscard]] auto serialize() const -> std::string;
 
