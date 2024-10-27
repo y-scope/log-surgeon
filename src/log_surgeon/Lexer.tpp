@@ -374,7 +374,7 @@ auto Lexer<NFAStateType, DFAStateType>::get_rule(uint32_t const variable_id
 
 template <typename NFAStateType, typename DFAStateType>
 void Lexer<NFAStateType, DFAStateType>::generate() {
-    finite_automata::RegexNFA<NFAStateType> nfa(std::move(m_rules));
+    finite_automata::RegexNFA<NFAStateType> nfa{std::move(m_rules)};
     // TODO: DFA ignores tags. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = nfa_to_dfa(nfa);
     DFAStateType const* state = m_dfa->get_root();
