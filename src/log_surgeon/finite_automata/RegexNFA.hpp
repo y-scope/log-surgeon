@@ -251,7 +251,7 @@ template <RegexNFAStateType state_type>
 auto NegativeTaggedTransition<state_type>::serialize(
         std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
-    auto state_id_it = state_ids.find(m_dest_state);
+    auto const state_id_it = state_ids.find(m_dest_state);
     if (state_id_it == state_ids.end()) {
         return std::nullopt;
     }
