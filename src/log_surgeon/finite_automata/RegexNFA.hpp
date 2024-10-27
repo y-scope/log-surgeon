@@ -153,9 +153,9 @@ public:
 
     /**
      * @param state_ids A map of states to their unique identifiers.
-     * @return A string representation of the NFA state if `m_positive_tagged_transitions` and
-     *         `m_negative_tagged_transitions` can be serialized with `state_ids`;
-     *         nullopt otherwise.
+     * @return A string representation of the NFA state on success.
+     * @return Forwards `PositiveTaggedTransition::serialize`'s return values on failure.
+     * @return Forwards `NegativeTaggedTransition::serialize`'s return values on failure.
      */
     [[nodiscard]] auto serialize(
             std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
