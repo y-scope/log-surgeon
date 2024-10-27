@@ -213,8 +213,6 @@ public:
     ) -> NFAStateType*;
 
     /**
-     * Traverse the NFA using a breadth-first search (BFS) and keep track of the order states are
-     * visited in.
      * @return A vector representing the traversal order of the NFA states using BFS.
      */
     [[nodiscard]] auto get_bfs_traversal_order() const -> std::vector<RegexNFAByteState const*>;
