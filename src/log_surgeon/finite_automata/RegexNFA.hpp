@@ -63,6 +63,8 @@ private:
 template <RegexNFAStateType state_type>
 class NegativeTaggedTransition {
 public:
+    NegativeTaggedTransition() = default;
+
     NegativeTaggedTransition(std::set<uint32_t> tags, RegexNFAState<state_type> const* dest_state)
             : m_tags{std::move(tags)},
               m_dest_state{dest_state} {}
@@ -84,7 +86,7 @@ public:
 
 private:
     std::set<uint32_t> m_tags;
-    RegexNFAState<state_type> const* m_dest_state;
+    RegexNFAState<state_type> const* m_dest_state{nullptr};
 };
 
 template <RegexNFAStateType state_type>
@@ -98,7 +100,7 @@ public:
             : m_positive_tagged_transitions{{tag, dest_state}} {}
 
     RegexNFAState(std::set<uint32_t> tags, RegexNFAState const* dest_state)
-            : m_negative_tagged_transitions{{std::move(tags), dest_state}} {}
+            : m_negative_tagged_transition{std::move(tags), dest_state} {}
 
     auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
 
@@ -117,9 +119,9 @@ public:
         return m_positive_tagged_transitions;
     }
 
-    [[nodiscard]] auto get_negative_tagged_transitions(
-    ) const -> std::vector<NegativeTaggedTransition<state_type>> const& {
-        return m_negative_tagged_transitions;
+    [[nodiscard]] auto get_negative_tagged_transition(
+    ) const -> NegativeTaggedTransition<state_type> const& {
+        return m_negative_tagged_transition;
     }
 
     auto add_epsilon_transition(RegexNFAState* epsilon_transition) -> void {
@@ -163,7 +165,7 @@ private:
     bool m_accepting{false};
     uint32_t m_matching_variable_id{0};
     std::vector<PositiveTaggedTransition<state_type>> m_positive_tagged_transitions;
-    std::vector<NegativeTaggedTransition<state_type>> m_negative_tagged_transitions;
+    NegativeTaggedTransition<state_type> m_negative_tagged_transition;
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
@@ -202,10 +204,11 @@ public:
     /**
      * Creates a unique_ptr for an NFA state with negative tagged transitions and adds it to
      * `m_states`.
+     * @param tags
      * @param dest_state
      * @return NFAStateType*
      */
-    [[nodiscard]] auto new_state_with_negative_tagged_transitions(
+    [[nodiscard]] auto new_state_with_negative_tagged_transition(
             std::set<uint32_t> tags,
             NFAStateType const* dest_state
     ) -> NFAStateType*;
@@ -331,14 +334,14 @@ auto RegexNFAState<state_type>::serialize(
         positive_tagged_transitions.emplace_back(optional_serialized_positive_transition.value());
     }
 
-    std::vector<std::string> negative_tagged_transitions;
-    for (auto const& negative_tagged_transition : m_negative_tagged_transitions) {
+    std::string negative_tagged_transition;
+    if(nullptr != m_negative_tagged_transition.get_dest_state()) {
         auto const optional_serialized_negative_transition
-                = negative_tagged_transition.serialize(state_ids);
+                = m_negative_tagged_transition.serialize(state_ids);
         if (false == optional_serialized_negative_transition.has_value()) {
             return std::nullopt;
         }
-        negative_tagged_transitions.emplace_back(optional_serialized_negative_transition.value());
+        negative_tagged_transition = optional_serialized_negative_transition.value();
     }
 
     auto const accepting_tag_string
@@ -346,13 +349,13 @@ auto RegexNFAState<state_type>::serialize(
 
     return fmt::format(
             "{}:{}byte_transitions={{{}}},epsilon_transitions={{{}}},positive_tagged_transitions={{"
-            "{}}},negative_tagged_transitions={{{}}}",
+            "{}}},negative_tagged_transition={{{}}}",
             state_ids.at(this),
             accepting_tag_string,
             fmt::join(byte_transitions, ","),
             fmt::join(epsilon_transitions, ","),
             fmt::join(positive_tagged_transitions, ","),
-            fmt::join(negative_tagged_transitions, ",")
+            negative_tagged_transition
     );
 }
 
@@ -380,7 +383,7 @@ auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_transition(
 }
 
 template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transitions(
+auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transition(
         std::set<uint32_t> tags,
         NFAStateType const* dest_state
 ) -> NFAStateType* {
@@ -422,10 +425,10 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order(
         {
             add_to_queue_and_visited(positive_tagged_transition.get_dest_state());
         }
-        for (auto const& negative_tagged_transition :
-             current_state->get_negative_tagged_transitions())
-        {
-            add_to_queue_and_visited(negative_tagged_transition.get_dest_state());
+        auto const* negative_dest_state
+                = current_state->get_negative_tagged_transition().get_dest_state();
+        if (nullptr != negative_dest_state) {
+            add_to_queue_and_visited(negative_dest_state);
         }
     }
     return visited_order;
