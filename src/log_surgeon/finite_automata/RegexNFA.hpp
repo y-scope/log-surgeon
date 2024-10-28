@@ -56,8 +56,8 @@ public:
     ) const -> std::optional<std::string>;
 
 private:
-    uint32_t m_tag{};
-    RegexNFAState<state_type> const* m_dest_state{};
+    uint32_t m_tag;
+    RegexNFAState<state_type> const* m_dest_state;
 };
 
 template <RegexNFAStateType state_type>
@@ -84,7 +84,7 @@ public:
 
 private:
     std::set<uint32_t> m_tags;
-    RegexNFAState<state_type> const* m_dest_state{};
+    RegexNFAState<state_type> const* m_dest_state;
 };
 
 template <RegexNFAStateType state_type>
