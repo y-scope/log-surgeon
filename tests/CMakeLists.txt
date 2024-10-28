@@ -4,6 +4,9 @@ set(
         ../src/log_surgeon/FileReader.hpp
         ../src/log_surgeon/finite_automata/RegexAST.hpp
         ../src/log_surgeon/finite_automata/RegexNFA.hpp
+        ../src/log_surgeon/finite_automata/RegexNFAState.hpp
+        ../src/log_surgeon/finite_automata/RegexNFAStateType.hpp
+        ../src/log_surgeon/finite_automata/TaggedTransition.hpp
         ../src/log_surgeon/LALR1Parser.cpp
         ../src/log_surgeon/LALR1Parser.hpp
         ../src/log_surgeon/LALR1Parser.tpp
