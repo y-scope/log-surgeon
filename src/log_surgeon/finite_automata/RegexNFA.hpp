@@ -323,22 +323,22 @@ auto RegexNFAState<state_type>::serialize(
 
     std::vector<std::string> positive_tagged_transitions;
     for (auto const& positive_tagged_transition : m_positive_tagged_transitions) {
-        auto const serialized_positive_transition_it
+        auto const optional_serialized_positive_transition
                 = positive_tagged_transition.serialize(state_ids);
-        if (false == serialized_positive_transition_it.has_value()) {
+        if (false == optional_serialized_positive_transition.has_value()) {
             return std::nullopt;
         }
-        positive_tagged_transitions.emplace_back(serialized_positive_transition_it.value());
+        positive_tagged_transitions.emplace_back(optional_serialized_positive_transition.value());
     }
 
     std::vector<std::string> negative_tagged_transitions;
     for (auto const& negative_tagged_transition : m_negative_tagged_transitions) {
-        auto const serialized_negative_transition_it
+        auto const optional_serialized_negative_transition
                 = negative_tagged_transition.serialize(state_ids);
-        if (false == serialized_negative_transition_it.has_value()) {
+        if (false == optional_serialized_negative_transition.has_value()) {
             return std::nullopt;
         }
-        negative_tagged_transitions.emplace_back(serialized_negative_transition_it.value());
+        negative_tagged_transitions.emplace_back(optional_serialized_negative_transition.value());
     }
 
     auto const accepting_tag_string
