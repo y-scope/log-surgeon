@@ -181,7 +181,7 @@ class RegexNFA {
 public:
     using StateVec = std::vector<NFAStateType*>;
 
-    explicit RegexNFA(std::vector<LexicalRule<NFAStateType>> rules);
+    explicit RegexNFA(std::vector<LexicalRule<NFAStateType>> const& rules);
 
     /**
      * Creates a unique_ptr for an NFA state with no tagged transitions and adds it to `m_states`.
@@ -359,7 +359,7 @@ auto RegexNFAState<state_type>::serialize(
 }
 
 template <typename NFAStateType>
-RegexNFA<NFAStateType>::RegexNFA(std::vector<LexicalRule<NFAStateType>> rules)
+RegexNFA<NFAStateType>::RegexNFA(std::vector<LexicalRule<NFAStateType>> const& rules)
         : m_root{new_state()} {
     for (auto const& rule : rules) {
         rule.add_to_nfa(this);
