@@ -446,6 +446,7 @@ auto RegexNFA<NFAStateType>::serialize() const -> std::string {
     for (auto const* state : traversal_order) {
         // `state_ids` is well-formed as its generated from `get_bfs_traversal_order` so we can
         // safely assume `state->serialize(state_ids)` will return a valid value.
+        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
         serialized_states.emplace_back(state->serialize(state_ids).value());
     }
     return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
