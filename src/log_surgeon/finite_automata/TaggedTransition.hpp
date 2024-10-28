@@ -10,6 +10,7 @@
 #include <fmt/format.h>
 
 #include <log_surgeon/finite_automata/RegexNFAStateType.hpp>
+#include <log_surgeon/finite_automata/Tag.hpp>
 
 namespace log_surgeon::finite_automata {
 template <RegexNFAStateType state_type>

@@ -19,6 +19,7 @@
 #include <fmt/xchar.h>
 
 #include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/Tag.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
