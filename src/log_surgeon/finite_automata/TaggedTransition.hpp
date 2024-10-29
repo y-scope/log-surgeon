@@ -16,11 +16,9 @@ namespace log_surgeon::finite_automata {
 template <RegexNFAStateType state_type>
 class PositiveTaggedTransition {
 public:
-    PositiveTaggedTransition(uint32_t const tag, RegexNFAState<state_type> const* dest_state)
+    PositiveTaggedTransition(Tag const* tag, RegexNFAState<state_type> const* dest_state)
             : m_tag{tag},
               m_dest_state{dest_state} {}
-
-    [[nodiscard]] auto get_tag() const -> uint32_t { return m_tag; }
 
     [[nodiscard]] auto get_dest_state() const -> RegexNFAState<state_type> const* {
         return m_dest_state;
@@ -36,18 +34,16 @@ public:
     ) const -> std::optional<std::string>;
 
 private:
-    uint32_t m_tag;
+    Tag const* m_tag;
     RegexNFAState<state_type> const* m_dest_state;
 };
 
 template <RegexNFAStateType state_type>
 class NegativeTaggedTransition {
 public:
-    NegativeTaggedTransition(std::set<uint32_t> tags, RegexNFAState<state_type> const* dest_state)
+    NegativeTaggedTransition(std::set<Tag const*> tags, RegexNFAState<state_type> const* dest_state)
             : m_tags{std::move(tags)},
               m_dest_state{dest_state} {}
-
-    [[nodiscard]] auto get_tags() const -> std::set<uint32_t> const& { return m_tags; }
 
     [[nodiscard]] auto get_dest_state() const -> RegexNFAState<state_type> const* {
         return m_dest_state;
@@ -63,7 +59,7 @@ public:
     ) const -> std::optional<std::string>;
 
 private:
-    std::set<uint32_t> m_tags;
+    std::set<Tag const*> const m_tags;
     RegexNFAState<state_type> const* m_dest_state;
 };
 
@@ -75,7 +71,7 @@ auto PositiveTaggedTransition<state_type>::serialize(
     if (state_id_it == state_ids.end()) {
         return std::nullopt;
     }
-    return fmt::format("{}[{}]", state_id_it->second, m_tag);
+    return fmt::format("{}[{}]", state_id_it->second, m_tag->get_name());
 }
 
 template <RegexNFAStateType state_type>
@@ -86,7 +82,13 @@ auto NegativeTaggedTransition<state_type>::serialize(
     if (state_id_it == state_ids.end()) {
         return std::nullopt;
     }
-    return fmt::format("{}[{}]", state_id_it->second, fmt::join(m_tags, ","));
+
+    auto const tag_names
+        = m_tags
+          | std::ranges::views::transform([](Tag const* tag) {
+                return tag->get_name();
+            });
+    return fmt::format("{}[{}]", state_id_it->second, fmt::join(tag_names, ","));
 }
 }  // namespace log_surgeon::finite_automata
 

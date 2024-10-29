@@ -23,7 +23,7 @@ class RegexNFA {
 public:
     using StateVec = std::vector<NFAStateType*>;
 
-    explicit RegexNFA(std::vector<LexicalRule<NFAStateType>> const& rules);
+    explicit RegexNFA(std::vector<LexicalRule<NFAStateType>> rules);
 
     /**
      * Creates a unique_ptr for an NFA state with no tagged transitions and adds it to `m_states`.
@@ -39,7 +39,7 @@ public:
      * @return NFAStateType*
      */
     [[nodiscard]] auto new_state_with_positive_tagged_transition(
-            uint32_t tag,
+            Tag const* tag,
             NFAStateType const* dest_state
     ) -> NFAStateType*;
 
@@ -51,7 +51,7 @@ public:
      * @return NFAStateType*
      */
     [[nodiscard]] auto new_state_with_negative_tagged_transitions(
-            std::set<uint32_t> tags,
+            std::set<Tag const*> tags,
             NFAStateType const* dest_state
     ) -> NFAStateType*;
 
@@ -77,12 +77,16 @@ public:
 private:
     std::vector<std::unique_ptr<NFAStateType>> m_states;
     NFAStateType* m_root;
+    // Store the rules locally as they contain information needed by the NFA. E.g., transitions in
+    // the NFA point to tags in the rule ASTs.
+    std::vector<LexicalRule<NFAStateType>> m_rules;
 };
 
 template <typename NFAStateType>
-RegexNFA<NFAStateType>::RegexNFA(std::vector<LexicalRule<NFAStateType>> const& rules)
-        : m_root{new_state()} {
-    for (auto const& rule : rules) {
+RegexNFA<NFAStateType>::RegexNFA(std::vector<LexicalRule<NFAStateType>> rules)
+        : m_root{new_state()},
+          m_rules{std::move(rules)} {
+    for (auto const& rule : m_rules) {
         rule.add_to_nfa(this);
     }
 }
@@ -95,7 +99,7 @@ auto RegexNFA<NFAStateType>::new_state() -> NFAStateType* {
 
 template <typename NFAStateType>
 auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_transition(
-        uint32_t const tag,
+        Tag const* tag,
         NFAStateType const* dest_state
 ) -> NFAStateType* {
     m_states.emplace_back(std::make_unique<NFAStateType>(tag, dest_state));
@@ -104,10 +108,10 @@ auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_transition(
 
 template <typename NFAStateType>
 auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transitions(
-        std::set<uint32_t> tags,
+        std::set<Tag const*> tags,
         NFAStateType const* dest_state
 ) -> NFAStateType* {
-    m_states.emplace_back(std::make_unique<NFAStateType>(tags, dest_state));
+    m_states.emplace_back(std::make_unique<NFAStateType>(std::move(tags), dest_state));
     return m_states.back().get();
 }
 

@@ -10,6 +10,7 @@
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/FileReader.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
+#include <log_surgeon/finite_automata/Tag.hpp>
 #include <log_surgeon/LALR1Parser.hpp>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/utils.hpp>
@@ -161,13 +162,12 @@ auto SchemaParser::existing_schema_rule(NonTerminal* m) -> unique_ptr<SchemaAST>
     return schema_ast;
 }
 
-auto SchemaParser::regex_capture_rule(NonTerminal* m) -> std::unique_ptr<ParserAST> {
-    auto* r4 = dynamic_cast<IdentifierAST*>(m->non_terminal_cast(3)->get_parser_ast().get());
+static auto regex_capture_rule(NonTerminal const* m) -> std::unique_ptr<ParserAST> {
+    auto const* r4 = dynamic_cast<IdentifierAST*>(m->non_terminal_cast(3)->get_parser_ast().get());
     auto& r6 = m->non_terminal_cast(5)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
     return std::make_unique<ParserValueRegex>(make_unique<RegexASTCaptureByte>(
-            r4->m_name,
             std::move(r6),
-            m_capture_group_id_generator.assign_next_id()
+            std::make_unique<finite_automata::Tag>(r4->m_name)
     ));
 }
 
