@@ -1,15 +1,16 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_STATE
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_STATE
 
-#include <cstdint>
-#include <vector>
-#include <unordered_map>
-#include <set>
-#include <optional>
 #include <array>
-#include <tuple>
+#include <cstdint>
 #include <memory>
+#include <optional>
+#include <set>
 #include <string>
+#include <tuple>
+#include <unordered_map>
+#include <vector>
+
 #include <fmt/format.h>
 
 #include <log_surgeon/finite_automata/RegexNFAStateType.hpp>
