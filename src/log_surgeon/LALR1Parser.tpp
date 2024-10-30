@@ -55,14 +55,14 @@ namespace {
 
 template <typename NFAStateType, typename DFAStateType>
 LALR1Parser<NFAStateType, DFAStateType>::LALR1Parser() {
-    m_terminals.insert((int)SymbolID::TokenEndID);
-    m_terminals.insert((int)SymbolID::TokenUncaughtStringID);
-    m_terminals.insert((int)SymbolID::TokenIntId);
-    m_terminals.insert((int)SymbolID::TokenFloatId);
-    m_terminals.insert((int)SymbolID::TokenHexId);
-    m_terminals.insert((int)SymbolID::TokenFirstTimestampId);
-    m_terminals.insert((int)SymbolID::TokenNewlineTimestampId);
-    m_terminals.insert((int)SymbolID::TokenNewlineId);
+    m_terminals.insert((uint32_t)SymbolId::TokenEnd);
+    m_terminals.insert((uint32_t)SymbolId::TokenUncaughtString);
+    m_terminals.insert((uint32_t)SymbolId::TokenInt);
+    m_terminals.insert((uint32_t)SymbolId::TokenFloat);
+    m_terminals.insert((uint32_t)SymbolId::TokenHex);
+    m_terminals.insert((uint32_t)SymbolId::TokenFirstTimestamp);
+    m_terminals.insert((uint32_t)SymbolId::TokenNewlineTimestamp);
+    m_terminals.insert((uint32_t)SymbolId::TokenNewline);
 }
 
 template <typename NFAStateType, typename DFAStateType>
@@ -327,7 +327,7 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lr1_item_sets() {
                     m_spontaneous_map[l0_item.m_production].end()
             );
             if (l0_item.m_production == m_productions[m_root_production_id].get()) {
-                lookaheads[l0_item].insert((int)SymbolID::TokenEndID);
+                lookaheads[l0_item].insert((uint32_t)SymbolId::TokenEnd);
             }
         }
     }
@@ -480,7 +480,7 @@ void LALR1Parser<NFAStateType, DFAStateType>::generate_lalr1_action() {
             if (item.has_dot_at_end()) {
                 if (item.m_production == m_productions[m_root_production_id].get()) {
                     Action action = true;
-                    item_set_ptr->m_actions[(int)SymbolID::TokenEndID] = action;
+                    item_set_ptr->m_actions[(uint32_t)SymbolId::TokenEnd] = action;
                 } else {
                     Action& action = item_set_ptr->m_actions[item.m_lookahead];
                     if (!std::holds_alternative<bool>(action)) {
@@ -561,7 +561,7 @@ template <typename NFAStateType, typename DFAStateType>
 auto LALR1Parser<NFAStateType, DFAStateType>::get_input_until_next_newline(Token* error_token
 ) -> std::string {
     std::string rest_of_line;
-    bool next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (int)SymbolID::TokenEndID);
+    bool next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd);
     bool next_has_newline = (error_token->to_string().find('\n') != std::string::npos)
                             || (error_token->to_string().find('\r') != std::string::npos);
     while (!next_has_newline && !next_is_end_token) {
@@ -570,7 +570,7 @@ auto LALR1Parser<NFAStateType, DFAStateType>::get_input_until_next_newline(Token
                            || (token.to_string().find('\r') != std::string::npos);
         if (!next_has_newline) {
             rest_of_line += token.to_string();
-            next_is_end_token = (token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenEndID);
+            next_is_end_token = (token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd);
         }
     }
     rest_of_line += "\n";
@@ -594,7 +594,7 @@ auto LALR1Parser<NFAStateType, DFAStateType>::report_error() -> std::string {
         error_indicator += " ";
     }
     error_indicator += "^\n";
-    if (token.m_type_ids_ptr->at(0) == (int)SymbolID::TokenEndID && consumed_input.empty()) {
+    if (token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd && consumed_input.empty()) {
         error_type = "empty file";
         error_indicator = "^\n";
     } else {
@@ -682,9 +682,9 @@ auto LALR1Parser<NFAStateType, DFAStateType>::get_next_symbol() -> Token {
 template <typename NFAStateType, typename DFAStateType>
 auto LALR1Parser<NFAStateType, DFAStateType>::parse_advance(Token& next_token, bool* accept)
         -> bool {
-    for (int const& type : *(next_token.m_type_ids_ptr)) {
+    for (auto const type : *next_token.m_type_ids_ptr) {
         if (parse_symbol(type, next_token, accept)) {
-            return (*accept);
+            return *accept;
         }
     }
     assert(*accept == false);

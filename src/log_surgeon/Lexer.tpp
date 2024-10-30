@@ -374,10 +374,8 @@ auto Lexer<NFAStateType, DFAStateType>::get_rule(uint32_t const variable_id
 
 template <typename NFAStateType, typename DFAStateType>
 void Lexer<NFAStateType, DFAStateType>::generate() {
-    finite_automata::RegexNFA<NFAStateType> nfa;
-    for (auto const& rule : m_rules) {
-        rule.add_to_nfa(&nfa);
-    }
+    finite_automata::RegexNFA<NFAStateType> nfa{std::move(m_rules)};
+    // TODO: DFA ignores tags. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = nfa_to_dfa(nfa);
     DFAStateType const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
@@ -387,32 +385,6 @@ void Lexer<NFAStateType, DFAStateType>::generate() {
             m_is_first_char[i] = false;
         }
     }
-}
-
-template <typename NFAStateType, typename DFAStateType>
-void Lexer<NFAStateType, DFAStateType>::generate_reverse() {
-    finite_automata::RegexNFA<NFAStateType> nfa;
-    for (auto const& rule : m_rules) {
-        rule.add_to_nfa(&nfa);
-    }
-    nfa.reverse();
-    m_dfa = nfa_to_dfa(nfa);
-    DFAStateType const* state = m_dfa->get_root();
-    for (uint32_t i = 0; i < cSizeOfByte; i++) {
-        if (state->next(i) != nullptr) {
-            m_is_first_char[i] = true;
-        } else {
-            m_is_first_char[i] = false;
-        }
-    }
-}
-
-template <typename NFAStateType>
-void LexicalRule<NFAStateType>::add_to_nfa(finite_automata::RegexNFA<NFAStateType>* nfa) const {
-    auto* end_state = nfa->new_state();
-    end_state->set_accepting(true);
-    end_state->set_matching_variable_id(m_variable_id);
-    m_regex->add_to_nfa(nfa, end_state);
 }
 
 template <typename NFAStateType, typename DFAStateType>
@@ -427,6 +399,14 @@ auto Lexer<NFAStateType, DFAStateType>::epsilon_closure(NFAStateType const* stat
         if (closure_set.insert(t).second) {
             for (NFAStateType* const u : t->get_epsilon_transitions()) {
                 stack.push(u);
+            }
+
+            // TODO: currently treat tagged transitions as epsilon transitions
+            for (auto const& positive_tagged_transition : t->get_positive_tagged_transitions()) {
+                stack.push(positive_tagged_transition.get_dest_state());
+            }
+            for (auto const& negative_tagged_transition : t->get_negative_tagged_transitions()) {
+                stack.push(negative_tagged_transition.get_dest_state());
             }
         }
     }

@@ -55,6 +55,7 @@ auto test_regex_ast(string_view const var_schema, u32string const& expected_seri
         -> void {
     log_surgeon::Schema schema;
     schema.add_variable(var_schema, -1);
+
     auto const schema_ast = schema.release_schema_ast_ptr();
     auto const* capture_rule_ast = dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars[0].get());
     REQUIRE(capture_rule_ast != nullptr);
@@ -76,6 +77,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         string const var_name = "myNumber";
         string const var_schema = var_name + string(":") + string("123");
         schema.add_variable(string_view(var_schema), -1);
+
         auto const schema_ast = schema.release_schema_ast_ptr();
         REQUIRE(schema_ast->m_schema_vars.size() == 1);
         REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());
@@ -93,6 +95,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         std::string const var_name = "capture";
         string const var_schema = var_name + string(":") + string("u(?<uID>[0-9]+)");
         schema.add_variable(var_schema, -1);
+
         auto const schema_ast = schema.release_schema_ast_ptr();
         REQUIRE(schema_ast->m_schema_vars.size() == 1);
         REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());

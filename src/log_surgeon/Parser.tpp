@@ -10,23 +10,23 @@ namespace log_surgeon {
 template <typename NFAStateType, typename DFAStateType>
 Parser<NFAStateType, DFAStateType>::Parser() {
     // TODO move clp-reserved symbols out of the parser
-    m_lexer.m_symbol_id[cTokenEnd] = (int)SymbolID::TokenEndID;
-    m_lexer.m_symbol_id[cTokenUncaughtString] = (int)SymbolID::TokenUncaughtStringID;
-    m_lexer.m_symbol_id[cTokenInt] = (int)SymbolID::TokenIntId;
-    m_lexer.m_symbol_id[cTokenFloat] = (int)SymbolID::TokenFloatId;
-    m_lexer.m_symbol_id[cTokenHex] = (int)SymbolID::TokenHexId;
-    m_lexer.m_symbol_id[cTokenFirstTimestamp] = (int)SymbolID::TokenFirstTimestampId;
-    m_lexer.m_symbol_id[cTokenNewlineTimestamp] = (int)SymbolID::TokenNewlineTimestampId;
-    m_lexer.m_symbol_id[cTokenNewline] = (int)SymbolID::TokenNewlineId;
+    m_lexer.m_symbol_id[cTokenEnd] = (uint32_t)SymbolId::TokenEnd;
+    m_lexer.m_symbol_id[cTokenUncaughtString] = (uint32_t)SymbolId::TokenUncaughtString;
+    m_lexer.m_symbol_id[cTokenInt] = (uint32_t)SymbolId::TokenInt;
+    m_lexer.m_symbol_id[cTokenFloat] = (uint32_t)SymbolId::TokenFloat;
+    m_lexer.m_symbol_id[cTokenHex] = (uint32_t)SymbolId::TokenHex;
+    m_lexer.m_symbol_id[cTokenFirstTimestamp] = (uint32_t)SymbolId::TokenFirstTimestamp;
+    m_lexer.m_symbol_id[cTokenNewlineTimestamp] = (uint32_t)SymbolId::TokenNewlineTimestamp;
+    m_lexer.m_symbol_id[cTokenNewline] = (uint32_t)SymbolId::TokenNewline;
 
-    m_lexer.m_id_symbol[(int)SymbolID::TokenEndID] = cTokenEnd;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenUncaughtStringID] = cTokenUncaughtString;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenIntId] = cTokenInt;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenFloatId] = cTokenFloat;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenHexId] = cTokenHex;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenFirstTimestampId] = cTokenFirstTimestamp;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenNewlineTimestampId] = cTokenNewlineTimestamp;
-    m_lexer.m_id_symbol[(int)SymbolID::TokenNewlineId] = cTokenNewline;
+    m_lexer.m_id_symbol[(uint32_t)SymbolId::TokenEnd] = cTokenEnd;
+    m_lexer.m_id_symbol[(uint32_t)SymbolId::TokenUncaughtString] = cTokenUncaughtString;
+    m_lexer.m_id_symbol[(uint32_t)SymbolId::TokenInt] = cTokenInt;
+    m_lexer.m_id_symbol[(uint32_t)SymbolId::TokenFloat] = cTokenFloat;
+    m_lexer.m_id_symbol[(uint32_t)SymbolId::TokenHex] = cTokenHex;
+    m_lexer.m_id_symbol[(uint32_t)SymbolId::TokenFirstTimestamp] = cTokenFirstTimestamp;
+    m_lexer.m_id_symbol[(uint32_t)SymbolId::TokenNewlineTimestamp] = cTokenNewlineTimestamp;
+    m_lexer.m_id_symbol[(uint32_t)SymbolId::TokenNewline] = cTokenNewline;
 }
 
 template <typename NFAStateType, typename DFAStateType>
