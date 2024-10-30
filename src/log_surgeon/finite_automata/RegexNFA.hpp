@@ -42,17 +42,14 @@ public:
 
     [[nodiscard]] auto get_tag() const -> uint32_t { return m_tag; }
 
-    [[nodiscard]] auto get_dest_state() const -> NFAStateType const* {
-        return m_dest_state;
-    }
+    [[nodiscard]] auto get_dest_state() const -> NFAStateType const* { return m_dest_state; }
 
     /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the positive tagged transitions on success.
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
-    [[nodiscard]] auto serialize(
-            std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
 private:
@@ -69,17 +66,14 @@ public:
 
     [[nodiscard]] auto get_tags() const -> std::set<uint32_t> const& { return m_tags; }
 
-    [[nodiscard]] auto get_dest_state() const -> NFAStateType const* {
-        return m_dest_state;
-    }
+    [[nodiscard]] auto get_dest_state() const -> NFAStateType const* { return m_dest_state; }
 
     /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the negative tagged transitions on success.
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
-    [[nodiscard]] auto serialize(
-            std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
 private:
@@ -157,8 +151,7 @@ public:
      * @return Forwards `NegativeTaggedTransition::serialize`'s return value (std::nullopt) on
      * failure.
      */
-    [[nodiscard]] auto serialize(
-            std::unordered_map<RegexNFAState const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(std::unordered_map<RegexNFAState const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
 private:
