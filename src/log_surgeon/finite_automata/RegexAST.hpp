@@ -98,7 +98,7 @@ public:
     }
 
     /**
-     * Handles the addition of an intermediate state with negative transitions if needed.
+     * Handles the addition of an intermediate state with a negative transition if needed.
      * @param nfa
      * @param end_state
      */

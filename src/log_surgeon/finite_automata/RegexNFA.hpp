@@ -46,7 +46,7 @@ public:
 
     /**
      * @param state_ids A map of states to their unique identifiers.
-     * @return A string representation of the positive tagged transitions on success.
+     * @return A string representation of the positive tagged transition on success.
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
@@ -72,7 +72,7 @@ public:
 
     /**
      * @param state_ids A map of states to their unique identifiers.
-     * @return A string representation of the negative tagged transitions on success.
+     * @return A string representation of the negative tagged transition on success.
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
