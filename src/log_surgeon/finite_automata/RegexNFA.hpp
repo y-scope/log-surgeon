@@ -33,60 +33,54 @@ class RegexNFAState;
 using RegexNFAByteState = RegexNFAState<RegexNFAStateType::Byte>;
 using RegexNFAUTF8State = RegexNFAState<RegexNFAStateType::UTF8>;
 
-template <RegexNFAStateType state_type>
+template <typename NFAStateType>
 class PositiveTaggedTransition {
 public:
-    PositiveTaggedTransition(uint32_t const tag, RegexNFAState<state_type> const* dest_state)
+    PositiveTaggedTransition(uint32_t const tag, NFAStateType const* dest_state)
             : m_tag{tag},
               m_dest_state{dest_state} {}
 
     [[nodiscard]] auto get_tag() const -> uint32_t { return m_tag; }
 
-    [[nodiscard]] auto get_dest_state() const -> RegexNFAState<state_type> const* {
-        return m_dest_state;
-    }
+    [[nodiscard]] auto get_dest_state() const -> NFAStateType const* { return m_dest_state; }
 
     /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the positive tagged transitions on success.
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
-    [[nodiscard]] auto serialize(
-            std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
 private:
     uint32_t m_tag;
-    RegexNFAState<state_type> const* m_dest_state;
+    NFAStateType const* m_dest_state;
 };
 
-template <RegexNFAStateType state_type>
+template <typename NFAStateType>
 class NegativeTaggedTransition {
 public:
     NegativeTaggedTransition() = default;
 
-    NegativeTaggedTransition(std::set<uint32_t> tags, RegexNFAState<state_type> const* dest_state)
+    NegativeTaggedTransition(std::set<uint32_t> tags, NFAStateType const* dest_state)
             : m_tags{std::move(tags)},
               m_dest_state{dest_state} {}
 
     [[nodiscard]] auto get_tags() const -> std::set<uint32_t> const& { return m_tags; }
 
-    [[nodiscard]] auto get_dest_state() const -> RegexNFAState<state_type> const* {
-        return m_dest_state;
-    }
+    [[nodiscard]] auto get_dest_state() const -> NFAStateType const* { return m_dest_state; }
 
     /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the negative tagged transitions on success.
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
-    [[nodiscard]] auto serialize(
-            std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
 private:
     std::set<uint32_t> m_tags;
-    RegexNFAState<state_type> const* m_dest_state{nullptr};
+    NFAStateType const* m_dest_state;
 };
 
 template <RegexNFAStateType state_type>
@@ -115,12 +109,12 @@ public:
     }
 
     [[nodiscard]] auto get_positive_tagged_transitions(
-    ) const -> std::vector<PositiveTaggedTransition<state_type>> const& {
+    ) const -> std::vector<PositiveTaggedTransition<RegexNFAState>> const& {
         return m_positive_tagged_transitions;
     }
 
     [[nodiscard]] auto get_negative_tagged_transition(
-    ) const -> NegativeTaggedTransition<state_type> const& {
+    ) const -> NegativeTaggedTransition<RegexNFAState> const& {
         return m_negative_tagged_transition;
     }
 
@@ -154,18 +148,19 @@ public:
     /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the NFA state on success.
-     * @return Forwards `PositiveTaggedTransition::serialize`'s or
-     * `NegativeTaggedTransition::serialize`'s return value (std::nullopt) on failure.
+     * @return Forwards `PositiveTaggedTransition::serialize`'s return value (std::nullopt) on *
+     * failure.
+     * @return Forwards `NegativeTaggedTransition::serialize`'s return value (std::nullopt) on
+     * failure.
      */
-    [[nodiscard]] auto serialize(
-            std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(std::unordered_map<RegexNFAState const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
 private:
     bool m_accepting{false};
     uint32_t m_matching_variable_id{0};
-    std::vector<PositiveTaggedTransition<state_type>> m_positive_tagged_transitions;
-    NegativeTaggedTransition<state_type> m_negative_tagged_transition;
+    std::vector<PositiveTaggedTransition<RegexNFAState>> m_positive_tagged_transitions;
+    NegativeTaggedTransition<RegexNFAState> m_negative_tagged_transition;
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
@@ -217,7 +212,7 @@ public:
      * @return A vector representing the traversal order of the NFA states using breadth-first
      * search (BFS).
      */
-    [[nodiscard]] auto get_bfs_traversal_order() const -> std::vector<RegexNFAByteState const*>;
+    [[nodiscard]] auto get_bfs_traversal_order() const -> std::vector<NFAStateType const*>;
 
     /**
      * @return A string representation of the NFA.
@@ -237,9 +232,9 @@ private:
     NFAStateType* m_root;
 };
 
-template <RegexNFAStateType state_type>
-auto PositiveTaggedTransition<state_type>::serialize(
-        std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
+template <typename NFAStateType>
+auto PositiveTaggedTransition<NFAStateType>::serialize(
+        std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     auto const state_id_it = state_ids.find(m_dest_state);
     if (state_id_it == state_ids.end()) {
@@ -248,9 +243,9 @@ auto PositiveTaggedTransition<state_type>::serialize(
     return fmt::format("{}[{}]", state_id_it->second, m_tag);
 }
 
-template <RegexNFAStateType state_type>
-auto NegativeTaggedTransition<state_type>::serialize(
-        std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
+template <typename NFAStateType>
+auto NegativeTaggedTransition<NFAStateType>::serialize(
+        std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     auto const state_id_it = state_ids.find(m_dest_state);
     if (state_id_it == state_ids.end()) {
@@ -308,7 +303,7 @@ void RegexNFAState<state_type>::add_interval(Interval interval, RegexNFAState* d
 
 template <RegexNFAStateType state_type>
 auto RegexNFAState<state_type>::serialize(
-        std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
+        std::unordered_map<RegexNFAState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     std::vector<std::string> byte_transitions;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
@@ -335,7 +330,7 @@ auto RegexNFAState<state_type>::serialize(
     }
 
     std::string negative_tagged_transition;
-    if(nullptr != m_negative_tagged_transition.get_dest_state()) {
+    if (nullptr != m_negative_tagged_transition.get_dest_state()) {
         auto const optional_serialized_negative_transition
                 = m_negative_tagged_transition.serialize(state_ids);
         if (false == optional_serialized_negative_transition.has_value()) {
@@ -346,7 +341,6 @@ auto RegexNFAState<state_type>::serialize(
 
     auto const accepting_tag_string
             = m_accepting ? fmt::format("accepting_tag={},", m_matching_variable_id) : "";
-
     return fmt::format(
             "{}:{}byte_transitions={{{}}},epsilon_transitions={{{}}},positive_tagged_transitions={{"
             "{}}},negative_tagged_transition={{{}}}",
@@ -392,16 +386,15 @@ auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transition(
 }
 
 template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::get_bfs_traversal_order(
-) const -> std::vector<RegexNFAByteState const*> {
-    std::queue<RegexNFAByteState const*> state_queue;
-    std::unordered_set<RegexNFAByteState const*> visited_states;
-    std::vector<RegexNFAByteState const*> visited_order;
+auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAStateType const*> {
+    std::queue<NFAStateType const*> state_queue;
+    std::unordered_set<NFAStateType const*> visited_states;
+    std::vector<NFAStateType const*> visited_order;
     visited_states.reserve(m_states.size());
     visited_order.reserve(m_states.size());
 
     auto add_to_queue_and_visited
-            = [&state_queue, &visited_states](RegexNFAByteState const* dest_state) {
+            = [&state_queue, &visited_states](NFAStateType const* dest_state) {
                   if (visited_states.insert(dest_state).second) {
                       state_queue.push(dest_state);
                   }
@@ -438,7 +431,7 @@ template <typename NFAStateType>
 auto RegexNFA<NFAStateType>::serialize() const -> std::string {
     auto const traversal_order = get_bfs_traversal_order();
 
-    std::unordered_map<RegexNFAByteState const*, uint32_t> state_ids;
+    std::unordered_map<NFAStateType const*, uint32_t> state_ids;
     for (auto const* state : traversal_order) {
         state_ids.emplace(state, state_ids.size());
     }
