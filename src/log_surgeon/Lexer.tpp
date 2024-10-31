@@ -394,23 +394,23 @@ auto Lexer<NFAStateType, DFAStateType>::epsilon_closure(NFAStateType const* stat
     std::stack<NFAStateType const*> stack;
     stack.push(state_ptr);
     while (!stack.empty()) {
-        NFAStateType const* curr_state = stack.top();
+        NFAStateType const* current_state = stack.top();
         stack.pop();
-        if (closure_set.insert(curr_state).second) {
-            for (NFAStateType* const dest_state : curr_state->get_epsilon_transitions()) {
+        if (closure_set.insert(current_state).second) {
+            for (NFAStateType* const dest_state : current_state->get_epsilon_transitions()) {
                 stack.push(dest_state);
             }
 
             // TODO: currently treat tagged transitions as epsilon transitions
             for (auto const& positive_tagged_transition :
-                 curr_state->get_positive_tagged_transitions())
+                 current_state->get_positive_tagged_transitions())
             {
                 stack.push(positive_tagged_transition.get_dest_state());
             }
             auto const* negative_dest_state
-                    = curr_state->get_negative_tagged_transition().get_dest_state();
+                    = current_state->get_negative_tagged_transition().get_dest_state();
             if (nullptr != negative_dest_state) {
-                stack.push(curr_state->get_negative_tagged_transition().get_dest_state());
+                stack.push(negative_dest_state);
             }
         }
     }

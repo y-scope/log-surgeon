@@ -148,7 +148,7 @@ public:
     /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the NFA state on success.
-     * @return Forwards `PositiveTaggedTransition::serialize`'s return value (std::nullopt) on *
+     * @return Forwards `PositiveTaggedTransition::serialize`'s return value (std::nullopt) on
      * failure.
      * @return Forwards `NegativeTaggedTransition::serialize`'s return value (std::nullopt) on
      * failure.
@@ -341,6 +341,7 @@ auto RegexNFAState<state_type>::serialize(
 
     auto const accepting_tag_string
             = m_accepting ? fmt::format("accepting_tag={},", m_matching_variable_id) : "";
+
     return fmt::format(
             "{}:{}byte_transitions={{{}}},epsilon_transitions={{{}}},positive_tagged_transitions={{"
             "{}}},negative_tagged_transition={{{}}}",
