@@ -80,7 +80,7 @@ public:
 
 private:
     std::set<uint32_t> m_tags;
-    NFAStateType const* m_dest_state;
+    NFAStateType const* m_dest_state{nullptr};
 };
 
 template <RegexNFAStateType state_type>
