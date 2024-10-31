@@ -25,10 +25,10 @@ public:
 
     RegexNFAState() = default;
 
-    RegexNFAState(Tag const* tag, RegexNFAState const* dest_state)
+    RegexNFAState(Tag* tag, RegexNFAState const* dest_state)
             : m_positive_tagged_end_transitions{{tag, dest_state}} {}
 
-    RegexNFAState(std::set<Tag const*> tags, RegexNFAState const* dest_state)
+    RegexNFAState(std::set<Tag*> tags, RegexNFAState const* dest_state)
             : m_negative_tagged_transition{std::move(tags), dest_state} {}
 
     auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
