@@ -121,10 +121,10 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAS
 
     auto add_to_queue_and_visited
             = [&state_queue, &visited_states](NFAStateType const* dest_state) {
-                if (visited_states.insert(dest_state).second) {
-                    state_queue.push(dest_state);
-                }
-    };
+                  if (visited_states.insert(dest_state).second) {
+                      state_queue.push(dest_state);
+                  }
+              };
 
     add_to_queue_and_visited(m_root);
     while (false == state_queue.empty()) {
