@@ -29,7 +29,7 @@ public:
             : m_positive_tagged_transitions{{tag, dest_state}} {}
 
     RegexNFAState(std::set<Tag const*> tags, RegexNFAState const* dest_state)
-            : m_negative_tagged_transitions{{std::move(tags), dest_state}} {}
+            : m_negative_tagged_transition{std::move(tags), dest_state} {}
 
     auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
 
@@ -44,13 +44,13 @@ public:
     }
 
     [[nodiscard]] auto get_positive_tagged_transitions(
-    ) const -> std::vector<PositiveTaggedTransition<state_type>> const& {
+    ) const -> std::vector<PositiveTaggedTransition<RegexNFAState>> const& {
         return m_positive_tagged_transitions;
     }
 
-    [[nodiscard]] auto get_negative_tagged_transitions(
-    ) const -> std::vector<NegativeTaggedTransition<state_type>> const& {
-        return m_negative_tagged_transitions;
+    [[nodiscard]] auto get_negative_tagged_transition(
+    ) const -> NegativeTaggedTransition<RegexNFAState> const& {
+        return m_negative_tagged_transition;
     }
 
     auto add_epsilon_transition(RegexNFAState* epsilon_transition) -> void {
@@ -83,18 +83,19 @@ public:
     /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the NFA state on success.
-     * @return Forwards `PositiveTaggedTransition::serialize`'s or
-     * `NegativeTaggedTransition::serialize`'s return value (std::nullopt) on failure.
+     * @return Forwards `PositiveTaggedTransition::serialize`'s return value (std::nullopt) on
+     * failure.
+     * @return Forwards `NegativeTaggedTransition::serialize`'s return value (std::nullopt) on
+     * failure.
      */
-    [[nodiscard]] auto serialize(
-            std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(std::unordered_map<RegexNFAState const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
 private:
     bool m_accepting{false};
     uint32_t m_matching_variable_id{0};
-    std::vector<PositiveTaggedTransition<state_type>> m_positive_tagged_transitions;
-    std::vector<NegativeTaggedTransition<state_type>> m_negative_tagged_transitions;
+    std::vector<PositiveTaggedTransition<RegexNFAState>> m_positive_tagged_transitions;
+    NegativeTaggedTransition<RegexNFAState> m_negative_tagged_transition;
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
@@ -153,7 +154,7 @@ void RegexNFAState<state_type>::add_interval(Interval interval, RegexNFAState* d
 
 template <RegexNFAStateType state_type>
 auto RegexNFAState<state_type>::serialize(
-        std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
+        std::unordered_map<RegexNFAState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     std::vector<std::string> byte_transitions;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
@@ -179,14 +180,14 @@ auto RegexNFAState<state_type>::serialize(
         positive_tagged_transitions.emplace_back(optional_serialized_positive_transition.value());
     }
 
-    std::vector<std::string> negative_tagged_transitions;
-    for (auto const& negative_tagged_transition : m_negative_tagged_transitions) {
+    std::string negative_tagged_transition_string;
+    if (nullptr != m_negative_tagged_transition.get_dest_state()) {
         auto const optional_serialized_negative_transition
-                = negative_tagged_transition.serialize(state_ids);
+                = m_negative_tagged_transition.serialize(state_ids);
         if (false == optional_serialized_negative_transition.has_value()) {
             return std::nullopt;
         }
-        negative_tagged_transitions.emplace_back(optional_serialized_negative_transition.value());
+        negative_tagged_transition_string = optional_serialized_negative_transition.value();
     }
 
     auto const accepting_tag_string
@@ -194,13 +195,13 @@ auto RegexNFAState<state_type>::serialize(
 
     return fmt::format(
             "{}:{}byte_transitions={{{}}},epsilon_transitions={{{}}},positive_tagged_transitions={{"
-            "{}}},negative_tagged_transitions={{{}}}",
+            "{}}},negative_tagged_transition={{{}}}",
             state_ids.at(this),
             accepting_tag_string,
             fmt::join(byte_transitions, ","),
             fmt::join(epsilon_transitions, ","),
             fmt::join(positive_tagged_transitions, ","),
-            fmt::join(negative_tagged_transitions, ",")
+            negative_tagged_transition_string
     );
 }
 }  // namespace log_surgeon::finite_automata

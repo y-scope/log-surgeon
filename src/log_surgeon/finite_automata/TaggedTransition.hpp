@@ -13,59 +13,55 @@
 #include <log_surgeon/finite_automata/Tag.hpp>
 
 namespace log_surgeon::finite_automata {
-template <RegexNFAStateType state_type>
+template <typename NFAStateType>
 class PositiveTaggedTransition {
 public:
-    PositiveTaggedTransition(Tag const* tag, RegexNFAState<state_type> const* dest_state)
+    PositiveTaggedTransition(Tag const* tag, NFAStateType const* dest_state)
             : m_tag{tag},
               m_dest_state{dest_state} {}
 
-    [[nodiscard]] auto get_dest_state() const -> RegexNFAState<state_type> const* {
-        return m_dest_state;
-    }
+    [[nodiscard]] auto get_dest_state() const -> NFAStateType const* { return m_dest_state; }
 
     /**
      * @param state_ids A map of states to their unique identifiers.
-     * @return A string representation of the positive tagged transitions on success.
+     * @return A string representation of the positive tagged transition on success.
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
-    [[nodiscard]] auto serialize(
-            std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
 private:
     Tag const* m_tag;
-    RegexNFAState<state_type> const* m_dest_state;
+    NFAStateType const* m_dest_state;
 };
 
-template <RegexNFAStateType state_type>
+template <typename NFAStateType>
 class NegativeTaggedTransition {
 public:
-    NegativeTaggedTransition(std::set<Tag const*> tags, RegexNFAState<state_type> const* dest_state)
+    NegativeTaggedTransition() = default;
+
+    NegativeTaggedTransition(std::set<Tag const*> tags, NFAStateType const* dest_state)
             : m_tags{std::move(tags)},
               m_dest_state{dest_state} {}
 
-    [[nodiscard]] auto get_dest_state() const -> RegexNFAState<state_type> const* {
-        return m_dest_state;
-    }
+    [[nodiscard]] auto get_dest_state() const -> NFAStateType const* { return m_dest_state; }
 
     /**
      * @param state_ids A map of states to their unique identifiers.
-     * @return A string representation of the negative tagged transitions on success.
+     * @return A string representation of the negative tagged transition on success.
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
-    [[nodiscard]] auto serialize(
-            std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
 private:
     std::set<Tag const*> const m_tags;
-    RegexNFAState<state_type> const* m_dest_state;
+    NFAStateType const* m_dest_state{nullptr};
 };
 
-template <RegexNFAStateType state_type>
-auto PositiveTaggedTransition<state_type>::serialize(
-        std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
+template <typename NFAStateType>
+auto PositiveTaggedTransition<NFAStateType>::serialize(
+        std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     auto const state_id_it = state_ids.find(m_dest_state);
     if (state_id_it == state_ids.end()) {
@@ -74,9 +70,9 @@ auto PositiveTaggedTransition<state_type>::serialize(
     return fmt::format("{}[{}]", state_id_it->second, m_tag->get_name());
 }
 
-template <RegexNFAStateType state_type>
-auto NegativeTaggedTransition<state_type>::serialize(
-        std::unordered_map<RegexNFAByteState const*, uint32_t> const& state_ids
+template <typename NFAStateType>
+auto NegativeTaggedTransition<NFAStateType>::serialize(
+        std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     auto const state_id_it = state_ids.find(m_dest_state);
     if (state_id_it == state_ids.end()) {

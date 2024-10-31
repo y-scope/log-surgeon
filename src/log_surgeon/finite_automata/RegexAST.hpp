@@ -99,18 +99,18 @@ public:
     }
 
     /**
-     * Handles the addition of an intermediate state with negative transitions if needed.
+     * Handles the addition of an intermediate state with a negative transition if needed.
      * @param nfa
      * @param end_state
      */
     auto add_to_nfa_with_negative_tags(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const
             -> void {
         // Handle negative tags as:
-        // root --(regex)--> state_with_negative_tagged_transitions --(negative tags)--> end_state
+        // root --(regex)--> state_with_negative_tagged_transition --(negative tags)--> end_state
         if (false == m_negative_tags.empty()) {
-            auto* state_with_negative_tagged_transitions
-                    = nfa->new_state_with_negative_tagged_transitions(m_negative_tags, end_state);
-            add_to_nfa(nfa, state_with_negative_tagged_transitions);
+            auto* state_with_negative_tagged_transition
+                    = nfa->new_state_with_negative_tagged_transition(m_negative_tags, end_state);
+            add_to_nfa(nfa, state_with_negative_tagged_transition);
         } else {
             add_to_nfa(nfa, end_state);
         }

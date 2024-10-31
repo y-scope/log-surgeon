@@ -50,58 +50,58 @@ TEST_CASE("Test NFA", "[NFA]") {
     string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2},"
                                      "epsilon_transitions={},"
                                      "positive_tagged_transitions={},"
-                                     "negative_tagged_transitions={}\n";
+                                     "negative_tagged_transition={}\n";
     expected_serialized_nfa += "1:byte_transitions={a-->3,b-->3,c-->4,d-->4},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
-                               "negative_tagged_transitions={}\n";
+                               "negative_tagged_transition={}\n";
     expected_serialized_nfa
             += "2:byte_transitions={},"
                "epsilon_transitions={},"
                "positive_tagged_transitions={},"
-               "negative_tagged_transitions={5[containerID,letter2,letter,letter1]}\n";
+               "negative_tagged_transition={5[containerID,letter2,letter,letter1]}\n";
     expected_serialized_nfa += "3:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={6[letter1]},"
-                               "negative_tagged_transitions={}\n";
+                               "negative_tagged_transition={}\n";
     expected_serialized_nfa += "4:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={7[letter2]},"
-                               "negative_tagged_transitions={}\n";
+                               "negative_tagged_transition={}\n";
     expected_serialized_nfa += "5:accepting_tag=0,byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
-                               "negative_tagged_transitions={}\n";
+                               "negative_tagged_transition={}\n";
     expected_serialized_nfa += "6:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
-                               "negative_tagged_transitions={8[letter2]}\n";
+                               "negative_tagged_transition={8[letter2]}\n";
     expected_serialized_nfa += "7:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
-                               "negative_tagged_transitions={8[letter1]}\n";
+                               "negative_tagged_transition={8[letter1]}\n";
     expected_serialized_nfa += "8:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={9[letter]},"
-                               "negative_tagged_transitions={}\n";
+                               "negative_tagged_transition={}\n";
     expected_serialized_nfa += "9:byte_transitions={B-->10},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
-                               "negative_tagged_transitions={}\n";
+                               "negative_tagged_transition={}\n";
     expected_serialized_nfa += "10:byte_transitions={0-->11,1-->11,2-->11,3-->11,4-->11,5-->11,6-->"
                                "11,7-->11,8-->11,9-->11},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
-                               "negative_tagged_transitions={}\n";
+                               "negative_tagged_transition={}\n";
     expected_serialized_nfa += "11:byte_transitions={0-->11,1-->11,2-->11,3-->11,4-->11,5-->11,6-->"
                                "11,7-->11,8-->11,9-->11},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={12[containerID]},"
-                               "negative_tagged_transitions={}\n";
+                               "negative_tagged_transition={}\n";
     expected_serialized_nfa += "12:byte_transitions={C-->5},"
                                "epsilon_transitions={},"
                                "positive_tagged_transitions={},"
-                               "negative_tagged_transitions={}\n";
+                               "negative_tagged_transition={}\n";
 
     // Compare expected and actual line-by-line
     auto const actual_serialized_nfa = nfa.serialize();
