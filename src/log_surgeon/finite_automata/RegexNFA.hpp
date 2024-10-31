@@ -406,6 +406,7 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAS
         auto const* current_state = state_queue.front();
         visited_order.push_back(current_state);
         state_queue.pop();
+        // TODO: handle the utf8 case
         for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
             for (auto const* dest_state : current_state->get_byte_transitions(idx)) {
                 add_to_queue_and_visited(dest_state);
