@@ -60,8 +60,6 @@ private:
 template <typename NFAStateType>
 class NegativeTaggedTransition {
 public:
-    NegativeTaggedTransition() = default;
-
     NegativeTaggedTransition(std::set<uint32_t> tags, NFAStateType const* dest_state)
             : m_tags{std::move(tags)},
               m_dest_state{dest_state} {}
@@ -80,7 +78,7 @@ public:
 
 private:
     std::set<uint32_t> m_tags;
-    NFAStateType const* m_dest_state{nullptr};
+    NFAStateType const* m_dest_state;
 };
 
 template <RegexNFAStateType state_type>
@@ -94,7 +92,9 @@ public:
             : m_positive_tagged_transitions{{tag, dest_state}} {}
 
     RegexNFAState(std::set<uint32_t> tags, RegexNFAState const* dest_state)
-            : m_negative_tagged_transition{std::move(tags), dest_state} {}
+            : m_optional_negative_tagged_transition{
+                      NegativeTaggedTransition{std::move(tags), dest_state}
+              } {}
 
     auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
 
@@ -113,9 +113,9 @@ public:
         return m_positive_tagged_transitions;
     }
 
-    [[nodiscard]] auto get_negative_tagged_transition(
-    ) const -> NegativeTaggedTransition<RegexNFAState> const& {
-        return m_negative_tagged_transition;
+    [[nodiscard]] auto get_optional_negative_tagged_transition(
+    ) const -> std::optional<NegativeTaggedTransition<RegexNFAState>> const& {
+        return m_optional_negative_tagged_transition;
     }
 
     auto add_epsilon_transition(RegexNFAState* epsilon_transition) -> void {
@@ -160,7 +160,7 @@ private:
     bool m_accepting{false};
     uint32_t m_matching_variable_id{0};
     std::vector<PositiveTaggedTransition<RegexNFAState>> m_positive_tagged_transitions;
-    NegativeTaggedTransition<RegexNFAState> m_negative_tagged_transition;
+    std::optional<NegativeTaggedTransition<RegexNFAState>> m_optional_negative_tagged_transition;
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
@@ -330,9 +330,9 @@ auto RegexNFAState<state_type>::serialize(
     }
 
     std::string negative_tagged_transition_string;
-    if (nullptr != m_negative_tagged_transition.get_dest_state()) {
+    if (m_optional_negative_tagged_transition.has_value()) {
         auto const optional_serialized_negative_transition
-                = m_negative_tagged_transition.serialize(state_ids);
+                = m_optional_negative_tagged_transition.value().serialize(state_ids);
         if (false == optional_serialized_negative_transition.has_value()) {
             return std::nullopt;
         }
@@ -420,10 +420,10 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAS
         {
             add_to_queue_and_visited(positive_tagged_transition.get_dest_state());
         }
-        auto const* negative_dest_state
-                = current_state->get_negative_tagged_transition().get_dest_state();
-        if (nullptr != negative_dest_state) {
-            add_to_queue_and_visited(negative_dest_state);
+        auto const optional_negative_tagged_transition
+                = current_state->get_optional_negative_tagged_transition();
+        if (optional_negative_tagged_transition.has_value()) {
+            add_to_queue_and_visited(optional_negative_tagged_transition.value().get_dest_state());
         }
     }
     return visited_order;
