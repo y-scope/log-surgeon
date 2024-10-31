@@ -329,14 +329,14 @@ auto RegexNFAState<state_type>::serialize(
         positive_tagged_transitions.emplace_back(optional_serialized_positive_transition.value());
     }
 
-    std::string negative_tagged_transition;
+    std::string negative_tagged_transition_string;
     if (nullptr != m_negative_tagged_transition.get_dest_state()) {
         auto const optional_serialized_negative_transition
                 = m_negative_tagged_transition.serialize(state_ids);
         if (false == optional_serialized_negative_transition.has_value()) {
             return std::nullopt;
         }
-        negative_tagged_transition = optional_serialized_negative_transition.value();
+        negative_tagged_transition_string = optional_serialized_negative_transition.value();
     }
 
     auto const accepting_tag_string
@@ -350,7 +350,7 @@ auto RegexNFAState<state_type>::serialize(
             fmt::join(byte_transitions, ","),
             fmt::join(epsilon_transitions, ","),
             fmt::join(positive_tagged_transitions, ","),
-            negative_tagged_transition
+            negative_tagged_transition_string
     );
 }
 
