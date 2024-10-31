@@ -19,6 +19,18 @@ class Tag {
 public:
     explicit Tag(std::string name) : m_name{std::move(name)} {}
 
+    auto add_start(uint32_t start) -> void {
+        m_starts.push_back(start);
+    }
+
+    auto add_end(uint32_t end) -> void {
+        m_ends.push_back(end);
+    }
+
+    auto set_unmatched() -> void {
+        m_starts.clear();
+    }
+
     [[nodiscard]] auto get_name() const -> std::string const& { return m_name; }
 
 private:

@@ -26,7 +26,7 @@ public:
     RegexNFAState() = default;
 
     RegexNFAState(Tag const* tag, RegexNFAState const* dest_state)
-            : m_positive_tagged_transitions{{tag, dest_state}} {}
+            : m_positive_tagged_end_transitions{{tag, dest_state}} {}
 
     RegexNFAState(std::set<Tag const*> tags, RegexNFAState const* dest_state)
             : m_negative_tagged_transition{std::move(tags), dest_state} {}
@@ -43,9 +43,14 @@ public:
         return m_matching_variable_id;
     }
 
-    [[nodiscard]] auto get_positive_tagged_transitions(
+    [[nodiscard]] auto get_positive_tagged_start_transitions(
     ) const -> std::vector<PositiveTaggedTransition<RegexNFAState>> const& {
-        return m_positive_tagged_transitions;
+        return m_positive_tagged_start_transitions;
+    }
+
+    [[nodiscard]] auto get_positive_tagged_end_transitions(
+    ) const -> std::vector<PositiveTaggedTransition<RegexNFAState>> const& {
+        return m_positive_tagged_end_transitions;
     }
 
     [[nodiscard]] auto get_negative_tagged_transition(
@@ -94,7 +99,8 @@ public:
 private:
     bool m_accepting{false};
     uint32_t m_matching_variable_id{0};
-    std::vector<PositiveTaggedTransition<RegexNFAState>> m_positive_tagged_transitions;
+    std::vector<PositiveTaggedTransition<RegexNFAState>> m_positive_tagged_start_transitions;
+    std::vector<PositiveTaggedTransition<RegexNFAState>> m_positive_tagged_end_transitions;
     NegativeTaggedTransition<RegexNFAState> m_negative_tagged_transition;
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
@@ -170,14 +176,28 @@ auto RegexNFAState<state_type>::serialize(
         epsilon_transitions.emplace_back(std::to_string(state_ids.at(dest_state)));
     }
 
-    std::vector<std::string> positive_tagged_transitions;
-    for (auto const& positive_tagged_transition : m_positive_tagged_transitions) {
+    std::vector<std::string> positive_tagged_start_transition_strings;
+    for (auto const& positive_tagged_start_transition : m_positive_tagged_start_transitions) {
         auto const optional_serialized_positive_transition
-                = positive_tagged_transition.serialize(state_ids);
+                = positive_tagged_start_transition.serialize(state_ids);
         if (false == optional_serialized_positive_transition.has_value()) {
             return std::nullopt;
         }
-        positive_tagged_transitions.emplace_back(optional_serialized_positive_transition.value());
+        positive_tagged_start_transition_strings.emplace_back(
+                optional_serialized_positive_transition.value()
+        );
+    }
+
+    std::vector<std::string> positive_tagged_end_transition_strings;
+    for (auto const& positive_tagged_end_transition : m_positive_tagged_end_transitions) {
+        auto const optional_serialized_positive_transition
+                = positive_tagged_end_transition.serialize(state_ids);
+        if (false == optional_serialized_positive_transition.has_value()) {
+            return std::nullopt;
+        }
+        positive_tagged_end_transition_strings.emplace_back(
+                optional_serialized_positive_transition.value()
+        );
     }
 
     std::string negative_tagged_transition_string;
@@ -194,13 +214,15 @@ auto RegexNFAState<state_type>::serialize(
             = m_accepting ? fmt::format("accepting_tag={},", m_matching_variable_id) : "";
 
     return fmt::format(
-            "{}:{}byte_transitions={{{}}},epsilon_transitions={{{}}},positive_tagged_transitions={{"
-            "{}}},negative_tagged_transition={{{}}}",
+            "{}:{}byte_transitions={{{}}},epsilon_transitions={{{}}},positive_tagged_start_"
+            "transitions={{{}}},positive_tagged_end_transitions={{{}}},negative_tagged_transition={"
+            "{{}}}",
             state_ids.at(this),
             accepting_tag_string,
             fmt::join(byte_transitions, ","),
             fmt::join(epsilon_transitions, ","),
-            fmt::join(positive_tagged_transitions, ","),
+            fmt::join(positive_tagged_start_transition_strings, ","),
+            fmt::join(positive_tagged_end_transition_strings, ","),
             negative_tagged_transition_string
     );
 }

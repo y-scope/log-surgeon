@@ -144,10 +144,15 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAS
         for (auto const* dest_state : current_state->get_epsilon_transitions()) {
             add_to_queue_and_visited(dest_state);
         }
-        for (auto const& positive_tagged_transition :
-             current_state->get_positive_tagged_transitions())
+        for (auto const& positive_tagged_start_transition :
+             current_state->get_positive_tagged_start_transitions())
         {
-            add_to_queue_and_visited(positive_tagged_transition.get_dest_state());
+            add_to_queue_and_visited(positive_tagged_start_transition.get_dest_state());
+        }
+        for (auto const& positive_tagged_end_transition :
+             current_state->get_positive_tagged_end_transitions())
+        {
+            add_to_queue_and_visited(positive_tagged_end_transition.get_dest_state());
         }
         auto const* negative_dest_state
                 = current_state->get_negative_tagged_transition().get_dest_state();

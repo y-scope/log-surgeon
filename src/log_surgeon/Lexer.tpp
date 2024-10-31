@@ -402,10 +402,15 @@ auto Lexer<NFAStateType, DFAStateType>::epsilon_closure(NFAStateType const* stat
             }
 
             // TODO: currently treat tagged transitions as epsilon transitions
-            for (auto const& positive_tagged_transition :
-                 current_state->get_positive_tagged_transitions())
+            for (auto const& positive_tagged_start_transition :
+                 current_state->get_positive_tagged_start_transitions())
             {
-                stack.push(positive_tagged_transition.get_dest_state());
+                stack.push(positive_tagged_start_transition.get_dest_state());
+            }
+            for (auto const& positive_tagged_end_transition :
+                 current_state->get_positive_tagged_start_transitions())
+            {
+                stack.push(positive_tagged_end_transition.get_dest_state());
             }
             auto const* negative_dest_state
                     = current_state->get_negative_tagged_transition().get_dest_state();
