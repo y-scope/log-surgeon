@@ -394,10 +394,10 @@ auto Lexer<NFAStateType, DFAStateType>::epsilon_closure(NFAStateType const* stat
     std::stack<NFAStateType const*> stack;
     stack.push(state_ptr);
     while (!stack.empty()) {
-        NFAStateType const* current_state = stack.top();
+        auto const* current_state = stack.top();
         stack.pop();
         if (closure_set.insert(current_state).second) {
-            for (NFAStateType* const dest_state : current_state->get_epsilon_transitions()) {
+            for (auto const* dest_state : current_state->get_epsilon_transitions()) {
                 stack.push(dest_state);
             }
 
