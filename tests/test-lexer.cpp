@@ -152,7 +152,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
                         "?<containerID>\\d+"
                     ")C"
                 ")",
-                U"(Z<~letter1><~letter><~containerID><~letter2>)|("
+                U"(Z<~letter2><~containerID><~letter1><~letter>)|("
                     "A("
                         "(((a)|(b))<letter1><~letter2>)|"
                         "(((c)|(d))<letter2><~letter1>)"
