@@ -29,7 +29,9 @@ public:
             : m_positive_tagged_end_transitions{{tag, dest_state}} {}
 
     RegexNFAState(std::set<Tag*> tags, RegexNFAState const* dest_state)
-            : m_negative_tagged_transition{std::move(tags), dest_state} {}
+            : m_optional_negative_tagged_transition{
+                      NegativeTaggedTransition{std::move(tags), dest_state}
+              } {}
 
     auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
 
@@ -53,9 +55,9 @@ public:
         return m_positive_tagged_end_transitions;
     }
 
-    [[nodiscard]] auto get_negative_tagged_transition(
-    ) const -> NegativeTaggedTransition<RegexNFAState> const& {
-        return m_negative_tagged_transition;
+    [[nodiscard]] auto get_optional_negative_tagged_transition(
+    ) const -> std::optional<NegativeTaggedTransition<RegexNFAState>> const& {
+        return m_optional_negative_tagged_transition;
     }
 
     auto add_epsilon_transition(RegexNFAState* epsilon_transition) -> void {
@@ -101,7 +103,7 @@ private:
     uint32_t m_matching_variable_id{0};
     std::vector<PositiveTaggedTransition<RegexNFAState>> m_positive_tagged_start_transitions;
     std::vector<PositiveTaggedTransition<RegexNFAState>> m_positive_tagged_end_transitions;
-    NegativeTaggedTransition<RegexNFAState> m_negative_tagged_transition;
+    std::optional<NegativeTaggedTransition<RegexNFAState>> m_optional_negative_tagged_transition;
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
@@ -201,9 +203,9 @@ auto RegexNFAState<state_type>::serialize(
     }
 
     std::string negative_tagged_transition_string;
-    if (nullptr != m_negative_tagged_transition.get_dest_state()) {
+    if (m_optional_negative_tagged_transition.has_value()) {
         auto const optional_serialized_negative_transition
-                = m_negative_tagged_transition.serialize(state_ids);
+                = m_optional_negative_tagged_transition.value().serialize(state_ids);
         if (false == optional_serialized_negative_transition.has_value()) {
             return std::nullopt;
         }
