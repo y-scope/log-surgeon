@@ -5,6 +5,9 @@
 #include <memory>
 #include <optional>
 #include <queue>
+#include <set>
+#include <string>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -44,7 +47,7 @@ public:
     ) -> NFAStateType*;
 
     /**
-     * Creates a unique_ptr for an NFA state with negative tagged transition and adds it to
+     * Creates a unique_ptr for an NFA state with a negative tagged transition and adds it to
      * `m_states`.
      * @param tags
      * @param dest_state
@@ -149,10 +152,10 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAS
         {
             add_to_queue_and_visited(positive_tagged_transition.get_dest_state());
         }
-        auto const* negative_dest_state
-                = current_state->get_negative_tagged_transition().get_dest_state();
-        if (nullptr != negative_dest_state) {
-            add_to_queue_and_visited(negative_dest_state);
+        auto const& optional_negative_tagged_transition
+                = current_state->get_optional_negative_tagged_transition();
+        if (optional_negative_tagged_transition.has_value()) {
+            add_to_queue_and_visited(optional_negative_tagged_transition.value().get_dest_state());
         }
     }
     return visited_order;

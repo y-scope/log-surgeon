@@ -2,6 +2,7 @@
 #define LOG_SURGEON_LEXER_TPP
 
 #include <cassert>
+#include <stack>
 #include <string>
 #include <vector>
 
@@ -396,22 +397,23 @@ auto Lexer<NFAStateType, DFAStateType>::epsilon_closure(NFAStateType const* stat
     while (!stack.empty()) {
         auto const* current_state = stack.top();
         stack.pop();
-        if (closure_set.insert(current_state).second) {
-            for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-                stack.push(dest_state);
-            }
+        if (false == closure_set.insert(current_state).second) {
+            continue;
+        }
+        for (auto const* dest_state : current_state->get_epsilon_transitions()) {
+            stack.push(dest_state);
+        }
 
-            // TODO: currently treat tagged transitions as epsilon transitions
-            for (auto const& positive_tagged_transition :
-                 current_state->get_positive_tagged_transitions())
-            {
-                stack.push(positive_tagged_transition.get_dest_state());
-            }
-            auto const* negative_dest_state
-                    = current_state->get_negative_tagged_transition().get_dest_state();
-            if (nullptr != negative_dest_state) {
-                stack.push(negative_dest_state);
-            }
+        // TODO: currently treat tagged transitions as epsilon transitions
+        for (auto const& positive_tagged_transition :
+             current_state->get_positive_tagged_transitions())
+        {
+            stack.push(positive_tagged_transition.get_dest_state());
+        }
+        auto const& optional_negative_tagged_transition
+                = current_state->get_optional_negative_tagged_transition();
+        if (optional_negative_tagged_transition.has_value()) {
+            stack.push(optional_negative_tagged_transition.value().get_dest_state());
         }
     }
     return closure_set;
