@@ -28,7 +28,7 @@ public:
     RegexNFAState(Tag* tag, RegexNFAState const* dest_state)
             : m_positive_tagged_end_transitions{{tag, dest_state}} {}
 
-    RegexNFAState(std::set<Tag*> tags, RegexNFAState const* dest_state)
+    RegexNFAState(std::vector<Tag*> tags, RegexNFAState const* dest_state)
             : m_optional_negative_tagged_transition{
                       NegativeTaggedTransition{std::move(tags), dest_state}
               } {}

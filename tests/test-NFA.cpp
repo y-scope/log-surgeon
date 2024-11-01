@@ -62,7 +62,7 @@ TEST_CASE("Test NFA", "[NFA]") {
                "epsilon_transitions={},"
                "positive_tagged_start_transitions={},"
                "positive_tagged_end_transitions={},"
-               "negative_tagged_transition={5[containerID,letter,letter1,letter2]}\n";
+               "negative_tagged_transition={5[letter1,letter2,letter,containerID]}\n";
     expected_serialized_nfa += "3:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_start_transitions={},"

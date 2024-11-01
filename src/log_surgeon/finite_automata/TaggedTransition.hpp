@@ -41,7 +41,7 @@ private:
 template <typename NFAStateType>
 class NegativeTaggedTransition {
 public:
-    NegativeTaggedTransition(std::set<Tag*> tags, NFAStateType const* dest_state)
+    NegativeTaggedTransition(std::vector<Tag*> tags, NFAStateType const* dest_state)
             : m_tags{std::move(tags)},
               m_dest_state{dest_state} {}
 
@@ -62,7 +62,7 @@ public:
     ) const -> std::optional<std::string>;
 
 private:
-    std::set<Tag*> const m_tags;
+    std::vector<Tag*> const m_tags;
     NFAStateType const* m_dest_state;
 };
 

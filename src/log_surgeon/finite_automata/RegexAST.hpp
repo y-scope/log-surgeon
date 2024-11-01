@@ -82,19 +82,23 @@ public:
      */
     [[nodiscard]] virtual auto serialize() const -> std::u32string = 0;
 
-    [[nodiscard]] auto get_subtree_positive_tags() const -> std::set<Tag*> const& {
+    [[nodiscard]] auto get_subtree_positive_tags() const -> std::vector<Tag*> const& {
         return m_subtree_positive_tags;
     }
 
-    auto set_subtree_positive_tags(std::set<Tag*> subtree_positive_tags) -> void {
+    auto set_subtree_positive_tags(std::vector<Tag*> subtree_positive_tags) -> void {
         m_subtree_positive_tags = std::move(subtree_positive_tags);
     }
 
-    auto add_subtree_positive_tags(std::set<Tag*> subtree_positive_tags) -> void {
-        m_subtree_positive_tags.merge(subtree_positive_tags);
+    auto add_subtree_positive_tags(std::vector<Tag*> subtree_positive_tags) -> void {
+        m_subtree_positive_tags.insert(
+                m_subtree_positive_tags.end(),
+                std::make_move_iterator(subtree_positive_tags.begin()),
+                std::make_move_iterator(subtree_positive_tags.end())
+        );
     }
 
-    auto set_negative_tags(std::set<Tag*> negative_tags) -> void {
+    auto set_negative_tags(std::vector<Tag*> negative_tags) -> void {
         m_negative_tags = std::move(negative_tags);
     }
 
@@ -128,10 +132,9 @@ protected:
         }
 
         auto const transformed_negative_tags
-                = m_negative_tags
-                  | std::ranges::views::transform([](Tag const* tag) {
-                        return fmt::format("<~{}>", tag->get_name());
-                    });
+                = m_negative_tags | std::ranges::views::transform([](Tag const* tag) {
+                      return fmt::format("<~{}>", tag->get_name());
+                  });
         auto const negative_tags_string
                 = fmt::format("{}", fmt::join(transformed_negative_tags, ""));
 
@@ -142,8 +145,8 @@ protected:
     }
 
 private:
-    std::set<Tag*> m_subtree_positive_tags;
-    std::set<Tag*> m_negative_tags;
+    std::vector<Tag*> m_subtree_positive_tags;
+    std::vector<Tag*> m_negative_tags;
 };
 
 /**
