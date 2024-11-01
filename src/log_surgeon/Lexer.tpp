@@ -2,6 +2,7 @@
 #define LOG_SURGEON_LEXER_TPP
 
 #include <cassert>
+#include <stack>
 #include <string>
 #include <vector>
 
