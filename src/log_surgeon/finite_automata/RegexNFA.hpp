@@ -158,7 +158,7 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAS
             add_to_queue_and_visited(positive_tagged_end_transition.get_dest_state());
         }
         auto const& optional_negative_tagged_transition
-                = current_state->get_optional_negative_tagged_transition();
+                = current_state->get_negative_tagged_transition();
         if (optional_negative_tagged_transition.has_value()) {
             add_to_queue_and_visited(optional_negative_tagged_transition.value().get_dest_state());
         }
