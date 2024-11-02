@@ -43,6 +43,10 @@ public:
         return m_matching_variable_id;
     }
 
+    auto add_positive_tagged_start_transition(Tag* tag, RegexNFAState* dest_state) -> void {
+        m_positive_tagged_start_transitions.emplace_back(tag, dest_state);
+    }
+
     [[nodiscard]] auto get_positive_tagged_start_transitions(
     ) const -> std::vector<PositiveTaggedTransition<RegexNFAState>> const& {
         return m_positive_tagged_start_transitions;
