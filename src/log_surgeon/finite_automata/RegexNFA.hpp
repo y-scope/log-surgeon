@@ -8,7 +8,8 @@
 #include <memory>
 #include <optional>
 #include <queue>
-#include <stack>
+#include <set>
+#include <string>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -46,7 +47,7 @@ public:
 
     /**
      * @param state_ids A map of states to their unique identifiers.
-     * @return A string representation of the positive tagged transitions on success.
+     * @return A string representation of the positive tagged transition on success.
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
@@ -70,7 +71,7 @@ public:
 
     /**
      * @param state_ids A map of states to their unique identifiers.
-     * @return A string representation of the negative tagged transitions on success.
+     * @return A string representation of the negative tagged transition on success.
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
@@ -92,7 +93,7 @@ public:
             : m_positive_tagged_transitions{{tag, dest_state}} {}
 
     RegexNFAState(std::set<uint32_t> tags, RegexNFAState const* dest_state)
-            : m_negative_tagged_transitions{{std::move(tags), dest_state}} {}
+            : m_negative_tagged_transition{NegativeTaggedTransition{std::move(tags), dest_state}} {}
 
     auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
 
@@ -111,9 +112,9 @@ public:
         return m_positive_tagged_transitions;
     }
 
-    [[nodiscard]] auto get_negative_tagged_transitions(
-    ) const -> std::vector<NegativeTaggedTransition<RegexNFAState>> const& {
-        return m_negative_tagged_transitions;
+    [[nodiscard]] auto get_negative_tagged_transition(
+    ) const -> std::optional<NegativeTaggedTransition<RegexNFAState>> const& {
+        return m_negative_tagged_transition;
     }
 
     auto add_epsilon_transition(RegexNFAState* epsilon_transition) -> void {
@@ -158,7 +159,7 @@ private:
     bool m_accepting{false};
     uint32_t m_matching_variable_id{0};
     std::vector<PositiveTaggedTransition<RegexNFAState>> m_positive_tagged_transitions;
-    std::vector<NegativeTaggedTransition<RegexNFAState>> m_negative_tagged_transitions;
+    std::optional<NegativeTaggedTransition<RegexNFAState>> m_negative_tagged_transition;
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
@@ -195,13 +196,13 @@ public:
     ) -> NFAStateType*;
 
     /**
-     * Creates a unique_ptr for an NFA state with negative tagged transitions and adds it to
+     * Creates a unique_ptr for an NFA state with a negative tagged transition and adds it to
      * `m_states`.
      * @param tags
      * @param dest_state
      * @return NFAStateType*
      */
-    [[nodiscard]] auto new_state_with_negative_tagged_transitions(
+    [[nodiscard]] auto new_state_with_negative_tagged_transition(
             std::set<uint32_t> tags,
             NFAStateType const* dest_state
     ) -> NFAStateType*;
@@ -327,14 +328,14 @@ auto RegexNFAState<state_type>::serialize(
         positive_tagged_transitions.emplace_back(optional_serialized_positive_transition.value());
     }
 
-    std::vector<std::string> negative_tagged_transitions;
-    for (auto const& negative_tagged_transition : m_negative_tagged_transitions) {
+    std::string negative_tagged_transition_string;
+    if (m_negative_tagged_transition.has_value()) {
         auto const optional_serialized_negative_transition
-                = negative_tagged_transition.serialize(state_ids);
+                = m_negative_tagged_transition.value().serialize(state_ids);
         if (false == optional_serialized_negative_transition.has_value()) {
             return std::nullopt;
         }
-        negative_tagged_transitions.emplace_back(optional_serialized_negative_transition.value());
+        negative_tagged_transition_string = optional_serialized_negative_transition.value();
     }
 
     auto const accepting_tag_string
@@ -342,13 +343,13 @@ auto RegexNFAState<state_type>::serialize(
 
     return fmt::format(
             "{}:{}byte_transitions={{{}}},epsilon_transitions={{{}}},positive_tagged_transitions={{"
-            "{}}},negative_tagged_transitions={{{}}}",
+            "{}}},negative_tagged_transition={{{}}}",
             state_ids.at(this),
             accepting_tag_string,
             fmt::join(byte_transitions, ","),
             fmt::join(epsilon_transitions, ","),
             fmt::join(positive_tagged_transitions, ","),
-            fmt::join(negative_tagged_transitions, ",")
+            negative_tagged_transition_string
     );
 }
 
@@ -376,7 +377,7 @@ auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_transition(
 }
 
 template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transitions(
+auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transition(
         std::set<uint32_t> tags,
         NFAStateType const* dest_state
 ) -> NFAStateType* {
@@ -404,6 +405,7 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAS
         auto const* current_state = state_queue.front();
         visited_order.push_back(current_state);
         state_queue.pop();
+        // TODO: handle the utf8 case
         for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
             for (auto const* dest_state : current_state->get_byte_transitions(idx)) {
                 add_to_queue_and_visited(dest_state);
@@ -417,10 +419,10 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAS
         {
             add_to_queue_and_visited(positive_tagged_transition.get_dest_state());
         }
-        for (auto const& negative_tagged_transition :
-             current_state->get_negative_tagged_transitions())
-        {
-            add_to_queue_and_visited(negative_tagged_transition.get_dest_state());
+        auto const& optional_negative_tagged_transition
+                = current_state->get_negative_tagged_transition();
+        if (optional_negative_tagged_transition.has_value()) {
+            add_to_queue_and_visited(optional_negative_tagged_transition.value().get_dest_state());
         }
     }
     return visited_order;
