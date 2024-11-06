@@ -106,7 +106,7 @@ private:
 };
 
 template <RegexNFAStateType state_type>
-void RegexNFAState<state_type>::add_interval(Interval interval, RegexNFAState* dest_state) {
+auto RegexNFAState<state_type>::add_interval(Interval interval, RegexNFAState* dest_state) -> void {
     if (interval.first < cSizeOfByte) {
         uint32_t const bound = std::min(interval.second, cSizeOfByte - 1);
         for (uint32_t i = interval.first; i <= bound; i++) {
