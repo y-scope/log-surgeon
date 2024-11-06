@@ -19,6 +19,12 @@
 
 namespace log_surgeon::finite_automata {
 template <RegexNFAStateType state_type>
+class RegexNFAState;
+
+using RegexNFAByteState = RegexNFAState<RegexNFAStateType::Byte>;
+using RegexNFAUTF8State = RegexNFAState<RegexNFAStateType::UTF8>;
+
+template <RegexNFAStateType state_type>
 class RegexNFAState {
 public:
     using Tree = UnicodeIntervalTree<RegexNFAState*>;
@@ -204,9 +210,6 @@ auto RegexNFAState<state_type>::serialize(
             negative_tagged_transition_string
     );
 }
-
-using RegexNFAByteState = RegexNFAState<RegexNFAStateType::Byte>;
-using RegexNFAUTF8State = RegexNFAState<RegexNFAStateType::UTF8>;
 }  // namespace log_surgeon::finite_automata
 
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_STATE

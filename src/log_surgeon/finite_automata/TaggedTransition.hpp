@@ -29,7 +29,13 @@ public:
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
-    ) const -> std::optional<std::string>;
+    ) const -> std::optional<std::string> {
+        auto const state_id_it = state_ids.find(m_dest_state);
+        if (state_id_it == state_ids.end()) {
+            return std::nullopt;
+        }
+        return fmt::format("{}[{}]", state_id_it->second, m_tag);
+    }
 
 private:
     uint32_t m_tag;
@@ -53,34 +59,18 @@ public:
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
-    ) const -> std::optional<std::string>;
+    ) const -> std::optional<std::string> {
+        auto const state_id_it = state_ids.find(m_dest_state);
+        if (state_id_it == state_ids.end()) {
+            return std::nullopt;
+        }
+        return fmt::format("{}[{}]", state_id_it->second, fmt::join(m_tags, ","));
+    }
 
 private:
     std::set<uint32_t> m_tags;
     NFAStateType const* m_dest_state;
 };
-
-template <typename NFAStateType>
-auto PositiveTaggedTransition<NFAStateType>::serialize(
-        std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
-) const -> std::optional<std::string> {
-    auto const state_id_it = state_ids.find(m_dest_state);
-    if (state_id_it == state_ids.end()) {
-        return std::nullopt;
-    }
-    return fmt::format("{}[{}]", state_id_it->second, m_tag);
-}
-
-template <typename NFAStateType>
-auto NegativeTaggedTransition<NFAStateType>::serialize(
-        std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
-) const -> std::optional<std::string> {
-    auto const state_id_it = state_ids.find(m_dest_state);
-    if (state_id_it == state_ids.end()) {
-        return std::nullopt;
-    }
-    return fmt::format("{}[{}]", state_id_it->second, fmt::join(m_tags, ","));
-}
 }  // namespace log_surgeon::finite_automata
 
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_TAGGED_TRANSITION
