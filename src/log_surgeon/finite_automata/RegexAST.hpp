@@ -128,10 +128,9 @@ protected:
         }
 
         auto const transformed_negative_tags
-                = m_negative_tags
-                  | std::ranges::views::transform([](Tag const* tag) {
-                        return fmt::format("<~{}>", tag->get_name());
-                    });
+                = m_negative_tags | std::ranges::views::transform([](Tag const* tag) {
+                      return fmt::format("<~{}>", tag->get_name());
+                  });
         auto const negative_tags_string
                 = fmt::format("{}", fmt::join(transformed_negative_tags, ""));
 
