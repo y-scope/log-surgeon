@@ -62,11 +62,9 @@ public:
             return std::nullopt;
         }
 
-        auto const tag_names
-            = m_tags
-              | std::ranges::views::transform([](Tag const* tag) {
-                    return tag->get_name();
-                });
+        auto const tag_names = m_tags | std::ranges::views::transform([](Tag const* tag) {
+                                   return tag->get_name();
+                               });
         return fmt::format("{}[{}]", state_id_it->second, fmt::join(tag_names, ","));
     }
 
