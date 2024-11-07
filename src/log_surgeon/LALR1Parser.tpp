@@ -204,7 +204,7 @@ auto LALR1Parser<NfaStateType, DfaStateType>::lr_closure_helper(
         return true;
     }
     *next_symbol = item->next_symbol();
-    if (this->symbol_is_token(*next_symbol)) {
+    if (symbol_is_token(*next_symbol)) {
         return true;
     }
     return false;

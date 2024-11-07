@@ -120,7 +120,7 @@ public:
      * has nothing on its LHS (i.e., HEAD -> {})
      * @return bool
      */
-    [[nodiscard]] auto is_epsilon() const -> bool { return this->m_body.empty(); }
+    [[nodiscard]] auto is_epsilon() const -> bool { return m_body.empty(); }
 
     uint32_t m_index;
     uint32_t m_head;
@@ -158,7 +158,7 @@ public:
      * @return bool
      */
     [[nodiscard]] auto has_dot_at_end() const -> bool {
-        return this->m_dot == this->m_production->m_body.size();
+        return m_dot == m_production->m_body.size();
     }
 
     /**
@@ -166,7 +166,7 @@ public:
      * @return uint32_t
      */
     [[nodiscard]] auto next_symbol() const -> uint32_t {
-        return this->m_production->m_body.at(this->m_dot);
+        return m_production->m_body.at(m_dot);
     }
 
     Production* m_production;

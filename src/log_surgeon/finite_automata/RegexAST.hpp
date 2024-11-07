@@ -616,7 +616,7 @@ public:
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
-    [[nodiscard]] auto is_infinite() const -> bool { return this->m_max == 0; }
+    [[nodiscard]] auto is_infinite() const -> bool { return m_max == 0; }
 
     [[nodiscard]] auto get_operand() const -> std::unique_ptr<RegexAST<NfaStateType>> const& {
         return m_operand;
@@ -845,26 +845,26 @@ void RegexASTMultiplication<NfaStateType>::add_to_nfa(
         NfaStateType* end_state
 ) const {
     NfaStateType* saved_root = nfa->get_root();
-    if (this->m_min == 0) {
+    if (0 == m_min) {
         nfa->get_root()->add_epsilon_transition(end_state);
     } else {
-        for (uint32_t i = 1; i < this->m_min; i++) {
+        for (uint32_t i = 1; i < m_min; i++) {
             NfaStateType* intermediate_state = nfa->new_state();
             m_operand->add_to_nfa_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
         m_operand->add_to_nfa_with_negative_tags(nfa, end_state);
     }
-    if (this->is_infinite()) {
+    if (is_infinite()) {
         nfa->set_root(end_state);
         m_operand->add_to_nfa_with_negative_tags(nfa, end_state);
-    } else if (this->m_max > this->m_min) {
-        if (this->m_min != 0) {
+    } else if (m_max > m_min) {
+        if (0 != m_min) {
             NfaStateType* intermediate_state = nfa->new_state();
             m_operand->add_to_nfa_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
-        for (uint32_t i = this->m_min + 1; i < this->m_max; ++i) {
+        for (uint32_t i = m_min + 1; i < m_max; ++i) {
             m_operand->add_to_nfa_with_negative_tags(nfa, end_state);
             NfaStateType* intermediate_state = nfa->new_state();
             m_operand->add_to_nfa_with_negative_tags(nfa, intermediate_state);
@@ -1032,7 +1032,7 @@ void RegexASTGroup<NfaStateType>::add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateTyp
     auto merged_ranges = m_ranges;
     std::sort(merged_ranges.begin(), merged_ranges.end());
     merged_ranges = merge(merged_ranges);
-    if (this->m_negate) {
+    if (m_negate) {
         merged_ranges = complement(merged_ranges);
     }
     for (auto const& [begin, end] : merged_ranges) {

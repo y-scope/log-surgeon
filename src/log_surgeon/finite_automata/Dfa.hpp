@@ -59,7 +59,7 @@ auto Dfa<DfaStateType>::get_intersect(std::unique_ptr<Dfa> const& dfa_in
     std::set<uint32_t> schema_types;
     std::set<DfaStatePair<DfaStateType>> unvisited_pairs;
     std::set<DfaStatePair<DfaStateType>> visited_pairs;
-    unvisited_pairs.emplace(this->get_root(), dfa_in->get_root());
+    unvisited_pairs.emplace(get_root(), dfa_in->get_root());
     // TODO: Handle UTF-8 (multi-byte transitions) as well
     while (false == unvisited_pairs.empty()) {
         auto current_pair_it = unvisited_pairs.begin();
