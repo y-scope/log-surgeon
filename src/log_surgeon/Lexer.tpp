@@ -65,9 +65,9 @@ auto Lexer<NfaStateType, DfaStateType>::scan(ParserInputBuffer& input_buffer, To
         m_type_ids = nullptr;
     }
     while (true) {
-        uint32_t prev_byte_buf_pos = input_buffer.storage().pos();
-        unsigned char next_char{utf8::cCharErr};
-        if (ErrorCode err = input_buffer.get_next_character(next_char); ErrorCode::Success != err) {
+        auto prev_byte_buf_pos = input_buffer.storage().pos();
+        auto next_char{utf8::cCharErr};
+        if (auto const err = input_buffer.get_next_character(next_char); ErrorCode::Success != err) {
             m_asked_for_more_data = true;
             m_prev_state = state;
             return err;
@@ -80,7 +80,7 @@ auto Lexer<NfaStateType, DfaStateType>::scan(ParserInputBuffer& input_buffer, To
             m_match_pos = prev_byte_buf_pos;
             m_match_line = m_line;
         }
-        DfaStateType* next = state->next(next_char);
+        auto* next = state->next(next_char);
         if (next_char == '\n') {
             m_line++;
             if (m_has_delimiters && !m_match) {

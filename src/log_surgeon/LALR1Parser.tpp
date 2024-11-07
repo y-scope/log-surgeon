@@ -88,18 +88,17 @@ auto LALR1Parser<NfaStateType, DfaStateType>::add_token_chain(
         std::string const& chain
 ) -> void {
     assert(chain.size() > 1);
-    std::unique_ptr<finite_automata::RegexASTLiteral<NfaStateType>> first_char_rule
+    auto first_char_rule
             = std::make_unique<finite_automata::RegexASTLiteral<NfaStateType>>(chain[0]);
-    std::unique_ptr<finite_automata::RegexASTLiteral<NfaStateType>> second_char_rule
+    auto second_char_rule
             = std::make_unique<finite_automata::RegexASTLiteral<NfaStateType>>(chain[1]);
-    std::unique_ptr<finite_automata::RegexASTCat<NfaStateType>> rule_chain
-            = std::make_unique<finite_automata::RegexASTCat<NfaStateType>>(
-                    std::move(first_char_rule),
-                    std::move(second_char_rule)
-            );
+    auto rule_chain = std::make_unique<finite_automata::RegexASTCat<NfaStateType>>(
+            std::move(first_char_rule),
+            std::move(second_char_rule)
+    );
     for (uint32_t i = 2; i < chain.size(); i++) {
-        char next_char = chain[i];
-        std::unique_ptr<finite_automata::RegexASTLiteral<NfaStateType>> next_char_rule
+        auto next_char = chain[i];
+        auto next_char_rule
                 = std::make_unique<finite_automata::RegexASTLiteral<NfaStateType>>(next_char);
         rule_chain = std::make_unique<finite_automata::RegexASTCat<NfaStateType>>(
                 std::move(rule_chain),
