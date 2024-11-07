@@ -1,5 +1,5 @@
-#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_STATE_PAIR
-#define LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_STATE_PAIR
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE_PAIR
+#define LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE_PAIR
 
 #include <set>
 #include <vector>
@@ -81,4 +81,4 @@ auto DfaStatePair<DFAState>::get_reachable_pairs(
 }
 }  // namespace log_surgeon::finite_automata
 
-#endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_STATE_PAIR
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE_PAIR

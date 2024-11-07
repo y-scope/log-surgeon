@@ -1,5 +1,5 @@
-#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_STATE
-#define LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_STATE
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE
+#define LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE
 
 #include <cassert>
 #include <cstdint>
@@ -70,4 +70,4 @@ auto DfaState<stateType>::next(uint32_t character) const -> DfaState* {
 }
 }  // namespace log_surgeon::finite_automata
 
-#endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_STATE
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE

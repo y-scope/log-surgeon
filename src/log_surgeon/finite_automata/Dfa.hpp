@@ -1,5 +1,5 @@
-#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_HPP
-#define LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_HPP
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_DFA_HPP
+#define LOG_SURGEON_FINITE_AUTOMATA_DFA_HPP
 
 #include <cstdint>
 #include <memory>
@@ -75,4 +75,4 @@ auto Dfa<DFAStateType>::get_intersect(std::unique_ptr<Dfa> const& dfa_in
 }
 }  // namespace log_surgeon::finite_automata
 
-#endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_HPP
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_DFA_HPP
