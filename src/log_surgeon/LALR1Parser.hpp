@@ -202,8 +202,8 @@ public:
     std::vector<Action> m_actions;
 };
 
-template <typename NFAStateType, typename DFAStateType>
-class LALR1Parser : public Parser<NFAStateType, DFAStateType> {
+template <typename NFAStateType, typename DfaStateType>
+class LALR1Parser : public Parser<NFAStateType, DfaStateType> {
 public:
     LALR1Parser();
 
@@ -276,7 +276,7 @@ protected:
      */
     auto report_error() -> std::string;
 
-    /* Lexer<NFAStateType, DFAStateType> m_lexer; */
+    /* Lexer<NFAStateType, DfaStateType> m_lexer; */
     std::stack<MatchedSymbol> m_parse_stack_matches;
     std::stack<ItemSet*> m_parse_stack_states;
     ItemSet* m_root_item_set_ptr{nullptr};

@@ -9,19 +9,19 @@
 #include <log_surgeon/finite_automata/DfaStatePair.hpp>
 
 namespace log_surgeon::finite_automata {
-template <typename DFAStateType>
+template <typename DfaStateType>
 class Dfa {
 public:
     /**
      * Creates a new DFA state based on a set of NFA states and adds it to
      * m_states
      * @param nfa_state_set
-     * @return DFAStateType*
+     * @return DfaStateType*
      */
     template <typename NFAStateType>
-    auto new_state(std::set<NFAStateType*> const& nfa_state_set) -> DFAStateType*;
+    auto new_state(std::set<NFAStateType*> const& nfa_state_set) -> DfaStateType*;
 
-    auto get_root() const -> DFAStateType const* { return m_states.at(0).get(); }
+    auto get_root() const -> DfaStateType const* { return m_states.at(0).get(); }
 
     /**
      * Compares this dfa with dfa_in to determine the set of schema types in
@@ -36,14 +36,14 @@ public:
     ) const -> std::set<uint32_t>;
 
 private:
-    std::vector<std::unique_ptr<DFAStateType>> m_states;
+    std::vector<std::unique_ptr<DfaStateType>> m_states;
 };
 
-template <typename DFAStateType>
+template <typename DfaStateType>
 template <typename NFAStateType>
-auto Dfa<DFAStateType>::new_state(std::set<NFAStateType*> const& nfa_state_set
-) -> DFAStateType* {
-    m_states.emplace_back(std::make_unique<DFAStateType>());
+auto Dfa<DfaStateType>::new_state(std::set<NFAStateType*> const& nfa_state_set
+) -> DfaStateType* {
+    m_states.emplace_back(std::make_unique<DfaStateType>());
     auto* dfa_state = m_states.back().get();
     for (auto const* nfa_state : nfa_state_set) {
         if (nfa_state->is_accepting()) {
@@ -53,12 +53,12 @@ auto Dfa<DFAStateType>::new_state(std::set<NFAStateType*> const& nfa_state_set
     return dfa_state;
 }
 
-template <typename DFAStateType>
-auto Dfa<DFAStateType>::get_intersect(std::unique_ptr<Dfa> const& dfa_in
+template <typename DfaStateType>
+auto Dfa<DfaStateType>::get_intersect(std::unique_ptr<Dfa> const& dfa_in
 ) const -> std::set<uint32_t> {
     std::set<uint32_t> schema_types;
-    std::set<DfaStatePair<DFAStateType>> unvisited_pairs;
-    std::set<DfaStatePair<DFAStateType>> visited_pairs;
+    std::set<DfaStatePair<DfaStateType>> unvisited_pairs;
+    std::set<DfaStatePair<DfaStateType>> visited_pairs;
     unvisited_pairs.emplace(this->get_root(), dfa_in->get_root());
     // TODO: Handle UTF-8 (multi-byte transitions) as well
     while (false == unvisited_pairs.empty()) {

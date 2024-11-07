@@ -18,10 +18,10 @@ namespace log_surgeon::finite_automata {
  *
  * NOTE: Only the first state in the pair contains the variable types matched by the pair.
  */
-template <typename DFAState>
+template <typename DfaState>
 class DfaStatePair {
 public:
-    DfaStatePair(DFAState const* state1, DFAState const* state2)
+    DfaStatePair(DfaState const* state1, DfaState const* state2)
             : m_state1(state1),
               m_state2(state2) {};
 
@@ -58,12 +58,12 @@ public:
     }
 
 private:
-    DFAState const* m_state1;
-    DFAState const* m_state2;
+    DfaState const* m_state1;
+    DfaState const* m_state2;
 };
 
-template <typename DFAState>
-auto DfaStatePair<DFAState>::get_reachable_pairs(
+template <typename DfaState>
+auto DfaStatePair<DfaState>::get_reachable_pairs(
         std::set<DfaStatePair>& visited_pairs,
         std::set<DfaStatePair>& unvisited_pairs
 ) const -> void {

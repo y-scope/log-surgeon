@@ -19,7 +19,7 @@
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
-template <typename NFAStateType, typename DFAStateType>
+template <typename NFAStateType, typename DfaStateType>
 class Lexer {
 public:
     static inline std::vector<uint32_t> const cTokenEndTypes = {(uint32_t)SymbolId::TokenEnd};
@@ -29,10 +29,10 @@ public:
     /**
      * Generate a DFA from an NFA
      * @param finite_automata::RegexNFA<NFAStateType> nfa
-     * @return std::unique_ptr<finite_automata::Dfa<DFAStateType>>
+     * @return std::unique_ptr<finite_automata::Dfa<DfaStateType>>
      */
     static auto nfa_to_dfa(finite_automata::RegexNFA<NFAStateType>& nfa
-    ) -> std::unique_ptr<finite_automata::Dfa<DFAStateType>>;
+    ) -> std::unique_ptr<finite_automata::Dfa<DfaStateType>>;
 
     /**
      * Add a delimiters line from the schema to the lexer
@@ -123,7 +123,7 @@ public:
     }
 
     [[nodiscard]] auto get_dfa(
-    ) const -> std::unique_ptr<finite_automata::Dfa<DFAStateType>> const& {
+    ) const -> std::unique_ptr<finite_automata::Dfa<DfaStateType>> const& {
         return m_dfa;
     }
 
@@ -156,9 +156,9 @@ private:
     std::vector<LexicalRule<NFAStateType>> m_rules;
     uint32_t m_line{0};
     bool m_has_delimiters{false};
-    std::unique_ptr<finite_automata::Dfa<DFAStateType>> m_dfa;
+    std::unique_ptr<finite_automata::Dfa<DfaStateType>> m_dfa;
     bool m_asked_for_more_data{false};
-    DFAStateType const* m_prev_state{nullptr};
+    DfaStateType const* m_prev_state{nullptr};
 };
 
 namespace lexers {

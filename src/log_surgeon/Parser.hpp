@@ -5,7 +5,7 @@
 
 namespace log_surgeon {
 
-template <typename NFAStateType, typename DFAStateType>
+template <typename NFAStateType, typename DfaStateType>
 class Parser {
 public:
     Parser();
@@ -17,7 +17,7 @@ public:
 
     auto add_token(std::string const& name, char rule_char) -> void;
 
-    Lexer<NFAStateType, DFAStateType> m_lexer;
+    Lexer<NFAStateType, DfaStateType> m_lexer;
 };
 }  // namespace log_surgeon
 
