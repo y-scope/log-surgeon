@@ -16,25 +16,25 @@
 #include <log_surgeon/utils.hpp>
 
 using ParserValueRegex = log_surgeon::ParserValue<std::unique_ptr<
-        log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::RegexNFAByteState>>>;
+        log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::NfaByteState>>>;
 using RegexASTByte
-        = log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::RegexNFAByteState>;
+        = log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::NfaByteState>;
 using RegexASTGroupByte = log_surgeon::finite_automata::RegexASTGroup<
-        log_surgeon::finite_automata::RegexNFAByteState>;
+        log_surgeon::finite_automata::NfaByteState>;
 using RegexASTIntegerByte = log_surgeon::finite_automata::RegexASTInteger<
-        log_surgeon::finite_automata::RegexNFAByteState>;
+        log_surgeon::finite_automata::NfaByteState>;
 using RegexASTLiteralByte = log_surgeon::finite_automata::RegexASTLiteral<
-        log_surgeon::finite_automata::RegexNFAByteState>;
+        log_surgeon::finite_automata::NfaByteState>;
 using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultiplication<
-        log_surgeon::finite_automata::RegexNFAByteState>;
+        log_surgeon::finite_automata::NfaByteState>;
 using RegexASTOrByte
-        = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::RegexNFAByteState>;
+        = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::NfaByteState>;
 using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<
-        log_surgeon::finite_automata::RegexNFAByteState>;
+        log_surgeon::finite_automata::NfaByteState>;
 using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<
-        log_surgeon::finite_automata::RegexNFAByteState>;
+        log_surgeon::finite_automata::NfaByteState>;
 using RegexASTEmptyByte = log_surgeon::finite_automata::RegexASTEmpty<
-        log_surgeon::finite_automata::RegexNFAByteState>;
+        log_surgeon::finite_automata::NfaByteState>;
 
 using std::make_unique;
 using std::string;

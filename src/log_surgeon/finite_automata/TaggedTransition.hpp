@@ -11,14 +11,14 @@
 #include <log_surgeon/finite_automata/Tag.hpp>
 
 namespace log_surgeon::finite_automata {
-template <typename NFAStateType>
+template <typename NfaStateType>
 class PositiveTaggedTransition {
 public:
-    PositiveTaggedTransition(Tag* tag, NFAStateType const* dest_state)
+    PositiveTaggedTransition(Tag* tag, NfaStateType const* dest_state)
             : m_tag{tag},
               m_dest_state{dest_state} {}
 
-    [[nodiscard]] auto get_dest_state() const -> NFAStateType const* { return m_dest_state; }
+    [[nodiscard]] auto get_dest_state() const -> NfaStateType const* { return m_dest_state; }
 
     auto set_tag_start_positions(std::vector<uint32_t> start_positions) const -> void {
         m_tag->set_start_positions(std::move(start_positions));
@@ -33,7 +33,7 @@ public:
      * @return A string representation of the positive tagged transition on success.
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
-    [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(std::unordered_map<NfaStateType const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string> {
         auto const state_id_it = state_ids.find(m_dest_state);
         if (state_id_it == state_ids.end() || nullptr == m_tag) {
@@ -44,24 +44,24 @@ public:
 
 private:
     Tag* m_tag;
-    NFAStateType const* m_dest_state;
+    NfaStateType const* m_dest_state;
 };
 
-template <typename NFAStateType>
+template <typename NfaStateType>
 class NegativeTaggedTransition {
 public:
-    NegativeTaggedTransition(std::vector<Tag*> tags, NFAStateType const* dest_state)
+    NegativeTaggedTransition(std::vector<Tag*> tags, NfaStateType const* dest_state)
             : m_tags{std::move(tags)},
               m_dest_state{dest_state} {}
 
-    [[nodiscard]] auto get_dest_state() const -> NFAStateType const* { return m_dest_state; }
+    [[nodiscard]] auto get_dest_state() const -> NfaStateType const* { return m_dest_state; }
 
     /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the negative tagged transition on success.
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
-    [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(std::unordered_map<NfaStateType const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string> {
         auto const state_id_it = state_ids.find(m_dest_state);
         if (state_id_it == state_ids.end()) {
@@ -78,7 +78,7 @@ public:
 
 private:
     std::vector<Tag*> const m_tags;
-    NFAStateType const* m_dest_state;
+    NfaStateType const* m_dest_state;
 };
 }  // namespace log_surgeon::finite_automata
 

@@ -17,8 +17,8 @@
  * 4 byte: 0x10000 - 0x1FFFFF : 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
  */
 namespace log_surgeon {
-template <typename NFAStateType, typename DfaStateType>
-void Lexer<NFAStateType, DfaStateType>::flip_states(uint32_t old_storage_size) {
+template <typename NfaStateType, typename DfaStateType>
+void Lexer<NfaStateType, DfaStateType>::flip_states(uint32_t old_storage_size) {
     if (m_match_pos >= old_storage_size / 2) {
         m_match_pos -= old_storage_size / 2;
     } else {
@@ -38,8 +38,8 @@ void Lexer<NFAStateType, DfaStateType>::flip_states(uint32_t old_storage_size) {
     }
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto Lexer<NFAStateType, DfaStateType>::scan(ParserInputBuffer& input_buffer, Token& token)
+template <typename NfaStateType, typename DfaStateType>
+auto Lexer<NfaStateType, DfaStateType>::scan(ParserInputBuffer& input_buffer, Token& token)
         -> ErrorCode {
     DfaStateType const* state = m_dfa->get_root();
     if (m_asked_for_more_data) {
@@ -166,8 +166,8 @@ auto Lexer<NFAStateType, DfaStateType>::scan(ParserInputBuffer& input_buffer, To
 }
 
 // TODO: this is duplicating almost all the code of scan()
-template <typename NFAStateType, typename DfaStateType>
-auto Lexer<NFAStateType, DfaStateType>::scan_with_wildcard(
+template <typename NfaStateType, typename DfaStateType>
+auto Lexer<NfaStateType, DfaStateType>::scan_with_wildcard(
         ParserInputBuffer& input_buffer,
         char wildcard,
         Token& token
@@ -299,8 +299,8 @@ auto Lexer<NFAStateType, DfaStateType>::scan_with_wildcard(
     }
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto Lexer<NFAStateType, DfaStateType>::increase_buffer_capacity(ParserInputBuffer& input_buffer
+template <typename NfaStateType, typename DfaStateType>
+auto Lexer<NfaStateType, DfaStateType>::increase_buffer_capacity(ParserInputBuffer& input_buffer
 ) -> void {
     uint32_t old_storage_size{0};
     bool flipped_static_buffer{false};
@@ -316,8 +316,8 @@ auto Lexer<NFAStateType, DfaStateType>::increase_buffer_capacity(ParserInputBuff
     }
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void Lexer<NFAStateType, DfaStateType>::reset() {
+template <typename NfaStateType, typename DfaStateType>
+void Lexer<NfaStateType, DfaStateType>::reset() {
     m_last_match_pos = 0;
     m_match = false;
     m_line = 0;
@@ -330,8 +330,8 @@ void Lexer<NFAStateType, DfaStateType>::reset() {
     m_prev_state = nullptr;
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void Lexer<NFAStateType, DfaStateType>::prepend_start_of_file_char(ParserInputBuffer& input_buffer
+template <typename NfaStateType, typename DfaStateType>
+void Lexer<NfaStateType, DfaStateType>::prepend_start_of_file_char(ParserInputBuffer& input_buffer
 ) {
     m_prev_state = m_dfa->get_root()->next(utf8::cCharStartOfFile);
     m_asked_for_more_data = true;
@@ -341,8 +341,8 @@ void Lexer<NFAStateType, DfaStateType>::prepend_start_of_file_char(ParserInputBu
     m_type_ids = nullptr;
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void Lexer<NFAStateType, DfaStateType>::add_delimiters(std::vector<uint32_t> const& delimiters) {
+template <typename NfaStateType, typename DfaStateType>
+void Lexer<NfaStateType, DfaStateType>::add_delimiters(std::vector<uint32_t> const& delimiters) {
     assert(!delimiters.empty());
     m_has_delimiters = true;
     for (bool& i : m_is_delimiter) {
@@ -354,17 +354,17 @@ void Lexer<NFAStateType, DfaStateType>::add_delimiters(std::vector<uint32_t> con
     m_is_delimiter[utf8::cCharStartOfFile] = true;
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void Lexer<NFAStateType, DfaStateType>::add_rule(
+template <typename NfaStateType, typename DfaStateType>
+void Lexer<NfaStateType, DfaStateType>::add_rule(
         uint32_t const& id,
-        std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule
+        std::unique_ptr<finite_automata::RegexAST<NfaStateType>> rule
 ) {
     m_rules.emplace_back(id, std::move(rule));
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto Lexer<NFAStateType, DfaStateType>::get_rule(uint32_t const variable_id
-) -> finite_automata::RegexAST<NFAStateType>* {
+template <typename NfaStateType, typename DfaStateType>
+auto Lexer<NfaStateType, DfaStateType>::get_rule(uint32_t const variable_id
+) -> finite_automata::RegexAST<NfaStateType>* {
     for (auto const& rule : m_rules) {
         if (rule.get_variable_id() == variable_id) {
             return rule.get_regex();
@@ -373,9 +373,9 @@ auto Lexer<NFAStateType, DfaStateType>::get_rule(uint32_t const variable_id
     return nullptr;
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void Lexer<NFAStateType, DfaStateType>::generate() {
-    finite_automata::RegexNFA<NFAStateType> nfa{std::move(m_rules)};
+template <typename NfaStateType, typename DfaStateType>
+void Lexer<NfaStateType, DfaStateType>::generate() {
+    finite_automata::Nfa<NfaStateType> nfa{std::move(m_rules)};
     // TODO: DFA ignores tags. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = nfa_to_dfa(nfa);
     DfaStateType const* state = m_dfa->get_root();
@@ -388,11 +388,11 @@ void Lexer<NFAStateType, DfaStateType>::generate() {
     }
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto Lexer<NFAStateType, DfaStateType>::epsilon_closure(NFAStateType const* state_ptr
-) -> std::set<NFAStateType const*> {
-    std::set<NFAStateType const*> closure_set;
-    std::stack<NFAStateType const*> stack;
+template <typename NfaStateType, typename DfaStateType>
+auto Lexer<NfaStateType, DfaStateType>::epsilon_closure(NfaStateType const* state_ptr
+) -> std::set<NfaStateType const*> {
+    std::set<NfaStateType const*> closure_set;
+    std::stack<NfaStateType const*> stack;
     stack.push(state_ptr);
     while (!stack.empty()) {
         auto const* current_state = stack.top();
@@ -424,10 +424,10 @@ auto Lexer<NFAStateType, DfaStateType>::epsilon_closure(NFAStateType const* stat
     return closure_set;
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto Lexer<NFAStateType, DfaStateType>::nfa_to_dfa(finite_automata::RegexNFA<NFAStateType>& nfa
+template <typename NfaStateType, typename DfaStateType>
+auto Lexer<NfaStateType, DfaStateType>::nfa_to_dfa(finite_automata::Nfa<NfaStateType>& nfa
 ) -> std::unique_ptr<finite_automata::Dfa<DfaStateType>> {
-    typedef std::set<NFAStateType const*> StateSet;
+    typedef std::set<NfaStateType const*> StateSet;
     std::unique_ptr<finite_automata::Dfa<DfaStateType>> dfa
             = std::make_unique<finite_automata::Dfa<DfaStateType>>();
     std::map<StateSet, DfaStateType*> dfa_states;
@@ -447,17 +447,17 @@ auto Lexer<NFAStateType, DfaStateType>::nfa_to_dfa(finite_automata::RegexNFA<NFA
         DfaStateType* dfa_state = dfa_states.at(set);
         std::map<uint32_t, StateSet> ascii_transitions_map;
         // map<Interval, StateSet> transitions_map;
-        for (NFAStateType const* s0 : set) {
+        for (NfaStateType const* s0 : set) {
             for (uint32_t i = 0; i < cSizeOfByte; i++) {
-                for (NFAStateType* const s1 : s0->get_byte_transitions(i)) {
+                for (NfaStateType* const s1 : s0->get_byte_transitions(i)) {
                     StateSet closure = epsilon_closure(s1);
                     ascii_transitions_map[i].insert(closure.begin(), closure.end());
                 }
             }
             // TODO: add this for the utf8 case
             /*
-            for (const typename NFAStateType::Tree::Data& data : s0->get_tree_transitions().all()) {
-                for (NFAStateType* const s1 : data.m_value) {
+            for (const typename NfaStateType::Tree::Data& data : s0->get_tree_transitions().all()) {
+                for (NfaStateType* const s1 : data.m_value) {
                     StateSet closure = epsilon_closure(s1);
                     transitions_map[data.m_interval].insert(closure.begin(), closure.end());
                 }
@@ -481,7 +481,7 @@ auto Lexer<NFAStateType, DfaStateType>::nfa_to_dfa(finite_automata::RegexNFA<NFA
         }
         // TODO: add this for the utf8 case
         /*
-        for (const typename map<Interval, typename NFAStateType::StateSet>::value_type& kv :
+        for (const typename map<Interval, typename NfaStateType::StateSet>::value_type& kv :
              transitions_map)
         {
             DfaStateType* dest_state = next_dfa_state(kv.second);

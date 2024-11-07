@@ -18,8 +18,8 @@ public:
      * @param nfa_state_set
      * @return DfaStateType*
      */
-    template <typename NFAStateType>
-    auto new_state(std::set<NFAStateType*> const& nfa_state_set) -> DfaStateType*;
+    template <typename NfaStateType>
+    auto new_state(std::set<NfaStateType*> const& nfa_state_set) -> DfaStateType*;
 
     auto get_root() const -> DfaStateType const* { return m_states.at(0).get(); }
 
@@ -40,8 +40,8 @@ private:
 };
 
 template <typename DfaStateType>
-template <typename NFAStateType>
-auto Dfa<DfaStateType>::new_state(std::set<NFAStateType*> const& nfa_state_set
+template <typename NfaStateType>
+auto Dfa<DfaStateType>::new_state(std::set<NfaStateType*> const& nfa_state_set
 ) -> DfaStateType* {
     m_states.emplace_back(std::make_unique<DfaStateType>());
     auto* dfa_state = m_states.back().get();

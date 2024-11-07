@@ -202,8 +202,8 @@ public:
     std::vector<Action> m_actions;
 };
 
-template <typename NFAStateType, typename DfaStateType>
-class LALR1Parser : public Parser<NFAStateType, DfaStateType> {
+template <typename NfaStateType, typename DfaStateType>
+class LALR1Parser : public Parser<NfaStateType, DfaStateType> {
 public:
     LALR1Parser();
 
@@ -214,7 +214,7 @@ public:
      */
     auto add_rule(
             std::string const& name,
-            std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule
+            std::unique_ptr<finite_automata::RegexAST<NfaStateType>> rule
     ) -> void override;
 
     /**
@@ -224,7 +224,7 @@ public:
      */
     auto add_token_group(
             std::string const& name,
-            std::unique_ptr<finite_automata::RegexASTGroup<NFAStateType>> rule_group
+            std::unique_ptr<finite_automata::RegexASTGroup<NfaStateType>> rule_group
     ) -> void;
 
     /**
@@ -276,7 +276,7 @@ protected:
      */
     auto report_error() -> std::string;
 
-    /* Lexer<NFAStateType, DfaStateType> m_lexer; */
+    /* Lexer<NfaStateType, DfaStateType> m_lexer; */
     std::stack<MatchedSymbol> m_parse_stack_matches;
     std::stack<ItemSet*> m_parse_stack_states;
     ItemSet* m_root_item_set_ptr{nullptr};

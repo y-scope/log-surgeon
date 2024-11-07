@@ -53,8 +53,8 @@ namespace {
 }
 }  // namespace
 
-template <typename NFAStateType, typename DfaStateType>
-LALR1Parser<NFAStateType, DfaStateType>::LALR1Parser() {
+template <typename NfaStateType, typename DfaStateType>
+LALR1Parser<NfaStateType, DfaStateType>::LALR1Parser() {
     m_terminals.insert((uint32_t)SymbolId::TokenEnd);
     m_terminals.insert((uint32_t)SymbolId::TokenUncaughtString);
     m_terminals.insert((uint32_t)SymbolId::TokenInt);
@@ -65,43 +65,43 @@ LALR1Parser<NFAStateType, DfaStateType>::LALR1Parser() {
     m_terminals.insert((uint32_t)SymbolId::TokenNewline);
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void LALR1Parser<NFAStateType, DfaStateType>::add_rule(
+template <typename NfaStateType, typename DfaStateType>
+void LALR1Parser<NfaStateType, DfaStateType>::add_rule(
         std::string const& name,
-        std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule
+        std::unique_ptr<finite_automata::RegexAST<NfaStateType>> rule
 ) {
-    Parser<NFAStateType, DfaStateType>::add_rule(name, std::move(rule));
+    Parser<NfaStateType, DfaStateType>::add_rule(name, std::move(rule));
     m_terminals.insert(this->m_lexer.m_symbol_id[name]);
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void LALR1Parser<NFAStateType, DfaStateType>::add_token_group(
+template <typename NfaStateType, typename DfaStateType>
+void LALR1Parser<NfaStateType, DfaStateType>::add_token_group(
         std::string const& name,
-        std::unique_ptr<finite_automata::RegexASTGroup<NFAStateType>> rule_group
+        std::unique_ptr<finite_automata::RegexASTGroup<NfaStateType>> rule_group
 ) {
     add_rule(name, std::move(rule_group));
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void LALR1Parser<NFAStateType, DfaStateType>::add_token_chain(
+template <typename NfaStateType, typename DfaStateType>
+void LALR1Parser<NfaStateType, DfaStateType>::add_token_chain(
         std::string const& name,
         std::string const& chain
 ) {
     assert(chain.size() > 1);
-    std::unique_ptr<finite_automata::RegexASTLiteral<NFAStateType>> first_char_rule
-            = std::make_unique<finite_automata::RegexASTLiteral<NFAStateType>>(chain[0]);
-    std::unique_ptr<finite_automata::RegexASTLiteral<NFAStateType>> second_char_rule
-            = std::make_unique<finite_automata::RegexASTLiteral<NFAStateType>>(chain[1]);
-    std::unique_ptr<finite_automata::RegexASTCat<NFAStateType>> rule_chain
-            = std::make_unique<finite_automata::RegexASTCat<NFAStateType>>(
+    std::unique_ptr<finite_automata::RegexASTLiteral<NfaStateType>> first_char_rule
+            = std::make_unique<finite_automata::RegexASTLiteral<NfaStateType>>(chain[0]);
+    std::unique_ptr<finite_automata::RegexASTLiteral<NfaStateType>> second_char_rule
+            = std::make_unique<finite_automata::RegexASTLiteral<NfaStateType>>(chain[1]);
+    std::unique_ptr<finite_automata::RegexASTCat<NfaStateType>> rule_chain
+            = std::make_unique<finite_automata::RegexASTCat<NfaStateType>>(
                     std::move(first_char_rule),
                     std::move(second_char_rule)
             );
     for (uint32_t i = 2; i < chain.size(); i++) {
         char next_char = chain[i];
-        std::unique_ptr<finite_automata::RegexASTLiteral<NFAStateType>> next_char_rule
-                = std::make_unique<finite_automata::RegexASTLiteral<NFAStateType>>(next_char);
-        rule_chain = std::make_unique<finite_automata::RegexASTCat<NFAStateType>>(
+        std::unique_ptr<finite_automata::RegexASTLiteral<NfaStateType>> next_char_rule
+                = std::make_unique<finite_automata::RegexASTLiteral<NfaStateType>>(next_char);
+        rule_chain = std::make_unique<finite_automata::RegexASTCat<NfaStateType>>(
                 std::move(rule_chain),
                 std::move(next_char_rule)
         );
@@ -109,8 +109,8 @@ void LALR1Parser<NFAStateType, DfaStateType>::add_token_chain(
     add_rule(name, std::move(rule_chain));
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto LALR1Parser<NFAStateType, DfaStateType>::add_production(
+template <typename NfaStateType, typename DfaStateType>
+auto LALR1Parser<NfaStateType, DfaStateType>::add_production(
         std::string const& head,
         std::vector<std::string> const& body,
         SemanticRule semantic_rule
@@ -150,8 +150,8 @@ auto LALR1Parser<NFAStateType, DfaStateType>::add_production(
     return n;
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void LALR1Parser<NFAStateType, DfaStateType>::generate() {
+template <typename NfaStateType, typename DfaStateType>
+void LALR1Parser<NfaStateType, DfaStateType>::generate() {
     this->m_lexer.generate();
     assert(!m_productions.empty());
     generate_lr0_kernels();
@@ -160,8 +160,8 @@ void LALR1Parser<NFAStateType, DfaStateType>::generate() {
     generate_lalr1_parsing_table();
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void LALR1Parser<NFAStateType, DfaStateType>::generate_lr0_kernels() {
+template <typename NfaStateType, typename DfaStateType>
+void LALR1Parser<NfaStateType, DfaStateType>::generate_lr0_kernels() {
     Production* root_production_ptr = m_productions[m_root_production_id].get();
     Item root_item(root_production_ptr, 0, cNullSymbol);
     std::unique_ptr<ItemSet> item_set0 = std::make_unique<ItemSet>();
@@ -190,8 +190,8 @@ void LALR1Parser<NFAStateType, DfaStateType>::generate_lr0_kernels() {
     }
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto LALR1Parser<NFAStateType, DfaStateType>::lr_closure_helper(
+template <typename NfaStateType, typename DfaStateType>
+auto LALR1Parser<NfaStateType, DfaStateType>::lr_closure_helper(
         ItemSet* item_set_ptr,
         Item const* item,
         uint32_t* next_symbol
@@ -210,8 +210,8 @@ auto LALR1Parser<NFAStateType, DfaStateType>::lr_closure_helper(
     return false;
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void LALR1Parser<NFAStateType, DfaStateType>::generate_lr0_closure(ItemSet* item_set_ptr) {
+template <typename NfaStateType, typename DfaStateType>
+void LALR1Parser<NfaStateType, DfaStateType>::generate_lr0_closure(ItemSet* item_set_ptr) {
     std::deque<Item> q(
             item_set_ptr->m_kernel.begin(),
             item_set_ptr->m_kernel.end()
@@ -233,8 +233,8 @@ void LALR1Parser<NFAStateType, DfaStateType>::generate_lr0_closure(ItemSet* item
     }
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto LALR1Parser<NFAStateType, DfaStateType>::go_to(
+template <typename NfaStateType, typename DfaStateType>
+auto LALR1Parser<NfaStateType, DfaStateType>::go_to(
         ItemSet* from_item_set,
         uint32_t const& next_symbol
 ) -> ItemSet* {
@@ -266,8 +266,8 @@ auto LALR1Parser<NFAStateType, DfaStateType>::go_to(
     return nullptr;
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void LALR1Parser<NFAStateType, DfaStateType>::generate_first_sets() {
+template <typename NfaStateType, typename DfaStateType>
+void LALR1Parser<NfaStateType, DfaStateType>::generate_first_sets() {
     for (uint32_t const& s : m_terminals) {
         m_firsts.insert(std::pair<uint32_t, std::set<uint32_t>>(s, {s}));
     }
@@ -298,8 +298,8 @@ void LALR1Parser<NFAStateType, DfaStateType>::generate_first_sets() {
     }
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void LALR1Parser<NFAStateType, DfaStateType>::generate_lr1_item_sets() {
+template <typename NfaStateType, typename DfaStateType>
+void LALR1Parser<NfaStateType, DfaStateType>::generate_lr1_item_sets() {
     for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv : m_lr0_item_sets)
     {
         for (Item const& l0_item : kv.second->m_kernel) {
@@ -382,8 +382,8 @@ void LALR1Parser<NFAStateType, DfaStateType>::generate_lr1_item_sets() {
     }
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void LALR1Parser<NFAStateType, DfaStateType>::generate_lr1_closure(ItemSet* item_set_ptr) {
+template <typename NfaStateType, typename DfaStateType>
+void LALR1Parser<NfaStateType, DfaStateType>::generate_lr1_closure(ItemSet* item_set_ptr) {
     std::deque<Item> queue(item_set_ptr->m_kernel.begin(), item_set_ptr->m_kernel.end());
     while (!queue.empty()) {
         Item item = queue.back();
@@ -418,20 +418,20 @@ void LALR1Parser<NFAStateType, DfaStateType>::generate_lr1_closure(ItemSet* item
     }
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void LALR1Parser<NFAStateType, DfaStateType>::generate_lalr1_parsing_table() {
+template <typename NfaStateType, typename DfaStateType>
+void LALR1Parser<NfaStateType, DfaStateType>::generate_lalr1_parsing_table() {
     generate_lalr1_goto();
     generate_lalr1_action();
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void LALR1Parser<NFAStateType, DfaStateType>::generate_lalr1_goto() {
+template <typename NfaStateType, typename DfaStateType>
+void LALR1Parser<NfaStateType, DfaStateType>::generate_lalr1_goto() {
     // done already at end of generate_lr1_item_sets()?
 }
 
 // Dragon book page 253
-template <typename NFAStateType, typename DfaStateType>
-void LALR1Parser<NFAStateType, DfaStateType>::generate_lalr1_action() {
+template <typename NfaStateType, typename DfaStateType>
+void LALR1Parser<NfaStateType, DfaStateType>::generate_lalr1_action() {
     for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv : m_lr1_item_sets)
     {
         ItemSet* item_set_ptr = kv.second.get();
@@ -518,8 +518,8 @@ void LALR1Parser<NFAStateType, DfaStateType>::generate_lalr1_action() {
     }
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto LALR1Parser<NFAStateType, DfaStateType>::get_input_after_last_newline(
+template <typename NfaStateType, typename DfaStateType>
+auto LALR1Parser<NfaStateType, DfaStateType>::get_input_after_last_newline(
         std::stack<MatchedSymbol>& parse_stack_matches
 ) -> std::string {
     std::string error_message_reversed;
@@ -557,8 +557,8 @@ auto LALR1Parser<NFAStateType, DfaStateType>::get_input_after_last_newline(
     return error_message_reversed;
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto LALR1Parser<NFAStateType, DfaStateType>::get_input_until_next_newline(Token* error_token
+template <typename NfaStateType, typename DfaStateType>
+auto LALR1Parser<NfaStateType, DfaStateType>::get_input_until_next_newline(Token* error_token
 ) -> std::string {
     std::string rest_of_line;
     bool next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd);
@@ -577,8 +577,8 @@ auto LALR1Parser<NFAStateType, DfaStateType>::get_input_until_next_newline(Token
     return rest_of_line;
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto LALR1Parser<NFAStateType, DfaStateType>::report_error() -> std::string {
+template <typename NfaStateType, typename DfaStateType>
+auto LALR1Parser<NfaStateType, DfaStateType>::report_error() -> std::string {
     assert(m_next_token == std::nullopt);
     assert(!m_parse_stack_matches.empty());
     MatchedSymbol top_symbol = std::move(m_parse_stack_matches.top());
@@ -604,7 +604,7 @@ auto LALR1Parser<NFAStateType, DfaStateType>::report_error() -> std::string {
             if (action.index() != 0) {
                 error_type += "'";
                 if (auto* regex_ast_literal
-                    = dynamic_cast<finite_automata::RegexASTLiteral<NFAStateType>*>(
+                    = dynamic_cast<finite_automata::RegexASTLiteral<NfaStateType>*>(
                             this->m_lexer.get_rule(i)
                     ))
                 {
@@ -628,8 +628,8 @@ auto LALR1Parser<NFAStateType, DfaStateType>::report_error() -> std::string {
     return error_string;
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto LALR1Parser<NFAStateType, DfaStateType>::parse(Reader& reader) -> NonTerminal {
+template <typename NfaStateType, typename DfaStateType>
+auto LALR1Parser<NfaStateType, DfaStateType>::parse(Reader& reader) -> NonTerminal {
     reset();
     m_parse_stack_states.push(m_root_item_set_ptr);
     bool accept = false;
@@ -650,8 +650,8 @@ auto LALR1Parser<NFAStateType, DfaStateType>::parse(Reader& reader) -> NonTermin
     return std::move(std::get<NonTerminal>(m));
 }
 
-template <typename NFAStateType, typename DfaStateType>
-void LALR1Parser<NFAStateType, DfaStateType>::reset() {
+template <typename NfaStateType, typename DfaStateType>
+void LALR1Parser<NfaStateType, DfaStateType>::reset() {
     m_next_token = std::nullopt;
     while (!m_parse_stack_states.empty()) {
         m_parse_stack_states.pop();
@@ -663,8 +663,8 @@ void LALR1Parser<NFAStateType, DfaStateType>::reset() {
     this->m_lexer.reset();
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto LALR1Parser<NFAStateType, DfaStateType>::get_next_symbol() -> Token {
+template <typename NfaStateType, typename DfaStateType>
+auto LALR1Parser<NfaStateType, DfaStateType>::get_next_symbol() -> Token {
     if (m_next_token == std::nullopt) {
         Token token;
         if (ErrorCode error = this->m_lexer.scan(m_input_buffer, token);
@@ -679,8 +679,8 @@ auto LALR1Parser<NFAStateType, DfaStateType>::get_next_symbol() -> Token {
     return s;
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto LALR1Parser<NFAStateType, DfaStateType>::parse_advance(Token& next_token, bool* accept)
+template <typename NfaStateType, typename DfaStateType>
+auto LALR1Parser<NfaStateType, DfaStateType>::parse_advance(Token& next_token, bool* accept)
         -> bool {
     for (auto const type : *next_token.m_type_ids_ptr) {
         if (parse_symbol(type, next_token, accept)) {
@@ -693,8 +693,8 @@ auto LALR1Parser<NFAStateType, DfaStateType>::parse_advance(Token& next_token, b
     return true;
 }
 
-template <typename NFAStateType, typename DfaStateType>
-auto LALR1Parser<NFAStateType, DfaStateType>::parse_symbol(
+template <typename NfaStateType, typename DfaStateType>
+auto LALR1Parser<NfaStateType, DfaStateType>::parse_symbol(
         uint32_t const& type_id,
         Token& next_token,
         bool* accept

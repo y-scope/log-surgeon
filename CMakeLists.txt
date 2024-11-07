@@ -98,9 +98,9 @@ set(SOURCE_FILES
     src/log_surgeon/finite_automata/DfaState.hpp
     src/log_surgeon/finite_automata/DfaStatePair.hpp
     src/log_surgeon/finite_automata/DfaStateType.hpp
-    src/log_surgeon/finite_automata/RegexNFA.hpp
-    src/log_surgeon/finite_automata/RegexNFAState.hpp
-    src/log_surgeon/finite_automata/RegexNFAStateType.hpp
+    src/log_surgeon/finite_automata/Nfa.hpp
+    src/log_surgeon/finite_automata/NfaState.hpp
+    src/log_surgeon/finite_automata/NfaStateType.hpp
     src/log_surgeon/finite_automata/Register.hpp
     src/log_surgeon/finite_automata/Tag.hpp
     src/log_surgeon/finite_automata/TaggedTransition.hpp
