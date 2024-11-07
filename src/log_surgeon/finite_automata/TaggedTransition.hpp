@@ -28,7 +28,13 @@ public:
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
-    ) const -> std::optional<std::string>;
+    ) const -> std::optional<std::string> {
+        auto const state_id_it = state_ids.find(m_dest_state);
+        if (state_id_it == state_ids.end()) {
+            return std::nullopt;
+        }
+        return fmt::format("{}[{}]", state_id_it->second, m_tag->get_name());
+    }
 
 private:
     Tag const* m_tag;
@@ -50,40 +56,24 @@ public:
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
-    ) const -> std::optional<std::string>;
+    ) const -> std::optional<std::string> {
+        auto const state_id_it = state_ids.find(m_dest_state);
+        if (state_id_it == state_ids.end()) {
+            return std::nullopt;
+        }
+
+        auto const tag_names
+            = m_tags
+              | std::ranges::views::transform([](Tag const* tag) {
+                    return tag->get_name();
+                });
+        return fmt::format("{}[{}]", state_id_it->second, fmt::join(tag_names, ","));
+    }
 
 private:
     std::set<Tag const*> const m_tags;
     NFAStateType const* m_dest_state;
 };
-
-template <typename NFAStateType>
-auto PositiveTaggedTransition<NFAStateType>::serialize(
-        std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
-) const -> std::optional<std::string> {
-    auto const state_id_it = state_ids.find(m_dest_state);
-    if (state_id_it == state_ids.end()) {
-        return std::nullopt;
-    }
-    return fmt::format("{}[{}]", state_id_it->second, m_tag->get_name());
-}
-
-template <typename NFAStateType>
-auto NegativeTaggedTransition<NFAStateType>::serialize(
-        std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
-) const -> std::optional<std::string> {
-    auto const state_id_it = state_ids.find(m_dest_state);
-    if (state_id_it == state_ids.end()) {
-        return std::nullopt;
-    }
-
-    auto const tag_names
-        = m_tags
-          | std::ranges::views::transform([](Tag const* tag) {
-                return tag->get_name();
-            });
-    return fmt::format("{}[{}]", state_id_it->second, fmt::join(tag_names, ","));
-}
 }  // namespace log_surgeon::finite_automata
 
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_TAGGED_TRANSITION
