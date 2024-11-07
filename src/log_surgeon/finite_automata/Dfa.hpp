@@ -6,12 +6,11 @@
 #include <set>
 #include <vector>
 
-#include <log_surgeon/finite_automata/RegexDFAStatePair.hpp>
+#include <log_surgeon/finite_automata/DfaStatePair.hpp>
 
 namespace log_surgeon::finite_automata {
-// TODO: rename `RegexDFA` to `DFA`
 template <typename DFAStateType>
-class RegexDFA {
+class Dfa {
 public:
     /**
      * Creates a new DFA state based on a set of NFA states and adds it to
@@ -33,7 +32,7 @@ public:
      * @param dfa_in
      * @return The set of schema types reachable by dfa_in
      */
-    [[nodiscard]] auto get_intersect(std::unique_ptr<RegexDFA> const& dfa_in
+    [[nodiscard]] auto get_intersect(std::unique_ptr<Dfa> const& dfa_in
     ) const -> std::set<uint32_t>;
 
 private:
@@ -42,7 +41,7 @@ private:
 
 template <typename DFAStateType>
 template <typename NFAStateType>
-auto RegexDFA<DFAStateType>::new_state(std::set<NFAStateType*> const& nfa_state_set
+auto Dfa<DFAStateType>::new_state(std::set<NFAStateType*> const& nfa_state_set
 ) -> DFAStateType* {
     m_states.emplace_back(std::make_unique<DFAStateType>());
     auto* dfa_state = m_states.back().get();
@@ -55,11 +54,11 @@ auto RegexDFA<DFAStateType>::new_state(std::set<NFAStateType*> const& nfa_state_
 }
 
 template <typename DFAStateType>
-auto RegexDFA<DFAStateType>::get_intersect(std::unique_ptr<RegexDFA> const& dfa_in
+auto Dfa<DFAStateType>::get_intersect(std::unique_ptr<Dfa> const& dfa_in
 ) const -> std::set<uint32_t> {
     std::set<uint32_t> schema_types;
-    std::set<RegexDFAStatePair<DFAStateType>> unvisited_pairs;
-    std::set<RegexDFAStatePair<DFAStateType>> visited_pairs;
+    std::set<DfaStatePair<DFAStateType>> unvisited_pairs;
+    std::set<DfaStatePair<DFAStateType>> visited_pairs;
     unvisited_pairs.emplace(this->get_root(), dfa_in->get_root());
     // TODO: Handle UTF-8 (multi-byte transitions) as well
     while (false == unvisited_pairs.empty()) {

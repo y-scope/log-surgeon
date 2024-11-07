@@ -114,7 +114,7 @@ private:
     std::vector<RegexNFAState*> m_epsilon_transitions;
     std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
-    // RegexDFAStateType::Byte` case, so we use an empty class (`std::tuple<>`)
+    // DfaStateType::Byte` case, so we use an empty class (`std::tuple<>`)
     // in that case.
     std::conditional_t<state_type == RegexNFAStateType::UTF8, Tree, std::tuple<>>
             m_tree_transitions;

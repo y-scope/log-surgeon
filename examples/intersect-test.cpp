@@ -5,8 +5,8 @@
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/Schema.hpp>
 
-using log_surgeon::finite_automata::RegexDFA;
-using log_surgeon::finite_automata::RegexDFAByteState;
+using log_surgeon::finite_automata::Dfa;
+using log_surgeon::finite_automata::DfaByteState;
 using log_surgeon::finite_automata::RegexNFA;
 using log_surgeon::finite_automata::RegexNFAByteState;
 using log_surgeon::lexers::ByteLexer;
@@ -21,7 +21,7 @@ using ByteLexicalRule = log_surgeon::LexicalRule<RegexNFAByteState>;
 
 auto get_intersect_for_query(
         std::map<uint32_t, std::string>& m_id_symbol,
-        std::unique_ptr<RegexDFA<RegexDFAByteState>>& dfa1,
+        std::unique_ptr<Dfa<DfaByteState>>& dfa1,
         std::string const& search_string
 ) -> void {
     std::string processed_search_string;

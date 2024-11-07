@@ -12,7 +12,7 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
-#include <log_surgeon/finite_automata/RegexDFA.hpp>
+#include <log_surgeon/finite_automata/Dfa.hpp>
 #include <log_surgeon/finite_automata/RegexNFA.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/ParserInputBuffer.hpp>
@@ -29,10 +29,10 @@ public:
     /**
      * Generate a DFA from an NFA
      * @param finite_automata::RegexNFA<NFAStateType> nfa
-     * @return std::unique_ptr<finite_automata::RegexDFA<DFAStateType>>
+     * @return std::unique_ptr<finite_automata::Dfa<DFAStateType>>
      */
     static auto nfa_to_dfa(finite_automata::RegexNFA<NFAStateType>& nfa
-    ) -> std::unique_ptr<finite_automata::RegexDFA<DFAStateType>>;
+    ) -> std::unique_ptr<finite_automata::Dfa<DFAStateType>>;
 
     /**
      * Add a delimiters line from the schema to the lexer
@@ -123,7 +123,7 @@ public:
     }
 
     [[nodiscard]] auto get_dfa(
-    ) const -> std::unique_ptr<finite_automata::RegexDFA<DFAStateType>> const& {
+    ) const -> std::unique_ptr<finite_automata::Dfa<DFAStateType>> const& {
         return m_dfa;
     }
 
@@ -156,14 +156,14 @@ private:
     std::vector<LexicalRule<NFAStateType>> m_rules;
     uint32_t m_line{0};
     bool m_has_delimiters{false};
-    std::unique_ptr<finite_automata::RegexDFA<DFAStateType>> m_dfa;
+    std::unique_ptr<finite_automata::Dfa<DFAStateType>> m_dfa;
     bool m_asked_for_more_data{false};
     DFAStateType const* m_prev_state{nullptr};
 };
 
 namespace lexers {
-using ByteLexer = Lexer<finite_automata::RegexNFAByteState, finite_automata::RegexDFAByteState>;
-using UTF8Lexer = Lexer<finite_automata::RegexNFAUTF8State, finite_automata::RegexDFAUTF8State>;
+using ByteLexer = Lexer<finite_automata::RegexNFAByteState, finite_automata::DfaByteState>;
+using UTF8Lexer = Lexer<finite_automata::RegexNFAUTF8State, finite_automata::DfaUTF8State>;
 }  // namespace lexers
 }  // namespace log_surgeon
 

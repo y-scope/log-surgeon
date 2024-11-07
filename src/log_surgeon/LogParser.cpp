@@ -24,7 +24,7 @@ using finite_automata::RegexASTInteger;
 using finite_automata::RegexASTLiteral;
 using finite_automata::RegexASTMultiplication;
 using finite_automata::RegexASTOr;
-using finite_automata::RegexDFAByteState;
+using finite_automata::DfaByteState;
 using finite_automata::RegexNFAByteState;
 
 LogParser::LogParser(string const& schema_file_path)
@@ -197,7 +197,7 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
                 // make a message with just the '\n' character
                 next_token.m_end_pos = next_token.m_start_pos + 1;
                 next_token.m_type_ids_ptr
-                        = &Lexer<RegexNFAByteState, RegexDFAByteState>::cTokenUncaughtStringTypes;
+                        = &Lexer<RegexNFAByteState, DfaByteState>::cTokenUncaughtStringTypes;
                 output_buffer->set_token(1, next_token);
                 output_buffer->set_pos(2);
                 m_input_buffer.set_consumed_pos(next_token.m_start_pos);
@@ -263,7 +263,7 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
             Token curr_token = output_buffer->get_curr_token();
             curr_token.m_end_pos = curr_token.m_start_pos + 1;
             curr_token.m_type_ids_ptr
-                    = &Lexer<RegexNFAByteState, RegexDFAByteState>::cTokenUncaughtStringTypes;
+                    = &Lexer<RegexNFAByteState, DfaByteState>::cTokenUncaughtStringTypes;
             output_buffer->set_curr_token(curr_token);
             if (0 == m_start_of_log_message.m_start_pos) {
                 m_input_buffer.set_consumed_pos(m_input_buffer.storage().size() - 1);

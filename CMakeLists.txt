@@ -94,10 +94,10 @@ set(SOURCE_FILES
     src/log_surgeon/Token.cpp
     src/log_surgeon/Token.hpp
     src/log_surgeon/finite_automata/RegexAST.hpp
-    src/log_surgeon/finite_automata/RegexDFA.hpp
-    src/log_surgeon/finite_automata/RegexDFAState.hpp
-    src/log_surgeon/finite_automata/RegexDFAStatePair.hpp
-    src/log_surgeon/finite_automata/RegexDFAStateType.hpp
+    src/log_surgeon/finite_automata/Dfa.hpp
+    src/log_surgeon/finite_automata/DfaState.hpp
+    src/log_surgeon/finite_automata/DfaStatePair.hpp
+    src/log_surgeon/finite_automata/DfaStateType.hpp
     src/log_surgeon/finite_automata/RegexNFA.hpp
     src/log_surgeon/finite_automata/RegexNFAState.hpp
     src/log_surgeon/finite_automata/RegexNFAStateType.hpp

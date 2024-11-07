@@ -71,7 +71,7 @@ public:
 
 class SchemaParser : public LALR1Parser<
                              finite_automata::RegexNFAByteState,
-                             finite_automata::RegexDFAByteState> {
+                             finite_automata::DfaByteState> {
 public:
     /**
      * File wrapper around generate_schema_ast()

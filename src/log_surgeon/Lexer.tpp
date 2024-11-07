@@ -426,10 +426,10 @@ auto Lexer<NFAStateType, DFAStateType>::epsilon_closure(NFAStateType const* stat
 
 template <typename NFAStateType, typename DFAStateType>
 auto Lexer<NFAStateType, DFAStateType>::nfa_to_dfa(finite_automata::RegexNFA<NFAStateType>& nfa
-) -> std::unique_ptr<finite_automata::RegexDFA<DFAStateType>> {
+) -> std::unique_ptr<finite_automata::Dfa<DFAStateType>> {
     typedef std::set<NFAStateType const*> StateSet;
-    std::unique_ptr<finite_automata::RegexDFA<DFAStateType>> dfa
-            = std::make_unique<finite_automata::RegexDFA<DFAStateType>>();
+    std::unique_ptr<finite_automata::Dfa<DFAStateType>> dfa
+            = std::make_unique<finite_automata::Dfa<DFAStateType>>();
     std::map<StateSet, DFAStateType*> dfa_states;
     std::stack<StateSet> unmarked_sets;
     auto create_dfa_state
