@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <optional>
-#include <set>
 #include <string>
 #include <unordered_map>
 
@@ -21,9 +20,13 @@ public:
 
     [[nodiscard]] auto get_dest_state() const -> NFAStateType const* { return m_dest_state; }
 
-    auto add_tag_start_pos(uint32_t start_pos) const -> void { m_tag->add_start_pos(start_pos); }
+    auto set_tag_start_positions(std::vector<uint32_t> start_positions) const -> void {
+        m_tag->set_start_positions(std::move(start_positions));
+    }
 
-    auto add_tag_end_pos(uint32_t end_pos) const -> void { m_tag->add_end_pos(end_pos); }
+    auto set_tag_end_positions(std::vector<uint32_t> end_positions) const -> void {
+        m_tag->set_end_positions(std::move(end_positions));
+    }
 
     /**
      * @param state_ids A map of states to their unique identifiers.
@@ -52,12 +55,6 @@ public:
               m_dest_state{dest_state} {}
 
     [[nodiscard]] auto get_dest_state() const -> NFAStateType const* { return m_dest_state; }
-
-    auto negate_tag() const -> void {
-        for (auto* tag : m_tags) {
-            tag->set_unmatched();
-        }
-    }
 
     /**
      * @param state_ids A map of states to their unique identifiers.

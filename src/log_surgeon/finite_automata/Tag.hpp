@@ -19,11 +19,13 @@ class Tag {
 public:
     explicit Tag(std::string name) : m_name{std::move(name)} {}
 
-    auto add_start_pos(uint32_t start_pos) -> void { m_start_positions.push_back(start_pos); }
+    auto set_start_positions(std::vector<uint32_t> start_positions) -> void {
+        m_start_positions = std::move(start_positions);
+    }
 
-    auto add_end_pos(uint32_t end_pos) -> void { m_end_positions.push_back(end_pos); }
-
-    auto set_unmatched() -> void { m_start_positions.clear(); }
+    auto set_end_positions(std::vector<uint32_t> end_positions) -> void {
+        m_end_positions = std::move(end_positions);
+    }
 
     [[nodiscard]] auto get_name() const -> std::string const& { return m_name; }
 
