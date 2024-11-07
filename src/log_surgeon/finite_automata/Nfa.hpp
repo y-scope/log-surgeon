@@ -148,10 +148,11 @@ auto Nfa<NfaStateType>::get_bfs_traversal_order() const -> std::vector<NfaStateT
         {
             add_to_queue_and_visited(positive_tagged_start_transition.get_dest_state());
         }
-        for (auto const& positive_tagged_end_transition :
-             current_state->get_positive_tagged_end_transitions())
-        {
-            add_to_queue_and_visited(positive_tagged_end_transition.get_dest_state());
+        auto const& optional_positive_tagged_end_transition
+                = current_state->get_positive_tagged_end_transitions();
+        if (optional_positive_tagged_end_transition.has_value()) {
+            add_to_queue_and_visited(optional_positive_tagged_end_transition.value().get_dest_state(
+            ));
         }
         auto const& optional_negative_tagged_transition
                 = current_state->get_negative_tagged_transition();

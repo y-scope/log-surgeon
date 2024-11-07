@@ -67,7 +67,8 @@ auto Lexer<NfaStateType, DfaStateType>::scan(ParserInputBuffer& input_buffer, To
     while (true) {
         auto prev_byte_buf_pos = input_buffer.storage().pos();
         auto next_char{utf8::cCharErr};
-        if (auto const err = input_buffer.get_next_character(next_char); ErrorCode::Success != err) {
+        if (auto const err = input_buffer.get_next_character(next_char); ErrorCode::Success != err)
+        {
             m_asked_for_more_data = true;
             m_prev_state = state;
             return err;
@@ -410,10 +411,10 @@ auto Lexer<NfaStateType, DfaStateType>::epsilon_closure(NfaStateType const* stat
         {
             stack.push(positive_tagged_start_transition.get_dest_state());
         }
-        for (auto const& positive_tagged_end_transition :
-             current_state->get_positive_tagged_start_transitions())
-        {
-            stack.push(positive_tagged_end_transition.get_dest_state());
+        auto const& optional_positive_tagged_end_transition
+                = current_state->get_positive_tagged_end_transitions();
+        if (optional_positive_tagged_end_transition.has_value()) {
+            stack.push(optional_positive_tagged_end_transition.value().get_dest_state());
         }
         auto const& optional_negative_tagged_transition
                 = current_state->get_negative_tagged_transition();
