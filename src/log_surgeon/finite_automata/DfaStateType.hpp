@@ -6,7 +6,7 @@
 namespace log_surgeon::finite_automata {
 enum class DfaStateType  : uint8_t {
     Byte,
-    UTF8
+    Utf8
 };
 }  // namespace log_surgeon::finite_automata
 

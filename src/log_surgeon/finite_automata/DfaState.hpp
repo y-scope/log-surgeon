@@ -15,7 +15,7 @@ template <DfaStateType state_type>
 class DfaState;
 
 using DfaByteState = DfaState<DfaStateType::Byte>;
-using DfaUTF8State = DfaState<DfaStateType::UTF8>;
+using DfaUtf8State = DfaState<DfaStateType::Utf8>;
 
 template <DfaStateType stateType>
 class DfaState {
@@ -48,7 +48,7 @@ private:
     DfaState* m_bytes_transition[cSizeOfByte];
     // NOTE: We don't need m_tree_transitions for the `stateType == DfaStateType::Byte` case,
     // so we use an empty class (`std::tuple<>`) in that case.
-    std::conditional_t<stateType == DfaStateType::UTF8, Tree, std::tuple<>> m_tree_transitions;
+    std::conditional_t<stateType == DfaStateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
 
 template <DfaStateType stateType>

@@ -163,7 +163,7 @@ private:
 
 namespace lexers {
 using ByteLexer = Lexer<finite_automata::NfaByteState, finite_automata::DfaByteState>;
-using UTF8Lexer = Lexer<finite_automata::NfaUTF8State, finite_automata::DfaUTF8State>;
+using Utf8Lexer = Lexer<finite_automata::NfaUtf8State, finite_automata::DfaUtf8State>;
 }  // namespace lexers
 }  // namespace log_surgeon
 

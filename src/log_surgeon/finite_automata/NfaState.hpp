@@ -21,7 +21,7 @@ template <NfaStateType state_type>
 class NfaState;
 
 using NfaByteState = NfaState<NfaStateType::Byte>;
-using NfaUTF8State = NfaState<NfaStateType::UTF8>;
+using NfaUtf8State = NfaState<NfaStateType::Utf8>;
 
 template <NfaStateType state_type>
 class NfaState {
@@ -116,7 +116,7 @@ private:
     // NOTE: We don't need m_tree_transitions for the `stateType ==
     // DfaStateType::Byte` case, so we use an empty class (`std::tuple<>`)
     // in that case.
-    std::conditional_t<state_type == NfaStateType::UTF8, Tree, std::tuple<>>
+    std::conditional_t<state_type == NfaStateType::Utf8, Tree, std::tuple<>>
             m_tree_transitions;
 };
 
@@ -129,7 +129,7 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
         }
         interval.first = bound + 1;
     }
-    if constexpr (NfaStateType::UTF8 == state_type) {
+    if constexpr (NfaStateType::Utf8 == state_type) {
         if (interval.second < cSizeOfByte) {
             return;
         }
@@ -139,7 +139,7 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
             uint32_t overlap_low = std::max(data.m_interval.first, interval.first);
             uint32_t overlap_high = std::min(data.m_interval.second, interval.second);
 
-            std::vector<NfaUTF8State*> tree_states = data.m_value;
+            std::vector<NfaUtf8State*> tree_states = data.m_value;
             tree_states.push_back(dest_state);
             m_tree_transitions.insert(Interval(overlap_low, overlap_high), tree_states);
             if (data.m_interval.first < interval.first) {
