@@ -18,7 +18,7 @@
  */
 namespace log_surgeon {
 template <typename NfaStateType, typename DfaStateType>
-void Lexer<NfaStateType, DfaStateType>::flip_states(uint32_t old_storage_size) {
+auto Lexer<NfaStateType, DfaStateType>::flip_states(uint32_t old_storage_size) -> void {
     if (m_match_pos >= old_storage_size / 2) {
         m_match_pos -= old_storage_size / 2;
     } else {
@@ -41,7 +41,7 @@ void Lexer<NfaStateType, DfaStateType>::flip_states(uint32_t old_storage_size) {
 template <typename NfaStateType, typename DfaStateType>
 auto Lexer<NfaStateType, DfaStateType>::scan(ParserInputBuffer& input_buffer, Token& token)
         -> ErrorCode {
-    DfaStateType const* state = m_dfa->get_root();
+    auto const* state = m_dfa->get_root();
     if (m_asked_for_more_data) {
         state = m_prev_state;
         m_asked_for_more_data = false;
@@ -411,7 +411,7 @@ auto Lexer<NfaStateType, DfaStateType>::epsilon_closure(NfaStateType const* stat
             stack.push(positive_tagged_start_transition.get_dest_state());
         }
         for (auto const& positive_tagged_end_transition :
-            current_state->get_positive_tagged_start_transitions())
+             current_state->get_positive_tagged_start_transitions())
         {
             stack.push(positive_tagged_end_transition.get_dest_state());
         }

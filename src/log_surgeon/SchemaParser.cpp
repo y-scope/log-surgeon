@@ -416,7 +416,7 @@ static auto new_delimiter_string_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     return make_unique<DelimiterStringAST>(character);
 }
 
-void SchemaParser::add_lexical_rules() {
+auto SchemaParser::add_lexical_rules() -> void {
     if (m_special_regex_characters.empty()) {
         m_special_regex_characters.emplace('(', "Lparen");
         m_special_regex_characters.emplace(')', "Rparen");
@@ -481,7 +481,7 @@ void SchemaParser::add_lexical_rules() {
     add_token_group("CommentCharacters", std::move(comment_characters));
 }
 
-void SchemaParser::add_productions() {
+auto SchemaParser::add_productions() -> void {
     // add_production("Schema", {}, new_schema_rule);
     add_production("Schema", {"Comment"}, new_schema_rule);
     add_production("Schema", {"SchemaVar"}, new_schema_rule_with_var);

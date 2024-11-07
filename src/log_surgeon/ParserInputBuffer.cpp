@@ -9,7 +9,7 @@ using std::string;
 using std::to_string;
 
 namespace log_surgeon {
-void ParserInputBuffer::reset() {
+auto ParserInputBuffer::reset() -> void {
     m_log_fully_consumed = false;
     m_finished_reading_input = false;
     m_pos_last_read_char = 0;
@@ -107,12 +107,12 @@ auto ParserInputBuffer::get_next_character(unsigned char& next_char) -> ErrorCod
 // the user to wrap their input buffer. It tricks the LogParser and
 // ParserInputBuffer into thinking it never reaches the wrap, while still
 // respecting the actual size of the buffer the user passed in.
-void ParserInputBuffer::set_storage(
+auto ParserInputBuffer::set_storage(
         char* storage,
         uint32_t size,
         uint32_t pos,
         bool finished_reading_input
-) {
+) -> void {
     reset();
     m_storage.set_active_buffer(storage, size * 2, pos);
     m_finished_reading_input = finished_reading_input;

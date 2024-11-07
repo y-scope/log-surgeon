@@ -30,10 +30,10 @@ Parser<NfaStateType, DfaStateType>::Parser() {
 }
 
 template <typename NfaStateType, typename DfaStateType>
-void Parser<NfaStateType, DfaStateType>::add_rule(
+auto Parser<NfaStateType, DfaStateType>::add_rule(
         std::string const& name,
         std::unique_ptr<finite_automata::RegexAST<NfaStateType>> rule
-) {
+) -> void {
     if (m_lexer.m_symbol_id.find(name) == m_lexer.m_symbol_id.end()) {
         m_lexer.m_symbol_id[name] = m_lexer.m_symbol_id.size();
         m_lexer.m_id_symbol[m_lexer.m_symbol_id[name]] = name;
@@ -42,7 +42,8 @@ void Parser<NfaStateType, DfaStateType>::add_rule(
 }
 
 template <typename NfaStateType, typename DfaStateType>
-void Parser<NfaStateType, DfaStateType>::add_token(std::string const& name, char rule_char) {
+auto Parser<NfaStateType, DfaStateType>::add_token(std::string const& name, char rule_char)
+        -> void {
     add_rule(name, std::make_unique<finite_automata::RegexASTLiteral<NfaStateType>>(rule_char));
 }
 }  // namespace log_surgeon
