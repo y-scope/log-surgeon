@@ -33,7 +33,7 @@ public:
     [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string> {
         auto const state_id_it = state_ids.find(m_dest_state);
-        if (state_id_it == state_ids.end()) {
+        if (state_id_it == state_ids.end() || nullptr == m_tag) {
             return std::nullopt;
         }
         return fmt::format("{}[{}]", state_id_it->second, m_tag->get_name());
@@ -71,9 +71,11 @@ public:
             return std::nullopt;
         }
 
-        auto const tag_names = m_tags | std::ranges::views::transform([](Tag const* tag) {
-                                   return tag->get_name();
-                               });
+        if (std::ranges::any_of(m_tags, [](Tag const* tag) { return tag == nullptr; })) {
+            return std::nullopt;
+        }
+        auto const tag_names = m_tags | std::ranges::views::transform(&Tag::get_name);
+
         return fmt::format("{}[{}]", state_id_it->second, fmt::join(tag_names, ","));
     }
 
