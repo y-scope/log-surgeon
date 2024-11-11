@@ -152,7 +152,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
                         "?<containerID>\\d+"
                     ")C"
                 ")",
-                U"(Z<~letter2><~containerID><~letter1><~letter>)|("
+                U"(Z<~containerID><~letter><~letter1><~letter2>)|("
                     "A("
                         "(((a)|(b))<letter1><~letter2>)|"
                         "(((c)|(d))<letter2><~letter1>)"
@@ -196,7 +196,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
                     "){0,10}"
                 ")",
                 U"("
-                    U"(<~letterA><~letterB>)|(("
+                    U"(<~letterB><~letterA>)|(("
                         U"((a)<letterA><~letterB>)|"
                         U"((b)<letterB><~letterA>)"
                     U"){1,inf})"
@@ -205,7 +205,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
                         U"((c)<letterC><~letterD>)|"
                         U"((d)<letterD><~letterC>)"
                     U"){1,10})"
-                U"<~letterA><~letterB>)"
+                U"<~letterB><~letterA>)"
                 // clang-format on
         );
     }
