@@ -44,7 +44,7 @@ private:
 template <typename NFAStateType>
 class NegativeTaggedTransition {
 public:
-    NegativeTaggedTransition(std::set<Tag const*> tags, NFAStateType const* dest_state)
+    NegativeTaggedTransition(std::vector<Tag const*> tags, NFAStateType const* dest_state)
             : m_tags{std::move(tags)},
               m_dest_state{dest_state} {}
 
@@ -71,7 +71,7 @@ public:
     }
 
 private:
-    std::set<Tag const*> const m_tags;
+    std::vector<Tag const*> const m_tags;
     NFAStateType const* m_dest_state;
 };
 }  // namespace log_surgeon::finite_automata

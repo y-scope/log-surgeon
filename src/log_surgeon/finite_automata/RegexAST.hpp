@@ -82,19 +82,23 @@ public:
      */
     [[nodiscard]] virtual auto serialize() const -> std::u32string = 0;
 
-    [[nodiscard]] auto get_subtree_positive_tags() const -> std::set<Tag const*> const& {
+    [[nodiscard]] auto get_subtree_positive_tags() const -> std::vector<Tag const*> const& {
         return m_subtree_positive_tags;
     }
 
-    auto set_subtree_positive_tags(std::set<Tag const*> subtree_positive_tags) -> void {
+    auto set_subtree_positive_tags(std::vector<Tag const*> subtree_positive_tags) -> void {
         m_subtree_positive_tags = std::move(subtree_positive_tags);
     }
 
-    auto add_subtree_positive_tags(std::set<Tag const*> subtree_positive_tags) -> void {
-        m_subtree_positive_tags.merge(subtree_positive_tags);
+    auto add_subtree_positive_tags(std::vector<Tag const*> subtree_positive_tags) -> void {
+        m_subtree_positive_tags.insert(
+                m_subtree_positive_tags.end(),
+                subtree_positive_tags.begin(),
+                subtree_positive_tags.end()
+        );
     }
 
-    auto set_negative_tags(std::set<Tag const*> negative_tags) -> void {
+    auto set_negative_tags(std::vector<Tag const*> negative_tags) -> void {
         m_negative_tags = std::move(negative_tags);
     }
 
@@ -141,8 +145,8 @@ protected:
     }
 
 private:
-    std::set<Tag const*> m_subtree_positive_tags;
-    std::set<Tag const*> m_negative_tags;
+    std::vector<Tag const*> m_subtree_positive_tags;
+    std::vector<Tag const*> m_negative_tags;
 };
 
 /**
