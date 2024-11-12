@@ -93,8 +93,8 @@ public:
     auto add_subtree_positive_tags(std::vector<Tag const*> subtree_positive_tags) -> void {
         m_subtree_positive_tags.insert(
                 m_subtree_positive_tags.end(),
-                subtree_positive_tags.begin(),
-                subtree_positive_tags.end()
+                subtree_positive_tags.cbegin(),
+                subtree_positive_tags.cend()
         );
     }
 
