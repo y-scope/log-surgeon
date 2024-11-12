@@ -90,7 +90,7 @@ public:
         m_subtree_positive_tags = std::move(subtree_positive_tags);
     }
 
-    auto add_subtree_positive_tags(std::vector<Tag const*> subtree_positive_tags) -> void {
+    auto add_subtree_positive_tags(std::vector<Tag const*> const& subtree_positive_tags) -> void {
         m_subtree_positive_tags.insert(
                 m_subtree_positive_tags.end(),
                 subtree_positive_tags.cbegin(),
