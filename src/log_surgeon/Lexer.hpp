@@ -132,12 +132,6 @@ public:
 
 private:
     /**
-     * Return epsilon_closure over m_epsilon_transitions
-     * @return
-     */
-    static auto epsilon_closure(NfaStateType const* state_ptr) -> std::set<NfaStateType const*>;
-
-    /**
      * Get next character from the input buffer
      * @return unsigned char
      */

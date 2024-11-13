@@ -41,7 +41,7 @@ auto get_intersect_for_query(
         rules.emplace_back(0, std::move(schema_var_ast->m_regex_ptr));
     }
     Nfa<NfaByteState> nfa(std::move(rules));
-    auto dfa2 = ByteLexer::nfa_to_dfa(nfa);
+    Dfa dfa2(nfa);
     auto schema_types = dfa1->get_intersect(dfa2);
     std::cout << search_string << ":";
     for (auto const& schema_type : schema_types) {
@@ -79,7 +79,7 @@ auto main() -> int {
             m_id_symbol[m_id_symbol.size()] = var_ast->m_name;
         }
         Nfa<NfaByteState> nfa(std::move(rules));
-        auto dfa = ByteLexer::nfa_to_dfa(nfa);
+        Dfa dfa(nfa);
         get_intersect_for_query(m_id_symbol, dfa, "*1*");
         get_intersect_for_query(m_id_symbol, dfa, "*a*");
         get_intersect_for_query(m_id_symbol, dfa, "*a1*");
