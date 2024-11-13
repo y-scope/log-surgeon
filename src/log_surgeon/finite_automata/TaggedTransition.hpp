@@ -24,7 +24,7 @@ template <typename NFAStateType>
 class PositiveTaggedTransition {
 public:
     PositiveTaggedTransition(Tag const* tag, NFAStateType const* dest_state)
-            : m_tag{nullptr == tag ? throw std::invalid_argument("tag cannot be null") : tag},
+            : m_tag{nullptr == tag ? throw std::invalid_argument("Tag cannot be null") : tag},
               m_dest_state{dest_state} {}
 
     [[nodiscard]] auto get_dest_state() const -> NFAStateType const* { return m_dest_state; }
@@ -60,7 +60,7 @@ public:
     NegativeTaggedTransition(std::vector<Tag const*> tags, NFAStateType const* dest_state)
             : m_tags{[&tags] {
                   if (std::ranges::any_of(tags, [](Tag const* tag) { return nullptr == tag; })) {
-                      throw std::invalid_argument("tags cannot contain null elements");
+                      throw std::invalid_argument("Tags cannot contain null elements");
                   }
                   return std::move(tags);
               }()},

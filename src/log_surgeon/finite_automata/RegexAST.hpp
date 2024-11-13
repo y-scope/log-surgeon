@@ -638,8 +638,8 @@ public:
             std::unique_ptr<RegexAST<NFAStateType>> group_regex_ast,
             std::unique_ptr<Tag> tag
     )
-            : m_group_regex_ast{nullptr == group_regex_ast ? throw std::invalid_argument("group regex AST cannot be null") : std::move(group_regex_ast)},
-              m_tag{nullptr == tag ? throw std::invalid_argument("tag cannot be null")
+            : m_group_regex_ast{nullptr == group_regex_ast ? throw std::invalid_argument("Group regex AST cannot be null") : std::move(group_regex_ast)},
+              m_tag{nullptr == tag ? throw std::invalid_argument("Tag cannot be null")
                                    : std::move(tag)} {
         RegexAST<NFAStateType>::set_subtree_positive_tags(
                 m_group_regex_ast->get_subtree_positive_tags()
