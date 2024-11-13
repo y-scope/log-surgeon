@@ -23,7 +23,7 @@ public:
     [[nodiscard]] auto get_name() const -> std::string_view { return m_name; }
 
 private:
-    std::string const m_name;
+    std::string m_name;
     std::vector<uint32_t> m_starts;
     std::vector<uint32_t> m_ends;
 };
