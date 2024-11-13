@@ -1,8 +1,8 @@
+#include <string>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <log_surgeon/finite_automata/Tag.hpp>
-
-#include <string>
 
 using log_surgeon::finite_automata::Tag;
 using std::string;
