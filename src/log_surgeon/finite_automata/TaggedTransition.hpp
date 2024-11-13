@@ -13,11 +13,18 @@
 #include <log_surgeon/finite_automata/Tag.hpp>
 
 namespace log_surgeon::finite_automata {
+
+/**
+ * Represents an NFA transition indicating a capture group has been matched.
+ * `m_tag` is always expected to be non-null.
+ * @throw std::invalid_argument Thrown when a null tag is passed into the constructor.
+ * @tparam NFAStateType Specifies the type of transition (bytes or UTF-8 characters).
+ */
 template <typename NFAStateType>
 class PositiveTaggedTransition {
 public:
     PositiveTaggedTransition(Tag const* tag, NFAStateType const* dest_state)
-            : m_tag{tag},
+            : m_tag{nullptr == tag ? throw std::invalid_argument("tag cannot be null") : tag},
               m_dest_state{dest_state} {}
 
     [[nodiscard]] auto get_dest_state() const -> NFAStateType const* { return m_dest_state; }
@@ -30,7 +37,7 @@ public:
     [[nodiscard]] auto serialize(std::unordered_map<NFAStateType const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string> {
         auto const state_id_it = state_ids.find(m_dest_state);
-        if (state_id_it == state_ids.end() || nullptr == m_tag) {
+        if (state_id_it == state_ids.end()) {
             return std::nullopt;
         }
         return fmt::format("{}[{}]", state_id_it->second, m_tag->get_name());
