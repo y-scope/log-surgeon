@@ -22,4 +22,14 @@ TEST_CASE("Tag operations", "[Tag]") {
         Tag const special_tag{"user.id-123_@"};
         REQUIRE("user.id-123_@" == string{special_tag.get_name()});
     }
+
+    SECTION("Move semantics work correctly") {
+        Tag original_tag{"source"};
+        Tag moved_tag{std::move(original_tag)};
+        REQUIRE("source" == string{moved_tag.get_name()});
+
+        Tag assign_tag{"target"};
+        assign_tag = Tag{"new_source"};
+        REQUIRE("new_source" == string{assign_tag.get_name()});
+    }
 }
