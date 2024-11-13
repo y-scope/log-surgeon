@@ -643,7 +643,7 @@ public:
               m_group_regex_ast{
                       std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_group_regex_ast->clone())
               },
-              m_tag{rhs.m_tag ? std::make_unique<Tag>(*rhs.m_tag) : nullptr} {
+              m_tag{std::make_unique<Tag>(*rhs.m_tag)} {
         RegexAST<NFAStateType>::set_subtree_positive_tags(rhs.get_subtree_positive_tags());
     }
 
