@@ -123,9 +123,9 @@ public:
 
 protected:
     RegexAST(RegexAST const& rhs) = default;
-    auto operator=(RegexAST const& rhs) -> RegexAST& = default;
-    RegexAST(RegexAST&& rhs) noexcept = default;
-    auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = default;
+    auto operator=(RegexAST const& rhs) -> RegexAST& = delete;
+    RegexAST(RegexAST&& rhs) noexcept = delete;
+    auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = delete;
 
     [[nodiscard]] auto serialize_negative_tags() const -> std::u32string {
         if (m_negative_tags.empty()) {
@@ -439,10 +439,6 @@ public:
               m_left(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone())),
               m_right(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone())) {}
 
-    auto operator=(RegexASTOr const& rhs) -> RegexASTOr& = default;
-    RegexASTOr(RegexASTOr&& rhs) noexcept = default;
-    auto operator=(RegexASTOr&& rhs) noexcept -> RegexASTOr& = default;
-
     /**
      * Used for cloning a unique_pointer of type RegexASTOr
      * @return RegexASTOr*
@@ -505,10 +501,6 @@ public:
             : RegexAST<NFAStateType>(rhs),
               m_left(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone())),
               m_right(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone())) {}
-
-    auto operator=(RegexASTCat const& rhs) -> RegexASTCat& = default;
-    RegexASTCat(RegexASTCat&& rhs) noexcept = default;
-    auto operator=(RegexASTCat&& rhs) noexcept -> RegexASTCat& = default;
 
     /**
      * Used for cloning a unique_pointer of type RegexASTCat
@@ -574,10 +566,6 @@ public:
               m_operand(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_operand->clone())),
               m_min(rhs.m_min),
               m_max(rhs.m_max) {}
-
-    auto operator=(RegexASTMultiplication const& rhs) -> RegexASTMultiplication& = default;
-    RegexASTMultiplication(RegexASTMultiplication&& rhs) noexcept = default;
-    auto operator=(RegexASTMultiplication&& rhs) noexcept -> RegexASTMultiplication& = default;
 
     /**
      * Used for cloning a unique_pointer of type RegexASTMultiplication
@@ -658,10 +646,6 @@ public:
               m_tag{rhs.m_tag ? std::make_unique<Tag>(*rhs.m_tag) : nullptr} {
         RegexAST<NFAStateType>::set_subtree_positive_tags(rhs.get_subtree_positive_tags());
     }
-
-    auto operator=(RegexASTCapture const& rhs) -> RegexASTCapture& = default;
-    RegexASTCapture(RegexASTCapture&& rhs) noexcept = default;
-    auto operator=(RegexASTCapture&& rhs) noexcept -> RegexASTCapture& = default;
 
     /**
      * Used for cloning a `unique_pointer` of type `RegexASTCapture`.
