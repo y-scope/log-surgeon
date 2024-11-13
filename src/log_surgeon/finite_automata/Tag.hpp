@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -19,7 +20,7 @@ class Tag {
 public:
     explicit Tag(std::string name) : m_name{std::move(name)} {}
 
-    [[nodiscard]] auto get_name() const -> std::string const& { return m_name; }
+    [[nodiscard]] auto get_name() const -> std::string_view { return m_name; }
 
 private:
     std::string const m_name;

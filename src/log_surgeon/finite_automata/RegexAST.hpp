@@ -11,6 +11,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -699,7 +700,7 @@ public:
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
-    [[nodiscard]] auto get_group_name() const -> std::string const& { return m_tag->get_name(); }
+    [[nodiscard]] auto get_group_name() const -> std::string_view { return m_tag->get_name(); }
 
     [[nodiscard]] auto get_group_regex_ast(
     ) const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
