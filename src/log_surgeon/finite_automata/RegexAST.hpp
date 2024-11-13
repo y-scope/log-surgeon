@@ -621,6 +621,14 @@ private:
     uint32_t m_max;
 };
 
+/**
+ * Represents a capture group AST node.
+ * `m_tag` is always expected to be non-null.
+ * `m_group_regex_ast` is always expected to be non-null.
+ * @throw std::invalid_argument Thrown if a null tag or group regex AST is passed into the
+ * constructor.
+ * @tparam NFAStateType Specifies the type of transition (bytes or UTF-8 characters).
+ */
 template <typename NFAStateType>
 class RegexASTCapture : public RegexAST<NFAStateType> {
 public:
@@ -630,8 +638,9 @@ public:
             std::unique_ptr<RegexAST<NFAStateType>> group_regex_ast,
             std::unique_ptr<Tag> tag
     )
-            : m_group_regex_ast{std::move(group_regex_ast)},
-              m_tag{std::move(tag)} {
+            : m_group_regex_ast{nullptr == group_regex_ast ? throw std::invalid_argument("group regex AST cannot be null") : std::move(group_regex_ast)},
+              m_tag{nullptr == tag ? throw std::invalid_argument("tag cannot be null")
+                                   : std::move(tag)} {
         RegexAST<NFAStateType>::set_subtree_positive_tags(
                 m_group_regex_ast->get_subtree_positive_tags()
         );
@@ -884,10 +893,10 @@ void RegexASTCapture<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAS
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTCapture<NFAStateType>::serialize() const -> std::u32string {
-    auto const tag_name_u32 = std::u32string(m_tag->get_name().begin(), m_tag->get_name().end());
+    auto const tag_name_u32 = std::u32string(m_tag->get_name().cbegin(), m_tag->get_name().cend());
     return fmt::format(
             U"({})<{}>{}",
-            nullptr != m_group_regex_ast ? m_group_regex_ast->serialize() : U"null",
+            m_group_regex_ast->serialize(),
             tag_name_u32,
             RegexAST<NFAStateType>::serialize_negative_tags()
     );
