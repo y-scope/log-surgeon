@@ -40,7 +40,7 @@ public:
      */
     [[nodiscard]] auto new_state_with_positive_tagged_transition(
             Tag* tag,
-            NFAStateType const* dest_state
+            NFAStateType* dest_state
     ) -> NFAStateType*;
 
     /**
@@ -52,7 +52,7 @@ public:
      */
     [[nodiscard]] auto new_state_with_negative_tagged_transition(
             std::vector<Tag*> tags,
-            NFAStateType const* dest_state
+            NFAStateType* dest_state
     ) -> NFAStateType*;
 
     /**
@@ -100,7 +100,7 @@ auto RegexNFA<NFAStateType>::new_state() -> NFAStateType* {
 template <typename NFAStateType>
 auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_transition(
         Tag* tag,
-        NFAStateType const* dest_state
+        NFAStateType* dest_state
 ) -> NFAStateType* {
     m_states.emplace_back(std::make_unique<NFAStateType>(tag, dest_state));
     return m_states.back().get();
@@ -109,7 +109,7 @@ auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_transition(
 template <typename NFAStateType>
 auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transition(
         std::vector<Tag*> tags,
-        NFAStateType const* dest_state
+        NFAStateType* dest_state
 ) -> NFAStateType* {
     m_states.emplace_back(std::make_unique<NFAStateType>(std::move(tags), dest_state));
     return m_states.back().get();
