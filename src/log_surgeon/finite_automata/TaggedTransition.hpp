@@ -20,6 +20,10 @@ public:
 
     [[nodiscard]] auto get_dest_state() const -> NfaStateType const* { return m_dest_state; }
 
+    [[nodiscard]] auto get_tag() const -> Tag* {
+        return m_tag;
+    }
+    
     auto set_tag_start_positions(std::vector<uint32_t> start_positions) const -> void {
         m_tag->set_start_positions(std::move(start_positions));
     }
