@@ -17,12 +17,16 @@ namespace log_surgeon::finite_automata {
 /**
  * Represents an NFA transition indicating that a capture group has been matched.
  * `m_tag` is always expected to be non-null.
- * @throw std::invalid_argument Thrown if a null tag is passed into the constructor.
  * @tparam NFAStateType Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename NFAStateType>
 class PositiveTaggedTransition {
 public:
+    /**
+     * @param tag
+     * @param dest_state
+     * @throw std::invalid_argument if `tag` is `nullptr`.
+     */
     PositiveTaggedTransition(Tag const* tag, NFAStateType const* dest_state)
             : m_tag{nullptr == tag ? throw std::invalid_argument("Tag cannot be null") : tag},
               m_dest_state{dest_state} {}
@@ -51,12 +55,16 @@ private:
 /**
  * Represents an NFA transition indicating that a capture group has been unmatched.
  * All tags in `m_tags` are always expected to be non-null.
- * @throw std::invalid_argument Thrown if any tag passed into the constructor is null.
  * @tparam NFAStateType Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename NFAStateType>
 class NegativeTaggedTransition {
 public:
+    /**
+     * @param tags
+     * @param dest_state
+     * @throw std::invalid_argument if any elements in `tags` is `nullptr`.
+     */
     NegativeTaggedTransition(std::vector<Tag const*> tags, NFAStateType const* dest_state)
             : m_tags{[&tags] {
                   if (std::ranges::any_of(tags, [](Tag const* tag) { return nullptr == tag; })) {

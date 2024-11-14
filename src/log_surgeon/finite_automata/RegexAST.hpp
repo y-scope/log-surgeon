@@ -625,8 +625,6 @@ private:
  * Represents a capture group AST node.
  * `m_tag` is always expected to be non-null.
  * `m_group_regex_ast` is always expected to be non-null.
- * @throw std::invalid_argument Thrown if a null tag or group regex AST is passed into the
- * constructor.
  * @tparam NFAStateType Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename NFAStateType>
@@ -634,6 +632,11 @@ class RegexASTCapture : public RegexAST<NFAStateType> {
 public:
     ~RegexASTCapture() override = default;
 
+    /**
+     * @param group_regex_ast
+     * @param tag
+     * @throw std::invalid_argument if `group_regex_ast` or `tag` are `nullptr`.
+     */
     RegexASTCapture(
             std::unique_ptr<RegexAST<NFAStateType>> group_regex_ast,
             std::unique_ptr<Tag> tag
