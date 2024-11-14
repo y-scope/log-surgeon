@@ -30,10 +30,10 @@ public:
 
     NfaState() = default;
 
-    NfaState(Tag* tag, NfaState const* dest_state)
+    NfaState(Tag* tag, NfaState* dest_state)
             : m_positive_tagged_end_transitions{{tag, dest_state}} {}
 
-    NfaState(std::vector<Tag*> tags, NfaState const* dest_state)
+    NfaState(std::vector<Tag*> tags, NfaState* dest_state)
             : m_negative_tagged_transition{NegativeTaggedTransition{std::move(tags), dest_state}} {}
 
     auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
