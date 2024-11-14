@@ -123,7 +123,7 @@ public:
 
 protected:
     RegexAST(RegexAST const& rhs) = default;
-    auto operator=(RegexAST const& rhs) -> RegexAST& = delete;
+    auto operator=(RegexAST const& rhs) -> RegexAST& = default;
     RegexAST(RegexAST&& rhs) noexcept = delete;
     auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = delete;
 
