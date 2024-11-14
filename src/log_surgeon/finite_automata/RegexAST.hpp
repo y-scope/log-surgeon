@@ -11,6 +11,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -90,11 +91,11 @@ public:
         m_subtree_positive_tags = std::move(subtree_positive_tags);
     }
 
-    auto add_subtree_positive_tags(std::vector<Tag*> subtree_positive_tags) -> void {
+    auto add_subtree_positive_tags(std::vector<Tag*> const& subtree_positive_tags) -> void {
         m_subtree_positive_tags.insert(
                 m_subtree_positive_tags.end(),
-                std::make_move_iterator(subtree_positive_tags.begin()),
-                std::make_move_iterator(subtree_positive_tags.end())
+                subtree_positive_tags.cbegin(),
+                subtree_positive_tags.cend()
         );
     }
 
@@ -123,8 +124,8 @@ public:
 protected:
     RegexAST(RegexAST const& rhs) = default;
     auto operator=(RegexAST const& rhs) -> RegexAST& = default;
-    RegexAST(RegexAST&& rhs) noexcept = default;
-    auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = default;
+    RegexAST(RegexAST&& rhs) noexcept = delete;
+    auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = delete;
 
     [[nodiscard]] auto serialize_negative_tags() const -> std::u32string {
         if (m_negative_tags.empty()) {
@@ -438,10 +439,6 @@ public:
               m_left(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone())),
               m_right(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone())) {}
 
-    auto operator=(RegexASTOr const& rhs) -> RegexASTOr& = default;
-    RegexASTOr(RegexASTOr&& rhs) noexcept = default;
-    auto operator=(RegexASTOr&& rhs) noexcept -> RegexASTOr& = default;
-
     /**
      * Used for cloning a unique_pointer of type RegexASTOr
      * @return RegexASTOr*
@@ -504,10 +501,6 @@ public:
             : RegexAST<NFAStateType>(rhs),
               m_left(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone())),
               m_right(std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone())) {}
-
-    auto operator=(RegexASTCat const& rhs) -> RegexASTCat& = default;
-    RegexASTCat(RegexASTCat&& rhs) noexcept = default;
-    auto operator=(RegexASTCat&& rhs) noexcept -> RegexASTCat& = default;
 
     /**
      * Used for cloning a unique_pointer of type RegexASTCat
@@ -574,10 +567,6 @@ public:
               m_min(rhs.m_min),
               m_max(rhs.m_max) {}
 
-    auto operator=(RegexASTMultiplication const& rhs) -> RegexASTMultiplication& = default;
-    RegexASTMultiplication(RegexASTMultiplication&& rhs) noexcept = default;
-    auto operator=(RegexASTMultiplication&& rhs) noexcept -> RegexASTMultiplication& = default;
-
     /**
      * Used for cloning a unique_pointer of type RegexASTMultiplication
      * @return RegexASTMultiplication*
@@ -632,17 +621,33 @@ private:
     uint32_t m_max;
 };
 
+/**
+ * Represents a capture group AST node.
+ * `m_tag` is always expected to be non-null.
+ * `m_group_regex_ast` is always expected to be non-null.
+ * @tparam NFAStateType Specifies the type of transition (bytes or UTF-8 characters).
+ */
 template <typename NFAStateType>
 class RegexASTCapture : public RegexAST<NFAStateType> {
 public:
     ~RegexASTCapture() override = default;
 
+    /**
+     * @param group_regex_ast
+     * @param tag
+     * @throw std::invalid_argument if `group_regex_ast` or `tag` are `nullptr`.
+     */
     RegexASTCapture(
             std::unique_ptr<RegexAST<NFAStateType>> group_regex_ast,
             std::unique_ptr<Tag> tag
     )
-            : m_group_regex_ast{std::move(group_regex_ast)},
-              m_tag{std::move(tag)} {
+            : m_group_regex_ast{(
+                      nullptr == group_regex_ast
+                              ? throw std::invalid_argument("Group regex AST cannot be null")
+                              : std::move(group_regex_ast)
+              )},
+              m_tag{nullptr == tag ? throw std::invalid_argument("Tag cannot be null")
+                                   : std::move(tag)} {
         RegexAST<NFAStateType>::set_subtree_positive_tags(
                 m_group_regex_ast->get_subtree_positive_tags()
         );
@@ -654,13 +659,9 @@ public:
               m_group_regex_ast{
                       std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_group_regex_ast->clone())
               },
-              m_tag{rhs.m_tag ? std::make_unique<Tag>(*rhs.m_tag) : nullptr} {
+              m_tag{std::make_unique<Tag>(*rhs.m_tag)} {
         RegexAST<NFAStateType>::set_subtree_positive_tags(rhs.get_subtree_positive_tags());
     }
-
-    auto operator=(RegexASTCapture const& rhs) -> RegexASTCapture& = default;
-    RegexASTCapture(RegexASTCapture&& rhs) noexcept = default;
-    auto operator=(RegexASTCapture&& rhs) noexcept -> RegexASTCapture& = default;
 
     /**
      * Used for cloning a `unique_pointer` of type `RegexASTCapture`.
@@ -699,7 +700,7 @@ public:
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
-    [[nodiscard]] auto get_group_name() const -> std::string const& { return m_tag->get_name(); }
+    [[nodiscard]] auto get_group_name() const -> std::string_view { return m_tag->get_name(); }
 
     [[nodiscard]] auto get_group_regex_ast(
     ) const -> std::unique_ptr<RegexAST<NFAStateType>> const& {
@@ -906,10 +907,10 @@ void RegexASTCapture<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAS
 
 template <typename NFAStateType>
 [[nodiscard]] auto RegexASTCapture<NFAStateType>::serialize() const -> std::u32string {
-    auto const tag_name_u32 = std::u32string(m_tag->get_name().begin(), m_tag->get_name().end());
+    auto const tag_name_u32 = std::u32string(m_tag->get_name().cbegin(), m_tag->get_name().cend());
     return fmt::format(
             U"({})<{}>{}",
-            nullptr != m_group_regex_ast ? m_group_regex_ast->serialize() : U"null",
+            m_group_regex_ast->serialize(),
             tag_name_u32,
             RegexAST<NFAStateType>::serialize_negative_tags()
     );
