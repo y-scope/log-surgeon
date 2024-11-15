@@ -1,7 +1,5 @@
 #include <codecvt>
-#include <cstdint>
 #include <locale>
-#include <ranges>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -152,13 +150,13 @@ TEST_CASE("Test the Schema class", "[Schema]") {
                         "?<containerID>\\d+"
                     ")C"
                 ")",
-                U"(Z<~0><~1><~2><~3>)|("
+                U"(Z<~letter1><~letter2><~letter><~containerID>)|("
                     "A("
-                        "(((a)|(b))<0><~1>)|"
-                        "(((c)|(d))<1><~0>)"
-                    ")<2>B("
+                        "(((a)|(b))<letter1><~letter2>)|"
+                        "(((c)|(d))<letter2><~letter1>)"
+                    ")<letter>B("
                         "([0-9]){1,inf}"
-                    ")<3>C"
+                    ")<containerID>C"
                 ")"
                 // clang-format on
         );
@@ -172,13 +170,13 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         test_regex_ast("capture:a+", U"(a){1,inf}");
 
         // Repetition with capture groups untagged and tagged AST are different
-        test_regex_ast("capture:(?<letter>a){0,10}", U"(<~0>)|(((a)<0>){1,10})");
-        test_regex_ast("capture:(?<letter>a){5,10}", U"((a)<0>){5,10}");
-        test_regex_ast("capture:(?<letter>a)*", U"(<~0>)|(((a)<0>){1,inf})");
-        test_regex_ast("capture:(?<letter>a)+", U"((a)<0>){1,inf}");
+        test_regex_ast("capture:(?<letter>a){0,10}", U"(<~letter>)|(((a)<letter>){1,10})");
+        test_regex_ast("capture:(?<letter>a){5,10}", U"((a)<letter>){5,10}");
+        test_regex_ast("capture:(?<letter>a)*", U"(<~letter>)|(((a)<letter>){1,inf})");
+        test_regex_ast("capture:(?<letter>a)+", U"((a)<letter>){1,inf}");
 
         // Capture group with repetition
-        test_regex_ast("capture:(?<letter>a{0,10})", U"(()|((a){1,10}))<0>");
+        test_regex_ast("capture:(?<letter>a{0,10})", U"(()|((a){1,10}))<letter>");
 
         // Complex repetition
         test_regex_ast(
@@ -196,16 +194,16 @@ TEST_CASE("Test the Schema class", "[Schema]") {
                     "){0,10}"
                 ")",
                 U"("
-                    U"(<~0><~1>)|(("
-                        U"((a)<0><~1>)|"
-                        U"((b)<1><~0>)"
+                    U"(<~letterA><~letterB>)|(("
+                        U"((a)<letterA><~letterB>)|"
+                        U"((b)<letterB><~letterA>)"
                     U"){1,inf})"
-                U"<~2><~3>)|("
-                    U"(<~2><~3>)|(("
-                        U"((c)<2><~3>)|"
-                        U"((d)<3><~2>)"
+                U"<~letterC><~letterD>)|("
+                    U"(<~letterC><~letterD>)|(("
+                        U"((c)<letterC><~letterD>)|"
+                        U"((d)<letterD><~letterC>)"
                     U"){1,10})"
-                U"<~0><~1>)"
+                U"<~letterA><~letterB>)"
                 // clang-format on
         );
     }

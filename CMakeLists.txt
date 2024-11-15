@@ -99,6 +99,7 @@ set(SOURCE_FILES
     src/log_surgeon/finite_automata/RegexNFA.hpp
     src/log_surgeon/finite_automata/RegexNFAState.hpp
     src/log_surgeon/finite_automata/RegexNFAStateType.hpp
+    src/log_surgeon/finite_automata/Tag.hpp
     src/log_surgeon/finite_automata/TaggedTransition.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.tpp
