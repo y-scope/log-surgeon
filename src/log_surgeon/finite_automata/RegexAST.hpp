@@ -623,8 +623,9 @@ private:
 
 /**
  * Represents a capture group AST node.
- * `m_tag` is always expected to be non-null.
- * `m_group_regex_ast` is always expected to be non-null.
+ * NOTE:
+ * - `m_tag` is always expected to be non-null.
+ * - `m_group_regex_ast` is always expected to be non-null.
  * @tparam NFAStateType Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename NFAStateType>
