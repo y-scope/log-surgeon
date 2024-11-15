@@ -15,7 +15,7 @@ namespace log_surgeon::finite_automata {
 
 /**
  * Represents an NFA transition indicating that a capture group has been matched.
- * `m_tag` is always expected to be non-null.
+ * NOTE: `m_tag` is always expected to be non-null.
  * @tparam NFAStateType Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename NFAStateType>
