@@ -20,13 +20,15 @@ TEST_CASE("Tag operations", "[Tag]") {
         REQUIRE("user.id-123_@" == special_tag.get_name());
     }
 
-    SECTION("Move semantics work correctly") {
-        Tag original_tag{"source"};
-        Tag moved_tag{std::move(original_tag)};
-        REQUIRE("source" == moved_tag.get_name());
-
+    SECTION("Copy constructor works correctly") {
         Tag assign_tag{"target"};
         assign_tag = Tag{"new_source"};
         REQUIRE("new_source" == assign_tag.get_name());
+    }
+
+    SECTION("Move constructor works correctly") {
+        Tag original_tag{"source"};
+        Tag moved_tag{std::move(original_tag)};
+        REQUIRE("source" == moved_tag.get_name());
     }
 }
