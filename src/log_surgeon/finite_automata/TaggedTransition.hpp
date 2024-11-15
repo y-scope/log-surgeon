@@ -3,13 +3,12 @@
 
 #include <cstdint>
 #include <optional>
-#include <set>
+#include <ranges>
 #include <string>
 #include <unordered_map>
 
 #include <fmt/format.h>
 
-#include <log_surgeon/finite_automata/RegexNFAStateType.hpp>
 #include <log_surgeon/finite_automata/Tag.hpp>
 
 namespace log_surgeon::finite_automata {
