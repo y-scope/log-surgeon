@@ -69,7 +69,7 @@ fi
 
 # Build
 cd "$extracted_dir"
-cmake -B build -S . -DBUILD_TESTING=OFF
+cmake -B build -S . -DBUILD_TESTING=OFF -DCMAKE_CXX_STANDARD=17
 cmake --build build --parallel "$num_cpus"
 
 # Check if checkinstall is installed

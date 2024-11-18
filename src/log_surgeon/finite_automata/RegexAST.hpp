@@ -83,15 +83,15 @@ public:
      */
     [[nodiscard]] virtual auto serialize() const -> std::u32string = 0;
 
-    [[nodiscard]] auto get_subtree_positive_tags() const -> std::vector<Tag*> const& {
+    [[nodiscard]] auto get_subtree_positive_tags() const -> std::vector<Tag const*> const& {
         return m_subtree_positive_tags;
     }
 
-    auto set_subtree_positive_tags(std::vector<Tag*> subtree_positive_tags) -> void {
+    auto set_subtree_positive_tags(std::vector<Tag const*> subtree_positive_tags) -> void {
         m_subtree_positive_tags = std::move(subtree_positive_tags);
     }
 
-    auto add_subtree_positive_tags(std::vector<Tag*> const& subtree_positive_tags) -> void {
+    auto add_subtree_positive_tags(std::vector<Tag const*> const& subtree_positive_tags) -> void {
         m_subtree_positive_tags.insert(
                 m_subtree_positive_tags.end(),
                 subtree_positive_tags.cbegin(),
@@ -99,7 +99,7 @@ public:
         );
     }
 
-    auto set_negative_tags(std::vector<Tag*> negative_tags) -> void {
+    auto set_negative_tags(std::vector<Tag const*> negative_tags) -> void {
         m_negative_tags = std::move(negative_tags);
     }
 
@@ -146,8 +146,8 @@ protected:
     }
 
 private:
-    std::vector<Tag*> m_subtree_positive_tags;
-    std::vector<Tag*> m_negative_tags;
+    std::vector<Tag const*> m_subtree_positive_tags;
+    std::vector<Tag const*> m_negative_tags;
 };
 
 /**
@@ -623,8 +623,9 @@ private:
 
 /**
  * Represents a capture group AST node.
- * `m_tag` is always expected to be non-null.
- * `m_group_regex_ast` is always expected to be non-null.
+ * NOTE:
+ * - `m_tag` is always expected to be non-null.
+ * - `m_group_regex_ast` is always expected to be non-null.
  * @tparam NFAStateType Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename NFAStateType>
