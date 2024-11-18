@@ -64,7 +64,7 @@ public:
      * @param dest_state
      * @throw std::invalid_argument if any elements in `tags` is `nullptr`.
      */
-    NegativeTaggedTransition(std::vector<Tag const*> tags, NFAStateType* dest_state)
+    NegativeTaggedTransition(std::vector<Tag const*> tags, NFAStateType const* dest_state)
             : m_tags{[&tags] {
                   if (std::ranges::any_of(tags, [](Tag const* tag) { return nullptr == tag; })) {
                       throw std::invalid_argument("Tags cannot contain null elements");
