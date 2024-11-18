@@ -94,7 +94,7 @@ public:
 
 private:
     std::vector<Tag const*> m_tags;
-    NFAStateType* m_dest_state;
+    NFAStateType const* m_dest_state;
 };
 }  // namespace log_surgeon::finite_automata
 
