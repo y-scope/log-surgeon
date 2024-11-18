@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <unordered_map>
 
@@ -14,7 +15,7 @@ namespace log_surgeon::finite_automata {
 
 /**
  * Represents an NFA transition indicating that a capture group has been matched.
- * `m_tag` is always expected to be non-null.
+ * NOTE: `m_tag` is always expected to be non-null.
  * @tparam NFAStateType Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename NFAStateType>
@@ -52,7 +53,7 @@ private:
 
 /**
  * Represents an NFA transition indicating that a capture group has been unmatched.
- * All tags in `m_tags` are always expected to be non-null.
+ * NOTE: All tags in `m_tags` are always expected to be non-null.
  * @tparam NFAStateType Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename NFAStateType>
