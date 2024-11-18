@@ -83,7 +83,7 @@ public:
      */
     [[nodiscard]] virtual auto serialize() const -> std::u32string = 0;
 
-    [[nodiscard]] auto get_subtree_positive_tags() const -> std::vector<Tag*> const& {
+    [[nodiscard]] auto get_subtree_positive_tags() const -> std::vector<Tag const*> const& {
         return m_subtree_positive_tags;
     }
 

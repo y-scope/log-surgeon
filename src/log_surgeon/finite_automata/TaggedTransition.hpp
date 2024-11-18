@@ -26,7 +26,7 @@ public:
      * @param dest_state
      * @throw std::invalid_argument if `tag` is `nullptr`.
      */
-    PositiveTaggedTransition(Tag* tag, NFAStateType const* dest_state)
+    PositiveTaggedTransition(Tag const* tag, NFAStateType const* dest_state)
             : m_tag{nullptr == tag ? throw std::invalid_argument("Tag cannot be null") : tag},
               m_dest_state{dest_state} {}
 
@@ -47,7 +47,7 @@ public:
     }
 
 private:
-    Tag* m_tag;
+    Tag const* m_tag;
     NFAStateType const* m_dest_state;
 };
 
@@ -64,7 +64,7 @@ public:
      * @param dest_state
      * @throw std::invalid_argument if any elements in `tags` is `nullptr`.
      */
-    NegativeTaggedTransition(std::vector<Tag*> tags, NFAStateType* dest_state)
+    NegativeTaggedTransition(std::vector<Tag const*> tags, NFAStateType* dest_state)
             : m_tags{[&tags] {
                   if (std::ranges::any_of(tags, [](Tag const* tag) { return nullptr == tag; })) {
                       throw std::invalid_argument("Tags cannot contain null elements");
@@ -93,7 +93,7 @@ public:
     }
 
 private:
-    std::vector<Tag*> m_tags;
+    std::vector<Tag const*> m_tags;
     NFAStateType* m_dest_state;
 };
 }  // namespace log_surgeon::finite_automata
