@@ -47,13 +47,6 @@ public:
     ) -> NFAStateType*;
 
     /**
-     * Add an NFA state with in incoming positive tagged start transition from `m_root`.
-     * @param tag
-     * @return NFAStateType*
-     */
-    [[nodiscard]] auto new_capture_group_start_state(Tag const* tag) -> NFAStateType*;
-
-    /**
      * Creates a unique_ptr for an NFA state with a negative tagged transition and adds it to
      * `m_states`.
      * @param tags
@@ -64,6 +57,19 @@ public:
             std::vector<Tag const*> tags,
             NFAStateType const* dest_state
     ) -> NFAStateType*;
+
+    /**
+     * Add two NFA states for a capture group:
+     * 1. A start state: `m_root` --(start `tag`)--> start_state.
+     * 2. An end state: end_state --(end `tag`)--> `dest_state`.
+     * @param tag
+     * @param dest_state
+     * @return std::pair<NFAStateType*, NFAStateType*>
+     */
+    [[nodiscard]] auto new_capture_group_start_states(
+            Tag const* tag,
+            NFAStateType const* dest_state
+    ) -> std::pair<NFAStateType*, NFAStateType*>;
 
     /**
      * @return A vector representing the traversal order of the NFA states using breadth-first
@@ -108,13 +114,6 @@ auto RegexNFA<NFAStateType>::new_state() -> NFAStateType* {
 }
 
 template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::new_capture_group_start_state(Tag const* tag) -> NFAStateType* {
-    auto* state = new_state();
-    m_root->add_positive_tagged_start_transition(tag, state);
-    return state;
-}
-
-template <typename NFAStateType>
 auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_end_transition(
         Tag const* tag,
         NFAStateType const* dest_state
@@ -130,6 +129,19 @@ auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transition(
 ) -> NFAStateType* {
     m_states.emplace_back(std::make_unique<NFAStateType>(std::move(tags), dest_state));
     return m_states.back().get();
+}
+
+template <typename NFAStateType>
+auto RegexNFA<NFAStateType>::new_capture_group_start_states(
+        Tag const* tag,
+        NFAStateType const* dest_state
+) -> std::pair<NFAStateType*, NFAStateType*> {
+    auto* start_state = new_state();
+    m_root->add_positive_tagged_start_transition(tag, start_state);
+
+    auto* end_state = new_state_with_positive_tagged_transition(tag, dest_state);
+
+    return {start_state, end_state};
 }
 
 template <typename NFAStateType>

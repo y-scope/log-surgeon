@@ -693,11 +693,11 @@ public:
 
     /**
      * Adds the needed `RegexNFA::states` to the passed in nfa to handle a
-     * `RegexASTCapture` before transitioning to an accepting `end_state`.
+     * `RegexASTCapture` before transitioning to a `dest_state`.
      * @param nfa
-     * @param end_state
+     * @param dest_state
      */
-    auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) const -> void override;
+    auto add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* dest_state) const -> void override;
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
@@ -892,23 +892,19 @@ template <typename NFAStateType>
 }
 
 template <typename NFAStateType>
-void RegexASTCapture<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state)
-        const {
+void RegexASTCapture<NFAStateType>::add_to_nfa(
+        RegexNFA<NFAStateType>* nfa,
+        NFAStateType* dest_state
+) const {
     // root --(pos_tagged_start_transition)--> capture_group_start_state -->
     // [inner capture group NFA] --(neg_tagged_transition)--> neg_state -->
     // state_with_positive_tagged_end_transition --(pos_tagged_end_transition)--> end_state
-    auto* capture_group_start_state = nfa->new_capture_group_start_state(m_tag.get());
+    auto [start_state, end_state] = nfa->new_capture_group_start_states(m_tag.get(), dest_state);
 
-    auto* root = nfa->get_root();
-    nfa->set_root(capture_group_start_state);
-
-    auto* state_with_positive_tagged_end_transition
-            = nfa->new_state_with_positive_tagged_end_transition(m_tag.get(), end_state);
-    m_group_regex_ast->add_to_nfa_with_negative_tags(
-            nfa,
-            state_with_positive_tagged_end_transition
-    );
-    nfa->set_root(root);
+    auto* initial_root = nfa->get_root();
+    nfa->set_root(start_state);
+    m_group_regex_ast->add_to_nfa_with_negative_tags(nfa, end_state);
+    nfa->set_root(initial_root);
 }
 
 template <typename NFAStateType>
