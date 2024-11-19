@@ -410,11 +410,12 @@ auto Lexer<NFAStateType, DFAStateType>::epsilon_closure(NFAStateType const* stat
         {
             stack.push(positive_tagged_start_transition.get_dest_state());
         }
-        for (auto const& positive_tagged_end_transition :
-             current_state->get_positive_tagged_end_transitions())
-        {
-            stack.push(positive_tagged_end_transition.get_dest_state());
+        auto const& optional_positive_tagged_end_transition
+                = current_state->get_positive_tagged_end_transitions();
+        if (optional_positive_tagged_end_transition.has_value()) {
+            stack.push(optional_positive_tagged_end_transition.value().get_dest_state());
         }
+
         auto const& optional_negative_tagged_transition
                 = current_state->get_negative_tagged_transition();
         if (optional_negative_tagged_transition.has_value()) {
