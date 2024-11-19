@@ -35,7 +35,7 @@ public:
     [[nodiscard]] auto new_state() -> NFAStateType*;
 
     /**
-     * Creates a unique_ptr for an NFA state with a positive tagged transition and adds it to
+     * Creates a unique_ptr for an NFA state with a positive tagged end transition and adds it to
      * `m_states`.
      * @param tag
      * @param dest_state
@@ -45,6 +45,13 @@ public:
             Tag const* tag,
             NFAStateType const* dest_state
     ) -> NFAStateType*;
+
+    /**
+     * Add an NFA state with in incoming positive tagged start transition from `m_root`.
+     * @param tag
+     * @return NFAStateType*
+     */
+    [[nodiscard]] auto new_capture_group_start_state(Tag const* tag) -> NFAStateType*;
 
     /**
      * Creates a unique_ptr for an NFA state with a negative tagged transition and adds it to
@@ -98,6 +105,13 @@ template <typename NFAStateType>
 auto RegexNFA<NFAStateType>::new_state() -> NFAStateType* {
     m_states.emplace_back(std::make_unique<NFAStateType>());
     return m_states.back().get();
+}
+
+template <typename NFAStateType>
+auto RegexNFA<NFAStateType>::new_capture_group_start_state(Tag const* tag) -> NFAStateType* {
+    auto* state = new_state();
+    m_root->add_positive_tagged_start_transition(tag, state);
+    return state;
 }
 
 template <typename NFAStateType>
