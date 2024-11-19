@@ -894,7 +894,7 @@ template <typename NFAStateType>
 template <typename NFAStateType>
 void RegexASTCapture<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAStateType* end_state)
         const {
-    NFAStateType* root = nfa->get_root();
+    auto* root = nfa->get_root();
     auto* capture_group_start_state = nfa->new_state();
     root->add_positive_tagged_start_transition(m_tag.get(), capture_group_start_state);
 
