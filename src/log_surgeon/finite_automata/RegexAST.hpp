@@ -902,7 +902,7 @@ void RegexASTCapture<NFAStateType>::add_to_nfa(RegexNFA<NFAStateType>* nfa, NFAS
     root->add_positive_tagged_start_transition(m_tag.get(), capture_group_start_state);
 
     auto* state_with_positive_tagged_end_transition
-            = nfa->new_state_with_positive_tagged_transition(m_tag.get(), end_state);
+            = nfa->new_state_with_positive_tagged_end_transition(m_tag.get(), end_state);
     nfa->set_root(capture_group_start_state);
     m_group_regex_ast->add_to_nfa_with_negative_tags(
             nfa,

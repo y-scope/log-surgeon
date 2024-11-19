@@ -41,7 +41,7 @@ public:
      * @param dest_state
      * @return NFAStateType*
      */
-    [[nodiscard]] auto new_state_with_positive_tagged_transition(
+    [[nodiscard]] auto new_state_with_positive_tagged_end_transition(
             Tag const* tag,
             NFAStateType const* dest_state
     ) -> NFAStateType*;
@@ -101,7 +101,7 @@ auto RegexNFA<NFAStateType>::new_state() -> NFAStateType* {
 }
 
 template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_transition(
+auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_end_transition(
         Tag const* tag,
         NFAStateType const* dest_state
 ) -> NFAStateType* {
