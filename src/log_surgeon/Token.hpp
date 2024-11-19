@@ -40,7 +40,7 @@ public:
     char const* m_buffer{nullptr};
     uint32_t m_buffer_size{0};
     uint32_t m_line{0};
-    std::vector<int> const* m_type_ids_ptr{nullptr};
+    std::vector<uint32_t> const* m_type_ids_ptr{nullptr};
     std::string m_wrap_around_string{};
 };
 }  // namespace log_surgeon

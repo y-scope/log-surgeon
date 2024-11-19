@@ -14,45 +14,17 @@
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/finite_automata/RegexDFA.hpp>
 #include <log_surgeon/finite_automata/RegexNFA.hpp>
+#include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/ParserInputBuffer.hpp>
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
-template <typename NFAStateType>
-class LexicalRule {
-public:
-    // Constructor
-    LexicalRule(
-            uint32_t const variable_id,
-            std::unique_ptr<finite_automata::RegexAST<NFAStateType>> regex
-    )
-            : m_variable_id(variable_id),
-              m_regex(std::move(regex)) {}
-
-    /**
-     * Adds AST representing the lexical rule to the NFA
-     * @param nfa
-     */
-    auto add_to_nfa(finite_automata::RegexNFA<NFAStateType>* nfa) const -> void;
-
-    [[nodiscard]] auto get_variable_id() const -> uint32_t { return m_variable_id; }
-
-    [[nodiscard]] auto get_regex() const -> finite_automata::RegexAST<NFAStateType>* {
-        return m_regex.get();
-    }
-
-private:
-    uint32_t m_variable_id;
-    std::unique_ptr<finite_automata::RegexAST<NFAStateType>> m_regex;
-};
-
 template <typename NFAStateType, typename DFAStateType>
 class Lexer {
 public:
-    // std::vector<int> can be declared as constexpr in c++20
-    static inline std::vector<int> const cTokenEndTypes = {(int)SymbolID::TokenEndID};
-    static inline std::vector<int> const cTokenUncaughtStringTypes
-            = {(int)SymbolID::TokenUncaughtStringID};
+    static inline std::vector<uint32_t> const cTokenEndTypes = {(uint32_t)SymbolId::TokenEnd};
+    static inline std::vector<uint32_t> const cTokenUncaughtStringTypes
+            = {(uint32_t)SymbolId::TokenUncaughtString};
 
     /**
      * Generate a DFA from an NFA
@@ -87,12 +59,6 @@ public:
      * Generate DFA for lexer
      */
     auto generate() -> void;
-
-    /**
-     * Generate DFA for a reverse lexer matching the reverse of the words in the
-     * original language
-     */
-    auto generate_reverse() -> void;
 
     /**
      * Reset the lexer to start a new lexing (reset buffers, reset vars tracking
@@ -183,8 +149,8 @@ private:
     uint32_t m_last_match_pos{0};
     uint32_t m_last_match_line{0};
     bool m_match{false};
-    std::vector<int> const* m_type_ids{nullptr};
-    std::set<int> m_type_ids_set;
+    std::vector<uint32_t> const* m_type_ids{nullptr};
+    std::set<uint32_t> m_type_ids_set;
     std::array<bool, cSizeOfByte> m_is_delimiter{false};
     std::array<bool, cSizeOfByte> m_is_first_char{false};
     std::vector<LexicalRule<NFAStateType>> m_rules;

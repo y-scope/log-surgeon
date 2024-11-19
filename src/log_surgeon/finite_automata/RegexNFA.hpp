@@ -1,118 +1,73 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP
 
-#include <algorithm>
-#include <array>
-#include <cassert>
 #include <cstdint>
-#include <map>
 #include <memory>
+#include <optional>
+#include <queue>
 #include <set>
-#include <stack>
+#include <string>
 #include <tuple>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include <fmt/core.h>
+
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
+#include <log_surgeon/finite_automata/RegexNFAState.hpp>
+#include <log_surgeon/LexicalRule.hpp>
 
 namespace log_surgeon::finite_automata {
-enum class RegexNFAStateType : uint8_t {
-    Byte,
-    UTF8
-};
-
-template <RegexNFAStateType state_type>
-class RegexNFAState {
-public:
-    using Tree = UnicodeIntervalTree<RegexNFAState*>;
-
-    auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
-
-    [[nodiscard]] auto is_accepting() const -> bool const& { return m_accepting; }
-
-    auto set_matching_variable_id(uint32_t const variable_id) -> void {
-        m_matching_variable_id = variable_id;
-    }
-
-    [[nodiscard]] auto get_matching_variable_id() const -> uint32_t {
-        return m_matching_variable_id;
-    }
-
-    auto set_epsilon_transitions(std::vector<RegexNFAState*>& epsilon_transitions) -> void {
-        m_epsilon_transitions = epsilon_transitions;
-    }
-
-    auto add_epsilon_transition(RegexNFAState* epsilon_transition) -> void {
-        m_epsilon_transitions.push_back(epsilon_transition);
-    }
-
-    auto clear_epsilon_transitions() -> void { m_epsilon_transitions.clear(); }
-
-    [[nodiscard]] auto get_epsilon_transitions() const -> std::vector<RegexNFAState*> const& {
-        return m_epsilon_transitions;
-    }
-
-    auto set_byte_transitions(uint8_t byte, std::vector<RegexNFAState*>& byte_transitions) -> void {
-        m_bytes_transitions[byte] = byte_transitions;
-    }
-
-    auto add_byte_transition(uint8_t byte, RegexNFAState* dest_state) -> void {
-        m_bytes_transitions[byte].push_back(dest_state);
-    }
-
-    auto clear_byte_transitions(uint8_t byte) -> void { m_bytes_transitions[byte].clear(); }
-
-    [[nodiscard]] auto get_byte_transitions(uint8_t byte
-    ) const -> std::vector<RegexNFAState*> const& {
-        return m_bytes_transitions[byte];
-    }
-
-    auto reset_tree_transitions() -> void { m_tree_transitions.reset(); }
-
-    auto get_tree_transitions() -> Tree const& { return m_tree_transitions; }
-
-    /**
-     Add dest_state to m_bytes_transitions if all values in interval are a byte, otherwise add
-     dest_state to m_tree_transitions
-     * @param interval
-     * @param dest_state
-     */
-    auto add_interval(Interval interval, RegexNFAState* dest_state) -> void;
-
-private:
-    bool m_accepting{false};
-    uint32_t m_matching_variable_id{0};
-    std::vector<RegexNFAState*> m_epsilon_transitions;
-    std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
-    // NOTE: We don't need m_tree_transitions for the `stateType ==
-    // RegexDFAStateType::Byte` case, so we use an empty class (`std::tuple<>`)
-    // in that case.
-    std::conditional_t<state_type == RegexNFAStateType::UTF8, Tree, std::tuple<>>
-            m_tree_transitions;
-};
-
-using RegexNFAByteState = RegexNFAState<RegexNFAStateType::Byte>;
-using RegexNFAUTF8State = RegexNFAState<RegexNFAStateType::UTF8>;
-
 // TODO: rename `RegexNFA` to `NFA`
 template <typename NFAStateType>
 class RegexNFA {
 public:
     using StateVec = std::vector<NFAStateType*>;
 
-    RegexNFA() : m_root{new_state()} {}
+    explicit RegexNFA(std::vector<LexicalRule<NFAStateType>> rules);
 
     /**
-     * Create a unique_ptr for an NFA state and add it to m_states
+     * Creates a unique_ptr for an NFA state with no tagged transitions and adds it to `m_states`.
      * @return NFAStateType*
      */
-    auto new_state() -> NFAStateType*;
+    [[nodiscard]] auto new_state() -> NFAStateType*;
 
     /**
-     * Reverse the NFA such that it matches on its reverse language
+     * Creates a unique_ptr for an NFA state with a positive tagged transition and adds it to
+     * `m_states`.
+     * @param tag
+     * @param dest_state
+     * @return NFAStateType*
      */
-    auto reverse() -> void;
+    [[nodiscard]] auto new_state_with_positive_tagged_transition(
+            Tag const* tag,
+            NFAStateType const* dest_state
+    ) -> NFAStateType*;
+
+    /**
+     * Creates a unique_ptr for an NFA state with a negative tagged transition and adds it to
+     * `m_states`.
+     * @param tags
+     * @param dest_state
+     * @return NFAStateType*
+     */
+    [[nodiscard]] auto new_state_with_negative_tagged_transition(
+            std::vector<Tag const*> tags,
+            NFAStateType const* dest_state
+    ) -> NFAStateType*;
+
+    /**
+     * @return A vector representing the traversal order of the NFA states using breadth-first
+     * search (BFS).
+     */
+    [[nodiscard]] auto get_bfs_traversal_order() const -> std::vector<NFAStateType const*>;
+
+    /**
+     * @return A string representation of the NFA.
+     */
+    [[nodiscard]] auto serialize() const -> std::string;
 
     auto add_root_interval(Interval interval, NFAStateType* dest_state) -> void {
         m_root->add_interval(interval, dest_state);
@@ -125,177 +80,104 @@ public:
 private:
     std::vector<std::unique_ptr<NFAStateType>> m_states;
     NFAStateType* m_root;
+    // Store the rules locally as they contain information needed by the NFA. E.g., transitions in
+    // the NFA point to tags in the rule ASTs.
+    std::vector<LexicalRule<NFAStateType>> m_rules;
 };
 
-template <RegexNFAStateType state_type>
-void RegexNFAState<state_type>::add_interval(Interval interval, RegexNFAState* dest_state) {
-    if (interval.first < cSizeOfByte) {
-        uint32_t const bound = std::min(interval.second, cSizeOfByte - 1);
-        for (uint32_t i = interval.first; i <= bound; i++) {
-            add_byte_transition(i, dest_state);
-        }
-        interval.first = bound + 1;
-    }
-    if constexpr (RegexNFAStateType::UTF8 == state_type) {
-        if (interval.second < cSizeOfByte) {
-            return;
-        }
-        std::unique_ptr<std::vector<typename Tree::Data>> overlaps
-                = m_tree_transitions.pop(interval);
-        for (typename Tree::Data const& data : *overlaps) {
-            uint32_t overlap_low = std::max(data.m_interval.first, interval.first);
-            uint32_t overlap_high = std::min(data.m_interval.second, interval.second);
-
-            std::vector<RegexNFAUTF8State*> tree_states = data.m_value;
-            tree_states.push_back(dest_state);
-            m_tree_transitions.insert(Interval(overlap_low, overlap_high), tree_states);
-            if (data.m_interval.first < interval.first) {
-                m_tree_transitions.insert(
-                        Interval(data.m_interval.first, interval.first - 1),
-                        data.m_value
-                );
-            } else if (data.m_interval.first > interval.first) {
-                m_tree_transitions.insert(
-                        Interval(interval.first, data.m_interval.first - 1),
-                        {dest_state}
-                );
-            }
-            if (data.m_interval.second > interval.second) {
-                m_tree_transitions.insert(
-                        Interval(interval.second + 1, data.m_interval.second),
-                        data.m_value
-                );
-            }
-            interval.first = data.m_interval.second + 1;
-        }
-        if (interval.first != 0 && interval.first <= interval.second) {
-            m_tree_transitions.insert(interval, {dest_state});
-        }
-    }
-}
-
 template <typename NFAStateType>
-void RegexNFA<NFAStateType>::reverse() {
-    // add new end with all accepting pointing to it
-    NFAStateType* new_end = new_state();
-    for (std::unique_ptr<NFAStateType>& state_ptr : m_states) {
-        if (state_ptr->is_accepting()) {
-            state_ptr->add_epsilon_transition(new_end);
-            state_ptr->set_accepting(false);
-        }
+RegexNFA<NFAStateType>::RegexNFA(std::vector<LexicalRule<NFAStateType>> rules)
+        : m_root{new_state()},
+          m_rules{std::move(rules)} {
+    for (auto const& rule : m_rules) {
+        rule.add_to_nfa(this);
     }
-    // move edges from NFA to maps
-    std::map<std::pair<NFAStateType*, NFAStateType*>, std::vector<uint8_t>> byte_edges;
-    std::map<std::pair<NFAStateType*, NFAStateType*>, bool> epsilon_edges;
-    for (std::unique_ptr<NFAStateType>& src_state_ptr : m_states) {
-        // TODO: handle utf8 case with if constexpr (RegexNFAUTF8State ==
-        // NFAStateType) ~ don't really need this though
-        for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
-            for (NFAStateType* dest_state_ptr : src_state_ptr->get_byte_transitions(byte)) {
-                std::pair<NFAStateType*, NFAStateType*> edge{src_state_ptr.get(), dest_state_ptr};
-                byte_edges[edge].push_back(byte);
-            }
-            src_state_ptr->clear_byte_transitions(byte);
-        }
-        for (NFAStateType* dest_state_ptr : src_state_ptr->get_epsilon_transitions()) {
-            epsilon_edges
-                    [std::pair<NFAStateType*, NFAStateType*>(src_state_ptr.get(), dest_state_ptr)]
-                    = true;
-        }
-        src_state_ptr->clear_epsilon_transitions();
-    }
-
-    // insert edges from maps back into NFA, but in the reverse direction
-    for (std::unique_ptr<NFAStateType>& src_state_ptr : m_states) {
-        for (std::unique_ptr<NFAStateType>& dest_state_ptr : m_states) {
-            std::pair<NFAStateType*, NFAStateType*> key(src_state_ptr.get(), dest_state_ptr.get());
-            auto byte_it = byte_edges.find(key);
-            if (byte_it != byte_edges.end()) {
-                for (uint8_t byte : byte_it->second) {
-                    dest_state_ptr->add_byte_transition(byte, src_state_ptr.get());
-                }
-            }
-            auto epsilon_it = epsilon_edges.find(key);
-            if (epsilon_it != epsilon_edges.end()) {
-                dest_state_ptr->add_epsilon_transition(src_state_ptr.get());
-            }
-        }
-    }
-
-    // propagate matching_variable_id from old accepting m_states
-    for (NFAStateType* old_accepting_state : new_end->get_epsilon_transitions()) {
-        auto const matching_variable_id = old_accepting_state->get_matching_variable_id();
-        std::stack<NFAStateType*> unvisited_states;
-        std::set<NFAStateType*> visited_states;
-        unvisited_states.push(old_accepting_state);
-        while (!unvisited_states.empty()) {
-            NFAStateType* current_state = unvisited_states.top();
-            current_state->set_matching_variable_id(matching_variable_id);
-            unvisited_states.pop();
-            visited_states.insert(current_state);
-            for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
-                std::vector<NFAStateType*> byte_transitions
-                        = current_state->get_byte_transitions(byte);
-                for (NFAStateType* next_state : byte_transitions) {
-                    if (false == visited_states.contains(next_state)) {
-                        unvisited_states.push(next_state);
-                    }
-                }
-            }
-            for (NFAStateType* next_state : current_state->get_epsilon_transitions()) {
-                if (false == visited_states.contains(next_state)) {
-                    unvisited_states.push(next_state);
-                }
-            }
-        }
-    }
-    for (int32_t i = m_states.size() - 1; i >= 0; --i) {
-        std::unique_ptr<NFAStateType>& src_state_unique_ptr = m_states[i];
-        NFAStateType* src_state = src_state_unique_ptr.get();
-        auto const matching_variable_id = src_state->get_matching_variable_id();
-        for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
-            std::vector<NFAStateType*> byte_transitions = src_state->get_byte_transitions(byte);
-            for (int32_t j = byte_transitions.size() - 1; j >= 0; --j) {
-                NFAStateType*& dest_state = byte_transitions[j];
-                if (dest_state == m_root) {
-                    dest_state = new_state();
-                    assert(dest_state != nullptr);
-                    dest_state->set_matching_variable_id(matching_variable_id);
-                    dest_state->set_accepting(true);
-                }
-            }
-            src_state->clear_byte_transitions(byte);
-            src_state->set_byte_transitions(byte, byte_transitions);
-        }
-        std::vector<NFAStateType*> epsilon_transitions = src_state->get_epsilon_transitions();
-        for (int32_t j = epsilon_transitions.size() - 1; j >= 0; --j) {
-            NFAStateType*& dest_state = epsilon_transitions[j];
-            if (dest_state == m_root) {
-                dest_state = new_state();
-                dest_state->set_matching_variable_id(src_state->get_matching_variable_id());
-                dest_state->set_accepting(true);
-            }
-        }
-        src_state->clear_epsilon_transitions();
-        src_state->set_epsilon_transitions(epsilon_transitions);
-    }
-
-    for (uint32_t i = 0; i < m_states.size(); i++) {
-        if (m_states[i].get() == m_root) {
-            m_states.erase(m_states.begin() + i);
-            break;
-        }
-    }
-    // start from the end
-    m_root = new_end;
 }
 
 template <typename NFAStateType>
 auto RegexNFA<NFAStateType>::new_state() -> NFAStateType* {
-    std::unique_ptr<NFAStateType> ptr = std::make_unique<NFAStateType>();
-    NFAStateType* state = ptr.get();
-    m_states.push_back(std::move(ptr));
-    return state;
+    m_states.emplace_back(std::make_unique<NFAStateType>());
+    return m_states.back().get();
+}
+
+template <typename NFAStateType>
+auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_transition(
+        Tag const* tag,
+        NFAStateType const* dest_state
+) -> NFAStateType* {
+    m_states.emplace_back(std::make_unique<NFAStateType>(tag, dest_state));
+    return m_states.back().get();
+}
+
+template <typename NFAStateType>
+auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transition(
+        std::vector<Tag const*> tags,
+        NFAStateType const* dest_state
+) -> NFAStateType* {
+    m_states.emplace_back(std::make_unique<NFAStateType>(std::move(tags), dest_state));
+    return m_states.back().get();
+}
+
+template <typename NFAStateType>
+auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAStateType const*> {
+    std::queue<NFAStateType const*> state_queue;
+    std::unordered_set<NFAStateType const*> visited_states;
+    std::vector<NFAStateType const*> visited_order;
+    visited_states.reserve(m_states.size());
+    visited_order.reserve(m_states.size());
+
+    auto add_to_queue_and_visited
+            = [&state_queue, &visited_states](NFAStateType const* dest_state) {
+                  if (visited_states.insert(dest_state).second) {
+                      state_queue.push(dest_state);
+                  }
+              };
+
+    add_to_queue_and_visited(m_root);
+    while (false == state_queue.empty()) {
+        auto const* current_state = state_queue.front();
+        visited_order.push_back(current_state);
+        state_queue.pop();
+        // TODO: handle the utf8 case
+        for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
+            for (auto const* dest_state : current_state->get_byte_transitions(idx)) {
+                add_to_queue_and_visited(dest_state);
+            }
+        }
+        for (auto const* dest_state : current_state->get_epsilon_transitions()) {
+            add_to_queue_and_visited(dest_state);
+        }
+        for (auto const& positive_tagged_transition :
+             current_state->get_positive_tagged_transitions())
+        {
+            add_to_queue_and_visited(positive_tagged_transition.get_dest_state());
+        }
+        auto const& optional_negative_tagged_transition
+                = current_state->get_negative_tagged_transition();
+        if (optional_negative_tagged_transition.has_value()) {
+            add_to_queue_and_visited(optional_negative_tagged_transition.value().get_dest_state());
+        }
+    }
+    return visited_order;
+}
+
+template <typename NFAStateType>
+auto RegexNFA<NFAStateType>::serialize() const -> std::string {
+    auto const traversal_order = get_bfs_traversal_order();
+
+    std::unordered_map<NFAStateType const*, uint32_t> state_ids;
+    for (auto const* state : traversal_order) {
+        state_ids.emplace(state, state_ids.size());
+    }
+
+    std::vector<std::string> serialized_states;
+    for (auto const* state : traversal_order) {
+        // `state_ids` is well-formed as its generated from `get_bfs_traversal_order` so we can
+        // safely assume `state->serialize(state_ids)` will return a valid value.
+        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+        serialized_states.emplace_back(state->serialize(state_ids).value());
+    }
+    return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
 }
 }  // namespace log_surgeon::finite_automata
 
