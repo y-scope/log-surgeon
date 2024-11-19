@@ -49,7 +49,8 @@ public:
         return m_matching_variable_id;
     }
 
-    auto add_positive_tagged_start_transition(Tag const* tag, RegexNFAState* dest_state) -> void {
+    auto
+    add_positive_tagged_start_transition(Tag const* tag, RegexNFAState const* dest_state) -> void {
         m_positive_tagged_start_transitions.emplace_back(tag, dest_state);
     }
 
