@@ -139,7 +139,7 @@ auto RegexNFA<NFAStateType>::new_capture_group_start_states(
     auto* start_state = new_state();
     m_root->add_positive_tagged_start_transition(tag, start_state);
 
-    auto* end_state = new_state_with_positive_tagged_transition(tag, dest_state);
+    auto* end_state = new_state_with_positive_tagged_end_transition(tag, dest_state);
 
     return {start_state, end_state};
 }
