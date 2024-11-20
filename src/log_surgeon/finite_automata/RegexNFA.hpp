@@ -66,7 +66,7 @@ public:
      * - A new state with a positive tagged start transition from `m_root`.
      * - A new state with a positive tagged end transition to `dest_state`.
      */
-    [[nodiscard]] auto new_start_and_end_states_with_positively_tagged_transitions(
+    [[nodiscard]] auto new_start_and_end_states_with_positive_tagged_transitions(
             Tag const* tag,
             NFAStateType const* dest_state
     ) -> std::pair<NFAStateType*, NFAStateType*>;
@@ -132,7 +132,7 @@ auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transition(
 }
 
 template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::new_start_and_end_states_with_positively_tagged_transitions(
+auto RegexNFA<NFAStateType>::new_start_and_end_states_with_positive_tagged_transitions(
         Tag const* tag,
         NFAStateType const* dest_state
 ) -> std::pair<NFAStateType*, NFAStateType*> {

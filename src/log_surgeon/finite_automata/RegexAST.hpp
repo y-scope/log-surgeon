@@ -899,7 +899,7 @@ auto RegexASTCapture<NFAStateType>::add_to_nfa(
     // root --(`m_tag` start)--> capture_start_state --> [`m_group_regex_ast` NFA]
     // --(`m_negative_tags`)--> capture_end_state --(`m_tag` end)--> dest_state
     auto [capture_start_state, capture_end_state]
-            = nfa->new_start_and_end_states_with_positively_tagged_transitions(
+            = nfa->new_start_and_end_states_with_positive_tagged_transitions(
                     m_tag.get(),
                     dest_state
             );
