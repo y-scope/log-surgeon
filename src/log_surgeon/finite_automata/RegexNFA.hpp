@@ -66,10 +66,8 @@ public:
      * @param dest_state
      * @return std::pair<NFAStateType*, NFAStateType*>
      */
-    [[nodiscard]] auto new_capture_group_states(
-            Tag const* tag,
-            NFAStateType const* dest_state
-    ) -> std::pair<NFAStateType*, NFAStateType*>;
+    [[nodiscard]] auto new_capture_group_states(Tag const* tag, NFAStateType const* dest_state)
+            -> std::pair<NFAStateType*, NFAStateType*>;
 
     /**
      * @return A vector representing the traversal order of the NFA states using breadth-first
