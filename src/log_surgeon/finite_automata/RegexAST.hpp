@@ -892,10 +892,10 @@ template <typename NFAStateType>
 }
 
 template <typename NFAStateType>
-void RegexASTCapture<NFAStateType>::add_to_nfa(
+auto RegexASTCapture<NFAStateType>::add_to_nfa(
         RegexNFA<NFAStateType>* nfa,
         NFAStateType* dest_state
-) const {
+) const -> void {
     // root --(pos_tagged_start_transition)--> capture_group_start_state -->
     // [inner capture group NFA] --(neg_tagged_transition)--> neg_state -->
     // state_with_positive_tagged_end_transition --(pos_tagged_end_transition)--> end_state
