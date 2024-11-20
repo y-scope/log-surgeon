@@ -59,12 +59,12 @@ public:
     ) -> NFAStateType*;
 
     /**
-     * Add two NFA states for a capture group:
-     * 1. A start state: `m_root` --(start `tag`)--> start_state.
-     * 2. An end state: end_state --(end `tag`)--> `dest_state`.
-     * @param tag
+     * Creates the start and end states for a capture group.
+     * @param tag The tag associated with the capture group.
      * @param dest_state
-     * @return std::pair<NFAStateType*, NFAStateType*>
+     * @return A pair of states:
+     * - A new state with a positive tagged start transition from `m_root`.
+     * - A new state with a positive tagged end transition to `dest_state`.
      */
     [[nodiscard]] auto new_capture_group_states(Tag const* tag, NFAStateType const* dest_state)
             -> std::pair<NFAStateType*, NFAStateType*>;
@@ -138,7 +138,6 @@ auto RegexNFA<NFAStateType>::new_capture_group_states(
     m_root->add_positive_tagged_start_transition(tag, start_state);
 
     auto* end_state = new_state_with_positive_tagged_end_transition(tag, dest_state);
-
     return {start_state, end_state};
 }
 
