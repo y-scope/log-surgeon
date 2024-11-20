@@ -187,26 +187,26 @@ auto RegexNFAState<state_type>::serialize(
         epsilon_transitions.emplace_back(std::to_string(state_ids.at(dest_state)));
     }
 
-    std::vector<std::string> positive_tagged_start_transition_strings;
+    std::vector<std::string> serialized_positive_tagged_start_transitions;
     for (auto const& positive_tagged_start_transition : m_positive_tagged_start_transitions) {
         auto const optional_serialized_positive_start_transition
                 = positive_tagged_start_transition.serialize(state_ids);
         if (false == optional_serialized_positive_start_transition.has_value()) {
             return std::nullopt;
         }
-        positive_tagged_start_transition_strings.emplace_back(
+        serialized_positive_tagged_start_transitions.emplace_back(
                 optional_serialized_positive_start_transition.value()
         );
     }
 
-    std::string positive_tagged_end_transition_string;
+    std::string serialized_positive_tagged_end_transition;
     if (m_positive_tagged_end_transition.has_value()) {
         auto const optional_serialized_positive_end_transition
                 = m_positive_tagged_end_transition.value().serialize(state_ids);
         if (false == optional_serialized_positive_end_transition.has_value()) {
             return std::nullopt;
         }
-        positive_tagged_end_transition_string = optional_serialized_positive_end_transition.value();
+        serialized_positive_tagged_end_transition = optional_serialized_positive_end_transition.value();
     }
 
     std::string negative_tagged_transition_string;
@@ -230,8 +230,8 @@ auto RegexNFAState<state_type>::serialize(
             accepting_tag_string,
             fmt::join(byte_transitions, ","),
             fmt::join(epsilon_transitions, ","),
-            fmt::join(positive_tagged_start_transition_strings, ","),
-            positive_tagged_end_transition_string,
+            fmt::join(serialized_positive_tagged_start_transitions, ","),
+            serialized_positive_tagged_end_transition,
             negative_tagged_transition_string
     );
 }
