@@ -66,7 +66,7 @@ public:
      * @param dest_state
      * @return std::pair<NFAStateType*, NFAStateType*>
      */
-    [[nodiscard]] auto new_capture_group_start_states(
+    [[nodiscard]] auto new_capture_group_states(
             Tag const* tag,
             NFAStateType const* dest_state
     ) -> std::pair<NFAStateType*, NFAStateType*>;
@@ -132,7 +132,7 @@ auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transition(
 }
 
 template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::new_capture_group_start_states(
+auto RegexNFA<NFAStateType>::new_capture_group_states(
         Tag const* tag,
         NFAStateType const* dest_state
 ) -> std::pair<NFAStateType*, NFAStateType*> {
