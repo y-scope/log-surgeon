@@ -206,7 +206,8 @@ auto RegexNFAState<state_type>::serialize(
         if (false == optional_serialized_positive_end_transition.has_value()) {
             return std::nullopt;
         }
-        serialized_positive_tagged_end_transition = optional_serialized_positive_end_transition.value();
+        serialized_positive_tagged_end_transition
+                = optional_serialized_positive_end_transition.value();
     }
 
     std::string negative_tagged_transition_string;
