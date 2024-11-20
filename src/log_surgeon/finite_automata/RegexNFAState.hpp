@@ -59,7 +59,7 @@ public:
         return m_positive_tagged_start_transitions;
     }
 
-    [[nodiscard]] auto get_positive_tagged_end_transitions(
+    [[nodiscard]] auto get_positive_tagged_end_transition(
     ) const -> std::optional<PositiveTaggedTransition<RegexNFAState>> const& {
         return m_positive_tagged_end_transition;
     }

@@ -180,7 +180,7 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAS
         }
 
         auto const& optional_positive_tagged_end_transition
-                = current_state->get_positive_tagged_end_transitions();
+                = current_state->get_positive_tagged_end_transition();
         if (optional_positive_tagged_end_transition.has_value()) {
             add_to_queue_and_visited(optional_positive_tagged_end_transition.value().get_dest_state(
             ));
