@@ -39,7 +39,7 @@ public:
      * `m_states`.
      * @param tag
      * @param dest_state
-     * @return NFAStateType*
+     * @return A new state with a positive tagged end transition to `dest_state`.
      */
     [[nodiscard]] auto new_state_with_positive_tagged_end_transition(
             Tag const* tag,
