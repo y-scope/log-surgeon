@@ -899,15 +899,15 @@ auto RegexASTCapture<NFAStateType>::add_to_nfa(
     // root --(pos_tagged_start_transition)--> capture_group_start_state -->
     // [inner capture group NFA] --(neg_tagged_transition)--> neg_state -->
     // state_with_positive_tagged_end_transition --(pos_tagged_end_transition)--> end_state
-    auto [start_state, end_state]
+    auto [capture_start_state, capture_end_state]
             = nfa->new_start_and_end_states_with_positively_tagged_transitions(
                     m_tag.get(),
                     dest_state
             );
 
     auto* initial_root = nfa->get_root();
-    nfa->set_root(start_state);
-    m_group_regex_ast->add_to_nfa_with_negative_tags(nfa, end_state);
+    nfa->set_root(capture_start_state);
+    m_group_regex_ast->add_to_nfa_with_negative_tags(nfa, capture_end_state);
     nfa->set_root(initial_root);
 }
 
