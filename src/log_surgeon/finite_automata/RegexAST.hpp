@@ -896,8 +896,37 @@ auto RegexASTCapture<NFAStateType>::add_to_nfa(
         RegexNFA<NFAStateType>* nfa,
         NFAStateType* dest_state
 ) const -> void {
-    // root --(`m_tag` start)--> capture_start_state --> [`m_group_regex_ast` NFA]
-    // --(`m_negative_tags`)--> capture_end_state --(`m_tag` end)--> dest_state
+    // TODO: move this into a documentation file in the future, and reference it here.
+    // The NFA constructed for a capture group follows the structure below, with tagged transitions
+    // explicitly labeled for clarity:
+    //         +---------------------+
+    //         |       `m_root`      |
+    //         +---------------------+
+    //                    | `m_tag` start
+    //                    | (positive tagged start transition)
+    //                    v
+    //         +---------------------+
+    //         |`capture_start_state`|
+    //         +---------------------+
+    //                    |
+    //                    | (epsilon transition)
+    //                    v
+    //         +---------------------+
+    //         | `m_group_regex_ast` |
+    //         |    (nested NFA)     |
+    //         +---------------------+
+    //                    | `m_negative_tags`
+    //                    | (negative tagged transition)
+    //                    v
+    //         +---------------------+
+    //         | `capture_end_state` |
+    //         +---------------------+
+    //                    | `m_tag` end
+    //                    | (positive tagged end transition)
+    //                    v
+    //         +---------------------+
+    //         |     `dest_state`    |
+    //         +---------------------+
     auto [capture_start_state, capture_end_state]
             = nfa->new_start_and_end_states_with_positive_tagged_transitions(
                     m_tag.get(),
