@@ -35,13 +35,13 @@ public:
     [[nodiscard]] auto new_state() -> NFAStateType*;
 
     /**
-     * Creates a unique_ptr for an NFA state with a positive tagged transition and adds it to
+     * Creates a unique_ptr for an NFA state with a positive tagged end transition and adds it to
      * `m_states`.
      * @param tag
      * @param dest_state
-     * @return NFAStateType*
+     * @return A new state with a positive tagged end transition to `dest_state`.
      */
-    [[nodiscard]] auto new_state_with_positive_tagged_transition(
+    [[nodiscard]] auto new_state_with_positive_tagged_end_transition(
             Tag const* tag,
             NFAStateType const* dest_state
     ) -> NFAStateType*;
@@ -57,6 +57,19 @@ public:
             std::vector<Tag const*> tags,
             NFAStateType const* dest_state
     ) -> NFAStateType*;
+
+    /**
+     * Creates the start and end states for a capture group.
+     * @param tag The tag associated with the capture group.
+     * @param dest_state
+     * @return A pair of states:
+     * - A new state with a positive tagged start transition from `m_root`.
+     * - A new state with a positive tagged end transition to `dest_state`.
+     */
+    [[nodiscard]] auto new_start_and_end_states_with_positive_tagged_transitions(
+            Tag const* tag,
+            NFAStateType const* dest_state
+    ) -> std::pair<NFAStateType*, NFAStateType*>;
 
     /**
      * @return A vector representing the traversal order of the NFA states using breadth-first
@@ -101,7 +114,7 @@ auto RegexNFA<NFAStateType>::new_state() -> NFAStateType* {
 }
 
 template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_transition(
+auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_end_transition(
         Tag const* tag,
         NFAStateType const* dest_state
 ) -> NFAStateType* {
@@ -116,6 +129,18 @@ auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transition(
 ) -> NFAStateType* {
     m_states.emplace_back(std::make_unique<NFAStateType>(std::move(tags), dest_state));
     return m_states.back().get();
+}
+
+template <typename NFAStateType>
+auto RegexNFA<NFAStateType>::new_start_and_end_states_with_positive_tagged_transitions(
+        Tag const* tag,
+        NFAStateType const* dest_state
+) -> std::pair<NFAStateType*, NFAStateType*> {
+    auto* start_state = new_state();
+    m_root->add_positive_tagged_start_transition(tag, start_state);
+
+    auto* end_state = new_state_with_positive_tagged_end_transition(tag, dest_state);
+    return {start_state, end_state};
 }
 
 template <typename NFAStateType>
@@ -147,11 +172,19 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAS
         for (auto const* dest_state : current_state->get_epsilon_transitions()) {
             add_to_queue_and_visited(dest_state);
         }
-        for (auto const& positive_tagged_transition :
-             current_state->get_positive_tagged_transitions())
+        for (auto const& positive_tagged_start_transition :
+             current_state->get_positive_tagged_start_transitions())
         {
-            add_to_queue_and_visited(positive_tagged_transition.get_dest_state());
+            add_to_queue_and_visited(positive_tagged_start_transition.get_dest_state());
         }
+
+        auto const& optional_positive_tagged_end_transition
+                = current_state->get_positive_tagged_end_transition();
+        if (optional_positive_tagged_end_transition.has_value()) {
+            add_to_queue_and_visited(optional_positive_tagged_end_transition.value().get_dest_state(
+            ));
+        }
+
         auto const& optional_negative_tagged_transition
                 = current_state->get_negative_tagged_transition();
         if (optional_negative_tagged_transition.has_value()) {
