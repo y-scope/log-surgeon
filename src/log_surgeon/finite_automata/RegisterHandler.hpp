@@ -94,7 +94,8 @@ public:
      * @throws std::out_of_range("Register index out-of-bounds")
 
      */
-    [[nodiscard]] auto get_reversed_positions(uint32_t const register_index) const -> std::vector<int32_t> {
+    [[nodiscard]] auto get_reversed_positions(uint32_t const register_index
+    ) const -> std::vector<int32_t> {
         if (register_index >= m_registers.size()) {
             throw std::out_of_range("Register index out of range");
         }

@@ -11,7 +11,7 @@ namespace log_surgeon::finite_automata {
 
     std::vector<int32_t> reversed_positions;
     auto current_index = index;
-    while(0 < current_index) {
+    while (0 < current_index) {
         auto const& current_node = m_nodes[current_index];
         reversed_positions.push_back(current_node.get_position());
         current_index = current_node.get_predecessor_index();
