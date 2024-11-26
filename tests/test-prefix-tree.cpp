@@ -27,10 +27,26 @@ TEST_CASE("Prefix tree operations", "[PrefixTree]") {
 
     SECTION("Invalid index access throws correctly") {
         PrefixTree tree;
-        REQUIRE_THROWS_AS(tree.get_reversed_positions(1), std::invalid_argument);
+        REQUIRE_THROWS_AS(tree.get_reversed_positions(1), std::out_of_range);
 
         tree.insert(0, 4);
-        REQUIRE_THROWS_AS(tree.get_reversed_positions(2), std::invalid_argument);
-        REQUIRE_THROWS_AS(tree.get_reversed_positions(3), std::invalid_argument);
+        REQUIRE_THROWS_AS(tree.get_reversed_positions(2), std::out_of_range);
+        REQUIRE_THROWS_AS(tree.get_reversed_positions(3), std::out_of_range);
+    }
+
+    SECTION("Set position for a valid index works correctly") {
+        PrefixTree tree;
+        uint32_t index_1 = tree.insert(0, 4);
+        tree.set(index_1, 10);
+        REQUIRE(tree.get_reversed_positions(index_1) == std::vector<int32_t>({10}));
+
+        uint32_t index_2 = tree.insert(index_1, 7);
+        tree.set(index_2, 12);
+        REQUIRE(tree.get_reversed_positions(index_2) == std::vector<int32_t>({12, 10}));
+    }
+
+    SECTION("Set position for an invalid index throws correctly") {
+        PrefixTree tree;
+        REQUIRE_THROWS_AS(tree.set(100, 20), std::out_of_range);
     }
 }
