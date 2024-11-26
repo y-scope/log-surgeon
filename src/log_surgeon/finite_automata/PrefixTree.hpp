@@ -53,7 +53,7 @@ public:
     }
 
     /**
-     * @param index 
+     * @param index
      * @param position
      * @throw std::out_of_range("Prefix tree index out-of-bounds.");
      */
@@ -61,7 +61,7 @@ public:
         if (m_nodes.size() <= index) {
             throw std::out_of_range("Prefix tree index out-of-bounds");
         }
-        
+
         m_nodes[index].set_position(position);
     }
 
