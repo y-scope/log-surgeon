@@ -2,7 +2,8 @@
 #define LOG_SURGEON_FINITE_AUTOMATA_REGISTER
 
 #include <cstdint>
-
+#include <vector>
+#include <unordered_map>
 #include <log_surgeon/finite_automata/Tag.hpp>
 
 namespace log_surgeon::finite_automata {
@@ -20,9 +21,7 @@ public:
 
     [[nodiscard]] auto get_tag() const -> Tag* { return m_tag; }
 
-    [[nodiscard]] auto get_last_position() const -> uint32_t { return positions.back(); }
-
-    [[nodiscard]] auto get_all_positions() const -> std::vector<uint32_t> const& {
+    [[nodiscard]] auto get_positions() const -> std::vector<uint32_t> const& {
         return positions;
     }
 
