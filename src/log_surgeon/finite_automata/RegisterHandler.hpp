@@ -2,7 +2,6 @@
 #define LOG_SURGEON_FINITE_AUTOMATA_REGISTER_HANDLER_HPP
 
 #include <cstdint>
-#include <unordered_map>
 #include <vector>
 
 #include <log_surgeon/finite_automata/PrefixTree.hpp>
@@ -39,7 +38,7 @@ private:
 class RegisterHandler {
 public:
     void add_register(uint32_t const predecessor_index, int32_t const position) {
-        auto const index = prefix_tree.insert(predecessor_index, position);
+        auto const index = m_prefix_tree.insert(predecessor_index, position);
         m_registers.emplace_back(index);
     }
 
@@ -54,7 +53,7 @@ public:
         }
 
         auto const tree_index = m_registers[register_index].get_index();
-        prefix_tree.set(tree_index, position);
+        m_prefix_tree.set(tree_index, position);
     }
 
     /**
@@ -83,7 +82,7 @@ public:
         }
 
         uint32_t const tree_index = m_registers[register_index].get_index();
-        auto const new_index = prefix_tree.insert(tree_index, position);
+        auto const new_index = m_prefix_tree.insert(tree_index, position);
         m_registers[register_index].set_index(new_index);
     }
 
@@ -99,11 +98,11 @@ public:
         }
 
         uint32_t const tree_index = m_registers[register_index].get_index();
-        return prefix_tree.get_reversed_positions(tree_index);
+        return m_prefix_tree.get_reversed_positions(tree_index);
     }
 
 private:
-    PrefixTree prefix_tree;
+    PrefixTree m_prefix_tree;
     std::vector<Register> m_registers;
 };
 }  // namespace log_surgeon::finite_automata
