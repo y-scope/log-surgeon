@@ -59,7 +59,7 @@ TEST_CASE("RegisterHandler tests", "[RegisterHandler]") {
         REQUIRE(std::vector<int32_t>{{7, 5}} == handler.get_reversed_positions(0));
     }
 
-    SECTION("Throws out-of-bounds correctly") {
+    SECTION("Throws out of range correctly") {
         REQUIRE_THROWS_AS(handler.set_register(10, 5), std::out_of_range);
         REQUIRE_THROWS_AS(handler.copy_register(10, 1), std::out_of_range);
         REQUIRE_THROWS_AS(handler.copy_register(0, 10), std::out_of_range);

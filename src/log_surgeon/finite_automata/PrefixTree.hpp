@@ -44,9 +44,16 @@ public:
     PrefixTree() : m_nodes{{0, -1}} {}
 
     /**
-     * @return The index of the newly inserted node in the tree.
+     * @param predecessor_index Index of the inserted node's predecessor in the prefix tree
+     * @param position The position in the lexed string
+     * @return The index of the newly inserted node in the tree
+     * @throw std::out_of_range if the predecessor index is out of range
      */
     uint32_t insert(uint32_t const predecessor_index, int32_t const position) {
+        if (m_nodes.size() <= predecessor_index) {
+            throw std::out_of_range("Predecessor index out of range");
+        }
+
         m_nodes.emplace_back(predecessor_index, position);
         return m_nodes.size() - 1;
     }
@@ -54,11 +61,11 @@ public:
     /**
      * @param index
      * @param position
-     * @throw std::out_of_range("Prefix tree index out-of-bounds.");
+     * @throw std::out_of_range if prefix tree index is out of range
      */
     auto set(uint32_t const index, int32_t const position) -> void {
         if (m_nodes.size() <= index) {
-            throw std::out_of_range("Prefix tree index out-of-bounds");
+            throw std::out_of_range("Prefix tree index out of range");
         }
 
         m_nodes[index].set_position(position);
@@ -69,7 +76,7 @@ public:
      * root.
      * @param index The index of the node to start the tarversal from.
      * @return A vector containing positions in reverse order from the given index to root.
-     * @throw std::out_of_range if the index is out of bounds
+     * @throw std::out_of_range if the index is out of range
      */
     [[nodiscard]] auto get_reversed_positions(uint32_t index) const -> std::vector<int32_t>;
 

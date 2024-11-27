@@ -46,7 +46,7 @@ public:
     /**
      * @param register_index
      * @param position
-     * @throw std::out_of_range if the register index is out of bounds
+     * @throw std::out_of_range if the register index is out of range
      */
     void set_register(uint32_t const register_index, int32_t const position) {
         if (m_registers.size() <= register_index) {
@@ -60,7 +60,7 @@ public:
     /**
      * @param dest_register_index
      * @param source_register_index
-     * @throw std::out_of_range if the register index is out of bounds
+     * @throw std::out_of_range if the register index is out of range
      */
     void copy_register(uint32_t const dest_register_index, uint32_t const source_register_index) {
         if (m_registers.size() <= source_register_index
@@ -75,7 +75,7 @@ public:
     /**
      * @param register_index
      * @param position
-     * @throw std::out_of_range if the register index is out of bounds
+     * @throw std::out_of_range if the register index is out of range
      */
     void append_position(uint32_t register_index, int32_t position) {
         if (register_index >= m_registers.size()) {
@@ -90,7 +90,7 @@ public:
     /**
      * @param register_index
      * @return Vector of positions representing the history of the given register.
-     * @throw std::out_of_range if the register index is out of bounds
+     * @throw std::out_of_range if the register index is out of range
 
      */
     [[nodiscard]] auto get_reversed_positions(uint32_t const register_index
