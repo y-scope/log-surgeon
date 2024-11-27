@@ -13,8 +13,7 @@ namespace log_surgeon::finite_automata {
  * was matched in the lexxed string, as well as the index of the prefix tree node that stores the
  * previous time the tag was matched.
  *
- * Note: m_position is -1 when a tag is
- * unmatched.
+ * Note: m_position is -1 to indicate that a tag is currently unmatched in the lexed string.
  */
 class PrefixTreeNode {
 public:
