@@ -73,7 +73,7 @@ public:
     /**
      * Retrieves a vector of positions in reverse order by traversing from the given index to the
      * root.
-     * @param index The index of the node to start the tarversal from.
+     * @param index The index of the node to start the traversal from.
      * @return A vector containing positions in reverse order from the given index to root.
      * @throw std::out_of_range if the index is out of range
      */
