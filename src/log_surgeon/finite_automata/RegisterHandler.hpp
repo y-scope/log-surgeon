@@ -77,7 +77,7 @@ public:
      * @param position
      * @throw std::out_of_range if the register index is out of range
      */
-    void append_position(uint32_t register_index, int32_t position) {
+    void append_position(uint32_t const register_index, int32_t const position) {
         if (register_index >= m_registers.size()) {
             throw std::out_of_range("Register index out of range");
         }
