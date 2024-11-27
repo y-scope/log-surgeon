@@ -1,5 +1,5 @@
-#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGISTER
-#define LOG_SURGEON_FINITE_AUTOMATA_REGISTER
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGISTER_HANDLER
+#define LOG_SURGEON_FINITE_AUTOMATA_REGISTER_HANDLER
 
 #include <cstdint>
 #include <unordered_map>
@@ -110,4 +110,4 @@ private:
 };
 }  // namespace log_surgeon::finite_automata
 
-#endif  // LOG_SURGEON_FINITE_AUTOMATA_REGISTER
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_REGISTER_HANDLER
