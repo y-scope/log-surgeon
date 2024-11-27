@@ -33,7 +33,7 @@ TEST_CASE("Prefix tree operations", "[PrefixTree]") {
         uint32_t index_5 = tree.insert(0, -1);
         uint32_t index_6 = tree.insert(index_5, -100);
         REQUIRE(std::vector<int32_t>{-1} == tree.get_reversed_positions(index_5));
-        REQUIRE(std::vector<int32_t>{-1, -100} == tree.get_reversed_positions(index_6));
+        REQUIRE(std::vector<int32_t>{-100, -1} == tree.get_reversed_positions(index_6));
     }
 
     SECTION("Invalid index access throws correctly") {
