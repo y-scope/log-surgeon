@@ -1,9 +1,8 @@
-#ifndef LOG_SURGEON_FINITE_AUTOMATA_PREFIX_TREE
-#define LOG_SURGEON_FINITE_AUTOMATA_PREFIX_TREE
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_PREFIX_TREE_HPP
+#define LOG_SURGEON_FINITE_AUTOMATA_PREFIX_TREE_HPP
 
 #include <cstdint>
 #include <stdexcept>
-#include <unordered_map>
 #include <vector>
 
 namespace log_surgeon::finite_automata {
@@ -86,4 +85,4 @@ private:
 
 }  // namespace log_surgeon::finite_automata
 
-#endif  // LOG_SURGEON_FINITE_AUTOMATA_PREFIX_TREE
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_PREFIX_TREE_HPP
