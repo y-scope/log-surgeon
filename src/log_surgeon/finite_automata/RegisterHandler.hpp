@@ -44,7 +44,6 @@ public:
     }
 
     /**
-     *
      * @param register_index
      * @param position
      * @throw std::out_of_range if the register index is out of bounds
