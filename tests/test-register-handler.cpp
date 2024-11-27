@@ -20,6 +20,14 @@ TEST_CASE("Register operations", "[Register]") {
         reg.set_index(10);
         REQUIRE(reg.get_index() == 10);
     }
+
+    SECTION("Register handles edge cases correctly") {
+        Register reg(-1);
+        REQUIRE(reg.get_index() == -1);
+
+        reg.set_index(std::numeric_limits<int32_t>::max());
+        REQUIRE(reg.get_index() == std::numeric_limits<int32_t>::max());
+    }
 }
 
 TEST_CASE("RegisterHandler tests", "[RegisterHandler]") {
