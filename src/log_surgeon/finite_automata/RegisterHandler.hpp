@@ -77,7 +77,7 @@ public:
      * @throw std::out_of_range if the register index is out of range.
      */
     void append_position(uint32_t const register_index, int32_t const position) {
-        if (register_index >= m_registers.size()) {
+        if (m_registers.size() <= register_index) {
             throw std::out_of_range("Register index out of range");
         }
 
@@ -93,7 +93,7 @@ public:
      */
     [[nodiscard]] auto get_reversed_positions(uint32_t const register_index
     ) const -> std::vector<int32_t> {
-        if (register_index >= m_registers.size()) {
+        if (m_registers.size() <= register_index) {
             throw std::out_of_range("Register index out of range");
         }
 
