@@ -58,9 +58,9 @@ public:
     }
 
     /**
-     * @param index
-     * @param position
-     * @throw std::out_of_range if prefix tree index is out of range
+     * @param index Index of the node to update.
+     * @param position New position value to set for the node.
+     * @throw std::out_of_range if prefix tree index is out of range.
      */
     auto set(uint32_t const index, int32_t const position) -> void {
         if (m_nodes.size() <= index) {
