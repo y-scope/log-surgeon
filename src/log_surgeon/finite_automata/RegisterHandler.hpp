@@ -90,8 +90,7 @@ public:
     /**
      * @param register_index
      * @return Vector of positions representing the history of the given register.
-     * @throw std::out_of_range if the register index is out of range
-
+     * @throw std::out_of_range if the register index is out of range.
      */
     [[nodiscard]] auto get_reversed_positions(uint32_t const register_index
     ) const -> std::vector<int32_t> {
