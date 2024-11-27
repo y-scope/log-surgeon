@@ -43,10 +43,10 @@ public:
     PrefixTree() : m_nodes{{0, -1}} {}
 
     /**
-     * @param predecessor_index Index of the inserted node's predecessor in the prefix tree
-     * @param position The position in the lexed string
-     * @return The index of the newly inserted node in the tree
-     * @throw std::out_of_range if the predecessor index is out of range
+     * @param predecessor_index Index of the inserted node's predecessor in the prefix tree.
+     * @param position The position in the lexed string.
+     * @return The index of the newly inserted node in the tree.
+     * @throw std::out_of_range if the predecessor index is out of range.
      */
     uint32_t insert(uint32_t const predecessor_index, int32_t const position) {
         if (m_nodes.size() <= predecessor_index) {
@@ -75,7 +75,7 @@ public:
      * root.
      * @param index The index of the node to start the traversal from.
      * @return A vector containing positions in reverse order from the given index to root.
-     * @throw std::out_of_range if the index is out of range
+     * @throw std::out_of_range if the index is out of range.
      */
     [[nodiscard]] auto get_reversed_positions(uint32_t index) const -> std::vector<int32_t>;
 
