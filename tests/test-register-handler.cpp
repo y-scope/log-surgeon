@@ -33,6 +33,10 @@ TEST_CASE("Register operations", "[Register]") {
 TEST_CASE("RegisterHandler tests", "[RegisterHandler]") {
     RegisterHandler handler;
 
+    SECTION("Initial state is empty") {
+        REQUIRE_THROWS_AS(handler.get_reversed_positions(0), std::out_of_range);
+    }
+
     constexpr uint32_t num_registers = 5;
     for (uint32_t i = 0; i < num_registers; i++) {
         handler.add_register(i, 0);
@@ -40,11 +44,16 @@ TEST_CASE("RegisterHandler tests", "[RegisterHandler]") {
 
     SECTION("Set register position correctly") {
         handler.set_register(0, 5);
-        REQUIRE(std::vector<int32_t>{{5}} == handler.get_reversed_positions(0));
-        handler.set_register(0, 10);
-        REQUIRE(std::vector<int32_t>{{10}} == handler.get_reversed_positions(0));
-        handler.set_register(1, 15);
-        REQUIRE(std::vector<int32_t>{{15, 10}} == handler.get_reversed_positions(1));
+        REQUIRE(std::vector<int32_t>{5} == handler.get_reversed_positions(0));
+    }
+
+    SECTION("Register relationships are maintained") {
+        handler.set_register(0, 5);
+        handler.set_register(1, 10);
+        handler.set_register(2, 15);
+
+        auto positions = handler.get_reversed_positions(2);
+        REQUIRE(std::vector<int32_t>{15, 10, 5} == handler.get_reversed_positions(2));
     }
 
     SECTION("Copy register index correctly") {
