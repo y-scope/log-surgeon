@@ -3,11 +3,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <log_surgeon/finite_automata/RegisterHandler.hpp>
-#include <log_surgeon/finite_automata/Tag.hpp>
 
 using log_surgeon::finite_automata::Register;
 using log_surgeon::finite_automata::RegisterHandler;
-using log_surgeon::finite_automata::Tag;
 using std::make_unique;
 using std::unique_ptr;
 
@@ -27,9 +25,6 @@ TEST_CASE("Register operations", "[Register]") {
 TEST_CASE("RegisterHandler tests", "[RegisterHandler]") {
     RegisterHandler handler;
 
-    // This example will have 5 registers each be the next's predecessor. Example tagged regex that
-    // may lead to this would be "(((((1a)+a)+a)+a)+a)+", whereeach regex represents 1 at a
-    // different layer of repetition.
     constexpr uint32_t num_registers = 5;
     for (uint32_t i = 0; i < num_registers; i++) {
         handler.add_register(i, 0);
