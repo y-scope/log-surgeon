@@ -50,7 +50,7 @@ public:
      */
     void set_register(uint32_t const register_index, int32_t const position) {
         if (m_registers.size() <= register_index) {
-            throw std::out_of_range("Register index out-of-bounds");
+            throw std::out_of_range("Register index out of range");
         }
 
         auto const tree_index = m_registers[register_index].get_index();
