@@ -10,6 +10,7 @@ TEST_CASE("Prefix tree operations", "[PrefixTree]") {
     SECTION("Newly constructed tree works correctly") {
         PrefixTree const tree;
 
+        // A newly constructed tree should return no positions as the root node is ignored
         REQUIRE(tree.get_reversed_positions(0).empty());
     }
 
@@ -41,6 +42,8 @@ TEST_CASE("Prefix tree operations", "[PrefixTree]") {
 
     SECTION("Set position for a valid index works correctly") {
         PrefixTree tree;
+        // Test that you can set the root node for sanity, although this value is not used
+        tree.set(0, 10);
 
         // Test updates to different nodes
         uint32_t index_1 = tree.insert(0, 4);
