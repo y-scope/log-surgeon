@@ -66,10 +66,11 @@ public:
     }
 
     /**
-     * @param index Representing the leaf node of the register's sub-tree.
-     * @return The positions, in reverse order, at which the register places the tag in the
-     * lexed string.
-     * @throw std::out_of_range("Prefix tree index out-of-bounds.");
+     * Retrieves a vector of positions in reverse order by traversing from the given index to the
+     * root.
+     * @param index The index of the node to start the tarversal from.
+     * @return A vector containing positions in reverse order from the given index to root.
+     * @throw std::out_of_range if the index is out of bounds
      */
     [[nodiscard]] auto get_reversed_positions(uint32_t index) const -> std::vector<int32_t>;
 
