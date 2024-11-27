@@ -29,7 +29,7 @@ private:
 };
 
 /**
- * The register handler maintains a prefix tree that is sufficient to reperesent all registers.
+ * The register handler maintains a prefix tree that is sufficient to represent all registers.
  * The register handler also contains a vector of registers, and performs the set, copy, and append
  * operations for these registers.
  *
