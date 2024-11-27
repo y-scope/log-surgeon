@@ -41,13 +41,25 @@ TEST_CASE("Prefix tree operations", "[PrefixTree]") {
 
     SECTION("Set position for a valid index works correctly") {
         PrefixTree tree;
-        uint32_t index_1 = tree.insert(0, 4);
-        tree.set(index_1, 10);
-        REQUIRE(tree.get_reversed_positions(index_1) == std::vector<int32_t>({10}));
 
+        // Test updates to different nodes
+        uint32_t index_1 = tree.insert(0, 4);
         uint32_t index_2 = tree.insert(index_1, 7);
+        tree.set(index_1, 10);
         tree.set(index_2, 12);
+        REQUIRE(tree.get_reversed_positions(index_1) == std::vector<int32_t>({10}));
         REQUIRE(tree.get_reversed_positions(index_2) == std::vector<int32_t>({12, 10}));
+
+        // Test multiple updates to the same node
+        tree.set(index_2, 15);
+        tree.set(index_2, 20);
+        REQUIRE(tree.get_reversed_positions(index_2) == std::vector<int32_t>({20, 10}));
+
+        // Test that updates don't affect unrelated paths
+        uint32_t index_3 = tree.insert(0, 30);
+        tree.set(index_3, 25);
+        REQUIRE(tree.get_reversed_positions(index_1) == std::vector<int32_t>({10}));
+        REQUIRE(tree.get_reversed_positions(index_2) == std::vector<int32_t>({20, 10}));
     }
 
     SECTION("Set position for an invalid index throws correctly") {
