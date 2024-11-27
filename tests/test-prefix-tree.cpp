@@ -64,6 +64,12 @@ TEST_CASE("Prefix tree operations", "[PrefixTree]") {
 
     SECTION("Set position for an invalid index throws correctly") {
         PrefixTree tree;
+
+        // Test setting position before any insertions
         REQUIRE_THROWS_AS(tree.set(100, 20), std::out_of_range);
+
+        // Test setting position just beyond valid range
+        uint32_t index_1 = tree.insert(0, 4);
+        REQUIRE_THROWS_AS(tree.set(index_1 + 1, 20), std::out_of_range);
     }
 }
