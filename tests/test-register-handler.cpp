@@ -59,13 +59,13 @@ TEST_CASE("RegisterHandler tests", "[RegisterHandler]") {
     SECTION("Copy register index correctly") {
         handler.set_register(0, 5);
         handler.copy_register(1, 0);
-        REQUIRE(std::vector<int32_t>{{5}} == handler.get_reversed_positions(1));
+        REQUIRE(std::vector<int32_t>{5} == handler.get_reversed_positions(1));
     }
 
     SECTION("append_position appends position correctly") {
         handler.set_register(0, 5);
         handler.append_position(0, 7);
-        REQUIRE(std::vector<int32_t>{{7, 5}} == handler.get_reversed_positions(0));
+        REQUIRE(std::vector<int32_t>{7, 5} == handler.get_reversed_positions(0));
     }
 
     SECTION("Throws out of range correctly") {
