@@ -9,8 +9,8 @@ namespace log_surgeon::finite_automata {
 
 /**
  * Represents a prefix tree node used by a register to track tag matches in a lexed string.
- * This node stores the current position where a tag was matched, as well as the index of the prefix
- * tree node corresponding to the previous match of the same tag.
+ * This node stores the current position at which a tag was matched, as well as the index of the
+ * prefix tree node corresponding to the previous match of the same tag.
  *
  * Note: A value of m_position < 0 indicates that the tag is currently unmatched in the lexed
  * string.
