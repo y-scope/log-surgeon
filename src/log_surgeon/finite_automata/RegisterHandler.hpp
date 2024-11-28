@@ -37,7 +37,7 @@ private:
  */
 class RegisterHandler {
 public:
-    void add_register(uint32_t const predecessor_index, int32_t const position) {
+    auto add_register(uint32_t const predecessor_index, int32_t const position) -> void {
         auto const index = m_prefix_tree.insert(predecessor_index, position);
         m_registers.emplace_back(index);
     }
@@ -47,9 +47,9 @@ public:
      * @param position The position value to set in the register.
      * @throw std::out_of_range if the register index is out of range.
      */
-    void set_register(uint32_t const register_index, int32_t const position) {
+    auto set_register(uint32_t const register_index, int32_t const position) -> void {
         if (m_registers.size() <= register_index) {
-            throw std::out_of_range("Register index out of range");
+            throw std::out_of_range("Register index out of range.");
         }
 
         auto const tree_index = m_registers[register_index].get_index();
@@ -61,11 +61,12 @@ public:
      * @param source_register_index The index of the source register.
      * @throw std::out_of_range if the register index is out of range.
      */
-    void copy_register(uint32_t const dest_register_index, uint32_t const source_register_index) {
+    auto copy_register(uint32_t const dest_register_index, uint32_t const source_register_index)
+            -> void {
         if (m_registers.size() <= source_register_index
             || m_registers.size() <= dest_register_index)
         {
-            throw std::out_of_range("Register index out of range");
+            throw std::out_of_range("Register index out of range.");
         }
 
         m_registers[dest_register_index] = m_registers[source_register_index];
@@ -76,9 +77,9 @@ public:
      * @param position The position to append to the register's history.
      * @throw std::out_of_range if the register index is out of range.
      */
-    void append_position(uint32_t const register_index, int32_t const position) {
+    auto append_position(uint32_t const register_index, int32_t const position) -> void {
         if (m_registers.size() <= register_index) {
-            throw std::out_of_range("Register index out of range");
+            throw std::out_of_range("Register index out of range.");
         }
 
         uint32_t const tree_index = m_registers[register_index].get_index();
@@ -94,7 +95,7 @@ public:
     [[nodiscard]] auto get_reversed_positions(uint32_t const register_index
     ) const -> std::vector<int32_t> {
         if (m_registers.size() <= register_index) {
-            throw std::out_of_range("Register index out of range");
+            throw std::out_of_range("Register index out of range.");
         }
 
         uint32_t const tree_index = m_registers[register_index].get_index();

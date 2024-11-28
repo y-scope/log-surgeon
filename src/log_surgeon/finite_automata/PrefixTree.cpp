@@ -6,7 +6,7 @@ namespace log_surgeon::finite_automata {
 [[nodiscard]] auto PrefixTree::get_reversed_positions(uint32_t const index
 ) const -> std::vector<int32_t> {
     if (m_nodes.size() <= index) {
-        throw std::out_of_range("Prefix tree index out of range");
+        throw std::out_of_range("Prefix tree index out of range.");
     }
 
     std::vector<int32_t> reversed_positions;

@@ -46,9 +46,9 @@ public:
      * @return The index of the newly inserted node in the tree.
      * @throw std::out_of_range if the predecessor index is out of range.
      */
-    uint32_t insert(uint32_t const predecessor_index, int32_t const position) {
+    auto insert(uint32_t const predecessor_index, int32_t const position) -> uint32_t {
         if (m_nodes.size() <= predecessor_index) {
-            throw std::out_of_range("Predecessor index out of range");
+            throw std::out_of_range("Predecessor index out of range.");
         }
 
         m_nodes.emplace_back(predecessor_index, position);
@@ -62,7 +62,7 @@ public:
      */
     auto set(uint32_t const index, int32_t const position) -> void {
         if (m_nodes.size() <= index) {
-            throw std::out_of_range("Prefix tree index out of range");
+            throw std::out_of_range("Prefix tree index out of range.");
         }
 
         m_nodes[index].set_position(position);
