@@ -81,7 +81,7 @@ public:
             throw std::out_of_range("Register index out of range.");
         }
 
-        uint32_t const tree_index = m_registers[register_index].get_index();
+        auto const tree_index = m_registers[register_index].get_index();
         auto const new_index = m_prefix_tree.insert(tree_index, position);
         m_registers[register_index].set_index(new_index);
     }
@@ -97,7 +97,7 @@ public:
             throw std::out_of_range("Register index out of range.");
         }
 
-        uint32_t const tree_index = m_registers[register_index].get_index();
+        auto const tree_index = m_registers[register_index].get_index();
         return m_prefix_tree.get_reversed_positions(tree_index);
     }
 
