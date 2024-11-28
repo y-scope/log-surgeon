@@ -33,11 +33,8 @@ private:
 };
 
 /**
- * A prefix tree structure to store positions associated with registers.
- *
- * PrefixTree stores positions at nodes, and each node can represent a part of a position.
- * Multiple positions can be stored at each index in the tree. The tree allows for the addition of
- * positions and the retrieval of positions by their associated index.
+ * A prefix tree for storing registers.
+ * Each path from the root to an index represents a sequence of matched tag positions.
  */
 class PrefixTree {
 public:
