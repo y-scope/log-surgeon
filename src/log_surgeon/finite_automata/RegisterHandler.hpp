@@ -8,12 +8,11 @@
 
 namespace log_surgeon::finite_automata {
 /**
- * A register stores an index in the prefix tree. The index node fully represents the register's
- * history.
+ * Represents a register that tracks a sequence of positions where a tag was matched in a lexed
+ * string.
  *
- * Note: history refers to the previous tag locations. E.g., given the tagged regex "aaa(1\d2)+",
- * after parsing input string "aaa123", a register representing tag 1 would contain the history
- * {3,4,5}.
+ * To improve efficiency, registers are stored in a prefix tree. This class holds only the index
+ * of the prefix tree node that represents the current state of the register.
  */
 class Register {
 public:
