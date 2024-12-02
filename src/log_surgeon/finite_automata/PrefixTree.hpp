@@ -34,7 +34,7 @@ private:
 
 /**
  * Represents a prefix tree that stores all data needed by registers.
- * 
+ *
  * Each path from the root to an index represents a sequence of matched tag positions.
  */
 class PrefixTree {
