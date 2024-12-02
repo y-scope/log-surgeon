@@ -7,36 +7,37 @@
 
 namespace log_surgeon::finite_automata {
 /**
- * Represents a prefix tree node used by a register to track tag matches in a lexed string.
- * This node stores the current position at which a tag was matched, as well as the index of the
- * prefix tree node corresponding to the previous match of the same tag.
- *
- * Note: A value of m_position < 0 indicates that the tag is currently unmatched in the lexed
- * string.
- */
-class PrefixTreeNode {
-public:
-    PrefixTreeNode(uint32_t const predecessor_index, int32_t const position)
-            : m_predecessor_index{predecessor_index},
-              m_position{position} {}
-
-    [[nodiscard]] auto get_predecessor_index() const -> uint32_t { return m_predecessor_index; }
-
-    auto set_position(int32_t const position) -> void { m_position = position; }
-
-    [[nodiscard]] auto get_position() const -> int32_t { return m_position; }
-
-private:
-    uint32_t m_predecessor_index;
-    int32_t m_position;
-};
-
-/**
- * Represents a prefix tree that stores all data needed by registers.
+ * Represents a prefix tree that stores all data needed by the TDFA registers.
  *
  * Each path from the root to an index represents a sequence of matched tag positions.
  */
 class PrefixTree {
+    /**
+     * Represents a prefix tree node. A node stores a potential value for a TDFA register.
+     * 
+     * A node stores the current position at which a tag was matched, as well as the index of the
+     * prefix tree node corresponding to the previous match of the same tag.
+     *
+     * Note: A value of m_position < 0 indicates that the tag is currently unmatched in the lexed
+     * string.
+     */
+    class Node {
+    public:
+        Node(uint32_t const predecessor_index, int32_t const position)
+                : m_predecessor_index{predecessor_index},
+                  m_position{position} {}
+
+        [[nodiscard]] auto get_predecessor_index() const -> uint32_t { return m_predecessor_index; }
+
+        auto set_position(int32_t const position) -> void { m_position = position; }
+
+        [[nodiscard]] auto get_position() const -> int32_t { return m_position; }
+
+    private:
+        uint32_t m_predecessor_index;
+        int32_t m_position;
+    };
+
 public:
     PrefixTree() : m_nodes{{0, -1}} {}
 
@@ -78,7 +79,7 @@ public:
     [[nodiscard]] auto get_reversed_positions(uint32_t index) const -> std::vector<int32_t>;
 
 private:
-    std::vector<PrefixTreeNode> m_nodes;
+    std::vector<Node> m_nodes;
 };
 
 }  // namespace log_surgeon::finite_automata
