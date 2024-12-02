@@ -17,14 +17,15 @@ namespace log_surgeon::finite_automata {
  */
 class Register {
 public:
-    explicit Register(uint32_t const index) : m_index{index} {}
+    explicit Register(uint32_t const prefix_tree_node_id)
+            : m_prefix_tree_node_id{prefix_tree_node_id} {}
 
-    auto set_index(uint32_t const index) -> void { m_index = index; }
+    auto set_prefix_tree_node_id(uint32_t const index) -> void { m_prefix_tree_node_id = index; }
 
-    [[nodiscard]] auto get_index() const -> uint32_t { return m_index; }
+    [[nodiscard]] auto get_prefix_tree_node_id() const -> uint32_t { return m_prefix_tree_node_id; }
 
 private:
-    uint32_t m_index;
+    uint32_t m_prefix_tree_node_id;
 };
 
 /**
@@ -52,7 +53,7 @@ public:
             throw std::out_of_range("Register index out of range.");
         }
 
-        auto const tree_index{m_registers[register_index].get_index()};
+        auto const tree_index{m_registers[register_index].get_prefix_tree_node_id()};
         m_prefix_tree.set(tree_index, position);
     }
 
@@ -82,9 +83,9 @@ public:
             throw std::out_of_range("Register index out of range.");
         }
 
-        auto const tree_index{m_registers[register_index].get_index()};
+        auto const tree_index{m_registers[register_index].get_prefix_tree_node_id()};
         auto const new_index{m_prefix_tree.insert(tree_index, position)};
-        m_registers[register_index].set_index(new_index);
+        m_registers[register_index].set_prefix_tree_node_id(new_index);
     }
 
     /**
@@ -98,7 +99,7 @@ public:
             throw std::out_of_range("Register index out of range.");
         }
 
-        auto const tree_index{m_registers[register_index].get_index()};
+        auto const tree_index{m_registers[register_index].get_prefix_tree_node_id()};
         return m_prefix_tree.get_reversed_positions(tree_index);
     }
 

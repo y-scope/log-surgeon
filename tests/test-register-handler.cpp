@@ -12,21 +12,21 @@ using std::unique_ptr;
 TEST_CASE("Register operations", "[Register]") {
     SECTION("Register constructor and getter initializes correctly") {
         Register const reg(5);
-        REQUIRE(reg.get_index() == 5);
+        REQUIRE(reg.get_prefix_tree_node_id() == 5);
     }
 
     SECTION("Register sets index correctly") {
         Register reg(5);
-        reg.set_index(10);
-        REQUIRE(reg.get_index() == 10);
+        reg.set_prefix_tree_node_id(10);
+        REQUIRE(reg.get_prefix_tree_node_id() == 10);
     }
 
     SECTION("Register handles edge cases correctly") {
         Register reg(-1);
-        REQUIRE(reg.get_index() == -1);
+        REQUIRE(reg.get_prefix_tree_node_id() == -1);
 
-        reg.set_index(std::numeric_limits<int32_t>::max());
-        REQUIRE(reg.get_index() == std::numeric_limits<int32_t>::max());
+        reg.set_prefix_tree_node_id(std::numeric_limits<int32_t>::max());
+        REQUIRE(reg.get_prefix_tree_node_id() == std::numeric_limits<int32_t>::max());
     }
 }
 
