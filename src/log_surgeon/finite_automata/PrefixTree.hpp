@@ -6,7 +6,6 @@
 #include <vector>
 
 namespace log_surgeon::finite_automata {
-
 /**
  * Represents a prefix tree node used by a register to track tag matches in a lexed string.
  * This node stores the current position at which a tag was matched, as well as the index of the
