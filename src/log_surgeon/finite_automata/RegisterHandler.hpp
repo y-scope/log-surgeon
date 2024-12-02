@@ -37,7 +37,7 @@ private:
 class RegisterHandler {
 public:
     auto add_register(uint32_t const predecessor_index, int32_t const position) -> void {
-        auto const index = m_prefix_tree.insert(predecessor_index, position);
+        auto const index{m_prefix_tree.insert(predecessor_index, position)};
         m_registers.emplace_back(index);
     }
 
@@ -51,7 +51,7 @@ public:
             throw std::out_of_range("Register index out of range.");
         }
 
-        auto const tree_index = m_registers[register_index].get_index();
+        auto const tree_index{m_registers[register_index].get_index()};
         m_prefix_tree.set(tree_index, position);
     }
 
@@ -81,8 +81,8 @@ public:
             throw std::out_of_range("Register index out of range.");
         }
 
-        auto const tree_index = m_registers[register_index].get_index();
-        auto const new_index = m_prefix_tree.insert(tree_index, position);
+        auto const tree_index{m_registers[register_index].get_index()};
+        auto const new_index{m_prefix_tree.insert(tree_index, position)};
         m_registers[register_index].set_index(new_index);
     }
 
@@ -97,7 +97,7 @@ public:
             throw std::out_of_range("Register index out of range.");
         }
 
-        auto const tree_index = m_registers[register_index].get_index();
+        auto const tree_index{m_registers[register_index].get_index()};
         return m_prefix_tree.get_reversed_positions(tree_index);
     }
 

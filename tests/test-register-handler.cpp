@@ -37,7 +37,7 @@ TEST_CASE("RegisterHandler tests", "[RegisterHandler]") {
         REQUIRE_THROWS_AS(handler.get_reversed_positions(0), std::out_of_range);
     }
 
-    constexpr uint32_t num_registers = 5;
+    constexpr uint32_t num_registers{5};
     for (uint32_t i = 0; i < num_registers; i++) {
         handler.add_register(i, 0);
     }
@@ -52,7 +52,7 @@ TEST_CASE("RegisterHandler tests", "[RegisterHandler]") {
         handler.set_register(1, 10);
         handler.set_register(2, 15);
 
-        auto positions = handler.get_reversed_positions(2);
+        auto positions{handler.get_reversed_positions(2)};
         REQUIRE(std::vector<int32_t>{15, 10, 5} == handler.get_reversed_positions(2));
     }
 
