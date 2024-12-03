@@ -38,9 +38,9 @@ private:
  */
 class RegisterHandler {
 public:
-    auto add_register(uint32_t const predecessor_index, int32_t const position) -> void {
-        auto const index{m_prefix_tree.insert(predecessor_index, position)};
-        m_registers.emplace_back(index);
+    auto add_register(uint32_t const prefix_tree_parent_node_id, int32_t const position) -> void {
+        auto const prefix_tree_node_id{m_prefix_tree.insert(prefix_tree_parent_node_id, position)};
+        m_registers.emplace_back(prefix_tree_node_id);
     }
 
     /**
