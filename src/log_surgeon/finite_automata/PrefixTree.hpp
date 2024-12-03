@@ -13,6 +13,10 @@ namespace log_surgeon::finite_automata {
  * Each path from the root to an index represents a sequence of matched tag positions.
  */
 class PrefixTree {
+public:
+    using node_id_t = uint32_t;
+
+private:
     /**
      * Represents a prefix tree node. A node stores a potential value for a TDFA register.
      *
@@ -24,11 +28,11 @@ class PrefixTree {
      */
     class Node {
     public:
-        Node(std::optional<uint32_t> const predecessor_index, int32_t const position)
+        Node(std::optional<node_id_t> const predecessor_index, int32_t const position)
                 : m_predecessor_index{predecessor_index},
                   m_position{position} {}
 
-        [[nodiscard]] auto get_predecessor_index() const -> std::optional<uint32_t> {
+        [[nodiscard]] auto get_predecessor_index() const -> std::optional<node_id_t> {
             return m_predecessor_index;
         }
 
@@ -37,7 +41,7 @@ class PrefixTree {
         [[nodiscard]] auto get_position() const -> int32_t { return m_position; }
 
     private:
-        std::optional<uint32_t> m_predecessor_index;
+        std::optional<node_id_t> m_predecessor_index;
         int32_t m_position;
     };
 
@@ -50,7 +54,7 @@ public:
      * @return The index of the newly inserted node in the tree.
      * @throw std::out_of_range if the predecessor index is out of range.
      */
-    auto insert(uint32_t const predecessor_index, int32_t const position) -> uint32_t {
+    auto insert(node_id_t const predecessor_index, int32_t const position) -> uint32_t {
         if (m_nodes.size() <= predecessor_index) {
             throw std::out_of_range("Predecessor index out of range.");
         }
@@ -59,10 +63,6 @@ public:
         return m_nodes.size() - 1;
     }
 
-    /**
-     * @param index Index of the node to update.
-     * @param position New position value to set for the node.
-     */
     auto set(uint32_t const index, int32_t const position) -> void {
         m_nodes.at(index).set_position(position);
     }

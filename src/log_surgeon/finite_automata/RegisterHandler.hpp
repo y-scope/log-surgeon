@@ -17,7 +17,10 @@ namespace log_surgeon::finite_automata {
  */
 class RegisterHandler {
 public:
-    auto add_register(uint32_t const prefix_tree_parent_node_id, int32_t const position) -> void {
+    auto add_register(
+            PrefixTree::node_id_t const prefix_tree_parent_node_id,
+            int32_t const position
+    ) -> void {
         auto const prefix_tree_node_id{m_prefix_tree.insert(prefix_tree_parent_node_id, position)};
         m_registers.emplace_back(prefix_tree_node_id);
     }
@@ -41,7 +44,7 @@ public:
 
 private:
     PrefixTree m_prefix_tree;
-    std::vector<uint32_t> m_registers;
+    std::vector<PrefixTree::node_id_t> m_registers;
 };
 }  // namespace log_surgeon::finite_automata
 
