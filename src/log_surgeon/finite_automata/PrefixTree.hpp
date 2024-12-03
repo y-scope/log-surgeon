@@ -2,6 +2,7 @@
 #define LOG_SURGEON_FINITE_AUTOMATA_PREFIX_TREE_HPP
 
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
 #include <vector>
 
@@ -23,23 +24,25 @@ class PrefixTree {
      */
     class Node {
     public:
-        Node(uint32_t const predecessor_index, int32_t const position)
+        Node(std::optional<uint32_t> const predecessor_index, int32_t const position)
                 : m_predecessor_index{predecessor_index},
                   m_position{position} {}
 
-        [[nodiscard]] auto get_predecessor_index() const -> uint32_t { return m_predecessor_index; }
+        [[nodiscard]] auto get_predecessor_index() const -> std::optional<uint32_t> {
+            return m_predecessor_index;
+        }
 
         auto set_position(int32_t const position) -> void { m_position = position; }
 
         [[nodiscard]] auto get_position() const -> int32_t { return m_position; }
 
     private:
-        uint32_t m_predecessor_index;
+        std::optional<uint32_t> m_predecessor_index;
         int32_t m_position;
     };
 
 public:
-    PrefixTree() : m_nodes{{0, -1}} {}
+    PrefixTree() : m_nodes{{std::nullopt, -1}} {}
 
     /**
      * @param predecessor_index Index of the inserted node's predecessor in the prefix tree.
@@ -59,7 +62,6 @@ public:
     /**
      * @param index Index of the node to update.
      * @param position New position value to set for the node.
-     * @throw std::out_of_range if prefix tree index is out of range.
      */
     auto set(uint32_t const index, int32_t const position) -> void {
         m_nodes.at(index).set_position(position);
