@@ -4,31 +4,9 @@
 
 #include <log_surgeon/finite_automata/RegisterHandler.hpp>
 
-using log_surgeon::finite_automata::Register;
 using log_surgeon::finite_automata::RegisterHandler;
 using std::make_unique;
 using std::unique_ptr;
-
-TEST_CASE("Register operations", "[Register]") {
-    SECTION("Register constructor and getter initializes correctly") {
-        Register const reg(5);
-        REQUIRE(reg.get_prefix_tree_node_id() == 5);
-    }
-
-    SECTION("Register sets index correctly") {
-        Register reg(5);
-        reg.set_prefix_tree_node_id(10);
-        REQUIRE(reg.get_prefix_tree_node_id() == 10);
-    }
-
-    SECTION("Register handles edge cases correctly") {
-        Register reg(-1);
-        REQUIRE(reg.get_prefix_tree_node_id() == -1);
-
-        reg.set_prefix_tree_node_id(std::numeric_limits<int32_t>::max());
-        REQUIRE(reg.get_prefix_tree_node_id() == std::numeric_limits<int32_t>::max());
-    }
-}
 
 TEST_CASE("RegisterHandler tests", "[RegisterHandler]") {
     RegisterHandler handler;

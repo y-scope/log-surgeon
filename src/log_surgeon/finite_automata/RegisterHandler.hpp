@@ -9,26 +9,6 @@
 
 namespace log_surgeon::finite_automata {
 /**
- * Represents a register that tracks a sequence of positions where a tag was matched in a lexed
- * string.
- *
- * To improve efficiency, registers are stored in a prefix tree. This class holds only the index
- * of the prefix tree node that represents the current state of the register.
- */
-class Register {
-public:
-    explicit Register(uint32_t const prefix_tree_node_id)
-            : m_prefix_tree_node_id{prefix_tree_node_id} {}
-
-    auto set_prefix_tree_node_id(uint32_t const index) -> void { m_prefix_tree_node_id = index; }
-
-    [[nodiscard]] auto get_prefix_tree_node_id() const -> uint32_t { return m_prefix_tree_node_id; }
-
-private:
-    uint32_t m_prefix_tree_node_id;
-};
-
-/**
  * The register handler maintains a prefix tree that is sufficient to represent all registers.
  * The register handler also contains a vector of registers, and performs the set, copy, and append
  * operations for these registers.
@@ -43,69 +23,26 @@ public:
         m_registers.emplace_back(prefix_tree_node_id);
     }
 
-    /**
-     * @param reg_id The index of the register to set.
-     * @param position The position value to set in the register.
-     * @throw std::out_of_range if the register index is out of range.
-     */
     auto set_register(uint32_t const reg_id, int32_t const position) -> void {
-        if (m_registers.size() <= reg_id) {
-            throw std::out_of_range("Register index out of range.");
-        }
-
-        auto const tree_index{m_registers[reg_id].get_prefix_tree_node_id()};
-        m_prefix_tree.set(tree_index, position);
+        m_prefix_tree.set(m_registers.at(reg_id), position);
     }
 
-    /**
-     * @param dest_register_index The index of the destination register.
-     * @param source_register_index The index of the source register.
-     * @throw std::out_of_range if the register index is out of range.
-     */
-    auto copy_register(uint32_t const dest_reg_id, uint32_t const source_reg_id)
-            -> void {
-        if (m_registers.size() <= source_reg_id
-            || m_registers.size() <= dest_reg_id)
-        {
-            throw std::out_of_range("Register index out of range.");
-        }
-
-        m_registers[dest_reg_id] = m_registers[source_reg_id];
+    auto copy_register(uint32_t const dest_reg_id, uint32_t const source_reg_id) -> void {
+        m_registers.at(dest_reg_id) = m_registers.at(source_reg_id);
     }
 
-    /**
-     * @param register_index The index of the register to append to.
-     * @param position The position to append to the register's history.
-     * @throw std::out_of_range if the register index is out of range.
-     */
     auto append_position(uint32_t const register_index, int32_t const position) -> void {
-        if (m_registers.size() <= register_index) {
-            throw std::out_of_range("Register index out of range.");
-        }
-
-        auto const tree_index{m_registers[register_index].get_prefix_tree_node_id()};
-        auto const new_index{m_prefix_tree.insert(tree_index, position)};
-        m_registers[register_index].set_prefix_tree_node_id(new_index);
+        auto& reg{m_registers.at(register_index)};
+        reg = m_prefix_tree.insert(reg, position);
     }
 
-    /**
-     * @param register_index The index of the register whose positions are retrieved.
-     * @return A vector of positions representing the history of the given register.
-     * @throw std::out_of_range if the register index is out of range.
-     */
-    [[nodiscard]] auto get_reversed_positions(uint32_t const register_index
-    ) const -> std::vector<int32_t> {
-        if (m_registers.size() <= register_index) {
-            throw std::out_of_range("Register index out of range.");
-        }
-
-        auto const tree_index{m_registers[register_index].get_prefix_tree_node_id()};
-        return m_prefix_tree.get_reversed_positions(tree_index);
+    [[nodiscard]] auto get_reversed_positions(uint32_t const reg_id) const -> std::vector<int32_t> {
+        return m_prefix_tree.get_reversed_positions(m_registers.at(reg_id));
     }
 
 private:
     PrefixTree m_prefix_tree;
-    std::vector<Register> m_registers;
+    std::vector<uint32_t> m_registers;
 };
 }  // namespace log_surgeon::finite_automata
 
