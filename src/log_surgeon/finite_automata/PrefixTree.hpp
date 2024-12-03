@@ -14,7 +14,7 @@ namespace log_surgeon::finite_automata {
 class PrefixTree {
     /**
      * Represents a prefix tree node. A node stores a potential value for a TDFA register.
-     * 
+     *
      * A node stores the current position at which a tag was matched, as well as the index of the
      * prefix tree node corresponding to the previous match of the same tag.
      *
