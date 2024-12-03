@@ -44,16 +44,16 @@ public:
     }
 
     /**
-     * @param register_index The index of the register to set.
+     * @param reg_id The index of the register to set.
      * @param position The position value to set in the register.
      * @throw std::out_of_range if the register index is out of range.
      */
-    auto set_register(uint32_t const register_index, int32_t const position) -> void {
-        if (m_registers.size() <= register_index) {
+    auto set_register(uint32_t const reg_id, int32_t const position) -> void {
+        if (m_registers.size() <= reg_id) {
             throw std::out_of_range("Register index out of range.");
         }
 
-        auto const tree_index{m_registers[register_index].get_prefix_tree_node_id()};
+        auto const tree_index{m_registers[reg_id].get_prefix_tree_node_id()};
         m_prefix_tree.set(tree_index, position);
     }
 
