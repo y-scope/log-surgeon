@@ -14,8 +14,8 @@ namespace log_surgeon::finite_automata {
  */
 class PrefixTree {
 public:
+    using id_t = uint32_t;
     using position_t = int32_t;
-    using node_id_t = uint32_t;
 
 private:
     /**
@@ -29,11 +29,11 @@ private:
      */
     class Node {
     public:
-        Node(std::optional<node_id_t> const predecessor_index, position_t const position)
+        Node(std::optional<id_t> const predecessor_index, position_t const position)
                 : m_predecessor_index{predecessor_index},
                   m_position{position} {}
 
-        [[nodiscard]] auto get_predecessor_index() const -> std::optional<node_id_t> {
+        [[nodiscard]] auto get_predecessor_index() const -> std::optional<id_t> {
             return m_predecessor_index;
         }
 
@@ -42,7 +42,7 @@ private:
         [[nodiscard]] auto get_position() const -> position_t { return m_position; }
 
     private:
-        std::optional<node_id_t> m_predecessor_index;
+        std::optional<id_t> m_predecessor_index;
         position_t m_position;
     };
 
@@ -55,7 +55,7 @@ public:
      * @return The index of the newly inserted node in the tree.
      * @throw std::out_of_range if the predecessor index is out of range.
      */
-    auto insert(node_id_t const predecessor_index, position_t const position) -> node_id_t {
+    auto insert(id_t const predecessor_index, position_t const position) -> id_t {
         if (m_nodes.size() <= predecessor_index) {
             throw std::out_of_range("Predecessor index out of range.");
         }
@@ -64,7 +64,7 @@ public:
         return m_nodes.size() - 1;
     }
 
-    auto set(node_id_t const index, position_t const position) -> void {
+    auto set(id_t const index, position_t const position) -> void {
         m_nodes.at(index).set_position(position);
     }
 
@@ -75,7 +75,7 @@ public:
      * @return A vector containing positions in reverse order from the given index to root.
      * @throw std::out_of_range if the index is out of range.
      */
-    [[nodiscard]] auto get_reversed_positions(node_id_t index) const -> std::vector<position_t>;
+    [[nodiscard]] auto get_reversed_positions(id_t index) const -> std::vector<position_t>;
 
 private:
     std::vector<Node> m_nodes;
