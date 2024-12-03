@@ -19,13 +19,13 @@ class RegisterHandler {
 public:
     auto add_register(
             PrefixTree::node_id_t const prefix_tree_parent_node_id,
-            int32_t const position
+            PrefixTree::position_t const position
     ) -> void {
         auto const prefix_tree_node_id{m_prefix_tree.insert(prefix_tree_parent_node_id, position)};
         m_registers.emplace_back(prefix_tree_node_id);
     }
 
-    auto set_register(uint32_t const reg_id, int32_t const position) -> void {
+    auto set_register(uint32_t const reg_id, PrefixTree::position_t const position) -> void {
         m_prefix_tree.set(m_registers.at(reg_id), position);
     }
 
@@ -33,12 +33,13 @@ public:
         m_registers.at(dest_reg_id) = m_registers.at(source_reg_id);
     }
 
-    auto append_position(uint32_t const reg_id, int32_t const position) -> void {
+    auto append_position(uint32_t const reg_id, PrefixTree::position_t const position) -> void {
         auto& reg{m_registers.at(reg_id)};
         reg = m_prefix_tree.insert(reg, position);
     }
 
-    [[nodiscard]] auto get_reversed_positions(uint32_t const reg_id) const -> std::vector<int32_t> {
+    [[nodiscard]] auto get_reversed_positions(uint32_t const reg_id
+    ) const -> std::vector<PrefixTree::position_t> {
         return m_prefix_tree.get_reversed_positions(m_registers.at(reg_id));
     }
 
