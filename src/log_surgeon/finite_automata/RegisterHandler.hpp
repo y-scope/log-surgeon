@@ -62,15 +62,15 @@ public:
      * @param source_register_index The index of the source register.
      * @throw std::out_of_range if the register index is out of range.
      */
-    auto copy_register(uint32_t const dest_register_index, uint32_t const source_register_index)
+    auto copy_register(uint32_t const dest_reg_id, uint32_t const source_reg_id)
             -> void {
-        if (m_registers.size() <= source_register_index
-            || m_registers.size() <= dest_register_index)
+        if (m_registers.size() <= source_reg_id
+            || m_registers.size() <= dest_reg_id)
         {
             throw std::out_of_range("Register index out of range.");
         }
 
-        m_registers[dest_register_index] = m_registers[source_register_index];
+        m_registers[dest_reg_id] = m_registers[source_reg_id];
     }
 
     /**
