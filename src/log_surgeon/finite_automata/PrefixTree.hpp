@@ -62,11 +62,7 @@ public:
      * @throw std::out_of_range if prefix tree index is out of range.
      */
     auto set(uint32_t const index, int32_t const position) -> void {
-        if (m_nodes.size() <= index) {
-            throw std::out_of_range("Prefix tree index out of range.");
-        }
-
-        m_nodes[index].set_position(position);
+        m_nodes.at(index).set_position(position);
     }
 
     /**
