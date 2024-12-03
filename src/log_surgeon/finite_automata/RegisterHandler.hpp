@@ -2,7 +2,6 @@
 #define LOG_SURGEON_FINITE_AUTOMATA_REGISTER_HANDLER_HPP
 
 #include <cstdint>
-#include <stdexcept>
 #include <vector>
 
 #include <log_surgeon/finite_automata/PrefixTree.hpp>
