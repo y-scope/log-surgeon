@@ -31,8 +31,8 @@ public:
         m_registers.at(dest_reg_id) = m_registers.at(source_reg_id);
     }
 
-    auto append_position(uint32_t const register_index, int32_t const position) -> void {
-        auto& reg{m_registers.at(register_index)};
+    auto append_position(uint32_t const reg_id, int32_t const position) -> void {
+        auto& reg{m_registers.at(reg_id)};
         reg = m_prefix_tree.insert(reg, position);
     }
 
