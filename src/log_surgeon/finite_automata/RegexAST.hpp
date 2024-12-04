@@ -83,15 +83,15 @@ public:
      */
     [[nodiscard]] virtual auto serialize() const -> std::u32string = 0;
 
-    [[nodiscard]] auto get_subtree_positive_tags() const -> std::vector<Tag*> const& {
+    [[nodiscard]] auto get_subtree_positive_tags() const -> std::vector<Tag const*> const& {
         return m_subtree_positive_tags;
     }
 
-    auto set_subtree_positive_tags(std::vector<Tag*> subtree_positive_tags) -> void {
+    auto set_subtree_positive_tags(std::vector<Tag const*> subtree_positive_tags) -> void {
         m_subtree_positive_tags = std::move(subtree_positive_tags);
     }
 
-    auto add_subtree_positive_tags(std::vector<Tag*> const& subtree_positive_tags) -> void {
+    auto add_subtree_positive_tags(std::vector<Tag const*> const& subtree_positive_tags) -> void {
         m_subtree_positive_tags.insert(
                 m_subtree_positive_tags.end(),
                 subtree_positive_tags.cbegin(),
@@ -99,7 +99,7 @@ public:
         );
     }
 
-    auto set_negative_tags(std::vector<Tag*> negative_tags) -> void {
+    auto set_negative_tags(std::vector<Tag const*> negative_tags) -> void {
         m_negative_tags = std::move(negative_tags);
     }
 
@@ -146,8 +146,8 @@ protected:
     }
 
 private:
-    std::vector<Tag*> m_subtree_positive_tags;
-    std::vector<Tag*> m_negative_tags;
+    std::vector<Tag const*> m_subtree_positive_tags;
+    std::vector<Tag const*> m_negative_tags;
 };
 
 /**
@@ -623,8 +623,9 @@ private:
 
 /**
  * Represents a capture group AST node.
- * `m_tag` is always expected to be non-null.
- * `m_group_regex_ast` is always expected to be non-null.
+ * NOTE:
+ * - `m_tag` is always expected to be non-null.
+ * - `m_group_regex_ast` is always expected to be non-null.
  * @tparam NfaStateType Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename NfaStateType>
@@ -692,11 +693,11 @@ public:
 
     /**
      * Adds the needed `Nfa::states` to the passed in nfa to handle a
-     * `RegexASTCapture` before transitioning to an accepting `end_state`.
+     * `RegexASTCapture` before transitioning to a `dest_state`.
      * @param nfa
-     * @param end_state
+     * @param dest_state
      */
-    auto add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state) const -> void override;
+    auto add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* dest_state) const -> void override;
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
@@ -889,21 +890,54 @@ template <typename NfaStateType>
 }
 
 template <typename NfaStateType>
-void RegexASTCapture<NfaStateType>::add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state)
-        const {
-    NfaStateType* root = nfa->get_root();
-    auto* capture_group_start_state = nfa->new_state();
-    root->add_positive_tagged_start_transition(m_tag.get(), capture_group_start_state);
+auto RegexASTCapture<NfaStateType>::add_to_nfa(
+        Nfa<NfaStateType>* nfa,
+        NfaStateType* dest_state
+) const -> void {
+    // TODO: move this into a documentation file in the future, and reference it here.
+    // The NFA constructed for a capture group follows the structure below, with tagged transitions
+    // explicitly labeled for clarity:
+    //         +---------------------+
+    //         |       `m_root`      |
+    //         +---------------------+
+    //                    | `m_tag` start
+    //                    | (positive tagged start transition)
+    //                    v
+    //         +---------------------+
+    //         |`capture_start_state`|
+    //         +---------------------+
+    //                    |
+    //                    | (epsilon transition)
+    //                    v
+    //         +---------------------+
+    //         | `m_group_regex_ast` |
+    //         |    (nested NFA)     |
+    //         +---------------------+
+    //                    | `m_negative_tags`
+    //                    | (negative tagged transition)
+    //                    v
+    //         +---------------------+
+    //         | `capture_end_state` |
+    //         +---------------------+
+    //                    | `m_tag` end
+    //                    | (positive tagged end transition)
+    //                    v
+    //         +---------------------+
+    //         |     `dest_state`    |
+    //         +---------------------+
+    auto [capture_start_state, capture_end_state]
+            = nfa->new_start_and_end_states_with_positive_tagged_transitions(
+                    m_tag.get(),
+                    dest_state
+            );
 
-    auto* state_with_positive_tagged_transition
-            = nfa->new_state_with_positive_tagged_transition(m_tag.get(), end_state);
-    nfa->set_root(capture_group_start_state);
-    m_group_regex_ast->add_to_nfa_with_negative_tags(nfa, state_with_positive_tagged_transition);
-
-    nfa->set_root(root);
+    auto* initial_root = nfa->get_root();
+    nfa->set_root(capture_start_state);
+    m_group_regex_ast->add_to_nfa_with_negative_tags(nfa, capture_end_state);
+    nfa->set_root(initial_root);
 }
 
-template <typename NFAStateType>
+template <typename NfaStateType>
 [[nodiscard]] auto RegexASTCapture<NfaStateType>::serialize() const -> std::u32string {
     auto const tag_name_u32 = std::u32string(m_tag->get_name().cbegin(), m_tag->get_name().cend());
     return fmt::format(
