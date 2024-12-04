@@ -49,10 +49,13 @@ TEST_CASE("`PrefixTree` operations", "[PrefixTree]") {
 
         // Test insertion with negative position values
         auto const node_id_5{tree.insert(0, cNegativePos1)};
-        auto const node_id_6{tree.insert(node_id_5, cNegativePos2)};
+        auto const node_id_6{tree.insert(node_id_5, cInsertPos1)};
+        auto const node_id_7{tree.insert(node_id_6, cNegativePos2)};
         REQUIRE(std::vector<position_t>{cNegativePos1} == tree.get_reversed_positions(node_id_5));
-        REQUIRE(std::vector<position_t>{cNegativePos2, cNegativePos1}
+        REQUIRE(std::vector<position_t>{cInsertPos1, cNegativePos1}
                 == tree.get_reversed_positions(node_id_6));
+        REQUIRE(std::vector<position_t>{cNegativePos2, cInsertPos1, cNegativePos1}
+                == tree.get_reversed_positions(node_id_7));
     }
 
     SECTION("Invalid index access throws correctly") {
