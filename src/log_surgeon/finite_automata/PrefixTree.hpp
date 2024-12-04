@@ -49,8 +49,8 @@ public:
 
     /**
      * @param node_id The index of the node.
-     * @return A vector containing positions along the path defined by `node_id`, in reverse order,
-     * i.e., [index, root).
+     * @return A vector containing positions in order from the given index up to but not including
+     * the root node.
      * @throw std::out_of_range if the index is out of range.
      */
     [[nodiscard]] auto get_reversed_positions(id_t node_id) const -> std::vector<position_t>;
