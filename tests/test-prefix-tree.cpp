@@ -23,9 +23,9 @@ TEST_CASE("`PrefixTree` operations", "[PrefixTree]") {
         auto const node_id_1{tree.insert(0, 4)};
         auto const node_id_2{tree.insert(node_id_1, 7)};
         auto const node_id_3{tree.insert(node_id_2, 9)};
-        REQUIRE(std::vector{4} == tree.get_reversed_positions(node_id_1));
-        REQUIRE(std::vector{7, 4} == tree.get_reversed_positions(node_id_2));
-        REQUIRE(std::vector{9, 7, 4} == tree.get_reversed_positions(node_id_3));
+        REQUIRE(std::vector<position_t>{4} == tree.get_reversed_positions(node_id_1));
+        REQUIRE(std::vector<position_t>{7, 4} == tree.get_reversed_positions(node_id_2));
+        REQUIRE(std::vector<position_t>{9, 7, 4} == tree.get_reversed_positions(node_id_3));
 
         // Test insertion with large position values
         auto const node_id_4{tree.insert(0, std::numeric_limits<position_t>::max())};
@@ -35,8 +35,8 @@ TEST_CASE("`PrefixTree` operations", "[PrefixTree]") {
         // Test insertion with negative position values
         auto const node_id_5{tree.insert(0, -1)};
         auto const node_id_6{tree.insert(node_id_5, -100)};
-        REQUIRE(std::vector{-1} == tree.get_reversed_positions(node_id_5));
-        REQUIRE(std::vector{-100, -1} == tree.get_reversed_positions(node_id_6));
+        REQUIRE(std::vector<position_t>{-1} == tree.get_reversed_positions(node_id_5));
+        REQUIRE(std::vector<position_t>{-100, -1} == tree.get_reversed_positions(node_id_6));
     }
 
     SECTION("Invalid index access throws correctly") {
@@ -63,19 +63,19 @@ TEST_CASE("`PrefixTree` operations", "[PrefixTree]") {
         auto const node_id_2{tree.insert(node_id_1, 7)};
         tree.set(node_id_1, 10);
         tree.set(node_id_2, 12);
-        REQUIRE(std::vector{10} == tree.get_reversed_positions(node_id_1));
-        REQUIRE(std::vector{12, 10} == tree.get_reversed_positions(node_id_2));
+        REQUIRE(std::vector<position_t>{10} == tree.get_reversed_positions(node_id_1));
+        REQUIRE(std::vector<position_t>{12, 10} == tree.get_reversed_positions(node_id_2));
 
         // Test multiple updates to the same node
         tree.set(node_id_2, 15);
         tree.set(node_id_2, 20);
-        REQUIRE(std::vector{20, 10} == tree.get_reversed_positions(node_id_2));
+        REQUIRE(std::vector<position_t>{20, 10} == tree.get_reversed_positions(node_id_2));
 
         // Test that updates don't affect unrelated paths
         auto const node_id_3{tree.insert(0, 30)};
         tree.set(node_id_3, 25);
-        REQUIRE(std::vector{10} == tree.get_reversed_positions(node_id_1));
-        REQUIRE(std::vector{20, 10} == tree.get_reversed_positions(node_id_2));
+        REQUIRE(std::vector<position_t>{10} == tree.get_reversed_positions(node_id_1));
+        REQUIRE(std::vector<position_t>{20, 10} == tree.get_reversed_positions(node_id_2));
     }
 
     SECTION("Set position for an invalid index throws correctly") {

@@ -2,10 +2,12 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <log_surgeon/finite_automata/PrefixTree.hpp>
 #include <log_surgeon/finite_automata/RegisterHandler.hpp>
 
 using log_surgeon::finite_automata::RegisterHandler;
 using std::make_unique;
+using position_t = log_surgeon::finite_automata::PrefixTree::position_t;
 using std::unique_ptr;
 
 TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
@@ -22,7 +24,7 @@ TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
 
     SECTION("Set register position correctly") {
         handler.set_register(0, 5);
-        REQUIRE(std::vector{5} == handler.get_reversed_positions(0));
+        REQUIRE(std::vector<position_t>{5} == handler.get_reversed_positions(0));
     }
 
     SECTION("Register relationships are maintained") {
@@ -31,19 +33,19 @@ TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
         handler.set_register(2, 15);
 
         auto positions{handler.get_reversed_positions(2)};
-        REQUIRE(std::vector{15, 10, 5} == handler.get_reversed_positions(2));
+        REQUIRE(std::vector<position_t>{15, 10, 5} == handler.get_reversed_positions(2));
     }
 
     SECTION("Copy register index correctly") {
         handler.set_register(0, 5);
         handler.copy_register(1, 0);
-        REQUIRE(std::vector{5} == handler.get_reversed_positions(1));
+        REQUIRE(std::vector<position_t>{5} == handler.get_reversed_positions(1));
     }
 
     SECTION("`append_position` appends position correctly") {
         handler.set_register(0, 5);
         handler.append_position(0, 7);
-        REQUIRE(std::vector{7, 5} == handler.get_reversed_positions(0));
+        REQUIRE(std::vector<position_t>{7, 5} == handler.get_reversed_positions(0));
     }
 
     SECTION("Throws out of range correctly") {
