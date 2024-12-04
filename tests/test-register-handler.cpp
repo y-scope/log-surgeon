@@ -8,7 +8,7 @@ using log_surgeon::finite_automata::RegisterHandler;
 using std::make_unique;
 using std::unique_ptr;
 
-TEST_CASE("RegisterHandler tests", "[RegisterHandler]") {
+TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
     RegisterHandler handler;
 
     SECTION("Initial state is empty") {
@@ -40,7 +40,7 @@ TEST_CASE("RegisterHandler tests", "[RegisterHandler]") {
         REQUIRE(std::vector<int32_t>{5} == handler.get_reversed_positions(1));
     }
 
-    SECTION("append_position appends position correctly") {
+    SECTION("`append_position` appends position correctly") {
         handler.set_register(0, 5);
         handler.append_position(0, 7);
         REQUIRE(std::vector<int32_t>{7, 5} == handler.get_reversed_positions(0));

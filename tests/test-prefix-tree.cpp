@@ -6,7 +6,7 @@
 
 using log_surgeon::finite_automata::PrefixTree;
 
-TEST_CASE("Prefix tree operations", "[PrefixTree]") {
+TEST_CASE("`PrefixTree` operations", "[PrefixTree]") {
     SECTION("Newly constructed tree works correctly") {
         PrefixTree const tree;
 
