@@ -22,7 +22,7 @@ TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
 
     SECTION("Set register position correctly") {
         handler.set_register(0, 5);
-        REQUIRE(std::vector<int32_t>{5} == handler.get_reversed_positions(0));
+        REQUIRE(std::vector{5} == handler.get_reversed_positions(0));
     }
 
     SECTION("Register relationships are maintained") {
@@ -31,19 +31,19 @@ TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
         handler.set_register(2, 15);
 
         auto positions{handler.get_reversed_positions(2)};
-        REQUIRE(std::vector<int32_t>{15, 10, 5} == handler.get_reversed_positions(2));
+        REQUIRE(std::vector{15, 10, 5} == handler.get_reversed_positions(2));
     }
 
     SECTION("Copy register index correctly") {
         handler.set_register(0, 5);
         handler.copy_register(1, 0);
-        REQUIRE(std::vector<int32_t>{5} == handler.get_reversed_positions(1));
+        REQUIRE(std::vector{5} == handler.get_reversed_positions(1));
     }
 
     SECTION("`append_position` appends position correctly") {
         handler.set_register(0, 5);
         handler.append_position(0, 7);
-        REQUIRE(std::vector<int32_t>{7, 5} == handler.get_reversed_positions(0));
+        REQUIRE(std::vector{7, 5} == handler.get_reversed_positions(0));
     }
 
     SECTION("Throws out of range correctly") {
