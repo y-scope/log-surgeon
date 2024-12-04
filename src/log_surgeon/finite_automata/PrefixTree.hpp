@@ -30,7 +30,7 @@ public:
      * @return The index of the newly inserted node in the tree.
      * @throw std::out_of_range if the parent's index is out of range.
      */
-    auto insert(id_t const parent_node_id, position_t const position) -> id_t {
+    [[maybe_unused]] auto insert(id_t const parent_node_id, position_t const position) -> id_t {
         if (m_nodes.size() <= parent_node_id) {
             throw std::out_of_range("Predecessor index out of range.");
         }
