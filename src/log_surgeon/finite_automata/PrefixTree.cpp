@@ -9,7 +9,7 @@ namespace log_surgeon::finite_automata {
 
     std::vector<position_t> reversed_positions;
     auto current_node{m_nodes[index]};
-    while (current_node.get_predecessor_index().has_value()) {
+    while (false == current_node.is_root()) {
         reversed_positions.push_back(current_node.get_position());
         current_node = m_nodes[current_node.get_predecessor_index().value()];
     }

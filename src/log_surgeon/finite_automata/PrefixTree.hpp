@@ -33,6 +33,10 @@ private:
                 : m_predecessor_index{predecessor_index},
                   m_position{position} {}
 
+        [[nodiscard]] auto is_root() const -> bool {
+            return false == m_predecessor_index.has_value();
+        }
+
         [[nodiscard]] auto get_predecessor_index() const -> std::optional<id_t> {
             return m_predecessor_index;
         }
