@@ -1,5 +1,7 @@
 #include "PrefixTree.hpp"
 
+#include <stdexcept>
+
 namespace log_surgeon::finite_automata {
 [[nodiscard]] auto PrefixTree::get_reversed_positions(id_t const index
 ) const -> std::vector<position_t> {
