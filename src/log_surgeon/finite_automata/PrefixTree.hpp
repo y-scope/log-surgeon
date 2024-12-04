@@ -9,7 +9,7 @@
 namespace log_surgeon::finite_automata {
 /**
  * Represents a prefix tree to store register data during TDFA simulation. Each node in the tree
- * stores a single posiiton in the lexed string. Each path from the root to an index corresponds to
+ * stores a single position in the lexed string. Each path from the root to an index corresponds to
  * a sequence of positions for an individual tag:
  * - Positive position node: Indicates the tag was matched at the position.
  * - Negative position node: Indicates the tag was unmatched. If a negative node is the entire path,
