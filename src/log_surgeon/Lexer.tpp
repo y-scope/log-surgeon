@@ -389,6 +389,111 @@ void Lexer<NfaStateType, DfaStateType>::generate() {
         }
     }
 }
+
+template <typename NfaStateType, typename DfaStateType>
+auto Lexer<NfaStateType, DfaStateType>::epsilon_closure(NfaStateType const* state_ptr
+) -> std::set<NfaStateType const*> {
+    std::set<NfaStateType const*> closure_set;
+    std::stack<NfaStateType const*> stack;
+    stack.push(state_ptr);
+    while (!stack.empty()) {
+        auto const* current_state = stack.top();
+        stack.pop();
+        if (false == closure_set.insert(current_state).second) {
+            continue;
+        }
+        for (auto const* dest_state : current_state->get_epsilon_transitions()) {
+            stack.push(dest_state);
+        }
+
+        // TODO: currently treat tagged transitions as epsilon transitions
+        for (auto const& positive_tagged_start_transition :
+             current_state->get_positive_tagged_start_transitions())
+        {
+            stack.push(positive_tagged_start_transition.get_dest_state());
+        }
+        auto const& optional_positive_tagged_end_transition
+                = current_state->get_positive_tagged_end_transition();
+        if (optional_positive_tagged_end_transition.has_value()) {
+            stack.push(optional_positive_tagged_end_transition.value().get_dest_state());
+        }
+
+        auto const& optional_negative_tagged_transition
+                = current_state->get_negative_tagged_transition();
+        if (optional_negative_tagged_transition.has_value()) {
+            stack.push(optional_negative_tagged_transition.value().get_dest_state());
+        }
+    }
+    return closure_set;
+}
+
+template <typename NfaStateType, typename DfaStateType>
+auto Lexer<NfaStateType, DfaStateType>::nfa_to_dfa(finite_automata::Nfa<NfaStateType>& nfa
+) -> std::unique_ptr<finite_automata::Dfa<DfaStateType>> {
+    typedef std::set<NfaStateType const*> StateSet;
+    std::unique_ptr<finite_automata::Dfa<DfaStateType>> dfa
+            = std::make_unique<finite_automata::Dfa<DfaStateType>>();
+    std::map<StateSet, DfaStateType*> dfa_states;
+    std::stack<StateSet> unmarked_sets;
+    auto create_dfa_state
+            = [&dfa, &dfa_states, &unmarked_sets](StateSet const& set) -> DfaStateType* {
+        DfaStateType* state = dfa->new_state(set);
+        dfa_states[set] = state;
+        unmarked_sets.push(set);
+        return state;
+    };
+    StateSet start_set = epsilon_closure(nfa.get_root());
+    create_dfa_state(start_set);
+    while (!unmarked_sets.empty()) {
+        StateSet set = unmarked_sets.top();
+        unmarked_sets.pop();
+        DfaStateType* dfa_state = dfa_states.at(set);
+        std::map<uint32_t, StateSet> ascii_transitions_map;
+        // map<Interval, StateSet> transitions_map;
+        for (NfaStateType const* s0 : set) {
+            for (uint32_t i = 0; i < cSizeOfByte; i++) {
+                for (NfaStateType* const s1 : s0->get_byte_transitions(i)) {
+                    StateSet closure = epsilon_closure(s1);
+                    ascii_transitions_map[i].insert(closure.begin(), closure.end());
+                }
+            }
+            // TODO: add this for the utf8 case
+            /*
+            for (const typename NfaStateType::Tree::Data& data : s0->get_tree_transitions().all()) {
+                for (NfaStateType* const s1 : data.m_value) {
+                    StateSet closure = epsilon_closure(s1);
+                    transitions_map[data.m_interval].insert(closure.begin(), closure.end());
+                }
+            }
+            */
+        }
+        auto next_dfa_state
+                = [&dfa_states, &create_dfa_state](StateSet const& set) -> DfaStateType* {
+            DfaStateType* state{nullptr};
+            auto it = dfa_states.find(set);
+            if (it == dfa_states.end()) {
+                state = create_dfa_state(set);
+            } else {
+                state = it->second;
+            }
+            return state;
+        };
+        for (typename std::map<uint32_t, StateSet>::value_type const& kv : ascii_transitions_map) {
+            DfaStateType* dest_state = next_dfa_state(kv.second);
+            dfa_state->add_byte_transition(kv.first, dest_state);
+        }
+        // TODO: add this for the utf8 case
+        /*
+        for (const typename map<Interval, typename NfaStateType::StateSet>::value_type& kv :
+             transitions_map)
+        {
+            DfaStateType* dest_state = next_dfa_state(kv.second);
+            dfa_state->add_tree_transition(kv.first, dest_state);
+        }
+        */
+    }
+    return dfa;
+}
 }  // namespace log_surgeon
 
 #endif  // LOG_SURGEON_LEXER_TPP
