@@ -34,8 +34,8 @@ public:
     }
 
     auto append_position(uint32_t const reg_id, PrefixTree::position_t const position) -> void {
-        auto& reg{m_registers.at(reg_id)};
-        reg = m_prefix_tree.insert(reg, position);
+        auto const node_id{m_registers.at(reg_id)};
+        m_registers.at(reg_id) = m_prefix_tree.insert(node_id, position);
     }
 
     [[nodiscard]] auto get_reversed_positions(uint32_t const reg_id
