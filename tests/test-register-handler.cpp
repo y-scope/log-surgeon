@@ -11,6 +11,8 @@ using log_surgeon::finite_automata::RegisterHandler;
 using position_t = log_surgeon::finite_automata::PrefixTree::position_t;
 
 constexpr position_t cInitialPos{0};
+constexpr position_t cNegativePos1{-1};
+constexpr position_t cNegativePos2{-100};
 constexpr position_t cSetPos1{5};
 constexpr position_t cSetPos2{10};
 constexpr position_t cSetPos3{15};
@@ -71,5 +73,13 @@ TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
         REQUIRE_THROWS_AS(handler.copy_register(cRegId1, cInvalidRegId), std::out_of_range);
         REQUIRE_THROWS_AS(handler.append_position(cInvalidRegId, cSetPos1), std::out_of_range);
         REQUIRE_THROWS_AS(handler.get_reversed_positions(cInvalidRegId), std::out_of_range);
+    }
+
+    SECTION("Handles negative position values correctly") {
+        handler.set_register(cRegId1, cNegativePos1);
+        handler.append_position(cRegId1, cSetPos1);
+        handler.append_position(cRegId1, cNegativePos2);
+        REQUIRE(std::vector<position_t>{cNegativePos2, cSetPos1, cNegativePos1}
+                == handler.get_reversed_positions(cRegId1));
     }
 }
