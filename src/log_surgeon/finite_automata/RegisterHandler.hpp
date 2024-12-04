@@ -12,8 +12,8 @@ namespace log_surgeon::finite_automata {
  * The register handler also contains a vector of registers, and performs the set, copy, and append
  * operations for these registers.
  *
- * Note: for efficiency these registers may be re-used, but are not required to be re-initialized.
- * It is the responsibility of the DFA to set the register value when needed.
+ * NOTE: For efficiency, registers are not initialized when lexing a new string; instead, it is the
+ * responsibility of the DFA to set the register values when needed.
  */
 class RegisterHandler {
 public:
