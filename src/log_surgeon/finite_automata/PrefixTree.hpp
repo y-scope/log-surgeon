@@ -8,8 +8,9 @@
 
 namespace log_surgeon::finite_automata {
 /**
- * Represents a prefix tree to store register data during TDFA simulation. Each path from the root
- * to an index corresponds to a sequence of positions for an individual tag:
+ * Represents a prefix tree to store register data during TDFA simulation. Each node in the tree
+ * stores a single posiiton in the lexed string. Each path from the root to an index corresponds to
+ * a sequence of positions for an individual tag:
  * - Positive position node: Indicates the tag was matched at the position.
  * - Negative position node: Indicates the tag was unmatched. If a negative node is the entire path,
  * it indicates the tag was never matched. If the negative tag is along a path containing positive
@@ -22,15 +23,6 @@ public:
     using position_t = int32_t;
 
 private:
-    /**
-     * Represents a prefix tree node. A node stores a potential value for a TDFA register.
-     *
-     * A node stores the current position at which a tag was matched, as well as the index of the
-     * prefix tree node corresponding to the previous match of the same tag.
-     *
-     * Note: A value of m_position < 0 indicates that the tag is currently unmatched in the lexed
-     * string.
-     */
     class Node {
     public:
         Node(std::optional<id_t> const predecessor_index, position_t const position)
