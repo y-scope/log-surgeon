@@ -25,46 +25,44 @@ public:
     PrefixTree() : m_nodes{{std::nullopt, -1}} {}
 
     /**
-     * @param predecessor_index Index of the inserted node's predecessor in the prefix tree.
+     * @param parent_node_id Index of the inserted node's parent in the prefix tree.
      * @param position The position in the lexed string.
      * @return The index of the newly inserted node in the tree.
-     * @throw std::out_of_range if the predecessor index is out of range.
+     * @throw std::out_of_range if the parent's index is out of range.
      */
-    auto insert(id_t const predecessor_index, position_t const position) -> id_t {
-        if (m_nodes.size() <= predecessor_index) {
+    auto insert(id_t const parent_node_id, position_t const position) -> id_t {
+        if (m_nodes.size() <= parent_node_id) {
             throw std::out_of_range("Predecessor index out of range.");
         }
 
-        m_nodes.emplace_back(predecessor_index, position);
+        m_nodes.emplace_back(parent_node_id, position);
         return m_nodes.size() - 1;
     }
 
-    auto set(id_t const index, position_t const position) -> void {
-        m_nodes.at(index).set_position(position);
+    auto set(id_t const node_id, position_t const position) -> void {
+        m_nodes.at(node_id).set_position(position);
     }
 
     /**
      * Retrieves a vector of positions in reverse order by traversing from the given index to the
      * root.
-     * @param index The index of the node to start the traversal from.
+     * @param node_id The index of the node to start the traversal from.
      * @return A vector containing positions in reverse order from the given index to root.
      * @throw std::out_of_range if the index is out of range.
      */
-    [[nodiscard]] auto get_reversed_positions(id_t index) const -> std::vector<position_t>;
+    [[nodiscard]] auto get_reversed_positions(id_t node_id) const -> std::vector<position_t>;
 
 private:
     class Node {
     public:
-        Node(std::optional<id_t> const predecessor_index, position_t const position)
-                : m_predecessor_index{predecessor_index},
+        Node(std::optional<id_t> const parent_node_id, position_t const position)
+                : m_parent_node_id{parent_node_id},
                   m_position{position} {}
 
-        [[nodiscard]] auto is_root() const -> bool {
-            return false == m_predecessor_index.has_value();
-        }
+        [[nodiscard]] auto is_root() const -> bool { return false == m_parent_node_id.has_value(); }
 
-        [[nodiscard]] auto get_predecessor_index() const -> std::optional<id_t> {
-            return m_predecessor_index;
+        [[nodiscard]] auto get_parent_node_id() const -> std::optional<id_t> {
+            return m_parent_node_id;
         }
 
         auto set_position(position_t const position) -> void { m_position = position; }
@@ -72,7 +70,7 @@ private:
         [[nodiscard]] auto get_position() const -> position_t { return m_position; }
 
     private:
-        std::optional<id_t> m_predecessor_index;
+        std::optional<id_t> m_parent_node_id;
         position_t m_position;
     };
 
