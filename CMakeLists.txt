@@ -93,6 +93,8 @@ set(SOURCE_FILES
     src/log_surgeon/SchemaParser.hpp
     src/log_surgeon/Token.cpp
     src/log_surgeon/Token.hpp
+    src/log_surgeon/finite_automata/PrefixTree.cpp
+    src/log_surgeon/finite_automata/PrefixTree.hpp
     src/log_surgeon/finite_automata/RegexAST.hpp
     src/log_surgeon/finite_automata/Dfa.hpp
     src/log_surgeon/finite_automata/DfaState.hpp
@@ -101,7 +103,7 @@ set(SOURCE_FILES
     src/log_surgeon/finite_automata/Nfa.hpp
     src/log_surgeon/finite_automata/NfaState.hpp
     src/log_surgeon/finite_automata/NfaStateType.hpp
-    src/log_surgeon/finite_automata/Register.hpp
+    src/log_surgeon/finite_automata/RegisterHandler.hpp
     src/log_surgeon/finite_automata/Tag.hpp
     src/log_surgeon/finite_automata/TaggedTransition.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.hpp
