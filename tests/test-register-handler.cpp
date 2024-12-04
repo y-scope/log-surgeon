@@ -20,6 +20,14 @@ constexpr size_t cRegId2{1};
 constexpr size_t cRegId3{2};
 constexpr size_t cInvalidRegId{10};
 
+namespace {
+auto add_register_to_handler(RegisterHandler& handler) -> void {
+    for (size_t i{0}; i < cNumRegisters; ++i) {
+        handler.add_register(i, 0);
+    }
+}
+}  // namespace
+
 TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
     RegisterHandler handler;
 
@@ -27,9 +35,7 @@ TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
         REQUIRE_THROWS_AS(handler.get_reversed_positions(cRegId1), std::out_of_range);
     }
 
-    for (size_t i{0}; i < cNumRegisters; ++i) {
-        handler.add_register(i, cInitialPos);
-    }
+    add_register_to_handler(handler);
 
     SECTION("Set register position correctly") {
         handler.set_register(cRegId1, cSetPos1);
