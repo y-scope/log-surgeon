@@ -116,7 +116,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         auto* regex_ast_capture
                 = dynamic_cast<RegexASTCaptureByte const*>(regex_ast_cat_ptr->get_right());
         REQUIRE(nullptr != regex_ast_capture);
-        REQUIRE("uID" == string{regex_ast_capture->get_group_name()});
+        REQUIRE("uID" == regex_ast_capture->get_group_name());
 
         auto* regex_ast_multiplication_ast = dynamic_cast<RegexASTMultiplicationByte*>(
                 regex_ast_capture->get_group_regex_ast().get()
