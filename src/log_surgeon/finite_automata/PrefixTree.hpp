@@ -22,6 +22,8 @@ public:
     using id_t = uint32_t;
     using position_t = int32_t;
 
+    static constexpr id_t cRootId{0};
+
     PrefixTree() : m_nodes{{std::nullopt, -1}} {}
 
     /**
@@ -42,6 +44,8 @@ public:
     auto set(id_t const node_id, position_t const position) -> void {
         m_nodes.at(node_id).set_position(position);
     }
+
+    [[nodiscard]] auto size() const -> size_t { return m_nodes.size(); }
 
     /**
      * @param node_id The index of the node.

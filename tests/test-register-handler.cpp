@@ -25,7 +25,7 @@ constexpr size_t cInvalidRegId{10};
 namespace {
 auto add_register_to_handler(RegisterHandler& handler) -> void {
     for (size_t i{0}; i < cNumRegisters; ++i) {
-        handler.add_register(i, 0);
+        handler.add_register(i, cInitialPos);
     }
 }
 }  // namespace
