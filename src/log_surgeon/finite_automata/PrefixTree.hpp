@@ -45,7 +45,7 @@ public:
 
     /**
      * @param node_id The index of the node.
-     * @return A vector containing positions in the path defined by `node_id`, in reverse order,
+     * @return A vector containing positions along the path defined by `node_id`, in reverse order,
      * i.e., [index, root).
      * @throw std::out_of_range if the index is out of range.
      */
