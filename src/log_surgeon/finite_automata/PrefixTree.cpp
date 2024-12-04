@@ -1,9 +1,10 @@
 #include "PrefixTree.hpp"
 
 #include <stdexcept>
+#include <vector>
 
 namespace log_surgeon::finite_automata {
-[[nodiscard]] auto PrefixTree::get_reversed_positions(id_t const index
+auto PrefixTree::get_reversed_positions(id_t const index
 ) const -> std::vector<position_t> {
     if (m_nodes.size() <= index) {
         throw std::out_of_range("Prefix tree index out of range.");
