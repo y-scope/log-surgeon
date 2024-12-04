@@ -22,31 +22,6 @@ public:
     using id_t = uint32_t;
     using position_t = int32_t;
 
-private:
-    class Node {
-    public:
-        Node(std::optional<id_t> const predecessor_index, position_t const position)
-                : m_predecessor_index{predecessor_index},
-                  m_position{position} {}
-
-        [[nodiscard]] auto is_root() const -> bool {
-            return false == m_predecessor_index.has_value();
-        }
-
-        [[nodiscard]] auto get_predecessor_index() const -> std::optional<id_t> {
-            return m_predecessor_index;
-        }
-
-        auto set_position(position_t const position) -> void { m_position = position; }
-
-        [[nodiscard]] auto get_position() const -> position_t { return m_position; }
-
-    private:
-        std::optional<id_t> m_predecessor_index;
-        position_t m_position;
-    };
-
-public:
     PrefixTree() : m_nodes{{std::nullopt, -1}} {}
 
     /**
@@ -78,6 +53,29 @@ public:
     [[nodiscard]] auto get_reversed_positions(id_t index) const -> std::vector<position_t>;
 
 private:
+    class Node {
+    public:
+        Node(std::optional<id_t> const predecessor_index, position_t const position)
+                : m_predecessor_index{predecessor_index},
+                  m_position{position} {}
+
+        [[nodiscard]] auto is_root() const -> bool {
+            return false == m_predecessor_index.has_value();
+        }
+
+        [[nodiscard]] auto get_predecessor_index() const -> std::optional<id_t> {
+            return m_predecessor_index;
+        }
+
+        auto set_position(position_t const position) -> void { m_position = position; }
+
+        [[nodiscard]] auto get_position() const -> position_t { return m_position; }
+
+    private:
+        std::optional<id_t> m_predecessor_index;
+        position_t m_position;
+    };
+
     std::vector<Node> m_nodes;
 };
 
