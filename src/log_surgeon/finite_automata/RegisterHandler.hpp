@@ -25,20 +25,20 @@ public:
         m_registers.emplace_back(prefix_tree_node_id);
     }
 
-    auto set_register(uint32_t const reg_id, PrefixTree::position_t const position) -> void {
+    auto set_register(size_t const reg_id, PrefixTree::position_t const position) -> void {
         m_prefix_tree.set(m_registers.at(reg_id), position);
     }
 
-    auto copy_register(uint32_t const dest_reg_id, uint32_t const source_reg_id) -> void {
+    auto copy_register(size_t const dest_reg_id, size_t const source_reg_id) -> void {
         m_registers.at(dest_reg_id) = m_registers.at(source_reg_id);
     }
 
-    auto append_position(uint32_t const reg_id, PrefixTree::position_t const position) -> void {
+    auto append_position(size_t const reg_id, PrefixTree::position_t const position) -> void {
         auto const node_id{m_registers.at(reg_id)};
         m_registers.at(reg_id) = m_prefix_tree.insert(node_id, position);
     }
 
-    [[nodiscard]] auto get_reversed_positions(uint32_t const reg_id
+    [[nodiscard]] auto get_reversed_positions(size_t const reg_id
     ) const -> std::vector<PrefixTree::position_t> {
         return m_prefix_tree.get_reversed_positions(m_registers.at(reg_id));
     }

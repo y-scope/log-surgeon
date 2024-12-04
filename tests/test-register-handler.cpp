@@ -18,7 +18,7 @@ TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
     }
 
     constexpr uint32_t num_registers{5};
-    for (uint32_t i{0}; i < num_registers; ++i) {
+    for (size_t i{0}; i < num_registers; ++i) {
         handler.add_register(i, 0);
     }
 
