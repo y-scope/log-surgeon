@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_PREFIX_TREE_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_PREFIX_TREE_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <stdexcept>
