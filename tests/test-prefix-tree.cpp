@@ -11,7 +11,7 @@ using id_t = PrefixTree::id_t;
 using position_t = PrefixTree::position_t;
 
 constexpr auto cRootId{PrefixTree::cRootId};
-constexpr id_t cInvaidNodeId{100};
+constexpr id_t cInvalidNodeId{100};
 constexpr position_t cInsertPos1{4};
 constexpr position_t cInsertPos2{7};
 constexpr position_t cInsertPos3{9};
@@ -108,7 +108,7 @@ TEST_CASE("`PrefixTree` operations", "[PrefixTree]") {
         PrefixTree tree;
 
         // Test setting position before any insertions
-        REQUIRE_THROWS_AS(tree.set(cInvaidNodeId, cSetPos4), std::out_of_range);
+        REQUIRE_THROWS_AS(tree.set(cInvalidNodeId, cSetPos4), std::out_of_range);
 
         // Test setting position just beyond valid range
         auto const node_id_1{tree.insert(cRootId, cInsertPos1)};
