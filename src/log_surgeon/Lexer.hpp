@@ -11,9 +11,9 @@
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/finite_automata/Dfa.hpp>
 #include <log_surgeon/finite_automata/Nfa.hpp>
+#include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/ParserInputBuffer.hpp>
 #include <log_surgeon/Token.hpp>
