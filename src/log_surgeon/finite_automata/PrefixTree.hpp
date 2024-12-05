@@ -80,7 +80,6 @@ private:
 
     std::vector<Node> m_nodes;
 };
-
 }  // namespace log_surgeon::finite_automata
 
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_PREFIX_TREE_HPP
