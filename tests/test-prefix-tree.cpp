@@ -108,7 +108,7 @@ TEST_CASE("`PrefixTree` operations", "[PrefixTree]") {
         PrefixTree tree;
 
         // Test setting position before any insertions
-        REQUIRE_THROWS_AS(tree.set(cInvaidNodeId, cSetPos4), std::out_of_range);
+        REQUIRE_THROWS_AS(tree.set(cInvalidNodeId, cSetPos4), std::out_of_range);
 
         // Test setting position just beyond valid range
         auto const node_id_1{tree.insert(cRootId, cInsertPos1)};
