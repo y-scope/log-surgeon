@@ -165,9 +165,7 @@ public:
      * Returns the next unmatched symbol in the production based on the dot.
      * @return uint32_t
      */
-    [[nodiscard]] auto next_symbol() const -> uint32_t {
-        return m_production->m_body.at(m_dot);
-    }
+    [[nodiscard]] auto next_symbol() const -> uint32_t { return m_production->m_body.at(m_dot); }
 
     Production* m_production;
     uint32_t m_dot;

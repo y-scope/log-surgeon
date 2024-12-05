@@ -17,6 +17,8 @@ using std::unique_ptr;
 using std::vector;
 
 namespace log_surgeon {
+using finite_automata::DfaByteState;
+using finite_automata::NfaByteState;
 using finite_automata::RegexAST;
 using finite_automata::RegexASTCat;
 using finite_automata::RegexASTGroup;
@@ -24,8 +26,6 @@ using finite_automata::RegexASTInteger;
 using finite_automata::RegexASTLiteral;
 using finite_automata::RegexASTMultiplication;
 using finite_automata::RegexASTOr;
-using finite_automata::DfaByteState;
-using finite_automata::NfaByteState;
 
 LogParser::LogParser(string const& schema_file_path)
         : LogParser::LogParser(SchemaParser::try_schema_file(schema_file_path)) {}
@@ -62,8 +62,7 @@ auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
     for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* rule = dynamic_cast<SchemaVarAST*>(parser_ast.get());
         if (rule->m_name == "timestamp") {
-            unique_ptr<RegexAST<NfaByteState>> first_timestamp_regex_ast(
-                    rule->m_regex_ptr->clone()
+            unique_ptr<RegexAST<NfaByteState>> first_timestamp_regex_ast(rule->m_regex_ptr->clone()
             );
             unique_ptr<RegexASTLiteral<NfaByteState>> r1
                     = make_unique<RegexASTLiteral<NfaByteState>>(utf8::cCharStartOfFile);
@@ -74,9 +73,8 @@ auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
                             std::move(first_timestamp_regex_ast)
                     )
             );
-            unique_ptr<RegexAST<NfaByteState>> newline_timestamp_regex_ast(
-                    rule->m_regex_ptr->clone()
-            );
+            unique_ptr<RegexAST<NfaByteState>> newline_timestamp_regex_ast(rule->m_regex_ptr->clone(
+            ));
             unique_ptr<RegexASTLiteral<NfaByteState>> r2
                     = make_unique<RegexASTLiteral<NfaByteState>>('\n');
             add_rule(
@@ -143,9 +141,7 @@ auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
 
         // For log-specific lexing: modify variable regex to contain a delimiter at the start.
         unique_ptr<RegexASTGroup<NfaByteState>> delimiter_group
-                = make_unique<RegexASTGroup<NfaByteState>>(
-                        RegexASTGroup<NfaByteState>(delimiters)
-                );
+                = make_unique<RegexASTGroup<NfaByteState>>(RegexASTGroup<NfaByteState>(delimiters));
         rule->m_regex_ptr = make_unique<RegexASTCat<NfaByteState>>(
                 std::move(delimiter_group),
                 std::move(rule->m_regex_ptr)
