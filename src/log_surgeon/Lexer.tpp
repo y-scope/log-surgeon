@@ -67,7 +67,8 @@ auto Lexer<NfaStateType, DfaStateType>::scan(ParserInputBuffer& input_buffer, To
     while (true) {
         auto prev_byte_buf_pos = input_buffer.storage().pos();
         auto next_char{utf8::cCharErr};
-        if (auto const err = input_buffer.get_next_character(next_char); ErrorCode::Success != err) {
+        if (auto const err = input_buffer.get_next_character(next_char); ErrorCode::Success != err)
+        {
             m_asked_for_more_data = true;
             m_prev_state = state;
             return err;
