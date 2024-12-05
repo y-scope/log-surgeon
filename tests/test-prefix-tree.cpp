@@ -11,7 +11,7 @@ using id_t = PrefixTree::id_t;
 using position_t = PrefixTree::position_t;
 
 constexpr auto cRootId{PrefixTree::cRootId};
-constexpr id_t cInvaidNodeId{100};
+constexpr id_t cInvalidNodeId{100};
 constexpr position_t cInsertPos1{4};
 constexpr position_t cInsertPos2{7};
 constexpr position_t cInsertPos3{9};
