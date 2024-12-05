@@ -46,8 +46,7 @@ public:
     // Constructor
     SchemaVarAST(
             std::string name,
-            std::unique_ptr<finite_automata::RegexAST<finite_automata::RegexNFAByteState>>
-                    regex_ptr,
+            std::unique_ptr<finite_automata::RegexAST<finite_automata::NfaByteState>> regex_ptr,
             uint32_t line_num
     )
             : m_line_num(line_num),
@@ -56,7 +55,7 @@ public:
 
     uint32_t m_line_num;
     std::string m_name;
-    std::unique_ptr<finite_automata::RegexAST<finite_automata::RegexNFAByteState>> m_regex_ptr;
+    std::unique_ptr<finite_automata::RegexAST<finite_automata::NfaByteState>> m_regex_ptr;
 };
 
 class DelimiterStringAST : public ParserAST {
@@ -69,9 +68,8 @@ public:
     std::vector<uint32_t> m_delimiters;
 };
 
-class SchemaParser : public LALR1Parser<
-                             finite_automata::RegexNFAByteState,
-                             finite_automata::RegexDFAByteState> {
+class SchemaParser
+        : public LALR1Parser<finite_automata::NfaByteState, finite_automata::DfaByteState> {
 public:
     /**
      * File wrapper around generate_schema_ast()
