@@ -48,8 +48,7 @@ public:
         return m_matching_variable_id;
     }
 
-    auto
-    add_positive_tagged_start_transition(Tag const* tag, NfaState const* dest_state) -> void {
+    auto add_positive_tagged_start_transition(Tag const* tag, NfaState const* dest_state) -> void {
         m_positive_tagged_start_transitions.emplace_back(tag, dest_state);
     }
 
@@ -80,8 +79,7 @@ public:
         m_bytes_transitions[byte].push_back(dest_state);
     }
 
-    [[nodiscard]] auto get_byte_transitions(uint8_t byte
-    ) const -> std::vector<NfaState*> const& {
+    [[nodiscard]] auto get_byte_transitions(uint8_t byte) const -> std::vector<NfaState*> const& {
         return m_bytes_transitions[byte];
     }
 
@@ -117,8 +115,7 @@ private:
     // NOTE: We don't need m_tree_transitions for the `stateType ==
     // DfaStateType::Byte` case, so we use an empty class (`std::tuple<>`)
     // in that case.
-    std::conditional_t<state_type == NfaStateType::Utf8, Tree, std::tuple<>>
-            m_tree_transitions;
+    std::conditional_t<state_type == NfaStateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
 
 template <NfaStateType state_type>
@@ -169,8 +166,7 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
 }
 
 template <NfaStateType state_type>
-auto NfaState<state_type>::serialize(
-        std::unordered_map<NfaState const*, uint32_t> const& state_ids
+auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     std::vector<std::string> byte_transitions;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
