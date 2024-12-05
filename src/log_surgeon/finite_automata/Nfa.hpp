@@ -1,13 +1,10 @@
-#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP
-#define LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
+#define LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
 
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <queue>
-#include <set>
 #include <string>
-#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -16,23 +13,22 @@
 #include <fmt/core.h>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/RegexNFAState.hpp>
+#include <log_surgeon/finite_automata/NfaState.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 
 namespace log_surgeon::finite_automata {
-// TODO: rename `RegexNFA` to `NFA`
-template <typename NFAStateType>
-class RegexNFA {
+template <typename NfaStateType>
+class Nfa {
 public:
-    using StateVec = std::vector<NFAStateType*>;
+    using StateVec = std::vector<NfaStateType*>;
 
-    explicit RegexNFA(std::vector<LexicalRule<NFAStateType>> rules);
+    explicit Nfa(std::vector<LexicalRule<NfaStateType>> rules);
 
     /**
      * Creates a unique_ptr for an NFA state with no tagged transitions and adds it to `m_states`.
-     * @return NFAStateType*
+     * @return NfaStateType*
      */
-    [[nodiscard]] auto new_state() -> NFAStateType*;
+    [[nodiscard]] auto new_state() -> NfaStateType*;
 
     /**
      * Creates a unique_ptr for an NFA state with a positive tagged end transition and adds it to
@@ -43,20 +39,20 @@ public:
      */
     [[nodiscard]] auto new_state_with_positive_tagged_end_transition(
             Tag const* tag,
-            NFAStateType const* dest_state
-    ) -> NFAStateType*;
+            NfaStateType const* dest_state
+    ) -> NfaStateType*;
 
     /**
      * Creates a unique_ptr for an NFA state with a negative tagged transition and adds it to
      * `m_states`.
      * @param tags
      * @param dest_state
-     * @return NFAStateType*
+     * @return NfaStateType*
      */
     [[nodiscard]] auto new_state_with_negative_tagged_transition(
             std::vector<Tag const*> tags,
-            NFAStateType const* dest_state
-    ) -> NFAStateType*;
+            NfaStateType const* dest_state
+    ) -> NfaStateType*;
 
     /**
      * Creates the start and end states for a capture group.
@@ -68,38 +64,38 @@ public:
      */
     [[nodiscard]] auto new_start_and_end_states_with_positive_tagged_transitions(
             Tag const* tag,
-            NFAStateType const* dest_state
-    ) -> std::pair<NFAStateType*, NFAStateType*>;
+            NfaStateType const* dest_state
+    ) -> std::pair<NfaStateType*, NfaStateType*>;
 
     /**
      * @return A vector representing the traversal order of the NFA states using breadth-first
      * search (BFS).
      */
-    [[nodiscard]] auto get_bfs_traversal_order() const -> std::vector<NFAStateType const*>;
+    [[nodiscard]] auto get_bfs_traversal_order() const -> std::vector<NfaStateType const*>;
 
     /**
      * @return A string representation of the NFA.
      */
     [[nodiscard]] auto serialize() const -> std::string;
 
-    auto add_root_interval(Interval interval, NFAStateType* dest_state) -> void {
+    auto add_root_interval(Interval interval, NfaStateType* dest_state) -> void {
         m_root->add_interval(interval, dest_state);
     }
 
-    auto set_root(NFAStateType* root) -> void { m_root = root; }
+    auto set_root(NfaStateType* root) -> void { m_root = root; }
 
-    auto get_root() -> NFAStateType* { return m_root; }
+    auto get_root() -> NfaStateType* { return m_root; }
 
 private:
-    std::vector<std::unique_ptr<NFAStateType>> m_states;
-    NFAStateType* m_root;
+    std::vector<std::unique_ptr<NfaStateType>> m_states;
+    NfaStateType* m_root;
     // Store the rules locally as they contain information needed by the NFA. E.g., transitions in
     // the NFA point to tags in the rule ASTs.
-    std::vector<LexicalRule<NFAStateType>> m_rules;
+    std::vector<LexicalRule<NfaStateType>> m_rules;
 };
 
-template <typename NFAStateType>
-RegexNFA<NFAStateType>::RegexNFA(std::vector<LexicalRule<NFAStateType>> rules)
+template <typename NfaStateType>
+Nfa<NfaStateType>::Nfa(std::vector<LexicalRule<NfaStateType>> rules)
         : m_root{new_state()},
           m_rules{std::move(rules)} {
     for (auto const& rule : m_rules) {
@@ -107,35 +103,35 @@ RegexNFA<NFAStateType>::RegexNFA(std::vector<LexicalRule<NFAStateType>> rules)
     }
 }
 
-template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::new_state() -> NFAStateType* {
-    m_states.emplace_back(std::make_unique<NFAStateType>());
+template <typename NfaStateType>
+auto Nfa<NfaStateType>::new_state() -> NfaStateType* {
+    m_states.emplace_back(std::make_unique<NfaStateType>());
     return m_states.back().get();
 }
 
-template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::new_state_with_positive_tagged_end_transition(
+template <typename NfaStateType>
+auto Nfa<NfaStateType>::new_state_with_positive_tagged_end_transition(
         Tag const* tag,
-        NFAStateType const* dest_state
-) -> NFAStateType* {
-    m_states.emplace_back(std::make_unique<NFAStateType>(tag, dest_state));
+        NfaStateType const* dest_state
+) -> NfaStateType* {
+    m_states.emplace_back(std::make_unique<NfaStateType>(tag, dest_state));
     return m_states.back().get();
 }
 
-template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::new_state_with_negative_tagged_transition(
+template <typename NfaStateType>
+auto Nfa<NfaStateType>::new_state_with_negative_tagged_transition(
         std::vector<Tag const*> tags,
-        NFAStateType const* dest_state
-) -> NFAStateType* {
-    m_states.emplace_back(std::make_unique<NFAStateType>(std::move(tags), dest_state));
+        NfaStateType const* dest_state
+) -> NfaStateType* {
+    m_states.emplace_back(std::make_unique<NfaStateType>(std::move(tags), dest_state));
     return m_states.back().get();
 }
 
-template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::new_start_and_end_states_with_positive_tagged_transitions(
+template <typename NfaStateType>
+auto Nfa<NfaStateType>::new_start_and_end_states_with_positive_tagged_transitions(
         Tag const* tag,
-        NFAStateType const* dest_state
-) -> std::pair<NFAStateType*, NFAStateType*> {
+        NfaStateType const* dest_state
+) -> std::pair<NfaStateType*, NfaStateType*> {
     auto* start_state = new_state();
     m_root->add_positive_tagged_start_transition(tag, start_state);
 
@@ -143,16 +139,16 @@ auto RegexNFA<NFAStateType>::new_start_and_end_states_with_positive_tagged_trans
     return {start_state, end_state};
 }
 
-template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAStateType const*> {
-    std::queue<NFAStateType const*> state_queue;
-    std::unordered_set<NFAStateType const*> visited_states;
-    std::vector<NFAStateType const*> visited_order;
+template <typename NfaStateType>
+auto Nfa<NfaStateType>::get_bfs_traversal_order() const -> std::vector<NfaStateType const*> {
+    std::queue<NfaStateType const*> state_queue;
+    std::unordered_set<NfaStateType const*> visited_states;
+    std::vector<NfaStateType const*> visited_order;
     visited_states.reserve(m_states.size());
     visited_order.reserve(m_states.size());
 
     auto add_to_queue_and_visited
-            = [&state_queue, &visited_states](NFAStateType const* dest_state) {
+            = [&state_queue, &visited_states](NfaStateType const* dest_state) {
                   if (visited_states.insert(dest_state).second) {
                       state_queue.push(dest_state);
                   }
@@ -194,11 +190,11 @@ auto RegexNFA<NFAStateType>::get_bfs_traversal_order() const -> std::vector<NFAS
     return visited_order;
 }
 
-template <typename NFAStateType>
-auto RegexNFA<NFAStateType>::serialize() const -> std::string {
+template <typename NfaStateType>
+auto Nfa<NfaStateType>::serialize() const -> std::string {
     auto const traversal_order = get_bfs_traversal_order();
 
-    std::unordered_map<NFAStateType const*, uint32_t> state_ids;
+    std::unordered_map<NfaStateType const*, uint32_t> state_ids;
     for (auto const* state : traversal_order) {
         state_ids.emplace(state, state_ids.size());
     }
@@ -214,4 +210,4 @@ auto RegexNFA<NFAStateType>::serialize() const -> std::string {
 }
 }  // namespace log_surgeon::finite_automata
 
-#endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_HPP
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP

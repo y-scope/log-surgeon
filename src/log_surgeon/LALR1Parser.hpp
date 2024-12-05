@@ -120,7 +120,7 @@ public:
      * has nothing on its LHS (i.e., HEAD -> {})
      * @return bool
      */
-    [[nodiscard]] auto is_epsilon() const -> bool { return this->m_body.empty(); }
+    [[nodiscard]] auto is_epsilon() const -> bool { return m_body.empty(); }
 
     uint32_t m_index;
     uint32_t m_head;
@@ -158,16 +158,14 @@ public:
      * @return bool
      */
     [[nodiscard]] auto has_dot_at_end() const -> bool {
-        return this->m_dot == this->m_production->m_body.size();
+        return m_dot == m_production->m_body.size();
     }
 
     /**
      * Returns the next unmatched symbol in the production based on the dot.
      * @return uint32_t
      */
-    [[nodiscard]] auto next_symbol() const -> uint32_t {
-        return this->m_production->m_body.at(this->m_dot);
-    }
+    [[nodiscard]] auto next_symbol() const -> uint32_t { return m_production->m_body.at(m_dot); }
 
     Production* m_production;
     uint32_t m_dot;
@@ -202,8 +200,8 @@ public:
     std::vector<Action> m_actions;
 };
 
-template <typename NFAStateType, typename DFAStateType>
-class LALR1Parser : public Parser<NFAStateType, DFAStateType> {
+template <typename NfaStateType, typename DfaStateType>
+class LALR1Parser : public Parser<NfaStateType, DfaStateType> {
 public:
     LALR1Parser();
 
@@ -214,7 +212,7 @@ public:
      */
     auto add_rule(
             std::string const& name,
-            std::unique_ptr<finite_automata::RegexAST<NFAStateType>> rule
+            std::unique_ptr<finite_automata::RegexAST<NfaStateType>> rule
     ) -> void override;
 
     /**
@@ -224,7 +222,7 @@ public:
      */
     auto add_token_group(
             std::string const& name,
-            std::unique_ptr<finite_automata::RegexASTGroup<NFAStateType>> rule_group
+            std::unique_ptr<finite_automata::RegexASTGroup<NfaStateType>> rule_group
     ) -> void;
 
     /**
@@ -276,7 +274,7 @@ protected:
      */
     auto report_error() -> std::string;
 
-    /* Lexer<NFAStateType, DFAStateType> m_lexer; */
+    /* Lexer<NfaStateType, DfaStateType> m_lexer; */
     std::stack<MatchedSymbol> m_parse_stack_matches;
     std::stack<ItemSet*> m_parse_stack_states;
     ItemSet* m_root_item_set_ptr{nullptr};
