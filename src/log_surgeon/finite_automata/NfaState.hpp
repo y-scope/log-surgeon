@@ -1,11 +1,11 @@
-#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_STATE
-#define LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_STATE
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_NFA_STATE
+#define LOG_SURGEON_FINITE_AUTOMATA_NFA_STATE
 
 #include <array>
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <set>
+#include <stack>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -13,28 +13,28 @@
 
 #include <fmt/format.h>
 
-#include <log_surgeon/finite_automata/RegexNFAStateType.hpp>
+#include <log_surgeon/finite_automata/NfaStateType.hpp>
 #include <log_surgeon/finite_automata/TaggedTransition.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-template <RegexNFAStateType state_type>
-class RegexNFAState;
+template <NfaStateType state_type>
+class NfaState;
 
-using RegexNFAByteState = RegexNFAState<RegexNFAStateType::Byte>;
-using RegexNFAUTF8State = RegexNFAState<RegexNFAStateType::UTF8>;
+using NfaByteState = NfaState<NfaStateType::Byte>;
+using NfaUtf8State = NfaState<NfaStateType::Utf8>;
 
-template <RegexNFAStateType state_type>
-class RegexNFAState {
+template <NfaStateType state_type>
+class NfaState {
 public:
-    using Tree = UnicodeIntervalTree<RegexNFAState*>;
+    using Tree = UnicodeIntervalTree<NfaState*>;
 
-    RegexNFAState() = default;
+    NfaState() = default;
 
-    RegexNFAState(Tag const* tag, RegexNFAState const* dest_state)
+    NfaState(Tag const* tag, NfaState const* dest_state)
             : m_positive_tagged_end_transition{PositiveTaggedTransition{tag, dest_state}} {}
 
-    RegexNFAState(std::vector<Tag const*> tags, RegexNFAState const* dest_state)
+    NfaState(std::vector<Tag const*> tags, NfaState const* dest_state)
             : m_negative_tagged_transition{NegativeTaggedTransition{std::move(tags), dest_state}} {}
 
     auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
@@ -49,52 +49,55 @@ public:
         return m_matching_variable_id;
     }
 
-    auto
-    add_positive_tagged_start_transition(Tag const* tag, RegexNFAState const* dest_state) -> void {
+    auto add_positive_tagged_start_transition(Tag const* tag, NfaState const* dest_state) -> void {
         m_positive_tagged_start_transitions.emplace_back(tag, dest_state);
     }
 
     [[nodiscard]] auto get_positive_tagged_start_transitions(
-    ) const -> std::vector<PositiveTaggedTransition<RegexNFAState>> const& {
+    ) const -> std::vector<PositiveTaggedTransition<NfaState>> const& {
         return m_positive_tagged_start_transitions;
     }
 
     [[nodiscard]] auto get_positive_tagged_end_transition(
-    ) const -> std::optional<PositiveTaggedTransition<RegexNFAState>> const& {
+    ) const -> std::optional<PositiveTaggedTransition<NfaState>> const& {
         return m_positive_tagged_end_transition;
     }
 
     [[nodiscard]] auto get_negative_tagged_transition(
-    ) const -> std::optional<NegativeTaggedTransition<RegexNFAState>> const& {
+    ) const -> std::optional<NegativeTaggedTransition<NfaState>> const& {
         return m_negative_tagged_transition;
     }
 
-    auto add_epsilon_transition(RegexNFAState* epsilon_transition) -> void {
+    auto add_epsilon_transition(NfaState* epsilon_transition) -> void {
         m_epsilon_transitions.push_back(epsilon_transition);
     }
 
-    [[nodiscard]] auto get_epsilon_transitions() const -> std::vector<RegexNFAState*> const& {
+    [[nodiscard]] auto get_epsilon_transitions() const -> std::vector<NfaState*> const& {
         return m_epsilon_transitions;
     }
 
-    auto add_byte_transition(uint8_t byte, RegexNFAState* dest_state) -> void {
+    auto add_byte_transition(uint8_t byte, NfaState* dest_state) -> void {
         m_bytes_transitions[byte].push_back(dest_state);
     }
 
-    [[nodiscard]] auto get_byte_transitions(uint8_t byte
-    ) const -> std::vector<RegexNFAState*> const& {
+    [[nodiscard]] auto get_byte_transitions(uint8_t byte) const -> std::vector<NfaState*> const& {
         return m_bytes_transitions[byte];
     }
 
     auto get_tree_transitions() -> Tree const& { return m_tree_transitions; }
 
     /**
-     Add dest_state to m_bytes_transitions if all values in interval are a byte, otherwise add
-     dest_state to m_tree_transitions
+     Add `dest_state` to `m_bytes_transitions` if all values in interval are a byte, otherwise add
+     `dest_state` to `m_tree_transitions`.
      * @param interval
      * @param dest_state
      */
-    auto add_interval(Interval interval, RegexNFAState* dest_state) -> void;
+    auto add_interval(Interval interval, NfaState* dest_state) -> void;
+
+    /**
+     * @return The set of all states reachable from the current state via epsilon transitions.
+     */
+    auto epsilon_closure() -> std::set<NfaState const*>;
 
     /**
      * @param state_ids A map of states to their unique identifiers.
@@ -104,26 +107,25 @@ public:
      * @return Forwards `NegativeTaggedTransition::serialize`'s return value (std::nullopt) on
      * failure.
      */
-    [[nodiscard]] auto serialize(std::unordered_map<RegexNFAState const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(std::unordered_map<NfaState const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
 private:
     bool m_accepting{false};
     uint32_t m_matching_variable_id{0};
-    std::vector<PositiveTaggedTransition<RegexNFAState>> m_positive_tagged_start_transitions;
-    std::optional<PositiveTaggedTransition<RegexNFAState>> m_positive_tagged_end_transition;
-    std::optional<NegativeTaggedTransition<RegexNFAState>> m_negative_tagged_transition;
-    std::vector<RegexNFAState*> m_epsilon_transitions;
-    std::array<std::vector<RegexNFAState*>, cSizeOfByte> m_bytes_transitions;
+    std::vector<PositiveTaggedTransition<NfaState>> m_positive_tagged_start_transitions;
+    std::optional<PositiveTaggedTransition<NfaState>> m_positive_tagged_end_transition;
+    std::optional<NegativeTaggedTransition<NfaState>> m_negative_tagged_transition;
+    std::vector<NfaState*> m_epsilon_transitions;
+    std::array<std::vector<NfaState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
-    // RegexDFAStateType::Byte` case, so we use an empty class (`std::tuple<>`)
+    // DfaStateType::Byte` case, so we use an empty class (`std::tuple<>`)
     // in that case.
-    std::conditional_t<state_type == RegexNFAStateType::UTF8, Tree, std::tuple<>>
-            m_tree_transitions;
+    std::conditional_t<state_type == NfaStateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
 
-template <RegexNFAStateType state_type>
-auto RegexNFAState<state_type>::add_interval(Interval interval, RegexNFAState* dest_state) -> void {
+template <NfaStateType state_type>
+auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state) -> void {
     if (interval.first < cSizeOfByte) {
         uint32_t const bound = std::min(interval.second, cSizeOfByte - 1);
         for (uint32_t i = interval.first; i <= bound; i++) {
@@ -131,7 +133,7 @@ auto RegexNFAState<state_type>::add_interval(Interval interval, RegexNFAState* d
         }
         interval.first = bound + 1;
     }
-    if constexpr (RegexNFAStateType::UTF8 == state_type) {
+    if constexpr (NfaStateType::Utf8 == state_type) {
         if (interval.second < cSizeOfByte) {
             return;
         }
@@ -141,7 +143,7 @@ auto RegexNFAState<state_type>::add_interval(Interval interval, RegexNFAState* d
             uint32_t overlap_low = std::max(data.m_interval.first, interval.first);
             uint32_t overlap_high = std::min(data.m_interval.second, interval.second);
 
-            std::vector<RegexNFAUTF8State*> tree_states = data.m_value;
+            std::vector<NfaUtf8State*> tree_states = data.m_value;
             tree_states.push_back(dest_state);
             m_tree_transitions.insert(Interval(overlap_low, overlap_high), tree_states);
             if (data.m_interval.first < interval.first) {
@@ -169,9 +171,43 @@ auto RegexNFAState<state_type>::add_interval(Interval interval, RegexNFAState* d
     }
 }
 
-template <RegexNFAStateType state_type>
-auto RegexNFAState<state_type>::serialize(
-        std::unordered_map<RegexNFAState const*, uint32_t> const& state_ids
+template <NfaStateType state_type>
+auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
+    std::set<NfaState const*> closure_set;
+    std::stack<NfaState const*> stack;
+    stack.push(this);
+    while (!stack.empty()) {
+        auto const* current_state = stack.top();
+        stack.pop();
+        if (false == closure_set.insert(current_state).second) {
+            continue;
+        }
+        for (auto const* dest_state : current_state->get_epsilon_transitions()) {
+            stack.push(dest_state);
+        }
+
+        // TODO: currently treat tagged transitions as epsilon transitions
+        for (auto const& positive_tagged_start_transition :
+             current_state->get_positive_tagged_start_transitions())
+        {
+            stack.push(positive_tagged_start_transition.get_dest_state());
+        }
+        auto const& optional_positive_tagged_end_transition
+                = current_state->get_positive_tagged_end_transition();
+        if (optional_positive_tagged_end_transition.has_value()) {
+            stack.push(optional_positive_tagged_end_transition.value().get_dest_state());
+        }
+        auto const& optional_negative_tagged_transition
+                = current_state->get_negative_tagged_transition();
+        if (optional_negative_tagged_transition.has_value()) {
+            stack.push(optional_negative_tagged_transition.value().get_dest_state());
+        }
+    }
+    return closure_set;
+}
+
+template <NfaStateType state_type>
+auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     std::vector<std::string> byte_transitions;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
@@ -238,4 +274,4 @@ auto RegexNFAState<state_type>::serialize(
 }
 }  // namespace log_surgeon::finite_automata
 
-#endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_NFA_STATE
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_NFA_STATE
