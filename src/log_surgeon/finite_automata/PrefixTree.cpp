@@ -13,7 +13,7 @@ auto PrefixTree::get_reversed_positions(id_t const node_id) const -> std::vector
     auto current_node{m_nodes[node_id]};
     while (false == current_node.is_root()) {
         reversed_positions.push_back(current_node.get_position());
-        current_node = m_nodes[current_node.get_parent_node_id().value()];
+        current_node = m_nodes[current_node.get_parent_id_unsafe()];
     }
     return reversed_positions;
 }
