@@ -193,7 +193,7 @@ auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
             stack.push(positive_tagged_start_transition.get_dest_state());
         }
         auto const& optional_positive_tagged_end_transition
-                = current_state->get_positive_tagged_end_transitions();
+                = current_state->get_positive_tagged_end_transition();
         if (optional_positive_tagged_end_transition.has_value()) {
             stack.push(optional_positive_tagged_end_transition.value().get_dest_state());
         }
