@@ -13,7 +13,7 @@ namespace log_surgeon::finite_automata {
  * operations for these registers.
  *
  * NOTE: For efficiency, registers are not initialized when lexing a new string; instead, it is the
- * responsibility of the DFA to set the register values when needed.
+ * DFA's responsibility to set the register values when needed.
  */
 class RegisterHandler {
 public:

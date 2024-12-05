@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_PREFIX_TREE_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_PREFIX_TREE_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <stdexcept>
@@ -13,9 +14,9 @@ namespace log_surgeon::finite_automata {
  * a sequence of positions for an individual tag:
  * - Positive position node: Indicates the tag was matched at the position.
  * - Negative position node: Indicates the tag was unmatched. If a negative node is the entire path,
- * it indicates the tag was never matched. If the negative tag is along a path containing positive
- * nodes, it functions as a placeholder. This can be useful for nested capture groups, to maintain a
- * one-to-one mapping between the contained capture group and the enclosing capture group.
+ *   it indicates the tag was never matched. If the negative tag is along a path containing positive
+ *   nodes, it functions as a placeholder. This can be useful for nested capture groups, to maintain
+ *   a one-to-one mapping between the contained capture group and the enclosing capture group.
  */
 class PrefixTree {
 public:
@@ -58,14 +59,15 @@ public:
 private:
     class Node {
     public:
-        Node(std::optional<id_t> const parent_node_id, position_t const position)
-                : m_parent_node_id{parent_node_id},
+        Node(std::optional<id_t> const parent_id, position_t const position)
+                : m_parent_id{parent_id},
                   m_position{position} {}
 
-        [[nodiscard]] auto is_root() const -> bool { return false == m_parent_node_id.has_value(); }
+        [[nodiscard]] auto is_root() const -> bool { return false == m_parent_id.has_value(); }
 
-        [[nodiscard]] auto get_parent_node_id() const -> std::optional<id_t> {
-            return m_parent_node_id;
+        [[nodiscard]] auto get_parent_id_unsafe() const -> id_t {
+            // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+            return m_parent_id.value();
         }
 
         auto set_position(position_t const position) -> void { m_position = position; }
@@ -73,13 +75,12 @@ private:
         [[nodiscard]] auto get_position() const -> position_t { return m_position; }
 
     private:
-        std::optional<id_t> m_parent_node_id;
+        std::optional<id_t> m_parent_id;
         position_t m_position;
     };
 
     std::vector<Node> m_nodes;
 };
-
 }  // namespace log_surgeon::finite_automata
 
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_PREFIX_TREE_HPP
