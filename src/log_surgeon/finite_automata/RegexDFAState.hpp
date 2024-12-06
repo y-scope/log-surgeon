@@ -22,6 +22,10 @@ class RegexDFAState {
 public:
     using Tree = UnicodeIntervalTree<RegexDFAState<stateType>*>;
 
+    RegexDFAState() {
+        std::fill(std::begin(m_bytes_transition), std::end(m_bytes_transition), nullptr);
+    }
+
     auto add_matching_variable_id(uint32_t const variable_id) -> void {
         m_matching_variable_ids.push_back(variable_id);
     }
