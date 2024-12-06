@@ -12,17 +12,19 @@ using position_t = log_surgeon::finite_automata::PrefixTree::position_t;
 
 namespace {
 /**
- * @param handler The register handler that will contain the new registers.
- * @param num_registers The number of registers to initialize.
+ * @param num_registers The number of registers managed by the handler.
+ * @return The newly initialized register handler.
  */
-auto registers_init(RegisterHandler& handler, size_t num_registers) -> void;
+[[nodiscard]] auto handler_init(size_t num_registers) -> RegisterHandler;
 
-auto registers_init(RegisterHandler& handler, size_t const num_registers) -> void {
+auto handler_init(size_t const num_registers) -> RegisterHandler {
     constexpr position_t cDefaultPos{0};
 
+    RegisterHandler handler;
     for (size_t i{0}; i < num_registers; ++i) {
         handler.add_register(i, cDefaultPos);
     }
+    return handler;
 }
 }  // namespace
 
@@ -32,13 +34,12 @@ TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
     constexpr size_t cRegId1{0};
     constexpr size_t cRegId2{1};
 
-    RegisterHandler handler;
-
     SECTION("Initial state is empty") {
-        REQUIRE_THROWS_AS(handler.get_reversed_positions(cRegId1), std::out_of_range);
+        RegisterHandler empty_handler{handler_init(0)};
+        REQUIRE_THROWS_AS(empty_handler.get_reversed_positions(cRegId1), std::out_of_range);
     }
 
-    registers_init(handler, cNumRegisters);
+    RegisterHandler handler{handler_init(cNumRegisters)};
 
     SECTION("Set register position correctly") {
         handler.set_register(cRegId1, cInitialPos1);
