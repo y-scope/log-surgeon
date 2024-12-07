@@ -42,7 +42,7 @@ auto get_intersect_for_query(
     }
     RegexNFA<RegexNFAByteState> nfa(std::move(rules));
     auto dfa2 = ByteLexer::nfa_to_dfa(nfa);
-    auto schema_types = dfa1->get_intersect(dfa2);
+    auto schema_types = dfa1->get_intersect(dfa2.get());
     std::cout << search_string << ":";
     for (auto const& schema_type : schema_types) {
         std::cout << m_id_symbol[schema_type] << ",";
