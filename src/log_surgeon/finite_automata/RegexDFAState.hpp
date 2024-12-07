@@ -22,6 +22,10 @@ class RegexDFAState {
 public:
     using Tree = UnicodeIntervalTree<RegexDFAState*>;
 
+    RegexDFAState() {
+        std::fill(std::begin(m_bytes_transition), std::end(m_bytes_transition), nullptr);
+    }
+
     auto add_matching_variable_id(uint32_t const variable_id) -> void {
         m_matching_variable_ids.push_back(variable_id);
     }
@@ -37,9 +41,8 @@ public:
     }
 
     /**
-     * Returns the next state the DFA transitions to on input character (byte or utf8).
-     * @param character
-     * @return RegexDFAState<stateType>*
+     * @param character The character (byte or utf8) to transition on.
+     * @return A pointer to the DFA state reached after transitioning on `character`.
      */
     [[nodiscard]] auto next(uint32_t character) const -> RegexDFAState*;
 
