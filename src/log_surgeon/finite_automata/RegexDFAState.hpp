@@ -41,10 +41,8 @@ public:
     }
 
     /**
-     * Returns the next state the DFA transitions to on input character (byte or
-     * utf8)
-     * @param character
-     * @return RegexDFAState<stateType>*
+     * @param character The character (byte or utf8) to transition on.
+     * @return A pointer to the DFA state reached after transitioning on `character`.
      */
     [[nodiscard]] auto next(uint32_t character) const -> RegexDFAState<stateType>*;
 
