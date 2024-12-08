@@ -16,8 +16,8 @@ namespace log_surgeon::finite_automata {
 template <DfaStateType state_type>
 class DfaState;
 
-using DfaByteState = DfaState<DfaStateType::Byte>;
-using DfaUtf8State = DfaState<DfaStateType::Utf8>;
+using ByteDfaState = DfaState<DfaStateType::Byte>;
+using Utf8DfaState = DfaState<DfaStateType::Utf8>;
 
 template <DfaStateType state_type>
 class DfaState {

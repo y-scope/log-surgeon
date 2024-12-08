@@ -15,7 +15,7 @@
 
 namespace log_surgeon {
 // TODO: Compare c-array vs. vectors (its underlying array) for buffers
-class LogParser : public Parser<finite_automata::NfaByteState, finite_automata::DfaByteState> {
+class LogParser : public Parser<finite_automata::ByteNfaState, finite_automata::ByteDfaState> {
 public:
     enum class ParsingAction {
         None,
