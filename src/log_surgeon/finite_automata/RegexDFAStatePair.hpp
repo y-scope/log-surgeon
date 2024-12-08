@@ -1,10 +1,11 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_STATE_PAIR
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_STATE_PAIR
 
+#include <cstdint>
 #include <set>
 #include <vector>
 
-#include <log_surgeon/finite_automata/RegexDFAState.hpp>
+#include <log_surgeon/Constants.hpp>
 
 namespace log_surgeon::finite_automata {
 /**

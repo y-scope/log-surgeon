@@ -7,6 +7,7 @@
 #include <tuple>
 #include <vector>
 
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/RegexDFAStateType.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
