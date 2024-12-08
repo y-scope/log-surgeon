@@ -13,22 +13,22 @@
 #include <log_surgeon/SchemaParser.hpp>
 
 using log_surgeon::cSizeOfByte;
-using log_surgeon::finite_automata::NfaByteState;
+using log_surgeon::finite_automata::ByteNfaState;
 using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
 using std::string;
 using std::stringstream;
 using std::vector;
 
-using ByteLexicalRule = log_surgeon::LexicalRule<NfaByteState>;
-using ByteNFA = log_surgeon::finite_automata::Nfa<NfaByteState>;
-using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<NfaByteState>;
-using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<NfaByteState>;
-using RegexASTGroupByte = log_surgeon::finite_automata::RegexASTGroup<NfaByteState>;
-using RegexASTLiteralByte = log_surgeon::finite_automata::RegexASTLiteral<NfaByteState>;
+using ByteLexicalRule = log_surgeon::LexicalRule<ByteNfaState>;
+using ByteNFA = log_surgeon::finite_automata::Nfa<ByteNfaState>;
+using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<ByteNfaState>;
+using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<ByteNfaState>;
+using RegexASTGroupByte = log_surgeon::finite_automata::RegexASTGroup<ByteNfaState>;
+using RegexASTLiteralByte = log_surgeon::finite_automata::RegexASTLiteral<ByteNfaState>;
 using RegexASTMultiplicationByte
-        = log_surgeon::finite_automata::RegexASTMultiplication<NfaByteState>;
-using RegexASTOrByte = log_surgeon::finite_automata::RegexASTOr<NfaByteState>;
+        = log_surgeon::finite_automata::RegexASTMultiplication<ByteNfaState>;
+using RegexASTOrByte = log_surgeon::finite_automata::RegexASTOr<ByteNfaState>;
 
 TEST_CASE("Test NFA", "[NFA]") {
     Schema schema;

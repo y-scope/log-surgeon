@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_TAGGED_TRANSITION
 #define LOG_SURGEON_FINITE_AUTOMATA_TAGGED_TRANSITION
 
+#include <algorithm>
 #include <cstdint>
 #include <optional>
 #include <ranges>
