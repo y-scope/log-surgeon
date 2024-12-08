@@ -65,6 +65,11 @@ private:
 
         [[nodiscard]] auto is_root() const -> bool { return false == m_parent_id.has_value(); }
 
+        /**
+         * Gets the parent ID without checking if it's `std::nullopt`.
+         * NOTE: This method should only be used if the caller has checked the node is not the root.
+         * @return The ID of the parent node in the prefix tree.
+         */
         [[nodiscard]] auto get_parent_id_unsafe() const -> id_t {
             // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
             return m_parent_id.value();

@@ -13,10 +13,9 @@ template <typename DfaStateType>
 class Dfa {
 public:
     /**
-     * Creates a new DFA state based on a set of NFA states and adds it to
-     * m_states
-     * @param nfa_state_set
-     * @return DfaStateType*
+     * Creates a new DFA state based on a set of NFA states and adds it to `m_states`.
+     * @param nfa_state_set The set of NFA states represented by this DFA state.
+     * @return A pointer to the new DFA state.
      */
     template <typename NfaStateType>
     auto new_state(std::set<NfaStateType*> const& nfa_state_set) -> DfaStateType*;
@@ -24,16 +23,14 @@ public:
     auto get_root() const -> DfaStateType const* { return m_states.at(0).get(); }
 
     /**
-     * Compares this dfa with dfa_in to determine the set of schema types in
-     * this dfa that are reachable by any type in dfa_in. A type is considered
-     * reachable if there is at least one string for which: (1) this dfa returns
-     * a set of types containing the type, and (2) dfa_in returns any non-empty
-     * set of types.
-     * @param dfa_in
-     * @return The set of schema types reachable by dfa_in
+     * Compares this dfa with `dfa_in` to determine the set of schema types in this dfa that are
+     * reachable by any type in `dfa_in`. A type is considered reachable if there is at least one
+     * string for which: (1) this dfa returns a set of types containing the type, and (2) `dfa_in`
+     * returns any non-empty set of types.
+     * @param dfa_in The dfa with which to take the intersect.
+     * @return The set of schema types reachable by `dfa_in`.
      */
-    [[nodiscard]] auto get_intersect(std::unique_ptr<Dfa> const& dfa_in
-    ) const -> std::set<uint32_t>;
+    [[nodiscard]] auto get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t>;
 
 private:
     std::vector<std::unique_ptr<DfaStateType>> m_states;
@@ -53,8 +50,7 @@ auto Dfa<DfaStateType>::new_state(std::set<NfaStateType*> const& nfa_state_set) 
 }
 
 template <typename DfaStateType>
-auto Dfa<DfaStateType>::get_intersect(std::unique_ptr<Dfa> const& dfa_in
-) const -> std::set<uint32_t> {
+auto Dfa<DfaStateType>::get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t> {
     std::set<uint32_t> schema_types;
     std::set<DfaStatePair<DfaStateType>> unvisited_pairs;
     std::set<DfaStatePair<DfaStateType>> visited_pairs;
