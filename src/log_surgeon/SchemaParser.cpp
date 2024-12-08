@@ -11,7 +11,7 @@
 #include <log_surgeon/FileReader.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/finite_automata/Tag.hpp>
-#include <log_surgeon/LALR1Parser.hpp>
+#include <log_surgeon/Lalr1Parser.hpp>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/utils.hpp>
 

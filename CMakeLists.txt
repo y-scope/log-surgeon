@@ -68,9 +68,9 @@ set(SOURCE_FILES
     src/log_surgeon/Constants.hpp
     src/log_surgeon/FileReader.cpp
     src/log_surgeon/FileReader.hpp
-    src/log_surgeon/LALR1Parser.cpp
-    src/log_surgeon/LALR1Parser.hpp
-    src/log_surgeon/LALR1Parser.tpp
+    src/log_surgeon/Lalr1Parser.cpp
+    src/log_surgeon/Lalr1Parser.hpp
+    src/log_surgeon/Lalr1Parser.tpp
     src/log_surgeon/Lexer.hpp
     src/log_surgeon/Lexer.tpp
     src/log_surgeon/LexicalRule.hpp

@@ -5,7 +5,7 @@
 #include <string_view>
 #include <utility>
 
-#include <log_surgeon/LALR1Parser.hpp>
+#include <log_surgeon/Lalr1Parser.hpp>
 
 namespace log_surgeon {
 // ASTs used in SchemaParser AST
@@ -69,7 +69,7 @@ public:
 };
 
 class SchemaParser
-        : public LALR1Parser<finite_automata::NfaByteState, finite_automata::DfaByteState> {
+        : public Lalr1Parser<finite_automata::NfaByteState, finite_automata::DfaByteState> {
 public:
     /**
      * File wrapper around generate_schema_ast()

@@ -203,9 +203,9 @@ public:
 };
 
 template <typename NfaStateType, typename DfaStateType>
-class LALR1Parser : public Parser<NfaStateType, DfaStateType> {
+class Lalr1Parser : public Parser<NfaStateType, DfaStateType> {
 public:
-    LALR1Parser();
+    Lalr1Parser();
 
     /**
      * Add a lexical rule to m_lexer
@@ -407,6 +407,6 @@ private:
 };
 }  // namespace log_surgeon
 
-#include "LALR1Parser.tpp"
+#include "Lalr1Parser.tpp"
 
 #endif  // LOG_SURGEON_LALR1_PARSER_HPP
