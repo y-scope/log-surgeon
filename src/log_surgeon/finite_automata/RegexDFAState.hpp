@@ -53,7 +53,8 @@ private:
     RegexDFAState* m_bytes_transition[cSizeOfByte];
     // NOTE: We don't need m_tree_transitions for the `state_type == RegexDFAStateType::Byte` case,
     // so we use an empty class (`std::tuple<>`) in that case.
-    std::conditional_t<state_type == RegexDFAStateType::UTF8, Tree, std::tuple<>> m_tree_transitions;
+    std::conditional_t<state_type == RegexDFAStateType::UTF8, Tree, std::tuple<>>
+            m_tree_transitions;
 };
 
 template <RegexDFAStateType state_type>
