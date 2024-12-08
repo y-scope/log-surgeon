@@ -9,7 +9,7 @@
 #include <log_surgeon/finite_automata/DfaStatePair.hpp>
 
 namespace log_surgeon::finite_automata {
-template <typename DfaStateType>
+template <typename TypedDfaState>
 class Dfa {
 public:
     /**
@@ -17,10 +17,10 @@ public:
      * @param nfa_state_set The set of NFA states represented by this DFA state.
      * @return A pointer to the new DFA state.
      */
-    template <typename NfaStateType>
-    auto new_state(std::set<NfaStateType*> const& nfa_state_set) -> DfaStateType*;
+    template <typename TypedNfaState>
+    auto new_state(std::set<TypedNfaState*> const& nfa_state_set) -> TypedDfaState*;
 
-    auto get_root() const -> DfaStateType const* { return m_states.at(0).get(); }
+    auto get_root() const -> TypedDfaState const* { return m_states.at(0).get(); }
 
     /**
      * Compares this dfa with `dfa_in` to determine the set of schema types in this dfa that are
@@ -33,13 +33,13 @@ public:
     [[nodiscard]] auto get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t>;
 
 private:
-    std::vector<std::unique_ptr<DfaStateType>> m_states;
+    std::vector<std::unique_ptr<TypedDfaState>> m_states;
 };
 
-template <typename DfaStateType>
-template <typename NfaStateType>
-auto Dfa<DfaStateType>::new_state(std::set<NfaStateType*> const& nfa_state_set) -> DfaStateType* {
-    m_states.emplace_back(std::make_unique<DfaStateType>());
+template <typename TypedDfaState>
+template <typename TypedNfaState>
+auto Dfa<TypedDfaState>::new_state(std::set<TypedNfaState*> const& nfa_state_set) -> TypedDfaState* {
+    m_states.emplace_back(std::make_unique<TypedDfaState>());
     auto* dfa_state = m_states.back().get();
     for (auto const* nfa_state : nfa_state_set) {
         if (nfa_state->is_accepting()) {
@@ -49,11 +49,11 @@ auto Dfa<DfaStateType>::new_state(std::set<NfaStateType*> const& nfa_state_set) 
     return dfa_state;
 }
 
-template <typename DfaStateType>
-auto Dfa<DfaStateType>::get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t> {
+template <typename TypedDfaState>
+auto Dfa<TypedDfaState>::get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t> {
     std::set<uint32_t> schema_types;
-    std::set<DfaStatePair<DfaStateType>> unvisited_pairs;
-    std::set<DfaStatePair<DfaStateType>> visited_pairs;
+    std::set<DfaStatePair<TypedDfaState>> unvisited_pairs;
+    std::set<DfaStatePair<TypedDfaState>> visited_pairs;
     unvisited_pairs.emplace(this->get_root(), dfa_in->get_root());
     // TODO: Handle UTF-8 (multi-byte transitions) as well
     while (false == unvisited_pairs.empty()) {

@@ -113,7 +113,7 @@ private:
     std::vector<NfaState*> m_epsilon_transitions;
     std::array<std::vector<NfaState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
-    // DfaStateType::Byte` case, so we use an empty class (`std::tuple<>`)
+    // NfaStateType::Byte` case, so we use an empty class (`std::tuple<>`)
     // in that case.
     std::conditional_t<state_type == NfaStateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
