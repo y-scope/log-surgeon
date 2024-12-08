@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_STATE
 #define LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_STATE
 
+#include <type_traits>
 #include <cassert>
 #include <cstdint>
 #include <memory>
