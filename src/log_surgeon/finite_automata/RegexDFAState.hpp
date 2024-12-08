@@ -36,7 +36,9 @@ public:
         return m_matching_variable_ids;
     }
 
-    [[nodiscard]] auto is_accepting() const -> bool { return !m_matching_variable_ids.empty(); }
+    [[nodiscard]] auto is_accepting() const -> bool {
+        return false == m_matching_variable_ids.empty();
+    }
 
     auto add_byte_transition(uint8_t const& byte, RegexDFAState* dest_state) -> void {
         m_bytes_transition[byte] = dest_state;
@@ -68,7 +70,7 @@ auto RegexDFAState<state_type>::next(uint32_t character) const -> RegexDFAState*
         std::unique_ptr<std::vector<typename Tree::Data>> result
                 = m_tree_transitions.find(Interval(character, character));
         assert(result->size() <= 1);
-        if (!result->empty()) {
+        if (false == result->empty()) {
             return result->front().m_value;
         }
         return nullptr;
