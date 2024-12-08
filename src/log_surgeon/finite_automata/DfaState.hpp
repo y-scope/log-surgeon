@@ -24,9 +24,7 @@ class DfaState {
 public:
     using Tree = UnicodeIntervalTree<DfaState*>;
 
-    DfaState() {
-        std::fill(std::begin(m_bytes_transition), std::end(m_bytes_transition), nullptr);
-    }
+    DfaState() { std::fill(std::begin(m_bytes_transition), std::end(m_bytes_transition), nullptr); }
 
     auto add_matching_variable_id(uint32_t const variable_id) -> void {
         m_matching_variable_ids.push_back(variable_id);
