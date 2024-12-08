@@ -5,10 +5,10 @@
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/Schema.hpp>
 
-using log_surgeon::finite_automata::Dfa;
 using log_surgeon::finite_automata::ByteDfaState;
-using log_surgeon::finite_automata::Nfa;
 using log_surgeon::finite_automata::ByteNfaState;
+using log_surgeon::finite_automata::Dfa;
+using log_surgeon::finite_automata::Nfa;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::LexicalRule;
 using log_surgeon::ParserAST;
