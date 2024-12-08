@@ -457,9 +457,8 @@ auto Lexer<TypedNfaState, TypedDfaState>::nfa_to_dfa(finite_automata::Nfa<TypedN
             }
             // TODO: add this for the utf8 case
             /*
-            for (const typename TypedNfaState::Tree::Data& data : s0->get_tree_transitions().all()) {
-                for (TypedNfaState* const s1 : data.m_value) {
-                    StateSet closure = epsilon_closure(s1);
+            for (const typename TypedNfaState::Tree::Data& data : s0->get_tree_transitions().all())
+            { for (TypedNfaState* const s1 : data.m_value) { StateSet closure = epsilon_closure(s1);
                     transitions_map[data.m_interval].insert(closure.begin(), closure.end());
                 }
             }

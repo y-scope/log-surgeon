@@ -781,7 +781,8 @@ RegexASTOr<TypedNfaState>::RegexASTOr(
 }
 
 template <typename TypedNfaState>
-void RegexASTOr<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const {
+void RegexASTOr<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state)
+        const {
     m_left->add_to_nfa_with_negative_tags(nfa, end_state);
     m_right->add_to_nfa_with_negative_tags(nfa, end_state);
 }
@@ -808,7 +809,8 @@ RegexASTCat<TypedNfaState>::RegexASTCat(
 }
 
 template <typename TypedNfaState>
-void RegexASTCat<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const {
+void RegexASTCat<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state)
+        const {
     TypedNfaState* saved_root = nfa->get_root();
     TypedNfaState* intermediate_state = nfa->new_state();
     m_left->add_to_nfa_with_negative_tags(nfa, intermediate_state);
