@@ -464,8 +464,7 @@ void Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lalr1_action() {
                         conflict_msg += "\n";
                     } else {
                         conflict_msg += "shift-reduce conflict with reduction ";
-                        conflict_msg
-                                += m_lexer.m_id_symbol[std::get<Production*>(action)->m_head];
+                        conflict_msg += m_lexer.m_id_symbol[std::get<Production*>(action)->m_head];
                         conflict_msg += "-> {";
                         for (uint32_t symbol : std::get<Production*>(action)->m_body) {
                             conflict_msg += m_lexer.m_id_symbol[symbol] + ",";
@@ -501,8 +500,7 @@ void Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lalr1_action() {
                         } else {
                             conflict_msg += "reduce-reduce conflict with reduction ";
                             conflict_msg
-                                    += m_lexer
-                                               .m_id_symbol[std::get<Production*>(action)->m_head];
+                                    += m_lexer.m_id_symbol[std::get<Production*>(action)->m_head];
                             conflict_msg += "-> {";
                             for (uint32_t symbol : std::get<Production*>(action)->m_body) {
                                 conflict_msg += m_lexer.m_id_symbol[symbol] + ",";
@@ -667,9 +665,7 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_next_symbol() -> Token {
     if (m_next_token == std::nullopt) {
         Token token;
-        if (ErrorCode error = m_lexer.scan(m_input_buffer, token);
-            ErrorCode::Success != error)
-        {
+        if (ErrorCode error = m_lexer.scan(m_input_buffer, token); ErrorCode::Success != error) {
             throw std::runtime_error("Error scanning in lexer.");
         }
         return token;
