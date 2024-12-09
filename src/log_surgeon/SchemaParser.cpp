@@ -11,30 +11,30 @@
 #include <log_surgeon/FileReader.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/finite_automata/Tag.hpp>
-#include <log_surgeon/LALR1Parser.hpp>
+#include <log_surgeon/Lalr1Parser.hpp>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/utils.hpp>
 
 using ParserValueRegex = log_surgeon::ParserValue<std::unique_ptr<
-        log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::RegexNFAByteState>>>;
+        log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::ByteNfaState>>>;
 using RegexASTByte
-        = log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::RegexNFAByteState>;
-using RegexASTGroupByte = log_surgeon::finite_automata::RegexASTGroup<
-        log_surgeon::finite_automata::RegexNFAByteState>;
-using RegexASTIntegerByte = log_surgeon::finite_automata::RegexASTInteger<
-        log_surgeon::finite_automata::RegexNFAByteState>;
-using RegexASTLiteralByte = log_surgeon::finite_automata::RegexASTLiteral<
-        log_surgeon::finite_automata::RegexNFAByteState>;
+        = log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTGroupByte
+        = log_surgeon::finite_automata::RegexASTGroup<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTIntegerByte
+        = log_surgeon::finite_automata::RegexASTInteger<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTLiteralByte
+        = log_surgeon::finite_automata::RegexASTLiteral<log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultiplication<
-        log_surgeon::finite_automata::RegexNFAByteState>;
+        log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTOrByte
-        = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::RegexNFAByteState>;
-using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<
-        log_surgeon::finite_automata::RegexNFAByteState>;
-using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<
-        log_surgeon::finite_automata::RegexNFAByteState>;
-using RegexASTEmptyByte = log_surgeon::finite_automata::RegexASTEmpty<
-        log_surgeon::finite_automata::RegexNFAByteState>;
+        = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTCatByte
+        = log_surgeon::finite_automata::RegexASTCat<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTCaptureByte
+        = log_surgeon::finite_automata::RegexASTCapture<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTEmptyByte
+        = log_surgeon::finite_automata::RegexASTEmpty<log_surgeon::finite_automata::ByteNfaState>;
 
 using std::make_unique;
 using std::string;
@@ -416,7 +416,7 @@ static auto new_delimiter_string_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     return make_unique<DelimiterStringAST>(character);
 }
 
-void SchemaParser::add_lexical_rules() {
+auto SchemaParser::add_lexical_rules() -> void {
     if (m_special_regex_characters.empty()) {
         m_special_regex_characters.emplace('(', "Lparen");
         m_special_regex_characters.emplace(')', "Rparen");
@@ -481,7 +481,7 @@ void SchemaParser::add_lexical_rules() {
     add_token_group("CommentCharacters", std::move(comment_characters));
 }
 
-void SchemaParser::add_productions() {
+auto SchemaParser::add_productions() -> void {
     // add_production("Schema", {}, new_schema_rule);
     add_production("Schema", {"Comment"}, new_schema_rule);
     add_production("Schema", {"SchemaVar"}, new_schema_rule_with_var);
