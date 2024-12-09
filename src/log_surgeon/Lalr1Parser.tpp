@@ -53,8 +53,8 @@ namespace {
 }
 }  // namespace
 
-template <typename NfaStateType, typename DfaStateType>
-LALR1Parser<NfaStateType, DfaStateType>::LALR1Parser() {
+template <typename TypedNfaState, typename TypedDfaState>
+Lalr1Parser<TypedNfaState, TypedDfaState>::Lalr1Parser() {
     m_terminals.insert((uint32_t)SymbolId::TokenEnd);
     m_terminals.insert((uint32_t)SymbolId::TokenUncaughtString);
     m_terminals.insert((uint32_t)SymbolId::TokenInt);
@@ -65,42 +65,43 @@ LALR1Parser<NfaStateType, DfaStateType>::LALR1Parser() {
     m_terminals.insert((uint32_t)SymbolId::TokenNewline);
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::add_rule(
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_rule(
         std::string const& name,
-        std::unique_ptr<finite_automata::RegexAST<NfaStateType>> rule
+        std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
 ) -> void {
-    Parser<NfaStateType, DfaStateType>::add_rule(name, std::move(rule));
-    m_terminals.insert(this->m_lexer.m_symbol_id[name]);
+    Parser<TypedNfaState, TypedDfaState>::add_rule(name, std::move(rule));
+    m_terminals.insert(m_lexer.m_symbol_id[name]);
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::add_token_group(
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_token_group(
         std::string const& name,
-        std::unique_ptr<finite_automata::RegexASTGroup<NfaStateType>> rule_group
+        std::unique_ptr<finite_automata::RegexASTGroup<TypedNfaState>> rule_group
 ) -> void {
     add_rule(name, std::move(rule_group));
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::add_token_chain(
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_token_chain(
         std::string const& name,
         std::string const& chain
 ) -> void {
     assert(chain.size() > 1);
     auto first_char_rule
-            = std::make_unique<finite_automata::RegexASTLiteral<NfaStateType>>(chain[0]);
+            = std::make_unique<finite_automata::RegexASTLiteral<TypedNfaState>>(chain[0]);
     auto second_char_rule
-            = std::make_unique<finite_automata::RegexASTLiteral<NfaStateType>>(chain[1]);
-    auto rule_chain = std::make_unique<finite_automata::RegexASTCat<NfaStateType>>(
-            std::move(first_char_rule),
-            std::move(second_char_rule)
-    );
+            = std::make_unique<finite_automata::RegexASTLiteral<TypedNfaState>>(chain[1]);
+    auto rule_chain
+            = std::make_unique<finite_automata::RegexASTCat<TypedNfaState>>(
+                    std::move(first_char_rule),
+                    std::move(second_char_rule)
+            );
     for (uint32_t i = 2; i < chain.size(); i++) {
         auto next_char = chain[i];
         auto next_char_rule
-                = std::make_unique<finite_automata::RegexASTLiteral<NfaStateType>>(next_char);
-        rule_chain = std::make_unique<finite_automata::RegexASTCat<NfaStateType>>(
+                = std::make_unique<finite_automata::RegexASTLiteral<TypedNfaState>>(next_char);
+        rule_chain = std::make_unique<finite_automata::RegexASTCat<TypedNfaState>>(
                 std::move(rule_chain),
                 std::move(next_char_rule)
         );
@@ -108,15 +109,15 @@ auto LALR1Parser<NfaStateType, DfaStateType>::add_token_chain(
     add_rule(name, std::move(rule_chain));
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::add_production(
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_production(
         std::string const& head,
         std::vector<std::string> const& body,
         SemanticRule semantic_rule
 ) -> uint32_t {
-    if (this->m_lexer.m_symbol_id.find(head) == this->m_lexer.m_symbol_id.end()) {
-        this->m_lexer.m_symbol_id[head] = this->m_lexer.m_symbol_id.size();
-        this->m_lexer.m_id_symbol[this->m_lexer.m_symbol_id[head]] = head;
+    if (m_lexer.m_symbol_id.find(head) == m_lexer.m_symbol_id.end()) {
+        m_lexer.m_symbol_id[head] = m_lexer.m_symbol_id.size();
+        m_lexer.m_id_symbol[m_lexer.m_symbol_id[head]] = head;
     }
     uint32_t n = m_productions.size();
     auto it = m_productions_map.find(head);
@@ -130,13 +131,13 @@ auto LALR1Parser<NfaStateType, DfaStateType>::add_production(
     }
     std::unique_ptr<Production> p(new Production);
     p->m_index = n;
-    p->m_head = this->m_lexer.m_symbol_id[head];
+    p->m_head = m_lexer.m_symbol_id[head];
     for (std::string const& symbol_string : body) {
-        if (this->m_lexer.m_symbol_id.find(symbol_string) == this->m_lexer.m_symbol_id.end()) {
-            this->m_lexer.m_symbol_id[symbol_string] = this->m_lexer.m_symbol_id.size();
-            this->m_lexer.m_id_symbol[this->m_lexer.m_symbol_id[symbol_string]] = symbol_string;
+        if (m_lexer.m_symbol_id.find(symbol_string) == m_lexer.m_symbol_id.end()) {
+            m_lexer.m_symbol_id[symbol_string] = m_lexer.m_symbol_id.size();
+            m_lexer.m_id_symbol[m_lexer.m_symbol_id[symbol_string]] = symbol_string;
         }
-        p->m_body.push_back(this->m_lexer.m_symbol_id[symbol_string]);
+        p->m_body.push_back(m_lexer.m_symbol_id[symbol_string]);
     }
     p->m_semantic_rule = std::move(semantic_rule);
     m_non_terminals.insert(std::pair<int, std::vector<Production*>>(p->m_head, {}));
@@ -149,9 +150,9 @@ auto LALR1Parser<NfaStateType, DfaStateType>::add_production(
     return n;
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::generate() -> void {
-    this->m_lexer.generate();
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate() -> void {
+    m_lexer.generate();
     assert(!m_productions.empty());
     generate_lr0_kernels();
     generate_first_sets();
@@ -159,29 +160,29 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate() -> void {
     generate_lalr1_parsing_table();
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::generate_lr0_kernels() -> void {
-    Production* root_production_ptr = m_productions[m_root_production_id].get();
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr0_kernels() -> void{
+    auto* root_production_ptr = m_productions[m_root_production_id].get();
     Item root_item(root_production_ptr, 0, cNullSymbol);
-    std::unique_ptr<ItemSet> item_set0 = std::make_unique<ItemSet>();
+    auto item_set0 = std::make_unique<ItemSet>();
     item_set0->m_kernel.insert(root_item);
     std::deque<ItemSet*> unused_item_sets;
     item_set0->m_index = m_lr0_item_sets.size();
     unused_item_sets.push_back(item_set0.get());
     m_lr0_item_sets[item_set0->m_kernel] = std::move(item_set0);
     while (!unused_item_sets.empty()) {
-        ItemSet* item_set_ptr = unused_item_sets.back();
+        auto* item_set_ptr = unused_item_sets.back();
         unused_item_sets.pop_back();
         generate_lr0_closure(item_set_ptr);
-        for (uint32_t const& next_symbol : m_terminals) {
-            ItemSet* new_item_set_ptr = go_to(item_set_ptr, next_symbol);
+        for (auto const& next_symbol : m_terminals) {
+            auto* new_item_set_ptr = go_to(item_set_ptr, next_symbol);
             if (new_item_set_ptr != nullptr) {
                 unused_item_sets.push_back(new_item_set_ptr);
             }
         }
-        for (std::map<uint32_t, std::vector<Production*>>::value_type const& kv : m_non_terminals) {
-            uint32_t next_symbol = kv.first;
-            ItemSet* new_item_set_ptr = go_to(item_set_ptr, next_symbol);
+        for (auto const& kv : m_non_terminals) {
+            auto next_symbol = kv.first;
+            auto* new_item_set_ptr = go_to(item_set_ptr, next_symbol);
             if (new_item_set_ptr != nullptr) {
                 unused_item_sets.push_back(new_item_set_ptr);
             }
@@ -189,8 +190,8 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_lr0_kernels() -> void {
     }
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::lr_closure_helper(
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::lr_closure_helper(
         ItemSet* item_set_ptr,
         Item const* item,
         uint32_t* next_symbol
@@ -209,14 +210,14 @@ auto LALR1Parser<NfaStateType, DfaStateType>::lr_closure_helper(
     return false;
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::generate_lr0_closure(ItemSet* item_set_ptr) -> void {
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr0_closure(ItemSet* item_set_ptr) -> void {
     std::deque<Item> q(
             item_set_ptr->m_kernel.begin(),
             item_set_ptr->m_kernel.end()
     );  // {{S'->(dot)S, ""}}
     while (!q.empty()) {
-        Item item = q.back();  // {S'->(dot)S, ""}
+        auto item = q.back();  // {S'->(dot)S, ""}
         q.pop_back();
         uint32_t next_symbol = 0;
         if (lr_closure_helper(item_set_ptr, &item, &next_symbol)) {
@@ -232,14 +233,14 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_lr0_closure(ItemSet* item
     }
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::go_to(
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::go_to(
         ItemSet* from_item_set,
         uint32_t const& next_symbol
 ) -> ItemSet* {
-    std::unique_ptr<ItemSet> next_item_set_ptr = std::make_unique<ItemSet>();
+    auto next_item_set_ptr = std::make_unique<ItemSet>();
     assert(from_item_set != nullptr);
-    for (Item const& item : from_item_set->m_closure) {
+    for (auto const& item : from_item_set->m_closure) {
         if (item.has_dot_at_end()) {
             continue;
         }
@@ -252,7 +253,7 @@ auto LALR1Parser<NfaStateType, DfaStateType>::go_to(
         return nullptr;
     }
     if (m_lr0_item_sets.find(next_item_set_ptr->m_kernel) != m_lr0_item_sets.end()) {
-        ItemSet* existing_item_set_ptr = m_lr0_item_sets[next_item_set_ptr->m_kernel].get();
+        auto* existing_item_set_ptr = m_lr0_item_sets[next_item_set_ptr->m_kernel].get();
         m_go_to_table[from_item_set->m_index][next_symbol] = existing_item_set_ptr->m_index;
         from_item_set->m_next[next_symbol] = existing_item_set_ptr;
     } else {
@@ -265,24 +266,24 @@ auto LALR1Parser<NfaStateType, DfaStateType>::go_to(
     return nullptr;
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::generate_first_sets() -> void {
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_first_sets() -> void {
     for (uint32_t const& s : m_terminals) {
         m_firsts.insert(std::pair<uint32_t, std::set<uint32_t>>(s, {s}));
     }
-    bool changed = true;
+    auto changed = true;
     while (changed) {
         changed = false;
-        for (std::unique_ptr<Production> const& p : m_productions) {
-            std::set<uint32_t>& f = m_firsts[p->m_head];
+        for (auto const& p : m_productions) {
+            auto& f = m_firsts[p->m_head];
             if (p->is_epsilon()) {
                 changed = changed || m_nullable.insert(p->m_head).second;
                 continue;
             }
-            size_t old = f.size();
+            auto old = f.size();
             size_t i = 0;
-            for (uint32_t const& s : p->m_body) {
-                std::set<uint32_t>& f2 = m_firsts[s];
+            for (auto const& s : p->m_body) {
+                auto& f2 = m_firsts[s];
                 f.insert(f2.begin(), f2.end());
                 if (m_nullable.find(s) == m_nullable.end()) {
                     break;
@@ -297,15 +298,15 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_first_sets() -> void {
     }
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::generate_lr1_item_sets() -> void {
-    for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv : m_lr0_item_sets)
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_item_sets() -> void {
+    for (auto const& kv : m_lr0_item_sets)
     {
-        for (Item const& l0_item : kv.second->m_kernel) {
+        for (auto const& l0_item : kv.second->m_kernel) {
             ItemSet temp_item_set;
             temp_item_set.m_kernel.insert(l0_item);
             generate_lr1_closure(&temp_item_set);
-            for (Item const& l1_item : temp_item_set.m_closure) {
+            for (auto const& l1_item : temp_item_set.m_closure) {
                 if (l1_item.m_lookahead != cNullSymbol) {
                     m_spontaneous_map[l1_item.m_production].insert(l1_item.m_lookahead);
                 } else {
@@ -318,9 +319,9 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_lr1_item_sets() -> void {
         }
     }
     std::map<Item, std::set<int>> lookaheads;
-    for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv : m_lr0_item_sets)
+    for (auto const& kv : m_lr0_item_sets)
     {
-        for (Item const& l0_item : kv.second->m_kernel) {
+        for (auto const& l0_item : kv.second->m_kernel) {
             lookaheads[l0_item].insert(
                     m_spontaneous_map[l0_item.m_production].begin(),
                     m_spontaneous_map[l0_item.m_production].end()
@@ -330,27 +331,27 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_lr1_item_sets() -> void {
             }
         }
     }
-    bool changed = true;
+    auto changed = true;
     while (changed) {
         changed = false;
-        for (std::map<Item, std::set<Item>>::value_type& kv : m_propagate_map) {
-            Item item_from = kv.first;
-            for (Item const& item_to : kv.second) {
-                size_t size_before = lookaheads[item_to].size();
+        for (auto& kv : m_propagate_map) {
+            auto item_from = kv.first;
+            for (auto const& item_to : kv.second) {
+                auto size_before = lookaheads[item_to].size();
                 lookaheads[item_to].insert(
                         lookaheads[item_from].begin(),
                         lookaheads[item_from].end()
                 );
-                size_t size_after = lookaheads[item_to].size();
+                auto size_after = lookaheads[item_to].size();
                 changed = changed || size_after > size_before;
             }
         }
     }
-    for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv : m_lr0_item_sets)
+    for (auto const& kv : m_lr0_item_sets)
     {
-        std::unique_ptr<ItemSet> lr1_item_set_ptr = std::make_unique<ItemSet>();
-        for (Item const& l0_item : kv.second->m_kernel) {
-            for (int const& lookahead : lookaheads[l0_item]) {
+        auto lr1_item_set_ptr = std::make_unique<ItemSet>();
+        for (auto const& l0_item : kv.second->m_kernel) {
+            for (auto const& lookahead : lookaheads[l0_item]) {
                 Item lr1_item(l0_item.m_production, l0_item.m_dot, lookahead);
                 lr1_item_set_ptr->m_kernel.insert(lr1_item);
             }
@@ -365,13 +366,9 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_lr1_item_sets() -> void {
         m_lr1_item_sets[lr1_item_set_ptr->m_kernel] = std::move(lr1_item_set_ptr);
     }
     // this seems like the wrong way to do this still:
-    for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv1 :
-         m_lr1_item_sets)
-    {
+    for (auto const& kv1 : m_lr1_item_sets) {
         for (auto const& next_index : m_go_to_table[kv1.second->m_index]) {
-            for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv2 :
-                 m_lr1_item_sets)
-            {
+            for (auto const& kv2 : m_lr1_item_sets) {
                 if (next_index.second == kv2.second->m_index) {
                     kv1.second->m_next[next_index.first] = kv2.second.get();
                     break;
@@ -381,21 +378,21 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_lr1_item_sets() -> void {
     }
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::generate_lr1_closure(ItemSet* item_set_ptr) -> void {
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_closure(ItemSet* item_set_ptr) -> void {
     std::deque<Item> queue(item_set_ptr->m_kernel.begin(), item_set_ptr->m_kernel.end());
     while (!queue.empty()) {
-        Item item = queue.back();
+        auto item = queue.back();
         queue.pop_back();
         uint32_t next_symbol = 0;
         if (lr_closure_helper(item_set_ptr, &item, &next_symbol)) {
             continue;
         }
         std::vector<uint32_t> lookaheads;
-        size_t pos = item.m_dot + 1;
+        auto pos = item.m_dot + 1;
         while (pos < item.m_production->m_body.size()) {
-            uint32_t symbol = item.m_production->m_body.at(pos);
-            std::set<uint32_t> symbol_firsts = m_firsts.find(symbol)->second;
+            auto symbol = item.m_production->m_body.at(pos);
+            auto symbol_firsts = m_firsts.find(symbol)->second;
             lookaheads.insert(
                     lookaheads.end(),
                     std::make_move_iterator(symbol_firsts.begin()),
@@ -409,33 +406,32 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_lr1_closure(ItemSet* item
         if (pos == item.m_production->m_body.size()) {
             lookaheads.push_back(item.m_lookahead);
         }
-        for (Production* const p : m_non_terminals.at(next_symbol)) {
-            for (uint32_t const& l : lookaheads) {
+        for (auto* const p : m_non_terminals.at(next_symbol)) {
+            for (auto const& l : lookaheads) {
                 queue.emplace_back(p, 0, l);
             }
         }
     }
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::generate_lalr1_parsing_table() -> void {
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lalr1_parsing_table() -> void {
     generate_lalr1_goto();
     generate_lalr1_action();
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::generate_lalr1_goto() -> void {
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lalr1_goto() -> void {
     // done already at end of generate_lr1_item_sets()?
 }
 
 // Dragon book page 253
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::generate_lalr1_action() -> void {
-    for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv : m_lr1_item_sets)
-    {
-        ItemSet* item_set_ptr = kv.second.get();
-        item_set_ptr->m_actions.resize(this->m_lexer.m_symbol_id.size(), false);
-        for (Item const& item : item_set_ptr->m_closure) {
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lalr1_action() -> void {
+    for (auto const& kv : m_lr1_item_sets) {
+        auto* item_set_ptr = kv.second.get();
+        item_set_ptr->m_actions.resize(m_lexer.m_symbol_id.size(), false);
+        for (auto const& item : item_set_ptr->m_closure) {
             if (!item.has_dot_at_end()) {
                 if (m_terminals.find(item.next_symbol()) == m_terminals.end()
                     && m_non_terminals.find(item.next_symbol()) == m_non_terminals.end())
@@ -443,7 +439,7 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_lalr1_action() -> void {
                     continue;
                 }
                 assert(item_set_ptr->m_next.find(item.next_symbol()) != item_set_ptr->m_next.end());
-                Action& action = item_set_ptr->m_actions[item.next_symbol()];
+                auto& action = item_set_ptr->m_actions[item.next_symbol()];
                 if (!std::holds_alternative<bool>(action)) {
                     if (std::holds_alternative<ItemSet*>(action)
                         && std::get<ItemSet*>(action) == item_set_ptr->m_next[item.next_symbol()])
@@ -452,7 +448,7 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_lalr1_action() -> void {
                     }
                     std::string conflict_msg{};
                     conflict_msg += "For symbol ";
-                    conflict_msg += this->m_lexer.m_id_symbol[item.next_symbol()];
+                    conflict_msg += m_lexer.m_id_symbol[item.next_symbol()];
                     conflict_msg += ", adding shift to ";
                     conflict_msg
                             += std::to_string(item_set_ptr->m_next[item.next_symbol()]->m_index);
@@ -463,11 +459,10 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_lalr1_action() -> void {
                         conflict_msg += "\n";
                     } else {
                         conflict_msg += "shift-reduce conflict with reduction ";
-                        conflict_msg
-                                += this->m_lexer.m_id_symbol[std::get<Production*>(action)->m_head];
+                        conflict_msg += m_lexer.m_id_symbol[std::get<Production*>(action)->m_head];
                         conflict_msg += "-> {";
                         for (uint32_t symbol : std::get<Production*>(action)->m_body) {
-                            conflict_msg += this->m_lexer.m_id_symbol[symbol] + ",";
+                            conflict_msg += m_lexer.m_id_symbol[symbol] + ",";
                         }
                         conflict_msg += "}\n";
                     }
@@ -481,16 +476,16 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_lalr1_action() -> void {
                     Action action = true;
                     item_set_ptr->m_actions[(uint32_t)SymbolId::TokenEnd] = action;
                 } else {
-                    Action& action = item_set_ptr->m_actions[item.m_lookahead];
+                    auto& action = item_set_ptr->m_actions[item.m_lookahead];
                     if (!std::holds_alternative<bool>(action)) {
                         std::string conflict_msg{};
                         conflict_msg += "For symbol ";
-                        conflict_msg += this->m_lexer.m_id_symbol[item.m_lookahead];
+                        conflict_msg += m_lexer.m_id_symbol[item.m_lookahead];
                         conflict_msg += ", adding reduction ";
-                        conflict_msg += this->m_lexer.m_id_symbol[item.m_production->m_head];
+                        conflict_msg += m_lexer.m_id_symbol[item.m_production->m_head];
                         conflict_msg += "-> {";
                         for (uint32_t symbol : item.m_production->m_body) {
-                            conflict_msg += this->m_lexer.m_id_symbol[symbol] + ",";
+                            conflict_msg += m_lexer.m_id_symbol[symbol] + ",";
                         }
                         conflict_msg += "} causes ";
                         if (std::holds_alternative<ItemSet*>(action)) {
@@ -500,11 +495,10 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_lalr1_action() -> void {
                         } else {
                             conflict_msg += "reduce-reduce conflict with reduction ";
                             conflict_msg
-                                    += this->m_lexer
-                                               .m_id_symbol[std::get<Production*>(action)->m_head];
+                                    += m_lexer.m_id_symbol[std::get<Production*>(action)->m_head];
                             conflict_msg += "-> {";
                             for (uint32_t symbol : std::get<Production*>(action)->m_body) {
-                                conflict_msg += this->m_lexer.m_id_symbol[symbol] + ",";
+                                conflict_msg += m_lexer.m_id_symbol[symbol] + ",";
                             }
                             conflict_msg += "}\n";
                         }
@@ -517,14 +511,14 @@ auto LALR1Parser<NfaStateType, DfaStateType>::generate_lalr1_action() -> void {
     }
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::get_input_after_last_newline(
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_after_last_newline(
         std::stack<MatchedSymbol>& parse_stack_matches
 ) -> std::string {
     std::string error_message_reversed;
-    bool done = false;
+    auto done = false;
     while (!parse_stack_matches.empty() && !done) {
-        MatchedSymbol top_symbol = std::move(parse_stack_matches.top());
+        auto top_symbol = std::move(parse_stack_matches.top());
         parse_stack_matches.pop();
         std::visit(
                 Overloaded{
@@ -535,7 +529,7 @@ auto LALR1Parser<NfaStateType, DfaStateType>::get_input_after_last_newline(
                                 // input is being read backwards, so reverse
                                 // each token so that when the entire input is
                                 // reversed each token is displayed correctly
-                                std::string token_string = token.to_string();
+                                auto token_string = token.to_string();
                                 std::reverse(token_string.begin(), token_string.end());
                                 error_message_reversed += token_string;
                             }
@@ -556,15 +550,15 @@ auto LALR1Parser<NfaStateType, DfaStateType>::get_input_after_last_newline(
     return error_message_reversed;
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::get_input_until_next_newline(Token* error_token
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_until_next_newline(Token* error_token
 ) -> std::string {
     std::string rest_of_line;
-    bool next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd);
-    bool next_has_newline = (error_token->to_string().find('\n') != std::string::npos)
+    auto next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd);
+    auto next_has_newline = (error_token->to_string().find('\n') != std::string::npos)
                             || (error_token->to_string().find('\r') != std::string::npos);
     while (!next_has_newline && !next_is_end_token) {
-        Token token = get_next_symbol();
+        auto token = get_next_symbol();
         next_has_newline = (token.to_string().find('\n') != std::string::npos)
                            || (token.to_string().find('\r') != std::string::npos);
         if (!next_has_newline) {
@@ -576,19 +570,19 @@ auto LALR1Parser<NfaStateType, DfaStateType>::get_input_until_next_newline(Token
     return rest_of_line;
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::report_error() -> std::string {
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::report_error() -> std::string {
     assert(m_next_token == std::nullopt);
     assert(!m_parse_stack_matches.empty());
-    MatchedSymbol top_symbol = std::move(m_parse_stack_matches.top());
+    auto top_symbol = std::move(m_parse_stack_matches.top());
     m_parse_stack_matches.pop();
-    uint32_t line_num = get_line_num(top_symbol);
-    Token token = std::get<Token>(top_symbol);
-    std::string consumed_input = get_input_after_last_newline(m_parse_stack_matches);
+    auto line_num = get_line_num(top_symbol);
+    auto token = std::get<Token>(top_symbol);
+    auto consumed_input = get_input_after_last_newline(m_parse_stack_matches);
     std::string error_type{};
     std::string error_indicator;
-    Token error_token = token;
-    std::string rest_of_line = get_input_until_next_newline(&error_token);
+    auto error_token = token;
+    auto rest_of_line = get_input_until_next_newline(&error_token);
     for (uint32_t i = 0; i < consumed_input.size() + 10; i++) {
         error_indicator += " ";
     }
@@ -599,17 +593,17 @@ auto LALR1Parser<NfaStateType, DfaStateType>::report_error() -> std::string {
     } else {
         error_type = "expected ";
         for (uint32_t i = 0; i < m_parse_stack_states.top()->m_actions.size(); i++) {
-            Action action = m_parse_stack_states.top()->m_actions[i];
+            auto action = m_parse_stack_states.top()->m_actions[i];
             if (action.index() != 0) {
                 error_type += "'";
                 if (auto* regex_ast_literal
-                    = dynamic_cast<finite_automata::RegexASTLiteral<NfaStateType>*>(
-                            this->m_lexer.get_rule(i)
+                    = dynamic_cast<finite_automata::RegexASTLiteral<TypedNfaState>*>(
+                            m_lexer.get_rule(i)
                     ))
                 {
                     error_type += unescape(char(regex_ast_literal->get_character()));
                 } else {
-                    error_type += this->m_lexer.m_id_symbol[i];
+                    error_type += m_lexer.m_id_symbol[i];
                 }
                 error_type += "',";
             }
@@ -617,7 +611,7 @@ auto LALR1Parser<NfaStateType, DfaStateType>::report_error() -> std::string {
         error_type.pop_back();
         error_type += " before '" + unescape(token.to_string()[0]) + "' token";
     }
-    std::string error_string = "Schema:" + std::to_string(line_num + 1) + ":"
+    auto error_string = "Schema:" + std::to_string(line_num + 1) + ":"
                                + std::to_string(consumed_input.size() + 1)
                                + ": error: " + error_type + "\n";
     for (int i = 0; i < 10; i++) {
@@ -627,14 +621,14 @@ auto LALR1Parser<NfaStateType, DfaStateType>::report_error() -> std::string {
     return error_string;
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::parse(Reader& reader) -> NonTerminal {
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse(Reader& reader) -> NonTerminal {
     reset();
     m_parse_stack_states.push(m_root_item_set_ptr);
-    bool accept = false;
+    auto accept = false;
     while (true) {
         m_input_buffer.read_if_safe(reader);
-        Token next_terminal = get_next_symbol();
+        auto next_terminal = get_next_symbol();
         if (parse_advance(next_terminal, &accept)) {
             break;
         }
@@ -643,14 +637,14 @@ auto LALR1Parser<NfaStateType, DfaStateType>::parse(Reader& reader) -> NonTermin
         throw std::runtime_error(report_error());
     }
     assert(!m_parse_stack_matches.empty());
-    MatchedSymbol m = std::move(m_parse_stack_matches.top());
+    auto m = std::move(m_parse_stack_matches.top());
     m_parse_stack_matches.pop();
     assert(m_parse_stack_matches.empty());
     return std::move(std::get<NonTerminal>(m));
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::reset() -> void {
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::reset() -> void {
     m_next_token = std::nullopt;
     while (!m_parse_stack_states.empty()) {
         m_parse_stack_states.pop();
@@ -659,27 +653,25 @@ auto LALR1Parser<NfaStateType, DfaStateType>::reset() -> void {
         m_parse_stack_matches.pop();
     }
     m_input_buffer.reset();
-    this->m_lexer.reset();
+    m_lexer.reset();
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::get_next_symbol() -> Token {
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_next_symbol() -> Token {
     if (m_next_token == std::nullopt) {
         Token token;
-        if (ErrorCode error = this->m_lexer.scan(m_input_buffer, token);
-            ErrorCode::Success != error)
-        {
+        if (auto error = m_lexer.scan(m_input_buffer, token); ErrorCode::Success != error) {
             throw std::runtime_error("Error scanning in lexer.");
         }
         return token;
     }
-    Token s = m_next_token.value();
+    auto s = m_next_token.value();
     m_next_token = std::nullopt;
     return s;
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::parse_advance(Token& next_token, bool* accept)
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse_advance(Token& next_token, bool* accept)
         -> bool {
     for (auto const type : *next_token.m_type_ids_ptr) {
         if (parse_symbol(type, next_token, accept)) {
@@ -692,14 +684,14 @@ auto LALR1Parser<NfaStateType, DfaStateType>::parse_advance(Token& next_token, b
     return true;
 }
 
-template <typename NfaStateType, typename DfaStateType>
-auto LALR1Parser<NfaStateType, DfaStateType>::parse_symbol(
+template <typename TypedNfaState, typename TypedDfaState>
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse_symbol(
         uint32_t const& type_id,
         Token& next_token,
         bool* accept
 ) -> bool {
-    ItemSet* curr = m_parse_stack_states.top();
-    Action& it = curr->m_actions[type_id];
+    auto* curr = m_parse_stack_states.top();
+    auto& it = curr->m_actions[type_id];
     bool ret = false;
     std::visit(
             Overloaded{
@@ -721,7 +713,7 @@ auto LALR1Parser<NfaStateType, DfaStateType>::parse_symbol(
                     [&ret, &next_token, this](Production* reduce) {
                         m_next_token = next_token;
                         NonTerminal matched_non_terminal(reduce);
-                        size_t n = reduce->m_body.size();
+                        auto n = reduce->m_body.size();
                         for (size_t i = 0; i < n; i++) {
                             m_parse_stack_states.pop();
                             assert((matched_non_terminal.m_children_start + n - i - 1)
@@ -742,8 +734,8 @@ auto LALR1Parser<NfaStateType, DfaStateType>::parse_symbol(
                             matched_non_terminal.m_ast
                                     = reduce->m_semantic_rule(&matched_non_terminal);
                         }
-                        ItemSet* curr = m_parse_stack_states.top();
-                        Action const& it
+                        auto* curr = m_parse_stack_states.top();
+                        auto const& it
                                 = curr->m_actions[matched_non_terminal.m_production->m_head];
                         m_parse_stack_states.push(std::get<ItemSet*>(it));
                         m_parse_stack_matches.emplace(std::move(matched_non_terminal));
