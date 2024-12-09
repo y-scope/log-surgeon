@@ -92,11 +92,10 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_token_chain(
             = std::make_unique<finite_automata::RegexASTLiteral<TypedNfaState>>(chain[0]);
     auto second_char_rule
             = std::make_unique<finite_automata::RegexASTLiteral<TypedNfaState>>(chain[1]);
-    auto rule_chain
-            = std::make_unique<finite_automata::RegexASTCat<TypedNfaState>>(
-                    std::move(first_char_rule),
-                    std::move(second_char_rule)
-            );
+    auto rule_chain = std::make_unique<finite_automata::RegexASTCat<TypedNfaState>>(
+            std::move(first_char_rule),
+            std::move(second_char_rule)
+    );
     for (uint32_t i = 2; i < chain.size(); i++) {
         auto next_char = chain[i];
         auto next_char_rule
@@ -161,7 +160,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate() -> void {
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr0_kernels() -> void{
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr0_kernels() -> void {
     auto* root_production_ptr = m_productions[m_root_production_id].get();
     Item root_item(root_production_ptr, 0, cNullSymbol);
     auto item_set0 = std::make_unique<ItemSet>();
@@ -211,7 +210,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::lr_closure_helper(
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr0_closure(ItemSet* item_set_ptr) -> void {
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr0_closure(ItemSet* item_set_ptr
+) -> void {
     std::deque<Item> q(
             item_set_ptr->m_kernel.begin(),
             item_set_ptr->m_kernel.end()
@@ -300,8 +300,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_first_sets() -> void {
 
 template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_item_sets() -> void {
-    for (auto const& kv : m_lr0_item_sets)
-    {
+    for (auto const& kv : m_lr0_item_sets) {
         for (auto const& l0_item : kv.second->m_kernel) {
             ItemSet temp_item_set;
             temp_item_set.m_kernel.insert(l0_item);
@@ -319,8 +318,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_item_sets() -> void
         }
     }
     std::map<Item, std::set<int>> lookaheads;
-    for (auto const& kv : m_lr0_item_sets)
-    {
+    for (auto const& kv : m_lr0_item_sets) {
         for (auto const& l0_item : kv.second->m_kernel) {
             lookaheads[l0_item].insert(
                     m_spontaneous_map[l0_item.m_production].begin(),
@@ -347,8 +345,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_item_sets() -> void
             }
         }
     }
-    for (auto const& kv : m_lr0_item_sets)
-    {
+    for (auto const& kv : m_lr0_item_sets) {
         auto lr1_item_set_ptr = std::make_unique<ItemSet>();
         for (auto const& l0_item : kv.second->m_kernel) {
             for (auto const& lookahead : lookaheads[l0_item]) {
@@ -379,7 +376,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_item_sets() -> void
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_closure(ItemSet* item_set_ptr) -> void {
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_closure(ItemSet* item_set_ptr
+) -> void {
     std::deque<Item> queue(item_set_ptr->m_kernel.begin(), item_set_ptr->m_kernel.end());
     while (!queue.empty()) {
         auto item = queue.back();
@@ -612,8 +610,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::report_error() -> std::string {
         error_type += " before '" + unescape(token.to_string()[0]) + "' token";
     }
     auto error_string = "Schema:" + std::to_string(line_num + 1) + ":"
-                               + std::to_string(consumed_input.size() + 1)
-                               + ": error: " + error_type + "\n";
+                        + std::to_string(consumed_input.size() + 1) + ": error: " + error_type
+                        + "\n";
     for (int i = 0; i < 10; i++) {
         error_string += " ";
     }
@@ -735,8 +733,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse_symbol(
                                     = reduce->m_semantic_rule(&matched_non_terminal);
                         }
                         auto* curr = m_parse_stack_states.top();
-                        auto const& it
-                                = curr->m_actions[matched_non_terminal.m_production->m_head];
+                        auto const& it = curr->m_actions[matched_non_terminal.m_production->m_head];
                         m_parse_stack_states.push(std::get<ItemSet*>(it));
                         m_parse_stack_matches.emplace(std::move(matched_non_terminal));
                         ret = true;
