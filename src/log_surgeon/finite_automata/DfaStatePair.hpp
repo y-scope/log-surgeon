@@ -1,10 +1,11 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE_PAIR
 #define LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE_PAIR
 
+#include <cstdint>
 #include <set>
 #include <vector>
 
-#include <log_surgeon/finite_automata/DfaState.hpp>
+#include <log_surgeon/Constants.hpp>
 
 namespace log_surgeon::finite_automata {
 /**
@@ -18,10 +19,10 @@ namespace log_surgeon::finite_automata {
  *
  * NOTE: Only the first state in the pair contains the variable types matched by the pair.
  */
-template <typename DfaState>
+template <typename TypedDfaState>
 class DfaStatePair {
 public:
-    DfaStatePair(DfaState const* state1, DfaState const* state2)
+    DfaStatePair(TypedDfaState const* state1, TypedDfaState const* state2)
             : m_state1(state1),
               m_state2(state2) {};
 
@@ -58,12 +59,12 @@ public:
     }
 
 private:
-    DfaState const* m_state1;
-    DfaState const* m_state2;
+    TypedDfaState const* m_state1;
+    TypedDfaState const* m_state2;
 };
 
-template <typename DfaState>
-auto DfaStatePair<DfaState>::get_reachable_pairs(
+template <typename TypedDfaState>
+auto DfaStatePair<TypedDfaState>::get_reachable_pairs(
         std::set<DfaStatePair>& visited_pairs,
         std::set<DfaStatePair>& unvisited_pairs
 ) const -> void {

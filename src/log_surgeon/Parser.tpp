@@ -7,8 +7,8 @@
 
 namespace log_surgeon {
 
-template <typename NfaStateType, typename DfaStateType>
-Parser<NfaStateType, DfaStateType>::Parser() {
+template <typename TypedNfaState, typename TypedDfaState>
+Parser<TypedNfaState, TypedDfaState>::Parser() {
     // TODO move clp-reserved symbols out of the parser
     m_lexer.m_symbol_id[cTokenEnd] = (uint32_t)SymbolId::TokenEnd;
     m_lexer.m_symbol_id[cTokenUncaughtString] = (uint32_t)SymbolId::TokenUncaughtString;
@@ -29,10 +29,10 @@ Parser<NfaStateType, DfaStateType>::Parser() {
     m_lexer.m_id_symbol[(uint32_t)SymbolId::TokenNewline] = cTokenNewline;
 }
 
-template <typename NfaStateType, typename DfaStateType>
-void Parser<NfaStateType, DfaStateType>::add_rule(
+template <typename TypedNfaState, typename TypedDfaState>
+void Parser<TypedNfaState, TypedDfaState>::add_rule(
         std::string const& name,
-        std::unique_ptr<finite_automata::RegexAST<NfaStateType>> rule
+        std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
 ) {
     if (m_lexer.m_symbol_id.find(name) == m_lexer.m_symbol_id.end()) {
         m_lexer.m_symbol_id[name] = m_lexer.m_symbol_id.size();
@@ -41,9 +41,9 @@ void Parser<NfaStateType, DfaStateType>::add_rule(
     m_lexer.add_rule(m_lexer.m_symbol_id[name], std::move(rule));
 }
 
-template <typename NfaStateType, typename DfaStateType>
-void Parser<NfaStateType, DfaStateType>::add_token(std::string const& name, char rule_char) {
-    add_rule(name, std::make_unique<finite_automata::RegexASTLiteral<NfaStateType>>(rule_char));
+template <typename TypedNfaState, typename TypedDfaState>
+void Parser<TypedNfaState, TypedDfaState>::add_token(std::string const& name, char rule_char) {
+    add_rule(name, std::make_unique<finite_automata::RegexASTLiteral<TypedNfaState>>(rule_char));
 }
 }  // namespace log_surgeon
 

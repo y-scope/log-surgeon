@@ -1,4 +1,4 @@
-#include "LALR1Parser.hpp"
+#include "Lalr1Parser.hpp"
 
 namespace log_surgeon {
 MatchedSymbol NonTerminal::m_all_children[cSizeOfAllChildren];
