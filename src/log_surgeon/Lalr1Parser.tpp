@@ -71,7 +71,7 @@ void Lalr1Parser<TypedNfaState, TypedDfaState>::add_rule(
         std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
 ) {
     Parser<TypedNfaState, TypedDfaState>::add_rule(name, std::move(rule));
-    m_terminals.insert(this->m_lexer.m_symbol_id[name]);
+    m_terminals.insert(m_lexer.m_symbol_id[name]);
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
@@ -115,9 +115,9 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_production(
         std::vector<std::string> const& body,
         SemanticRule semantic_rule
 ) -> uint32_t {
-    if (this->m_lexer.m_symbol_id.find(head) == this->m_lexer.m_symbol_id.end()) {
-        this->m_lexer.m_symbol_id[head] = this->m_lexer.m_symbol_id.size();
-        this->m_lexer.m_id_symbol[this->m_lexer.m_symbol_id[head]] = head;
+    if (m_lexer.m_symbol_id.find(head) == m_lexer.m_symbol_id.end()) {
+        m_lexer.m_symbol_id[head] = m_lexer.m_symbol_id.size();
+        m_lexer.m_id_symbol[m_lexer.m_symbol_id[head]] = head;
     }
     uint32_t n = m_productions.size();
     auto it = m_productions_map.find(head);
@@ -131,13 +131,13 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_production(
     }
     std::unique_ptr<Production> p(new Production);
     p->m_index = n;
-    p->m_head = this->m_lexer.m_symbol_id[head];
+    p->m_head = m_lexer.m_symbol_id[head];
     for (std::string const& symbol_string : body) {
-        if (this->m_lexer.m_symbol_id.find(symbol_string) == this->m_lexer.m_symbol_id.end()) {
-            this->m_lexer.m_symbol_id[symbol_string] = this->m_lexer.m_symbol_id.size();
-            this->m_lexer.m_id_symbol[this->m_lexer.m_symbol_id[symbol_string]] = symbol_string;
+        if (m_lexer.m_symbol_id.find(symbol_string) == m_lexer.m_symbol_id.end()) {
+            m_lexer.m_symbol_id[symbol_string] = m_lexer.m_symbol_id.size();
+            m_lexer.m_id_symbol[m_lexer.m_symbol_id[symbol_string]] = symbol_string;
         }
-        p->m_body.push_back(this->m_lexer.m_symbol_id[symbol_string]);
+        p->m_body.push_back(m_lexer.m_symbol_id[symbol_string]);
     }
     p->m_semantic_rule = std::move(semantic_rule);
     m_non_terminals.insert(std::pair<int, std::vector<Production*>>(p->m_head, {}));
@@ -152,7 +152,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_production(
 
 template <typename TypedNfaState, typename TypedDfaState>
 void Lalr1Parser<TypedNfaState, TypedDfaState>::generate() {
-    this->m_lexer.generate();
+    m_lexer.generate();
     assert(!m_productions.empty());
     generate_lr0_kernels();
     generate_first_sets();
@@ -435,7 +435,7 @@ void Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lalr1_action() {
     for (std::map<std::set<Item>, std::unique_ptr<ItemSet>>::value_type const& kv : m_lr1_item_sets)
     {
         ItemSet* item_set_ptr = kv.second.get();
-        item_set_ptr->m_actions.resize(this->m_lexer.m_symbol_id.size(), false);
+        item_set_ptr->m_actions.resize(m_lexer.m_symbol_id.size(), false);
         for (Item const& item : item_set_ptr->m_closure) {
             if (!item.has_dot_at_end()) {
                 if (m_terminals.find(item.next_symbol()) == m_terminals.end()
@@ -453,7 +453,7 @@ void Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lalr1_action() {
                     }
                     std::string conflict_msg{};
                     conflict_msg += "For symbol ";
-                    conflict_msg += this->m_lexer.m_id_symbol[item.next_symbol()];
+                    conflict_msg += m_lexer.m_id_symbol[item.next_symbol()];
                     conflict_msg += ", adding shift to ";
                     conflict_msg
                             += std::to_string(item_set_ptr->m_next[item.next_symbol()]->m_index);
@@ -465,10 +465,10 @@ void Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lalr1_action() {
                     } else {
                         conflict_msg += "shift-reduce conflict with reduction ";
                         conflict_msg
-                                += this->m_lexer.m_id_symbol[std::get<Production*>(action)->m_head];
+                                += m_lexer.m_id_symbol[std::get<Production*>(action)->m_head];
                         conflict_msg += "-> {";
                         for (uint32_t symbol : std::get<Production*>(action)->m_body) {
-                            conflict_msg += this->m_lexer.m_id_symbol[symbol] + ",";
+                            conflict_msg += m_lexer.m_id_symbol[symbol] + ",";
                         }
                         conflict_msg += "}\n";
                     }
@@ -486,12 +486,12 @@ void Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lalr1_action() {
                     if (!std::holds_alternative<bool>(action)) {
                         std::string conflict_msg{};
                         conflict_msg += "For symbol ";
-                        conflict_msg += this->m_lexer.m_id_symbol[item.m_lookahead];
+                        conflict_msg += m_lexer.m_id_symbol[item.m_lookahead];
                         conflict_msg += ", adding reduction ";
-                        conflict_msg += this->m_lexer.m_id_symbol[item.m_production->m_head];
+                        conflict_msg += m_lexer.m_id_symbol[item.m_production->m_head];
                         conflict_msg += "-> {";
                         for (uint32_t symbol : item.m_production->m_body) {
-                            conflict_msg += this->m_lexer.m_id_symbol[symbol] + ",";
+                            conflict_msg += m_lexer.m_id_symbol[symbol] + ",";
                         }
                         conflict_msg += "} causes ";
                         if (std::holds_alternative<ItemSet*>(action)) {
@@ -501,11 +501,11 @@ void Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lalr1_action() {
                         } else {
                             conflict_msg += "reduce-reduce conflict with reduction ";
                             conflict_msg
-                                    += this->m_lexer
+                                    += m_lexer
                                                .m_id_symbol[std::get<Production*>(action)->m_head];
                             conflict_msg += "-> {";
                             for (uint32_t symbol : std::get<Production*>(action)->m_body) {
-                                conflict_msg += this->m_lexer.m_id_symbol[symbol] + ",";
+                                conflict_msg += m_lexer.m_id_symbol[symbol] + ",";
                             }
                             conflict_msg += "}\n";
                         }
@@ -605,12 +605,12 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::report_error() -> std::string {
                 error_type += "'";
                 if (auto* regex_ast_literal
                     = dynamic_cast<finite_automata::RegexASTLiteral<TypedNfaState>*>(
-                            this->m_lexer.get_rule(i)
+                            m_lexer.get_rule(i)
                     ))
                 {
                     error_type += unescape(char(regex_ast_literal->get_character()));
                 } else {
-                    error_type += this->m_lexer.m_id_symbol[i];
+                    error_type += m_lexer.m_id_symbol[i];
                 }
                 error_type += "',";
             }
@@ -660,14 +660,14 @@ void Lalr1Parser<TypedNfaState, TypedDfaState>::reset() {
         m_parse_stack_matches.pop();
     }
     m_input_buffer.reset();
-    this->m_lexer.reset();
+    m_lexer.reset();
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_next_symbol() -> Token {
     if (m_next_token == std::nullopt) {
         Token token;
-        if (ErrorCode error = this->m_lexer.scan(m_input_buffer, token);
+        if (ErrorCode error = m_lexer.scan(m_input_buffer, token);
             ErrorCode::Success != error)
         {
             throw std::runtime_error("Error scanning in lexer.");

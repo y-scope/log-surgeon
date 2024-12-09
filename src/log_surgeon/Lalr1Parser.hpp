@@ -394,6 +394,8 @@ private:
 
     auto symbol_is_token(uint32_t s) -> bool { return m_terminals.find(s) != m_terminals.end(); }
 
+    using Parser<TypedNfaState, TypedDfaState>::m_lexer;
+
     std::set<uint32_t> m_terminals;
     std::set<uint32_t> m_nullable;
     std::map<std::set<Item>, std::unique_ptr<ItemSet>> m_lr0_item_sets;
