@@ -173,7 +173,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
         char wildcard,
         Token& token
 ) -> ErrorCode {
-    TypedDfaState const* state = m_dfa->get_root();
+    auto const* state = m_dfa->get_root();
     if (m_asked_for_more_data) {
         state = m_prev_state;
         m_asked_for_more_data = false;
@@ -197,7 +197,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
         m_type_ids = nullptr;
     }
     while (true) {
-        uint32_t prev_byte_buf_pos = input_buffer.storage().pos();
+        auto prev_byte_buf_pos = input_buffer.storage().pos();
         unsigned char next_char{utf8::cCharErr};
         if (ErrorCode err = input_buffer.get_next_character(next_char); ErrorCode::Success != err) {
             m_asked_for_more_data = true;
@@ -240,7 +240,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
                 // BFS (keep track of m_type_ids)
                 if (wildcard == '?') {
                     for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
-                        TypedDfaState* next_state = state->next(byte);
+                        auto* next_state = state->next(byte);
                         if (next_state->is_accepting() == false) {
                             token
                                     = Token{m_last_match_pos,
@@ -304,7 +304,7 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lexer<TypedNfaState, TypedDfaState>::increase_buffer_capacity(ParserInputBuffer& input_buffer
 ) -> void {
     uint32_t old_storage_size{0};
-    bool flipped_static_buffer{false};
+    auto flipped_static_buffer{false};
     input_buffer.increase_capacity(old_storage_size, flipped_static_buffer);
     if (old_storage_size < input_buffer.storage().size()) {
         if (flipped_static_buffer) {
@@ -346,10 +346,10 @@ template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::add_delimiters(std::vector<uint32_t> const& delimiters) {
     assert(!delimiters.empty());
     m_has_delimiters = true;
-    for (bool& i : m_is_delimiter) {
+    for (auto& i : m_is_delimiter) {
         i = false;
     }
-    for (uint32_t delimiter : delimiters) {
+    for (auto delimiter : delimiters) {
         m_is_delimiter[delimiter] = true;
     }
     m_is_delimiter[utf8::cCharStartOfFile] = true;
@@ -379,7 +379,7 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
     finite_automata::Nfa<TypedNfaState> nfa{std::move(m_rules)};
     // TODO: DFA ignores tags. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = nfa_to_dfa(nfa);
-    TypedDfaState const* state = m_dfa->get_root();
+    auto const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
         if (state->next(i) != nullptr) {
             m_is_first_char[i] = true;
@@ -430,23 +430,22 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lexer<TypedNfaState, TypedDfaState>::nfa_to_dfa(finite_automata::Nfa<TypedNfaState>& nfa
 ) -> std::unique_ptr<finite_automata::Dfa<TypedDfaState>> {
     typedef std::set<TypedNfaState const*> StateSet;
-    std::unique_ptr<finite_automata::Dfa<TypedDfaState>> dfa
-            = std::make_unique<finite_automata::Dfa<TypedDfaState>>();
+    auto dfa = std::make_unique<finite_automata::Dfa<TypedDfaState>>();
     std::map<StateSet, TypedDfaState*> dfa_states;
     std::stack<StateSet> unmarked_sets;
     auto create_dfa_state
             = [&dfa, &dfa_states, &unmarked_sets](StateSet const& set) -> TypedDfaState* {
-        TypedDfaState* state = dfa->new_state(set);
+        auto* state = dfa->new_state(set);
         dfa_states[set] = state;
         unmarked_sets.push(set);
         return state;
     };
-    StateSet start_set = epsilon_closure(nfa.get_root());
+    auto start_set = epsilon_closure(nfa.get_root());
     create_dfa_state(start_set);
     while (!unmarked_sets.empty()) {
-        StateSet set = unmarked_sets.top();
+        auto set = unmarked_sets.top();
         unmarked_sets.pop();
-        TypedDfaState* dfa_state = dfa_states.at(set);
+        auto* dfa_state = dfa_states.at(set);
         std::map<uint32_t, StateSet> ascii_transitions_map;
         // map<Interval, StateSet> transitions_map;
         for (TypedNfaState const* s0 : set) {
@@ -477,7 +476,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::nfa_to_dfa(finite_automata::Nfa<TypedN
             return state;
         };
         for (typename std::map<uint32_t, StateSet>::value_type const& kv : ascii_transitions_map) {
-            TypedDfaState* dest_state = next_dfa_state(kv.second);
+            auto* dest_state = next_dfa_state(kv.second);
             dfa_state->add_byte_transition(kv.first, dest_state);
         }
         // TODO: add this for the utf8 case
