@@ -11,9 +11,9 @@ set(
         ../src/log_surgeon/finite_automata/RegisterHandler.hpp
         ../src/log_surgeon/finite_automata/Tag.hpp
         ../src/log_surgeon/finite_automata/TaggedTransition.hpp
-        ../src/log_surgeon/LALR1Parser.cpp
-        ../src/log_surgeon/LALR1Parser.hpp
-        ../src/log_surgeon/LALR1Parser.tpp
+        ../src/log_surgeon/Lalr1Parser.cpp
+        ../src/log_surgeon/Lalr1Parser.hpp
+        ../src/log_surgeon/Lalr1Parser.tpp
         ../src/log_surgeon/ParserInputBuffer.hpp
         ../src/log_surgeon/ParserInputBuffer.cpp
         ../src/log_surgeon/Schema.hpp

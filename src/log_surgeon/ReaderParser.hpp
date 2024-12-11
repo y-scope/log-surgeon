@@ -19,7 +19,7 @@ public:
     /**
      * Constructs the parser using the the given schema file.
      * @param schema_file_path
-     * @throw std::runtime_error from LALR1Parser, RegexAST, or Lexer
+     * @throw std::runtime_error from Lalr1Parser, RegexAST, or Lexer
      * describing the failure parsing the schema file or processing the schema
      * AST.
      */
@@ -28,7 +28,7 @@ public:
     /**
      * Constructs the parser using the given schema AST.
      * @param schema_ast
-     * @throw std::runtime_error from LALR1Parser, RegexAST, or Lexer
+     * @throw std::runtime_error from Lalr1Parser, RegexAST, or Lexer
      * describing the failure processing the schema AST.
      */
     explicit ReaderParser(std::unique_ptr<log_surgeon::SchemaAST> schema_ast);

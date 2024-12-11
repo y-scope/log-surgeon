@@ -21,8 +21,8 @@ namespace log_surgeon::finite_automata {
 template <NfaStateType state_type>
 class NfaState;
 
-using NfaByteState = NfaState<NfaStateType::Byte>;
-using NfaUtf8State = NfaState<NfaStateType::Utf8>;
+using ByteNfaState = NfaState<NfaStateType::Byte>;
+using Utf8NfaState = NfaState<NfaStateType::Utf8>;
 
 template <NfaStateType state_type>
 class NfaState {
@@ -119,7 +119,7 @@ private:
     std::vector<NfaState*> m_epsilon_transitions;
     std::array<std::vector<NfaState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
-    // DfaStateType::Byte` case, so we use an empty class (`std::tuple<>`)
+    // NfaStateType::Byte` case, so we use an empty class (`std::tuple<>`)
     // in that case.
     std::conditional_t<state_type == NfaStateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
@@ -143,7 +143,7 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
             uint32_t overlap_low = std::max(data.m_interval.first, interval.first);
             uint32_t overlap_high = std::min(data.m_interval.second, interval.second);
 
-            std::vector<NfaUtf8State*> tree_states = data.m_value;
+            std::vector<Utf8NfaState*> tree_states = data.m_value;
             tree_states.push_back(dest_state);
             m_tree_transitions.insert(Interval(overlap_low, overlap_high), tree_states);
             if (data.m_interval.first < interval.first) {
@@ -176,7 +176,7 @@ auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
     std::set<NfaState const*> closure_set;
     std::stack<NfaState const*> stack;
     stack.push(this);
-    while (!stack.empty()) {
+    while (false == stack.empty()) {
         auto const* current_state = stack.top();
         stack.pop();
         if (false == closure_set.insert(current_state).second) {
