@@ -40,40 +40,40 @@ private:
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
 };
 
-template <typename DfaStateType>
-template <typename NfaStateType>
-Dfa<DfaStateType>::Dfa(Nfa<NfaStateType> nfa) {
-    typedef std::set<NfaStateType const*> StateSet;
+template <typename TypedDfaState>
+template <typename TypedNfaState>
+Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
+    typedef std::set<TypedNfaState const*> StateSet;
 
-    std::map<StateSet, DfaStateType*> dfa_states;
+    std::map<StateSet, TypedDfaState*> dfa_states;
     std::stack<StateSet> unmarked_sets;
     auto create_dfa_state
-            = [this, &dfa_states, &unmarked_sets](StateSet const& set) -> DfaStateType* {
-        DfaStateType* state = new_state(set);
+            = [this, &dfa_states, &unmarked_sets](StateSet const& set) -> TypedDfaState* {
+        auto* state = new_state(set);
         dfa_states[set] = state;
         unmarked_sets.push(set);
         return state;
     };
 
-    StateSet start_set = nfa.get_root()->epsilon_closure();
+    auto start_set = nfa.get_root()->epsilon_closure();
     create_dfa_state(start_set);
-    while (!unmarked_sets.empty()) {
-        StateSet set = unmarked_sets.top();
+    while (false == unmarked_sets.empty()) {
+        auto set = unmarked_sets.top();
         unmarked_sets.pop();
-        DfaStateType* dfa_state = dfa_states.at(set);
+        auto* dfa_state = dfa_states.at(set);
         std::map<uint32_t, StateSet> ascii_transitions_map;
         // map<Interval, StateSet> transitions_map;
-        for (NfaStateType const* s0 : set) {
+        for (auto const* s0 : set) {
             for (uint32_t i = 0; i < cSizeOfByte; i++) {
-                for (NfaStateType* const s1 : s0->get_byte_transitions(i)) {
+                for (auto* const s1 : s0->get_byte_transitions(i)) {
                     StateSet closure = s1->epsilon_closure();
                     ascii_transitions_map[i].insert(closure.begin(), closure.end());
                 }
             }
             // TODO: add this for the utf8 case
             /*
-            for (const typename NfaStateType::Tree::Data& data : s0->get_tree_transitions().all()) {
-                for (NfaStateType* const s1 : data.m_value) {
+            for (auto const& data : s0->get_tree_transitions().all()) {
+                for (auto* const s1 : data.m_value) {
                     StateSet closure = s1->epsilon_closure();
                     transitions_map[data.m_interval].insert(closure.begin(), closure.end());
                 }
@@ -81,8 +81,8 @@ Dfa<DfaStateType>::Dfa(Nfa<NfaStateType> nfa) {
             */
         }
         auto next_dfa_state
-                = [&dfa_states, &create_dfa_state](StateSet const& set) -> DfaStateType* {
-            DfaStateType* state;
+                = [&dfa_states, &create_dfa_state](StateSet const& set) -> TypedDfaState* {
+            TypedDfaState* state;
             auto it = dfa_states.find(set);
             if (it == dfa_states.end()) {
                 state = create_dfa_state(set);
@@ -91,16 +91,14 @@ Dfa<DfaStateType>::Dfa(Nfa<NfaStateType> nfa) {
             }
             return state;
         };
-        for (typename std::map<uint32_t, StateSet>::value_type const& kv : ascii_transitions_map) {
-            DfaStateType* dest_state = next_dfa_state(kv.second);
+        for (auto const& kv : ascii_transitions_map) {
+            auto* dest_state = next_dfa_state(kv.second);
             dfa_state->add_byte_transition(kv.first, dest_state);
         }
         // TODO: add this for the utf8 case
         /*
-        for (const typename map<Interval, typename NfaStateType::StateSet>::value_type& kv :
-             transitions_map)
-        {
-            DfaStateType* dest_state = next_dfa_state(kv.second);
+        for (auto& kv : transitions_map) {
+            TypedDfaState* dest_state = next_dfa_state(kv.second);
             dfa_state->add_tree_transition(kv.first, dest_state);
         }
         */

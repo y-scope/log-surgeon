@@ -28,14 +28,6 @@ public:
             = {(uint32_t)SymbolId::TokenUncaughtString};
 
     /**
-     * Generate a DFA from an NFA
-     * @param finite_automata::Nfa<TypedNfaState> nfa
-     * @return std::unique_ptr<finite_automata::Dfa<TypedDfaState>>
-     */
-    static auto nfa_to_dfa(finite_automata::Nfa<TypedNfaState>& nfa
-    ) -> std::unique_ptr<finite_automata::Dfa<TypedDfaState>>;
-
-    /**
      * Add a delimiters line from the schema to the lexer
      * @param delimiters
      */
