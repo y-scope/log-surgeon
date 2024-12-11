@@ -21,7 +21,7 @@ using ByteLexicalRule = log_surgeon::LexicalRule<ByteNfaState>;
 
 auto get_intersect_for_query(
         std::map<uint32_t, std::string>& m_id_symbol,
-        Dfa<ByteDfaState>& dfa1,
+        Dfa<ByteDfaState> const& dfa1,
         std::string const& search_string
 ) -> void {
     std::string processed_search_string;
