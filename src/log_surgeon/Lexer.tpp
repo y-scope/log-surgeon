@@ -389,30 +389,6 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
         }
     }
 }
-        for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-            stack.push(dest_state);
-        }
-
-        // TODO: currently treat tagged transitions as epsilon transitions
-        for (auto const& positive_tagged_start_transition :
-             current_state->get_positive_tagged_start_transitions())
-        {
-            stack.push(positive_tagged_start_transition.get_dest_state());
-        }
-        auto const& optional_positive_tagged_end_transition
-                = current_state->get_positive_tagged_end_transition();
-        if (optional_positive_tagged_end_transition.has_value()) {
-            stack.push(optional_positive_tagged_end_transition.value().get_dest_state());
-        }
-
-        auto const& optional_negative_tagged_transition
-                = current_state->get_negative_tagged_transition();
-        if (optional_negative_tagged_transition.has_value()) {
-            stack.push(optional_negative_tagged_transition.value().get_dest_state());
-        }
-    }
-    return closure_set;
-}
 
 template <typename TypedNfaState, typename TypedDfaState>
 auto Lexer<TypedNfaState, TypedDfaState>::nfa_to_dfa(finite_automata::Nfa<TypedNfaState>& nfa
