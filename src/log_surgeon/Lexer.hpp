@@ -13,6 +13,7 @@
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/finite_automata/RegexDFA.hpp>
+#include <log_surgeon/finite_automata/RegexDFAState.hpp>
 #include <log_surgeon/finite_automata/RegexNFA.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/ParserInputBuffer.hpp>
