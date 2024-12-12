@@ -8,6 +8,7 @@
 
 #include <log_surgeon/finite_automata/DfaStatePair.hpp>
 #include <log_surgeon/finite_automata/Nfa.hpp>
+#include <log_surgeon/finite_automata/RegisterHandler.hpp>
 
 namespace log_surgeon::finite_automata {
 template <typename TypedDfaState>
@@ -38,6 +39,7 @@ public:
 
 private:
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
+    RegisterHandler m_register_handler;
 };
 
 template <typename TypedDfaState>
