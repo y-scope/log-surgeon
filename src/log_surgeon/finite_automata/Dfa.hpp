@@ -2,10 +2,13 @@
 #define LOG_SURGEON_FINITE_AUTOMATA_DFA_HPP
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <set>
+#include <stack>
 #include <vector>
 
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/DfaStatePair.hpp>
 #include <log_surgeon/finite_automata/Nfa.hpp>
 #include <log_surgeon/finite_automata/RegisterHandler.hpp>
@@ -84,7 +87,7 @@ Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
         }
         auto next_dfa_state
                 = [&dfa_states, &create_dfa_state](StateSet const& set) -> TypedDfaState* {
-            TypedDfaState* state;
+            TypedDfaState* state{nullptr};
             auto it = dfa_states.find(set);
             if (it == dfa_states.end()) {
                 state = create_dfa_state(set);
