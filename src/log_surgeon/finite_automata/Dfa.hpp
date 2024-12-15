@@ -48,12 +48,12 @@ private:
 template <typename TypedDfaState>
 template <typename TypedNfaState>
 Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
-    typedef std::set<TypedNfaState const*> StateSet;
+    typedef std::set<TypedNfaState const*> NfaStateSet;
 
-    std::map<StateSet, TypedDfaState*> dfa_states;
-    std::stack<StateSet> unmarked_sets;
+    std::map<NfaStateSet, TypedDfaState*> dfa_states;
+    std::stack<NfaStateSet> unmarked_sets;
     auto create_dfa_state
-            = [this, &dfa_states, &unmarked_sets](StateSet const& set) -> TypedDfaState* {
+            = [this, &dfa_states, &unmarked_sets](NfaStateSet const& set) -> TypedDfaState* {
         auto* state = new_state(set);
         dfa_states[set] = state;
         unmarked_sets.push(set);
@@ -66,12 +66,12 @@ Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
         auto set = unmarked_sets.top();
         unmarked_sets.pop();
         auto* dfa_state = dfa_states.at(set);
-        std::map<uint32_t, StateSet> ascii_transitions_map;
-        // map<Interval, StateSet> transitions_map;
+        std::map<uint32_t, NfaStateSet> ascii_transitions_map;
+        // map<Interval, NfaStateSet> transitions_map;
         for (auto const* s0 : set) {
             for (uint32_t i = 0; i < cSizeOfByte; i++) {
                 for (auto* const s1 : s0->get_byte_transitions(i)) {
-                    StateSet closure = s1->epsilon_closure();
+                    NfaStateSet closure = s1->epsilon_closure();
                     ascii_transitions_map[i].insert(closure.begin(), closure.end());
                 }
             }
@@ -79,14 +79,14 @@ Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
             /*
             for (auto const& data : s0->get_tree_transitions().all()) {
                 for (auto* const s1 : data.m_value) {
-                    StateSet closure = s1->epsilon_closure();
+                    NfaStateSet closure = s1->epsilon_closure();
                     transitions_map[data.m_interval].insert(closure.begin(), closure.end());
                 }
             }
             */
         }
         auto next_dfa_state
-                = [&dfa_states, &create_dfa_state](StateSet const& set) -> TypedDfaState* {
+                = [&dfa_states, &create_dfa_state](NfaStateSet const& set) -> TypedDfaState* {
             TypedDfaState* state{nullptr};
             auto it = dfa_states.find(set);
             if (it == dfa_states.end()) {
