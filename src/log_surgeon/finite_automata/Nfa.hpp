@@ -1,9 +1,11 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <queue>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -14,6 +16,7 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/NfaState.hpp>
+#include <log_surgeon/finite_automata/Tag.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 
 namespace log_surgeon::finite_automata {
@@ -86,9 +89,13 @@ public:
 
     auto get_root() -> TypedNfaState* { return m_root; }
 
+    [[nodiscard]] auto get_num_tags() const -> size_t { return m_tags.size(); }
+
 private:
     std::vector<std::unique_ptr<TypedNfaState>> m_states;
     TypedNfaState* m_root;
+    std::set<Tag const*> m_tags;
+
     // Store the rules locally as they contain information needed by the NFA. E.g., transitions in
     // the NFA point to tags in the rule ASTs.
     std::vector<LexicalRule<TypedNfaState>> m_rules;
@@ -114,6 +121,7 @@ auto Nfa<TypedNfaState>::new_state_with_positive_tagged_end_transition(
         Tag const* tag,
         TypedNfaState const* dest_state
 ) -> TypedNfaState* {
+    m_tags.insert(tag);
     m_states.emplace_back(std::make_unique<TypedNfaState>(tag, dest_state));
     return m_states.back().get();
 }
