@@ -97,7 +97,6 @@ set(SOURCE_FILES
     src/log_surgeon/finite_automata/PrefixTree.hpp
     src/log_surgeon/finite_automata/RegexAST.hpp
     src/log_surgeon/finite_automata/Dfa.hpp
-    src/log_surgeon/finite_automata/DfaDeterminizationHandler.hpp
     src/log_surgeon/finite_automata/DfaState.hpp
     src/log_surgeon/finite_automata/DfaStatePair.hpp
     src/log_surgeon/finite_automata/DfaStateType.hpp
