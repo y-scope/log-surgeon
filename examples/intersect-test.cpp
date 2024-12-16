@@ -41,7 +41,7 @@ auto get_intersect_for_query(
         rules.emplace_back(0, std::move(schema_var_ast->m_regex_ptr));
     }
     Nfa<ByteNfaState> nfa(std::move(rules));
-    Dfa<ByteDfaState> dfa2(std::move(nfa));
+    Dfa<ByteDfaState, ByteNfaState> dfa2(std::move(nfa));
     auto schema_types = dfa1.get_intersect(&dfa2);
     std::cout << search_string << ":";
     for (auto const& schema_type : schema_types) {

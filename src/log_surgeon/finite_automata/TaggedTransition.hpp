@@ -32,6 +32,8 @@ public:
 
     [[nodiscard]] auto get_dest_state() const -> TypedNfaState const* { return m_dest_state; }
 
+    [[nodiscard]] auto get_tag() const -> Tag const* { return m_tag; }
+
     /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the positive tagged transition on success.
@@ -74,6 +76,8 @@ public:
               m_dest_state{dest_state} {}
 
     [[nodiscard]] auto get_dest_state() const -> TypedNfaState const* { return m_dest_state; }
+
+    [[nodiscard]] auto get_tags() const -> std::vector<Tag const*> { return m_tags; }
 
     /**
      * @param state_ids A map of states to their unique identifiers.

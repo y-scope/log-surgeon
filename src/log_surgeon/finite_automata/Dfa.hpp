@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <set>
 #include <stack>
 #include <vector>
@@ -12,6 +13,8 @@
 #include <log_surgeon/finite_automata/DfaStatePair.hpp>
 #include <log_surgeon/finite_automata/Nfa.hpp>
 #include <log_surgeon/finite_automata/RegisterHandler.hpp>
+
+#include "DeterminizationConfiguration.hpp"
 
 namespace log_surgeon::finite_automata {
 template <typename TypedDfaState, typename TypedNfaState>
@@ -32,7 +35,7 @@ public:
     [[nodiscard]] auto get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t>;
 
 private:
-    typedef std::set<TypedNfaState const*> NfaStateSet;
+    typedef std::set<DetermizationConfiguration<TypedNfaState>> ConfigurationSet;
 
     /**
      * Generate the DFA states from the given NFA using the superset determinization algorithm.
@@ -45,7 +48,7 @@ private:
      * @param nfa_state_set The set of NFA states represented by this DFA state.
      * @return A pointer to the new DFA state.
      */
-    auto new_state(NfaStateSet const& nfa_state_set) -> TypedDfaState*;
+    auto new_state(ConfigurationSet const& nfa_state_set) -> TypedDfaState*;
 
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
     RegisterHandler m_register_handler;
@@ -57,15 +60,27 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> nfa) : m_nfa(std::move
     generate();
 }
 
+// TODO: handle utf8 case in DFA generation.
 template <typename TypedDfaState, typename TypedNfaState>
 auto Dfa<TypedDfaState, TypedNfaState>::generate() -> void {
-    std::map<NfaStateSet, TypedDfaState*> dfa_states;
-    std::stack<NfaStateSet> unmarked_sets;
+    std::map<ConfigurationSet, TypedDfaState*> dfa_states;
+    std::stack<ConfigurationSet> unexplored_sets;
     auto create_dfa_state
-            = [this, &dfa_states, &unmarked_sets](NfaStateSet const& set) -> TypedDfaState* {
+            = [this, &dfa_states, &unexplored_sets](ConfigurationSet const& set) -> TypedDfaState* {
         auto* state = new_state(set);
         dfa_states[set] = state;
-        unmarked_sets.push(set);
+        unexplored_sets.push(set);
+        return state;
+    };
+    auto next_dfa_state
+            = [&dfa_states, &create_dfa_state](ConfigurationSet const& set) -> TypedDfaState* {
+        TypedDfaState* state{nullptr};
+        auto it = dfa_states.find(set);
+        if (it == dfa_states.end()) {
+            state = create_dfa_state(set);
+        } else {
+            state = it->second;
+        }
         return state;
     };
 
@@ -73,64 +88,49 @@ auto Dfa<TypedDfaState, TypedNfaState>::generate() -> void {
         constexpr PrefixTree::position_t cDefaultPos{0};
         m_register_handler.add_register(PrefixTree::cRootId, cDefaultPos);
     }
+    std::vector<uint32_t> initial_registers(m_nfa.get_num_tags() * 2);
+    std::iota(initial_registers.begin(), initial_registers.end(), 0);
 
-    auto start_set = m_nfa.get_root()->epsilon_closure();
+    DetermizationConfiguration<TypedNfaState>
+            initial_configuration{m_nfa.get_root(), initial_registers, {}, {}};
+    auto configuration_set = initial_configuration.epsilon_closure();
+    create_dfa_state(configuration_set);
+    while (false == unexplored_sets.empty()) {
+        configuration_set = unexplored_sets.top();
+        unexplored_sets.pop();
 
-    create_dfa_state(start_set);
-    while (false == unmarked_sets.empty()) {
-        auto set = unmarked_sets.top();
-        unmarked_sets.pop();
-        auto* dfa_state = dfa_states.at(set);
-        std::map<uint32_t, NfaStateSet> ascii_transitions_map;
-        // map<Interval, NfaStateSet> transitions_map;
-        for (auto const* s0 : set) {
+        auto* dfa_state = dfa_states.at(configuration_set);
+        std::map<uint32_t, ConfigurationSet> ascii_transitions_map;
+        for (auto const& configuration : configuration_set) {
             for (uint32_t i = 0; i < cSizeOfByte; i++) {
-                for (auto* const s1 : s0->get_byte_transitions(i)) {
-                    NfaStateSet closure = s1->epsilon_closure();
+                auto const* nfa_state = configuration.get_state();
+                for (auto const* next_nfa_state : nfa_state->get_byte_transitions(i)) {
+                    DetermizationConfiguration<TypedNfaState> next_configuration{
+                            next_nfa_state,
+                            configuration.get_register_ids(),
+                            configuration.get_sequence(),
+                            {}
+                    };
+                    auto closure = next_configuration.epsilon_closure();
                     ascii_transitions_map[i].insert(closure.begin(), closure.end());
                 }
             }
-            // TODO: add this for the utf8 case
-            /*
-            for (auto const& data : s0->get_tree_transitions().all()) {
-                for (auto* const s1 : data.m_value) {
-                    NfaStateSet closure = s1->epsilon_closure();
-                    transitions_map[data.m_interval].insert(closure.begin(), closure.end());
-                }
-            }
-            */
         }
-        auto next_dfa_state
-                = [&dfa_states, &create_dfa_state](NfaStateSet const& set) -> TypedDfaState* {
-            TypedDfaState* state{nullptr};
-            auto it = dfa_states.find(set);
-            if (it == dfa_states.end()) {
-                state = create_dfa_state(set);
-            } else {
-                state = it->second;
-            }
-            return state;
-        };
-        for (auto const& kv : ascii_transitions_map) {
-            auto* dest_state = next_dfa_state(kv.second);
-            dfa_state->add_byte_transition(kv.first, dest_state);
+
+        for (auto const& [ascii_value, configuration] : ascii_transitions_map) {
+            auto* dest_state = next_dfa_state(configuration);
+            dfa_state->add_byte_transition(ascii_value, dest_state);
         }
-        // TODO: add this for the utf8 case
-        /*
-        for (auto& kv : transitions_map) {
-            TypedDfaState* dest_state = next_dfa_state(kv.second);
-            dfa_state->add_tree_transition(kv.first, dest_state);
-        }
-        */
     }
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
-auto Dfa<TypedDfaState, TypedNfaState>::new_state(NfaStateSet const& nfa_state_set
+auto Dfa<TypedDfaState, TypedNfaState>::new_state(ConfigurationSet const& configuration_set
 ) -> TypedDfaState* {
     m_states.emplace_back(std::make_unique<TypedDfaState>());
     auto* dfa_state = m_states.back().get();
-    for (auto const* nfa_state : nfa_state_set) {
+    for (auto const configuration : configuration_set) {
+        auto const* nfa_state = configuration.get_state();
         if (nfa_state->is_accepting()) {
             dfa_state->add_matching_variable_id(nfa_state->get_matching_variable_id());
         }

@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <stack>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -95,11 +94,6 @@ public:
     auto add_interval(Interval interval, NfaState* dest_state) -> void;
 
     /**
-     * @return The set of all states reachable from the current state via epsilon transitions.
-     */
-    auto epsilon_closure() -> std::set<NfaState const*>;
-
-    /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the NFA state on success.
      * @return Forwards `PositiveTaggedTransition::serialize`'s return value (std::nullopt) on
@@ -169,41 +163,6 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
             m_tree_transitions.insert(interval, {dest_state});
         }
     }
-}
-
-template <NfaStateType state_type>
-auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
-    std::set<NfaState const*> closure_set;
-    std::stack<NfaState const*> stack;
-    stack.push(this);
-    while (false == stack.empty()) {
-        auto const* current_state = stack.top();
-        stack.pop();
-        if (false == closure_set.insert(current_state).second) {
-            continue;
-        }
-        for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-            stack.push(dest_state);
-        }
-
-        // TODO: currently treat tagged transitions as epsilon transitions
-        for (auto const& positive_tagged_start_transition :
-             current_state->get_positive_tagged_start_transitions())
-        {
-            stack.push(positive_tagged_start_transition.get_dest_state());
-        }
-        auto const& optional_positive_tagged_end_transition
-                = current_state->get_positive_tagged_end_transition();
-        if (optional_positive_tagged_end_transition.has_value()) {
-            stack.push(optional_positive_tagged_end_transition.value().get_dest_state());
-        }
-        auto const& optional_negative_tagged_transition
-                = current_state->get_negative_tagged_transition();
-        if (optional_negative_tagged_transition.has_value()) {
-            stack.push(optional_negative_tagged_transition.value().get_dest_state());
-        }
-    }
-    return closure_set;
 }
 
 template <NfaStateType state_type>
