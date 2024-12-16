@@ -31,20 +31,6 @@ public:
         return m_nfa_state < rhs.m_nfa_state;
     }
 
-    auto configuration_with_new_state(TypedNfaState const* new_nfa_state
-    ) const -> DetermizationConfiguration {
-        return DetermizationConfiguration(new_nfa_state, m_register_ids, m_history, m_sequence);
-    }
-
-    auto configuration_with_new_state_and_tag(
-            TypedNfaState const* new_nfa_state,
-            Tag const* tag
-    ) const -> DetermizationConfiguration {
-        auto sequence{m_sequence};
-        sequence.push_back(tag);
-        return DetermizationConfiguration(new_nfa_state, m_register_ids, m_history, sequence);
-    }
-
     auto configuration_with_new_state_and_tags(
             TypedNfaState const* new_nfa_state,
             std::vector<Tag const*> const& tags
@@ -87,7 +73,7 @@ auto DetermizationConfiguration<TypedNfaState>::epsilon_transition(
         std::stack<DetermizationConfiguration>& unexplored_stack
 ) const -> void {
     for (auto const* dest_state : m_nfa_state->get_epsilon_transitions()) {
-        unexplored_stack.push(configuration_with_new_state(dest_state));
+        unexplored_stack.push(configuration_with_new_state_and_tags(dest_state, {}));
     }
 
     for (auto const& positive_tagged_start_transition :
@@ -95,15 +81,15 @@ auto DetermizationConfiguration<TypedNfaState>::epsilon_transition(
     {
         auto const* dest_state = positive_tagged_start_transition.get_dest_state();
         auto const* tag = positive_tagged_start_transition.get_tag();
-        unexplored_stack.push(configuration_with_new_state_and_tag(dest_state, tag));
+        unexplored_stack.push(configuration_with_new_state_and_tags(dest_state, {tag}));
     }
 
     auto const& optional_positive_tagged_end_transition
             = m_nfa_state->get_positive_tagged_end_transition();
     if (optional_positive_tagged_end_transition.has_value()) {
-        auto const* dest_state = optional_positive_tagged_end_transition.value().get_dest_state();
-        auto const* tag = optional_positive_tagged_end_transition.value().get_tag();
-        unexplored_stack.push(configuration_with_new_state_and_tag(dest_state, tag));
+        auto const* dest_state{optional_positive_tagged_end_transition.value().get_dest_state()};
+        auto const* tag{optional_positive_tagged_end_transition.value().get_tag()};
+        unexplored_stack.push(configuration_with_new_state_and_tags(dest_state, {tag}));
     }
 
     auto const& optional_negative_tagged_transition = m_nfa_state->get_negative_tagged_transition();
