@@ -27,7 +27,6 @@ public:
               m_state2(state2) {};
 
     /**
-     * Used for ordering in a set by considering the states' addresses.
      * @param rhs
      * @return Whether `m_state1` in lhs has a lower address than in rhs, or if they're equal,
      * whether `m_state2` in lhs has a lower address than in rhs.
