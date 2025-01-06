@@ -208,3 +208,36 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         );
     }
 }
+
+TEST_CASE("Test the Lexer class", "[Lexer]") {
+    constexpr string_view cVarSchema{"var_name:123"};
+    constexpr string_view cTokenString1{"123"};
+    constexpr string_view cTokenString2{"234"};
+    std::vector<uint32_t> const cTokenVars1{0};
+    std::vector<uint32_t> const cTokenVars2{};
+
+    log_surgeon::Schema schema;
+    schema.add_variable(string_view(cVarSchema), -1);
+
+    auto const schema_ast{schema.release_schema_ast_ptr()};
+    log_surgeon::lexers::ByteLexer lexer;
+    for (auto const& m_schema_var : schema_ast->m_schema_vars) {
+        auto* rule = dynamic_cast<SchemaVarAST*>(m_schema_var.get());
+        lexer.add_rule(0, std::move(rule->m_regex_ptr));
+    }
+
+    log_surgeon::ParserInputBuffer m_input_buffer;
+
+    string token_string{cTokenString1};
+    m_input_buffer.set_storage(token_string.data(), token_string.size(), 0, true);
+    log_surgeon::Token token;
+    lexer.scan(m_input_buffer, token);
+    REQUIRE(cTokenVars1 == *token.m_type_ids_ptr);
+    REQUIRE(cTokenString1 == token.to_string_view());
+
+    token_string = cTokenString2;
+    m_input_buffer.set_storage(token_string.data(), token_string.size(), 0, true);
+    lexer.scan(m_input_buffer, token);
+    REQUIRE(cTokenVars2 == *token.m_type_ids_ptr);
+    REQUIRE(cTokenString2 == token.to_string_view());
+}

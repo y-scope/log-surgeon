@@ -15,6 +15,7 @@
 #include <log_surgeon/finite_automata/DfaState.hpp>
 #include <log_surgeon/finite_automata/Nfa.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
+#include <log_surgeon/finite_automata/RegisterHandler.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/ParserInputBuffer.hpp>
 #include <log_surgeon/Token.hpp>
@@ -148,6 +149,8 @@ private:
     std::unique_ptr<finite_automata::Dfa<TypedDfaState>> m_dfa;
     bool m_asked_for_more_data{false};
     TypedDfaState const* m_prev_state{nullptr};
+    std::unordered_map<uint32_t, uint32_t> m_symbol_to_tag_id;
+    std::unordered_map<uint32_t, finite_automata::RegisterHandler::register_id_t> m_tag_to_register_id;
 };
 
 namespace lexers {
