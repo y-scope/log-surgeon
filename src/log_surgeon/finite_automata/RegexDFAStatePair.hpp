@@ -27,7 +27,6 @@ public:
               m_state2(state2) {};
 
     /**
-     * Used for ordering in a set by considering the states' addresses.
      * @param rhs
      * @return Whether `m_state1` in lhs has a lower address than in rhs, or if they're equal,
      * whether `m_state2` in lhs has a lower address than in rhs.
@@ -73,7 +72,7 @@ auto RegexDFAStatePair<DFAState>::get_reachable_pairs(
         auto next_state1 = m_state1->next(i);
         auto next_state2 = m_state2->next(i);
         if (next_state1 != nullptr && next_state2 != nullptr) {
-            RegexDFAStatePair reachable_pair{next_state1, next_state2};
+            RegexDFAStatePair const reachable_pair{next_state1, next_state2};
             if (visited_pairs.count(reachable_pair) == 0) {
                 unvisited_pairs.insert(reachable_pair);
             }
