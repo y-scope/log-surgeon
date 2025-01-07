@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -88,8 +89,8 @@ public:
     auto get_tree_transitions() -> Tree const& { return m_tree_transitions; }
 
     /**
-     * Add `dest_state` to `m_bytes_transitions` if all values in interval are a byte, otherwise add
-     * `dest_state` to `m_tree_transitions`.
+     Add dest_state to m_bytes_transitions if all values in interval are a byte, otherwise add
+     dest_state to m_tree_transitions
      * @param interval
      * @param dest_state
      */

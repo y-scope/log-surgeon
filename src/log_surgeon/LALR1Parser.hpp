@@ -77,7 +77,7 @@ public:
      */
     [[nodiscard]] auto token_cast(uint32_t i) const -> Token* {
         assert(i < cSizeOfAllChildren);
-        return &std::get<Token>(m_all_children[m_children_start + i]);
+        return &std::get<Token>(NonTerminal::m_all_children[m_children_start + i]);
     }
 
     /**
@@ -89,7 +89,7 @@ public:
      */
     [[nodiscard]] auto non_terminal_cast(uint32_t i) const -> NonTerminal* {
         assert(i < cSizeOfAllChildren);
-        return &std::get<NonTerminal>(m_all_children[m_children_start + i]);
+        return &std::get<NonTerminal>(NonTerminal::m_all_children[m_children_start + i]);
     }
 
     /**
