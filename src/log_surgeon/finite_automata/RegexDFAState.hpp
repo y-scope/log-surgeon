@@ -19,10 +19,10 @@ class RegexDFAState;
 using RegexDFAByteState = RegexDFAState<RegexDFAStateType::Byte>;
 using RegexDFAUTF8State = RegexDFAState<RegexDFAStateType::UTF8>;
 
-template <RegexDFAStateType stateType>
+template <RegexDFAStateType state_type>
 class RegexDFAState {
 public:
-    using Tree = UnicodeIntervalTree<RegexDFAState<stateType>*>;
+    using Tree = UnicodeIntervalTree<RegexDFAState*>;
 
     RegexDFAState() {
         std::fill(std::begin(m_bytes_transition), std::end(m_bytes_transition), nullptr);
@@ -40,7 +40,7 @@ public:
         return false == m_matching_variable_ids.empty();
     }
 
-    auto add_byte_transition(uint8_t const& byte, RegexDFAState<stateType>* dest_state) -> void {
+    auto add_byte_transition(uint8_t const& byte, RegexDFAState* dest_state) -> void {
         m_bytes_transition[byte] = dest_state;
     }
 
@@ -48,19 +48,20 @@ public:
      * @param character The character (byte or utf8) to transition on.
      * @return A pointer to the DFA state reached after transitioning on `character`.
      */
-    [[nodiscard]] auto next(uint32_t character) const -> RegexDFAState<stateType>*;
+    [[nodiscard]] auto next(uint32_t character) const -> RegexDFAState*;
 
 private:
     std::vector<uint32_t> m_matching_variable_ids;
-    RegexDFAState<stateType>* m_bytes_transition[cSizeOfByte];
-    // NOTE: We don't need m_tree_transitions for the `stateType == RegexDFAStateType::Byte` case,
+    RegexDFAState* m_bytes_transition[cSizeOfByte];
+    // NOTE: We don't need m_tree_transitions for the `state_type == RegexDFAStateType::Byte` case,
     // so we use an empty class (`std::tuple<>`) in that case.
-    std::conditional_t<stateType == RegexDFAStateType::UTF8, Tree, std::tuple<>> m_tree_transitions;
+    std::conditional_t<state_type == RegexDFAStateType::UTF8, Tree, std::tuple<>>
+            m_tree_transitions;
 };
 
-template <RegexDFAStateType stateType>
-auto RegexDFAState<stateType>::next(uint32_t character) const -> RegexDFAState<stateType>* {
-    if constexpr (RegexDFAStateType::Byte == stateType) {
+template <RegexDFAStateType state_type>
+auto RegexDFAState<state_type>::next(uint32_t character) const -> RegexDFAState* {
+    if constexpr (RegexDFAStateType::Byte == state_type) {
         return m_bytes_transition[character];
     } else {
         if (character < cSizeOfByte) {
