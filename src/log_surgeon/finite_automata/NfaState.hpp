@@ -13,18 +13,22 @@
 
 #include <fmt/format.h>
 
-#include <log_surgeon/finite_automata/NfaStateType.hpp>
+#include <log_surgeon/finite_automata/Register.hpp>
+#include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/finite_automata/TaggedTransition.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-template <NfaStateType state_type>
+template <StateType state_type>
 class NfaState;
 
-using ByteNfaState = NfaState<NfaStateType::Byte>;
-using Utf8NfaState = NfaState<NfaStateType::Utf8>;
+using ByteNfaState = NfaState<StateType::Byte>;
+using Utf8NfaState = NfaState<StateType::Utf8>;
 
-template <NfaStateType state_type>
+template <typename TypedNfaState>
+class RegOpNfaStatePair;
+
+template <StateType state_type>
 class NfaState {
 public:
     using Tree = UnicodeIntervalTree<NfaState*>;
@@ -87,8 +91,8 @@ public:
     auto get_tree_transitions() -> Tree const& { return m_tree_transitions; }
 
     /**
-     Add `dest_state` to `m_bytes_transitions` if all values in interval are a byte, otherwise add
-     `dest_state` to `m_tree_transitions`.
+     * Add `dest_state` to `m_bytes_transitions` if all values in interval are a byte, otherwise add
+     * `dest_state` to `m_tree_transitions`.
      * @param interval
      * @param dest_state
      */
@@ -97,8 +101,8 @@ public:
     /**
      * @return The set of all states reachable from the current state via epsilon transitions.
      */
-    auto epsilon_closure() -> std::set<NfaState const*>;
-
+    auto epsilon_closure(std::vector<std::unique_ptr<Register>>& registers
+    ) const -> std::set<RegOpNfaStatePair<NfaState>>;
     /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the NFA state on success.
@@ -121,10 +125,37 @@ private:
     // NOTE: We don't need m_tree_transitions for the `stateType ==
     // NfaStateType::Byte` case, so we use an empty class (`std::tuple<>`)
     // in that case.
-    std::conditional_t<state_type == NfaStateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
+    std::conditional_t<state_type == StateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
 
-template <NfaStateType state_type>
+/**
+ * Represents a pair containing a register and NFA state.
+ * If the NFA state has no associate register `m_register` is set to null.
+ * @tparam TypedDfaState Specifies the type of DFA state.
+ */
+template <typename TypedDfaState>
+class RegOpNfaStatePair {
+public:
+    RegOpNfaStatePair(RegisterOperator const register_operation, TypedDfaState* nfa_state)
+            : m_register_operation(register_operation),
+              m_nfa_state(nfa_state) {}
+
+    [[nodiscard]] auto get_register() const -> Register* {
+        return m_register_operation.get_register();
+    }
+
+    [[nodiscard]] auto is_start() const -> bool { return m_register_operation.is_start(); }
+
+    [[nodiscard]] auto get_state() const -> NfaStateTypeTypedDfaState* { return m_nfa_state; }
+
+    bool operator<(RegOpNfaStatePair const& other) const { return m_nfa_state < other.m_nfa_state; }
+
+private:
+    RegisterOperator m_register_operation;
+    TypedDfaState* m_nfa_state;
+};
+
+template <StateType state_type>
 auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state) -> void {
     if (interval.first < cSizeOfByte) {
         uint32_t const bound = std::min(interval.second, cSizeOfByte - 1);
@@ -133,7 +164,7 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
         }
         interval.first = bound + 1;
     }
-    if constexpr (NfaStateType::Utf8 == state_type) {
+    if constexpr (StateType::Utf8 == state_type) {
         if (interval.second < cSizeOfByte) {
             return;
         }
@@ -171,42 +202,103 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
     }
 }
 
-template <NfaStateType state_type>
-auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
-    std::set<NfaState const*> closure_set;
-    std::stack<NfaState const*> stack;
-    stack.push(this);
-    while (false == stack.empty()) {
-        auto const* current_state = stack.top();
-        stack.pop();
-        if (false == closure_set.insert(current_state).second) {
+template <StateType state_type>
+auto NfaState<state_type>::epsilon_closure(std::vector<std::unique_ptr<Register>>& registers
+) const -> std::set<RegOpNfaStatePair<NfaState>> {
+    std::set<RegOpNfaStatePair<NfaState>> closure_set;
+
+    std::set<NfaState*> visited_set;
+    std::stack<RegOpNfaStatePair<NfaState>> unvisited_stack;
+    unvisited_stack.emplace(RegisterOperator{nullptr, RegisterOperation::None}, this);
+    while (false == unvisited_stack.empty()) {
+        auto const current_register_state_pair = unvisited_stack.top();
+        auto* current_register = current_register_state_pair.get_register();
+        auto* current_state = current_register_state_pair.get_state();
+        unvisited_stack.pop();
+
+        if (false == visited_set.insert(current_state).second) {
             continue;
         }
+        closure_set.insert(current_register_state_pair);
+
         for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-            stack.push(dest_state);
+            unvisited_stack.emplace(
+                    RegisterOperator{current_register, RegisterOperation::None},
+                    dest_state
+            );
         }
 
-        // TODO: currently treat tagged transitions as epsilon transitions
         for (auto const& positive_tagged_start_transition :
              current_state->get_positive_tagged_start_transitions())
         {
-            stack.push(positive_tagged_start_transition.get_dest_state());
+            auto* transition_tag = positive_tagged_start_transition.get_tag();
+            auto* dest_state = positive_tagged_start_transition.get_dest_state();
+            if (current_register->get_tag() == transition_tag) {
+                unvisited_stack.emplace(
+                        RegisterOperator{current_register, RegisterOperation::Append},
+                        dest_state
+                );
+            } else {
+                registers.emplace_back(std::make_unique<Register>(transition_tag, true));
+                unvisited_stack.emplace(
+                        RegisterOperator{registers.back().get(), RegisterOperation::Append},
+                        dest_state
+                );
+            }
         }
+
         auto const& optional_positive_tagged_end_transition
                 = current_state->get_positive_tagged_end_transition();
         if (optional_positive_tagged_end_transition.has_value()) {
-            stack.push(optional_positive_tagged_end_transition.value().get_dest_state());
+            auto const& positive_tagged_end_transition
+                    = optional_positive_tagged_end_transition.value();
+
+            auto* transition_tag = positive_tagged_end_transition.get_tag();
+            auto* dest_state = positive_tagged_end_transition.get_dest_state();
+            if (current_register->get_tag() == transition_tag) {
+                unvisited_stack.emplace(
+                        RegisterOperator{current_register, RegisterOperation::Append},
+                        dest_state
+                );
+            } else {
+                registers.emplace_back(std::make_unique<Register>(transition_tag, false));
+                unvisited_stack.emplace(
+                        RegisterOperator{registers.back().get(), RegisterOperation::Append},
+                        dest_state
+                );
+            }
         }
+
+        // TODO: you have a bunch of tags not just one so you need to change everything
+        // to fix this
+        /*
         auto const& optional_negative_tagged_transition
                 = current_state->get_negative_tagged_transition();
         if (optional_negative_tagged_transition.has_value()) {
-            stack.push(optional_negative_tagged_transition.value().get_dest_state());
+            auto const& negative_tagged_end_transition
+                    = optional_negative_tagged_transition.value();
+            auto* transition_tag = negative_tagged_end_transition.get_tag();
+            auto* dest_state = negative_tagged_end_transition.get_dest_state();
+
+            if (current_register->get_tag() == transition_tag) {
+                unvisited_stack.emplace(
+                        RegisterOperator{current_register, RegisterOperation::Append},
+                        dest_state
+                );
+            } else {
+                registers.emplace_back(std::make_unique<Register>(transition_tag, false));
+                unvisited_stack.emplace(
+                        RegisterOperator{registers.back().get(), RegisterOperation::Append},
+                        dest_state
+                );
+            }
         }
+        */
     }
     return closure_set;
 }
 
-template <NfaStateType state_type>
+template <StateType state_type>
 auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     std::vector<std::string> byte_transitions;

@@ -8,18 +8,18 @@
 #include <type_traits>
 #include <vector>
 
+#include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/DfaStateType.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-template <DfaStateType state_type>
+template <StateType state_type>
 class DfaState;
 
-using ByteDfaState = DfaState<DfaStateType::Byte>;
-using Utf8DfaState = DfaState<DfaStateType::Utf8>;
+using DfaByteState = DfaState<StateType::Byte>;
+using DfaUtf8State = DfaState<StateType::Utf8>;
 
-template <DfaStateType state_type>
+template <StateType state_type>
 class DfaState {
 public:
     using Tree = UnicodeIntervalTree<DfaState*>;
@@ -51,14 +51,14 @@ public:
 private:
     std::vector<uint32_t> m_matching_variable_ids;
     DfaState* m_bytes_transition[cSizeOfByte];
-    // NOTE: We don't need m_tree_transitions for the `state_type == DfaStateType::Byte` case, so we
-    // use an empty class (`std::tuple<>`) in that case.
-    std::conditional_t<state_type == DfaStateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
+    // NOTE: We don't need m_tree_transitions for the `stateType == StateType::Byte` case, so we use
+    // an empty class (`std::tuple<>`) in that case.
+    std::conditional_t<state_type == StateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
 
-template <DfaStateType state_type>
+template <StateType state_type>
 auto DfaState<state_type>::next(uint32_t character) const -> DfaState* {
-    if constexpr (DfaStateType::Byte == state_type) {
+    if constexpr (StateType::Byte == state_type) {
         return m_bytes_transition[character];
     } else {
         if (character < cSizeOfByte) {

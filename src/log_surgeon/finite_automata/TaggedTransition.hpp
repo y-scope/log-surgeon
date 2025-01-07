@@ -16,7 +16,7 @@ namespace log_surgeon::finite_automata {
 /**
  * Represents an NFA transition indicating that a capture group has been matched.
  * NOTE: `m_tag` is always expected to be non-null.
- * @tparam TypedNfaState Specifies the type of transition (bytes or UTF-8 characters).
+ * @tparam TypedNfaState Specifies the type of NFA state.
  */
 template <typename TypedNfaState>
 class PositiveTaggedTransition {
@@ -31,6 +31,18 @@ public:
               m_dest_state{dest_state} {}
 
     [[nodiscard]] auto get_dest_state() const -> TypedNfaState const* { return m_dest_state; }
+
+    [[nodiscard]] auto get_tag() const -> Tag* {
+        return m_tag;
+    }
+    
+    auto set_tag_start_positions(std::vector<uint32_t> start_positions) const -> void {
+        m_tag->set_start_positions(std::move(start_positions));
+    }
+
+    auto set_tag_end_positions(std::vector<uint32_t> end_positions) const -> void {
+        m_tag->set_end_positions(std::move(end_positions));
+    }
 
     /**
      * @param state_ids A map of states to their unique identifiers.
