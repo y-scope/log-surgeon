@@ -13,18 +13,18 @@
 
 #include <fmt/format.h>
 
-#include <log_surgeon/finite_automata/NfaStateType.hpp>
+#include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/finite_automata/TaggedTransition.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-template <NfaStateType state_type>
+template <StateType state_type>
 class NfaState;
 
-using ByteNfaState = NfaState<NfaStateType::Byte>;
-using Utf8NfaState = NfaState<NfaStateType::Utf8>;
+using ByteNfaState = NfaState<StateType::Byte>;
+using Utf8NfaState = NfaState<StateType::Utf8>;
 
-template <NfaStateType state_type>
+template <StateType state_type>
 class NfaState {
 public:
     using Tree = UnicodeIntervalTree<NfaState*>;
@@ -119,12 +119,12 @@ private:
     std::vector<NfaState*> m_epsilon_transitions;
     std::array<std::vector<NfaState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
-    // NfaStateType::Byte` case, so we use an empty class (`std::tuple<>`)
+    // StateType::Byte` case, so we use an empty class (`std::tuple<>`)
     // in that case.
-    std::conditional_t<state_type == NfaStateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
+    std::conditional_t<state_type == StateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
 
-template <NfaStateType state_type>
+template <StateType state_type>
 auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state) -> void {
     if (interval.first < cSizeOfByte) {
         uint32_t const bound = std::min(interval.second, cSizeOfByte - 1);
@@ -133,7 +133,7 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
         }
         interval.first = bound + 1;
     }
-    if constexpr (NfaStateType::Utf8 == state_type) {
+    if constexpr (StateType::Utf8 == state_type) {
         if (interval.second < cSizeOfByte) {
             return;
         }
@@ -171,7 +171,7 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
     }
 }
 
-template <NfaStateType state_type>
+template <StateType state_type>
 auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
     std::set<NfaState const*> closure_set;
     std::stack<NfaState const*> stack;
@@ -206,7 +206,7 @@ auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
     return closure_set;
 }
 
-template <NfaStateType state_type>
+template <StateType state_type>
 auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     std::vector<std::string> byte_transitions;
