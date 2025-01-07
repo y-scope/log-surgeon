@@ -4,7 +4,7 @@
 #include <cstdint>
 
 namespace log_surgeon::finite_automata {
-enum class StateType  : uint8_t {
+enum class StateType : uint8_t {
     Byte,
     Utf8
 };

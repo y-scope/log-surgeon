@@ -8,16 +8,16 @@
 #include <type_traits>
 #include <vector>
 
-#include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
 template <StateType state_type>
 class DfaState;
 
-using DfaByteState = DfaState<StateType::Byte>;
-using DfaUtf8State = DfaState<StateType::Utf8>;
+using ByteDfaState = DfaState<StateType::Byte>;
+using Utf8DfaState = DfaState<StateType::Utf8>;
 
 template <StateType state_type>
 class DfaState {

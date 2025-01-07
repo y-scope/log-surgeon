@@ -123,7 +123,7 @@ private:
     std::vector<NfaState*> m_epsilon_transitions;
     std::array<std::vector<NfaState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
-    // NfaStateType::Byte` case, so we use an empty class (`std::tuple<>`)
+    // StateType::Byte` case, so we use an empty class (`std::tuple<>`)
     // in that case.
     std::conditional_t<state_type == StateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
@@ -146,7 +146,7 @@ public:
 
     [[nodiscard]] auto is_start() const -> bool { return m_register_operation.is_start(); }
 
-    [[nodiscard]] auto get_state() const -> NfaStateTypeTypedDfaState* { return m_nfa_state; }
+    [[nodiscard]] auto get_state() const -> TypedDfaState* { return m_nfa_state; }
 
     bool operator<(RegOpNfaStatePair const& other) const { return m_nfa_state < other.m_nfa_state; }
 
