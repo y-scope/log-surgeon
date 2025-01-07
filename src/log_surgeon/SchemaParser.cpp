@@ -11,30 +11,30 @@
 #include <log_surgeon/FileReader.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/finite_automata/Tag.hpp>
-#include <log_surgeon/LALR1Parser.hpp>
+#include <log_surgeon/Lalr1Parser.hpp>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/utils.hpp>
 
 using ParserValueRegex = log_surgeon::ParserValue<std::unique_ptr<
-        log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::NfaByteState>>>;
+        log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::ByteNfaState>>>;
 using RegexASTByte
-        = log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::NfaByteState>;
-using RegexASTGroupByte = log_surgeon::finite_automata::RegexASTGroup<
-        log_surgeon::finite_automata::NfaByteState>;
-using RegexASTIntegerByte = log_surgeon::finite_automata::RegexASTInteger<
-        log_surgeon::finite_automata::NfaByteState>;
-using RegexASTLiteralByte = log_surgeon::finite_automata::RegexASTLiteral<
-        log_surgeon::finite_automata::NfaByteState>;
+        = log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTGroupByte
+        = log_surgeon::finite_automata::RegexASTGroup<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTIntegerByte
+        = log_surgeon::finite_automata::RegexASTInteger<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTLiteralByte
+        = log_surgeon::finite_automata::RegexASTLiteral<log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultiplication<
-        log_surgeon::finite_automata::NfaByteState>;
+        log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTOrByte
-        = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::NfaByteState>;
-using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<
-        log_surgeon::finite_automata::NfaByteState>;
-using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<
-        log_surgeon::finite_automata::NfaByteState>;
-using RegexASTEmptyByte = log_surgeon::finite_automata::RegexASTEmpty<
-        log_surgeon::finite_automata::NfaByteState>;
+        = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTCatByte
+        = log_surgeon::finite_automata::RegexASTCat<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTCaptureByte
+        = log_surgeon::finite_automata::RegexASTCapture<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTEmptyByte
+        = log_surgeon::finite_automata::RegexASTEmpty<log_surgeon::finite_automata::ByteNfaState>;
 
 using std::make_unique;
 using std::string;

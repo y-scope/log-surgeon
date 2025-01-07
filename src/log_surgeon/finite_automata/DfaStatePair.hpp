@@ -1,10 +1,11 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE_PAIR
 #define LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE_PAIR
 
+#include <cstdint>
 #include <set>
 #include <vector>
 
-#include <log_surgeon/finite_automata/DfaState.hpp>
+#include <log_surgeon/Constants.hpp>
 
 namespace log_surgeon::finite_automata {
 /**
@@ -18,15 +19,14 @@ namespace log_surgeon::finite_automata {
  *
  * NOTE: Only the first state in the pair contains the variable types matched by the pair.
  */
-template <typename DfaState>
+template <typename TypedDfaState>
 class DfaStatePair {
 public:
-    DfaStatePair(DfaState const* state1, DfaState const* state2)
+    DfaStatePair(TypedDfaState const* state1, TypedDfaState const* state2)
             : m_state1(state1),
               m_state2(state2) {};
 
     /**
-     * Used for ordering in a set by considering the states' addresses.
      * @param rhs
      * @return Whether `m_state1` in lhs has a lower address than in rhs, or if they're equal,
      * whether `m_state2` in lhs has a lower address than in rhs.
@@ -58,12 +58,12 @@ public:
     }
 
 private:
-    DfaState const* m_state1;
-    DfaState const* m_state2;
+    TypedDfaState const* m_state1;
+    TypedDfaState const* m_state2;
 };
 
-template <typename DfaState>
-auto DfaStatePair<DfaState>::get_reachable_pairs(
+template <typename TypedDfaState>
+auto DfaStatePair<TypedDfaState>::get_reachable_pairs(
         std::set<DfaStatePair>& visited_pairs,
         std::set<DfaStatePair>& unvisited_pairs
 ) const -> void {
@@ -72,7 +72,7 @@ auto DfaStatePair<DfaState>::get_reachable_pairs(
         auto next_state1 = m_state1->next(i);
         auto next_state2 = m_state2->next(i);
         if (next_state1 != nullptr && next_state2 != nullptr) {
-            DfaStatePair reachable_pair{next_state1, next_state2};
+            DfaStatePair const reachable_pair{next_state1, next_state2};
             if (visited_pairs.count(reachable_pair) == 0) {
                 unvisited_pairs.insert(reachable_pair);
             }

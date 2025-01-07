@@ -5,19 +5,19 @@
 
 namespace log_surgeon {
 
-template <typename NfaStateType, typename DfaStateType>
+template <typename TypedNfaState, typename TypedDfaState>
 class Parser {
 public:
     Parser();
 
     virtual auto add_rule(
             std::string const& name,
-            std::unique_ptr<finite_automata::RegexAST<NfaStateType>> rule
+            std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
     ) -> void;
 
     auto add_token(std::string const& name, char rule_char) -> void;
 
-    Lexer<NfaStateType, DfaStateType> m_lexer;
+    Lexer<TypedNfaState, TypedDfaState> m_lexer;
 };
 }  // namespace log_surgeon
 

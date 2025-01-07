@@ -77,7 +77,7 @@ public:
      */
     [[nodiscard]] auto token_cast(uint32_t i) const -> Token* {
         assert(i < cSizeOfAllChildren);
-        return &std::get<Token>(NonTerminal::m_all_children[m_children_start + i]);
+        return &std::get<Token>(m_all_children[m_children_start + i]);
     }
 
     /**
@@ -89,7 +89,7 @@ public:
      */
     [[nodiscard]] auto non_terminal_cast(uint32_t i) const -> NonTerminal* {
         assert(i < cSizeOfAllChildren);
-        return &std::get<NonTerminal>(NonTerminal::m_all_children[m_children_start + i]);
+        return &std::get<NonTerminal>(m_all_children[m_children_start + i]);
     }
 
     /**
@@ -165,9 +165,7 @@ public:
      * Returns the next unmatched symbol in the production based on the dot.
      * @return uint32_t
      */
-    [[nodiscard]] auto next_symbol() const -> uint32_t {
-        return m_production->m_body.at(m_dot);
-    }
+    [[nodiscard]] auto next_symbol() const -> uint32_t { return m_production->m_body.at(m_dot); }
 
     Production* m_production;
     uint32_t m_dot;
@@ -202,10 +200,10 @@ public:
     std::vector<Action> m_actions;
 };
 
-template <typename NfaStateType, typename DfaStateType>
-class LALR1Parser : public Parser<NfaStateType, DfaStateType> {
+template <typename TypedNfaState, typename TypedDfaState>
+class Lalr1Parser : public Parser<TypedNfaState, TypedDfaState> {
 public:
-    LALR1Parser();
+    Lalr1Parser();
 
     /**
      * Add a lexical rule to m_lexer
@@ -214,7 +212,7 @@ public:
      */
     auto add_rule(
             std::string const& name,
-            std::unique_ptr<finite_automata::RegexAST<NfaStateType>> rule
+            std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
     ) -> void override;
 
     /**
@@ -224,7 +222,7 @@ public:
      */
     auto add_token_group(
             std::string const& name,
-            std::unique_ptr<finite_automata::RegexASTGroup<NfaStateType>> rule_group
+            std::unique_ptr<finite_automata::RegexASTGroup<TypedNfaState>> rule_group
     ) -> void;
 
     /**
@@ -276,7 +274,7 @@ protected:
      */
     auto report_error() -> std::string;
 
-    /* Lexer<NfaStateType, DfaStateType> m_lexer; */
+    /* Lexer<TypedNfaState, TypedDfaState> m_lexer; */
     std::stack<MatchedSymbol> m_parse_stack_matches;
     std::stack<ItemSet*> m_parse_stack_states;
     ItemSet* m_root_item_set_ptr{nullptr};
@@ -396,6 +394,8 @@ private:
 
     auto symbol_is_token(uint32_t s) -> bool { return m_terminals.find(s) != m_terminals.end(); }
 
+    using Parser<TypedNfaState, TypedDfaState>::m_lexer;
+
     std::set<uint32_t> m_terminals;
     std::set<uint32_t> m_nullable;
     std::map<std::set<Item>, std::unique_ptr<ItemSet>> m_lr0_item_sets;
@@ -407,6 +407,6 @@ private:
 };
 }  // namespace log_surgeon
 
-#include "LALR1Parser.tpp"
+#include "Lalr1Parser.tpp"
 
 #endif  // LOG_SURGEON_LALR1_PARSER_HPP

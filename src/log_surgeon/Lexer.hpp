@@ -11,28 +11,21 @@
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/finite_automata/Dfa.hpp>
+#include <log_surgeon/finite_automata/DfaState.hpp>
 #include <log_surgeon/finite_automata/Nfa.hpp>
+#include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/ParserInputBuffer.hpp>
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
-template <typename NfaStateType, typename DfaStateType>
+template <typename TypedNfaState, typename TypedDfaState>
 class Lexer {
 public:
     static inline std::vector<uint32_t> const cTokenEndTypes = {(uint32_t)SymbolId::TokenEnd};
     static inline std::vector<uint32_t> const cTokenUncaughtStringTypes
             = {(uint32_t)SymbolId::TokenUncaughtString};
-
-    /**
-     * Generate a DFA from an NFA
-     * @param finite_automata::Nfa<NfaStateType> nfa
-     * @return std::unique_ptr<finite_automata::Dfa<DfaStateType>>
-     */
-    static auto nfa_to_dfa(finite_automata::Nfa<NfaStateType>& nfa
-    ) -> std::unique_ptr<finite_automata::Dfa<DfaStateType>>;
 
     /**
      * Add a delimiters line from the schema to the lexer
@@ -45,15 +38,17 @@ public:
      * @param id
      * @param regex
      */
-    auto add_rule(uint32_t const& id, std::unique_ptr<finite_automata::RegexAST<NfaStateType>> rule)
-            -> void;
+    auto add_rule(
+            uint32_t const& id,
+            std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
+    ) -> void;
 
     /**
      * Return regex pattern for a rule name
      * @param variable_id
      * @return finite_automata::RegexAST*
      */
-    auto get_rule(uint32_t variable_id) -> finite_automata::RegexAST<NfaStateType>*;
+    auto get_rule(uint32_t variable_id) -> finite_automata::RegexAST<TypedNfaState>*;
 
     /**
      * Generate DFA for lexer
@@ -123,7 +118,7 @@ public:
     }
 
     [[nodiscard]] auto get_dfa(
-    ) const -> std::unique_ptr<finite_automata::Dfa<DfaStateType>> const& {
+    ) const -> std::unique_ptr<finite_automata::Dfa<TypedDfaState>> const& {
         return m_dfa;
     }
 
@@ -147,17 +142,17 @@ private:
     std::set<uint32_t> m_type_ids_set;
     std::array<bool, cSizeOfByte> m_is_delimiter{false};
     std::array<bool, cSizeOfByte> m_is_first_char{false};
-    std::vector<LexicalRule<NfaStateType>> m_rules;
+    std::vector<LexicalRule<TypedNfaState>> m_rules;
     uint32_t m_line{0};
     bool m_has_delimiters{false};
-    std::unique_ptr<finite_automata::Dfa<DfaStateType>> m_dfa;
+    std::unique_ptr<finite_automata::Dfa<TypedDfaState>> m_dfa;
     bool m_asked_for_more_data{false};
-    DfaStateType const* m_prev_state{nullptr};
+    TypedDfaState const* m_prev_state{nullptr};
 };
 
 namespace lexers {
-using ByteLexer = Lexer<finite_automata::NfaByteState, finite_automata::DfaByteState>;
-using Utf8Lexer = Lexer<finite_automata::NfaUtf8State, finite_automata::DfaUtf8State>;
+using ByteLexer = Lexer<finite_automata::ByteNfaState, finite_automata::ByteDfaState>;
+using Utf8Lexer = Lexer<finite_automata::Utf8NfaState, finite_automata::Utf8DfaState>;
 }  // namespace lexers
 }  // namespace log_surgeon
 

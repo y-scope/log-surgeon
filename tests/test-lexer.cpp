@@ -1,15 +1,13 @@
 #include <codecvt>
-#include <cstdint>
 #include <locale>
-#include <ranges>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/finite_automata/Nfa.hpp>
+#include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
@@ -20,18 +18,18 @@ using std::u32string;
 using std::vector;
 using std::wstring_convert;
 
-using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<
-        log_surgeon::finite_automata::NfaByteState>;
-using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<
-        log_surgeon::finite_automata::NfaByteState>;
-using RegexASTGroupByte = log_surgeon::finite_automata::RegexASTGroup<
-        log_surgeon::finite_automata::NfaByteState>;
-using RegexASTLiteralByte = log_surgeon::finite_automata::RegexASTLiteral<
-        log_surgeon::finite_automata::NfaByteState>;
+using RegexASTCatByte
+        = log_surgeon::finite_automata::RegexASTCat<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTCaptureByte
+        = log_surgeon::finite_automata::RegexASTCapture<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTGroupByte
+        = log_surgeon::finite_automata::RegexASTGroup<log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTLiteralByte
+        = log_surgeon::finite_automata::RegexASTLiteral<log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultiplication<
-        log_surgeon::finite_automata::NfaByteState>;
+        log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTOrByte
-        = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::NfaByteState>;
+        = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::ByteNfaState>;
 using log_surgeon::SchemaVarAST;
 
 namespace {

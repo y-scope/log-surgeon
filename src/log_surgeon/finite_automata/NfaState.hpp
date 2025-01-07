@@ -22,10 +22,10 @@ namespace log_surgeon::finite_automata {
 template <StateType state_type>
 class NfaState;
 
-using NfaByteState = NfaState<StateType::Byte>;
-using NfaUtf8State = NfaState<StateType::Utf8>;
+using ByteNfaState = NfaState<StateType::Byte>;
+using Utf8NfaState = NfaState<StateType::Utf8>;
 
-template <typename NfaStateType>
+template <typename TypedNfaState>
 class RegOpNfaStatePair;
 
 template <StateType state_type>
@@ -35,10 +35,10 @@ public:
 
     NfaState() = default;
 
-    NfaState(Tag* tag, NfaState const* dest_state)
+    NfaState(Tag const* tag, NfaState const* dest_state)
             : m_positive_tagged_end_transition{PositiveTaggedTransition{tag, dest_state}} {}
 
-    NfaState(std::vector<Tag*> tags, NfaState const* dest_state)
+    NfaState(std::vector<Tag const*> tags, NfaState const* dest_state)
             : m_negative_tagged_transition{NegativeTaggedTransition{std::move(tags), dest_state}} {}
 
     auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
@@ -53,7 +53,7 @@ public:
         return m_matching_variable_id;
     }
 
-    auto add_positive_tagged_start_transition(Tag* tag, NfaState* dest_state) -> void {
+    auto add_positive_tagged_start_transition(Tag const* tag, NfaState const* dest_state) -> void {
         m_positive_tagged_start_transitions.emplace_back(tag, dest_state);
     }
 
@@ -62,7 +62,7 @@ public:
         return m_positive_tagged_start_transitions;
     }
 
-    [[nodiscard]] auto get_positive_tagged_end_transitions(
+    [[nodiscard]] auto get_positive_tagged_end_transition(
     ) const -> std::optional<PositiveTaggedTransition<NfaState>> const& {
         return m_positive_tagged_end_transition;
     }
@@ -91,8 +91,8 @@ public:
     auto get_tree_transitions() -> Tree const& { return m_tree_transitions; }
 
     /**
-     Add `dest_state` to `m_bytes_transitions` if all values in interval are a byte, otherwise add
-     `dest_state` to `m_tree_transitions`.
+     * Add `dest_state` to `m_bytes_transitions` if all values in interval are a byte, otherwise add
+     * `dest_state` to `m_tree_transitions`.
      * @param interval
      * @param dest_state
      */
@@ -123,7 +123,7 @@ private:
     std::vector<NfaState*> m_epsilon_transitions;
     std::array<std::vector<NfaState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
-    // DfaStateType::Byte` case, so we use an empty class (`std::tuple<>`)
+    // NfaStateType::Byte` case, so we use an empty class (`std::tuple<>`)
     // in that case.
     std::conditional_t<state_type == StateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
@@ -131,12 +131,12 @@ private:
 /**
  * Represents a pair containing a register and NFA state.
  * If the NFA state has no associate register `m_register` is set to null.
- * @tparam NfaStateType Specifies the NFA state type (byte state or UTF-8 state).
+ * @tparam TypedDfaState Specifies the type of DFA state.
  */
-template <typename NfaStateType>
+template <typename TypedDfaState>
 class RegOpNfaStatePair {
 public:
-    RegOpNfaStatePair(RegisterOperator const register_operation, NfaStateType* nfa_state)
+    RegOpNfaStatePair(RegisterOperator const register_operation, TypedDfaState* nfa_state)
             : m_register_operation(register_operation),
               m_nfa_state(nfa_state) {}
 
@@ -146,13 +146,13 @@ public:
 
     [[nodiscard]] auto is_start() const -> bool { return m_register_operation.is_start(); }
 
-    [[nodiscard]] auto get_state() const -> NfaStateType* { return m_nfa_state; }
+    [[nodiscard]] auto get_state() const -> NfaStateTypeTypedDfaState* { return m_nfa_state; }
 
     bool operator<(RegOpNfaStatePair const& other) const { return m_nfa_state < other.m_nfa_state; }
 
 private:
     RegisterOperator m_register_operation;
-    NfaStateType* m_nfa_state;
+    TypedDfaState* m_nfa_state;
 };
 
 template <StateType state_type>
@@ -174,7 +174,7 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
             uint32_t overlap_low = std::max(data.m_interval.first, interval.first);
             uint32_t overlap_high = std::min(data.m_interval.second, interval.second);
 
-            std::vector<NfaUtf8State*> tree_states = data.m_value;
+            std::vector<Utf8NfaState*> tree_states = data.m_value;
             tree_states.push_back(dest_state);
             m_tree_transitions.insert(Interval(overlap_low, overlap_high), tree_states);
             if (data.m_interval.first < interval.first) {
@@ -248,7 +248,7 @@ auto NfaState<state_type>::epsilon_closure(std::vector<std::unique_ptr<Register>
         }
 
         auto const& optional_positive_tagged_end_transition
-                = current_state->get_positive_tagged_end_transitions();
+                = current_state->get_positive_tagged_end_transition();
         if (optional_positive_tagged_end_transition.has_value()) {
             auto const& positive_tagged_end_transition
                     = optional_positive_tagged_end_transition.value();
@@ -315,26 +315,27 @@ auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_
         epsilon_transitions.emplace_back(std::to_string(state_ids.at(dest_state)));
     }
 
-    std::vector<std::string> positive_tagged_start_transition_strings;
+    std::vector<std::string> serialized_positive_tagged_start_transitions;
     for (auto const& positive_tagged_start_transition : m_positive_tagged_start_transitions) {
         auto const optional_serialized_positive_start_transition
                 = positive_tagged_start_transition.serialize(state_ids);
         if (false == optional_serialized_positive_start_transition.has_value()) {
             return std::nullopt;
         }
-        positive_tagged_start_transition_strings.emplace_back(
+        serialized_positive_tagged_start_transitions.emplace_back(
                 optional_serialized_positive_start_transition.value()
         );
     }
 
-    std::string positive_tagged_end_transition_string;
+    std::string serialized_positive_tagged_end_transition;
     if (m_positive_tagged_end_transition.has_value()) {
         auto const optional_serialized_positive_end_transition
                 = m_positive_tagged_end_transition.value().serialize(state_ids);
         if (false == optional_serialized_positive_end_transition.has_value()) {
             return std::nullopt;
         }
-        positive_tagged_end_transition_string = optional_serialized_positive_end_transition.value();
+        serialized_positive_tagged_end_transition
+                = optional_serialized_positive_end_transition.value();
     }
 
     std::string negative_tagged_transition_string;
@@ -358,8 +359,8 @@ auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_
             accepting_tag_string,
             fmt::join(byte_transitions, ","),
             fmt::join(epsilon_transitions, ","),
-            fmt::join(positive_tagged_start_transition_strings, ","),
-            positive_tagged_end_transition_string,
+            fmt::join(serialized_positive_tagged_start_transitions, ","),
+            serialized_positive_tagged_end_transition,
             negative_tagged_transition_string
     );
 }

@@ -11,6 +11,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -23,7 +24,7 @@
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-template <typename NfaStateType>
+template <typename TypedNfaState>
 class Nfa;
 
 // TODO: rename `RegexAST` to `RegexASTNode`
@@ -39,9 +40,9 @@ class Nfa;
  * ASTs built using this class are assumed to be constructed in a bottom-up manner, where all
  * descendant nodes are created first.
  *
- * @tparam NfaStateType Whether this AST is used for byte lexing or UTF-8 lexing.
+ * @tparam TypedNfaState Whether this AST is used for byte lexing or UTF-8 lexing.
  */
-template <typename NfaStateType>
+template <typename TypedNfaState>
 class RegexAST {
 public:
     RegexAST() = default;
@@ -74,7 +75,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    virtual auto add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state) const -> void = 0;
+    virtual auto add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const -> void = 0;
 
     /**
      * Serializes the AST with this node as the root.
@@ -82,23 +83,23 @@ public:
      */
     [[nodiscard]] virtual auto serialize() const -> std::u32string = 0;
 
-    [[nodiscard]] auto get_subtree_positive_tags() const -> std::vector<Tag*> const& {
+    [[nodiscard]] auto get_subtree_positive_tags() const -> std::vector<Tag const*> const& {
         return m_subtree_positive_tags;
     }
 
-    auto set_subtree_positive_tags(std::vector<Tag*> subtree_positive_tags) -> void {
+    auto set_subtree_positive_tags(std::vector<Tag const*> subtree_positive_tags) -> void {
         m_subtree_positive_tags = std::move(subtree_positive_tags);
     }
 
-    auto add_subtree_positive_tags(std::vector<Tag*> subtree_positive_tags) -> void {
+    auto add_subtree_positive_tags(std::vector<Tag const*> const& subtree_positive_tags) -> void {
         m_subtree_positive_tags.insert(
                 m_subtree_positive_tags.end(),
-                std::make_move_iterator(subtree_positive_tags.begin()),
-                std::make_move_iterator(subtree_positive_tags.end())
+                subtree_positive_tags.cbegin(),
+                subtree_positive_tags.cend()
         );
     }
 
-    auto set_negative_tags(std::vector<Tag*> negative_tags) -> void {
+    auto set_negative_tags(std::vector<Tag const*> negative_tags) -> void {
         m_negative_tags = std::move(negative_tags);
     }
 
@@ -107,8 +108,8 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add_to_nfa_with_negative_tags(Nfa<NfaStateType>* nfa, NfaStateType* end_state) const
-            -> void {
+    auto
+    add_to_nfa_with_negative_tags(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const -> void {
         // Handle negative tags as:
         // root --(regex)--> state_with_negative_tagged_transition --(negative tags)--> end_state
         if (false == m_negative_tags.empty()) {
@@ -123,8 +124,8 @@ public:
 protected:
     RegexAST(RegexAST const& rhs) = default;
     auto operator=(RegexAST const& rhs) -> RegexAST& = default;
-    RegexAST(RegexAST&& rhs) noexcept = default;
-    auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = default;
+    RegexAST(RegexAST&& rhs) noexcept = delete;
+    auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = delete;
 
     [[nodiscard]] auto serialize_negative_tags() const -> std::u32string {
         if (m_negative_tags.empty()) {
@@ -145,8 +146,8 @@ protected:
     }
 
 private:
-    std::vector<Tag*> m_subtree_positive_tags;
-    std::vector<Tag*> m_negative_tags;
+    std::vector<Tag const*> m_subtree_positive_tags;
+    std::vector<Tag const*> m_negative_tags;
 };
 
 /**
@@ -154,10 +155,10 @@ private:
  * repetition with a minimum repetition of 0. Namely, we treat `R{0,N}` as `R{1,N} | ∅`. Then, the
  * NFA handles the 0 repetition case using the logic in `RegexASTOR` (i.e., adding a negative
  * transition for every capture group matched in `R{1,N}`).
- * @tparam NfaStateType Whether this AST is used for byte lexing or UTF-8 lexing.
+ * @tparam TypedNfaState Whether this AST is used for byte lexing or UTF-8 lexing.
  */
-template <typename NfaStateType>
-class RegexASTEmpty : public RegexAST<NfaStateType> {
+template <typename TypedNfaState>
+class RegexASTEmpty : public RegexAST<TypedNfaState> {
 public:
     RegexASTEmpty() = default;
 
@@ -177,8 +178,8 @@ public:
     }
 
     auto add_to_nfa(
-            [[maybe_unused]] Nfa<NfaStateType>* nfa,
-            [[maybe_unused]] NfaStateType* end_state
+            [[maybe_unused]] Nfa<TypedNfaState>* nfa,
+            [[maybe_unused]] TypedNfaState* end_state
     ) const -> void override {
         // Do nothing as adding an empty node to the NFA is a null operation.
     }
@@ -186,8 +187,8 @@ public:
     [[nodiscard]] auto serialize() const -> std::u32string override;
 };
 
-template <typename NfaStateType>
-class RegexASTLiteral : public RegexAST<NfaStateType> {
+template <typename TypedNfaState>
+class RegexASTLiteral : public RegexAST<TypedNfaState> {
 public:
     explicit RegexASTLiteral(uint32_t character);
 
@@ -225,7 +226,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state) const -> void override;
+    auto add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const -> void override;
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
@@ -235,8 +236,8 @@ private:
     uint32_t m_character;
 };
 
-template <typename NfaStateType>
-class RegexASTInteger : public RegexAST<NfaStateType> {
+template <typename TypedNfaState>
+class RegexASTInteger : public RegexAST<TypedNfaState> {
 public:
     explicit RegexASTInteger(uint32_t digit);
 
@@ -278,7 +279,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state) const -> void override;
+    auto add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const -> void override;
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
@@ -290,24 +291,24 @@ private:
     std::vector<uint32_t> m_digits;
 };
 
-template <typename NfaStateType>
-class RegexASTGroup : public RegexAST<NfaStateType> {
+template <typename TypedNfaState>
+class RegexASTGroup : public RegexAST<TypedNfaState> {
 public:
     using Range = std::pair<uint32_t, uint32_t>;
 
     RegexASTGroup() = default;
 
-    explicit RegexASTGroup(RegexASTLiteral<NfaStateType> const* right);
+    explicit RegexASTGroup(RegexASTLiteral<TypedNfaState> const* right);
 
     explicit RegexASTGroup(RegexASTGroup const* right);
 
-    RegexASTGroup(RegexASTGroup const* left, RegexASTLiteral<NfaStateType> const* right);
+    RegexASTGroup(RegexASTGroup const* left, RegexASTLiteral<TypedNfaState> const* right);
 
     RegexASTGroup(RegexASTGroup const* left, RegexASTGroup const* right);
 
     RegexASTGroup(
-            RegexASTLiteral<NfaStateType> const* left,
-            RegexASTLiteral<NfaStateType> const* right
+            RegexASTLiteral<TypedNfaState> const* left,
+            RegexASTLiteral<TypedNfaState> const* right
     );
 
     RegexASTGroup(uint32_t min, uint32_t max);
@@ -386,7 +387,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state) const -> void override;
+    auto add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const -> void override;
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
@@ -423,24 +424,20 @@ private:
     std::vector<Range> m_ranges;
 };
 
-template <typename NfaStateType>
-class RegexASTOr : public RegexAST<NfaStateType> {
+template <typename TypedNfaState>
+class RegexASTOr : public RegexAST<TypedNfaState> {
 public:
     ~RegexASTOr() override = default;
 
     RegexASTOr(
-            std::unique_ptr<RegexAST<NfaStateType>> left,
-            std::unique_ptr<RegexAST<NfaStateType>> right
+            std::unique_ptr<RegexAST<TypedNfaState>> left,
+            std::unique_ptr<RegexAST<TypedNfaState>> right
     );
 
     RegexASTOr(RegexASTOr const& rhs)
-            : RegexAST<NfaStateType>(rhs),
-              m_left(std::unique_ptr<RegexAST<NfaStateType>>(rhs.m_left->clone())),
-              m_right(std::unique_ptr<RegexAST<NfaStateType>>(rhs.m_right->clone())) {}
-
-    auto operator=(RegexASTOr const& rhs) -> RegexASTOr& = default;
-    RegexASTOr(RegexASTOr&& rhs) noexcept = default;
-    auto operator=(RegexASTOr&& rhs) noexcept -> RegexASTOr& = default;
+            : RegexAST<TypedNfaState>(rhs),
+              m_left(std::unique_ptr<RegexAST<TypedNfaState>>(rhs.m_left->clone())),
+              m_right(std::unique_ptr<RegexAST<TypedNfaState>>(rhs.m_right->clone())) {}
 
     /**
      * Used for cloning a unique_pointer of type RegexASTOr
@@ -477,37 +474,33 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state) const -> void override;
+    auto add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const -> void override;
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
-    [[nodiscard]] auto get_left() const -> RegexAST<NfaStateType> const* { return m_left.get(); }
+    [[nodiscard]] auto get_left() const -> RegexAST<TypedNfaState> const* { return m_left.get(); }
 
-    [[nodiscard]] auto get_right() const -> RegexAST<NfaStateType> const* { return m_right.get(); }
+    [[nodiscard]] auto get_right() const -> RegexAST<TypedNfaState> const* { return m_right.get(); }
 
 private:
-    std::unique_ptr<RegexAST<NfaStateType>> m_left;
-    std::unique_ptr<RegexAST<NfaStateType>> m_right;
+    std::unique_ptr<RegexAST<TypedNfaState>> m_left;
+    std::unique_ptr<RegexAST<TypedNfaState>> m_right;
 };
 
-template <typename NfaStateType>
-class RegexASTCat : public RegexAST<NfaStateType> {
+template <typename TypedNfaState>
+class RegexASTCat : public RegexAST<TypedNfaState> {
 public:
     ~RegexASTCat() override = default;
 
     RegexASTCat(
-            std::unique_ptr<RegexAST<NfaStateType>> left,
-            std::unique_ptr<RegexAST<NfaStateType>> right
+            std::unique_ptr<RegexAST<TypedNfaState>> left,
+            std::unique_ptr<RegexAST<TypedNfaState>> right
     );
 
     RegexASTCat(RegexASTCat const& rhs)
-            : RegexAST<NfaStateType>(rhs),
-              m_left(std::unique_ptr<RegexAST<NfaStateType>>(rhs.m_left->clone())),
-              m_right(std::unique_ptr<RegexAST<NfaStateType>>(rhs.m_right->clone())) {}
-
-    auto operator=(RegexASTCat const& rhs) -> RegexASTCat& = default;
-    RegexASTCat(RegexASTCat&& rhs) noexcept = default;
-    auto operator=(RegexASTCat&& rhs) noexcept -> RegexASTCat& = default;
+            : RegexAST<TypedNfaState>(rhs),
+              m_left(std::unique_ptr<RegexAST<TypedNfaState>>(rhs.m_left->clone())),
+              m_right(std::unique_ptr<RegexAST<TypedNfaState>>(rhs.m_right->clone())) {}
 
     /**
      * Used for cloning a unique_pointer of type RegexASTCat
@@ -544,39 +537,35 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state) const -> void override;
+    auto add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const -> void override;
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
-    [[nodiscard]] auto get_left() const -> RegexAST<NfaStateType> const* { return m_left.get(); }
+    [[nodiscard]] auto get_left() const -> RegexAST<TypedNfaState> const* { return m_left.get(); }
 
-    [[nodiscard]] auto get_right() const -> RegexAST<NfaStateType> const* { return m_right.get(); }
+    [[nodiscard]] auto get_right() const -> RegexAST<TypedNfaState> const* { return m_right.get(); }
 
 private:
-    std::unique_ptr<RegexAST<NfaStateType>> m_left;
-    std::unique_ptr<RegexAST<NfaStateType>> m_right;
+    std::unique_ptr<RegexAST<TypedNfaState>> m_left;
+    std::unique_ptr<RegexAST<TypedNfaState>> m_right;
 };
 
-template <typename NfaStateType>
-class RegexASTMultiplication : public RegexAST<NfaStateType> {
+template <typename TypedNfaState>
+class RegexASTMultiplication : public RegexAST<TypedNfaState> {
 public:
     ~RegexASTMultiplication() override = default;
 
     RegexASTMultiplication(
-            std::unique_ptr<RegexAST<NfaStateType>> operand,
+            std::unique_ptr<RegexAST<TypedNfaState>> operand,
             uint32_t min,
             uint32_t max
     );
 
     RegexASTMultiplication(RegexASTMultiplication const& rhs)
-            : RegexAST<NfaStateType>(rhs),
-              m_operand(std::unique_ptr<RegexAST<NfaStateType>>(rhs.m_operand->clone())),
+            : RegexAST<TypedNfaState>(rhs),
+              m_operand(std::unique_ptr<RegexAST<TypedNfaState>>(rhs.m_operand->clone())),
               m_min(rhs.m_min),
               m_max(rhs.m_max) {}
-
-    auto operator=(RegexASTMultiplication const& rhs) -> RegexASTMultiplication& = default;
-    RegexASTMultiplication(RegexASTMultiplication&& rhs) noexcept = default;
-    auto operator=(RegexASTMultiplication&& rhs) noexcept -> RegexASTMultiplication& = default;
 
     /**
      * Used for cloning a unique_pointer of type RegexASTMultiplication
@@ -612,13 +601,13 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state) const -> void override;
+    auto add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const -> void override;
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
     [[nodiscard]] auto is_infinite() const -> bool { return m_max == 0; }
 
-    [[nodiscard]] auto get_operand() const -> std::unique_ptr<RegexAST<NfaStateType>> const& {
+    [[nodiscard]] auto get_operand() const -> std::unique_ptr<RegexAST<TypedNfaState>> const& {
         return m_operand;
     }
 
@@ -627,40 +616,53 @@ public:
     [[nodiscard]] auto get_max() const -> uint32_t { return m_max; }
 
 private:
-    std::unique_ptr<RegexAST<NfaStateType>> m_operand;
+    std::unique_ptr<RegexAST<TypedNfaState>> m_operand;
     uint32_t m_min;
     uint32_t m_max;
 };
 
-template <typename NfaStateType>
-class RegexASTCapture : public RegexAST<NfaStateType> {
+/**
+ * Represents a capture group AST node.
+ * NOTE:
+ * - `m_tag` is always expected to be non-null.
+ * - `m_group_regex_ast` is always expected to be non-null.
+ * @tparam TypedNfaState Specifies the type of transition (bytes or UTF-8 characters).
+ */
+template <typename TypedNfaState>
+class RegexASTCapture : public RegexAST<TypedNfaState> {
 public:
     ~RegexASTCapture() override = default;
 
+    /**
+     * @param group_regex_ast
+     * @param tag
+     * @throw std::invalid_argument if `group_regex_ast` or `tag` are `nullptr`.
+     */
     RegexASTCapture(
-            std::unique_ptr<RegexAST<NfaStateType>> group_regex_ast,
+            std::unique_ptr<RegexAST<TypedNfaState>> group_regex_ast,
             std::unique_ptr<Tag> tag
     )
-            : m_group_regex_ast{std::move(group_regex_ast)},
-              m_tag{std::move(tag)} {
-        RegexAST<NfaStateType>::set_subtree_positive_tags(
+            : m_group_regex_ast{(
+                      nullptr == group_regex_ast
+                              ? throw std::invalid_argument("Group regex AST cannot be null")
+                              : std::move(group_regex_ast)
+              )},
+              m_tag{nullptr == tag ? throw std::invalid_argument("Tag cannot be null")
+                                   : std::move(tag)} {
+        RegexAST<TypedNfaState>::set_subtree_positive_tags(
                 m_group_regex_ast->get_subtree_positive_tags()
         );
-        RegexAST<NfaStateType>::add_subtree_positive_tags({m_tag.get()});
+        RegexAST<TypedNfaState>::add_subtree_positive_tags({m_tag.get()});
     }
 
     RegexASTCapture(RegexASTCapture const& rhs)
-            : RegexAST<NfaStateType>{rhs},
+            : RegexAST<TypedNfaState>{rhs},
               m_group_regex_ast{
-                      std::unique_ptr<RegexAST<NfaStateType>>(rhs.m_group_regex_ast->clone())
+                      std::unique_ptr<RegexAST<TypedNfaState>>(rhs.m_group_regex_ast->clone())
               },
-              m_tag{rhs.m_tag ? std::make_unique<Tag>(*rhs.m_tag) : nullptr} {
-        RegexAST<NfaStateType>::set_subtree_positive_tags(rhs.get_subtree_positive_tags());
+              m_tag{std::make_unique<Tag>(*rhs.m_tag)} {
+        RegexAST<TypedNfaState>::set_subtree_positive_tags(rhs.get_subtree_positive_tags());
     }
-
-    auto operator=(RegexASTCapture const& rhs) -> RegexASTCapture& = default;
-    RegexASTCapture(RegexASTCapture&& rhs) noexcept = default;
-    auto operator=(RegexASTCapture&& rhs) noexcept -> RegexASTCapture& = default;
 
     /**
      * Used for cloning a `unique_pointer` of type `RegexASTCapture`.
@@ -691,165 +693,165 @@ public:
 
     /**
      * Adds the needed `Nfa::states` to the passed in nfa to handle a
-     * `RegexASTCapture` before transitioning to an accepting `end_state`.
+     * `RegexASTCapture` before transitioning to a `dest_state`.
      * @param nfa
-     * @param end_state
+     * @param dest_state
      */
-    auto add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state) const -> void override;
+    auto add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* dest_state) const -> void override;
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
-    [[nodiscard]] auto get_group_name() const -> std::string const& { return m_tag->get_name(); }
+    [[nodiscard]] auto get_group_name() const -> std::string_view { return m_tag->get_name(); }
 
     [[nodiscard]] auto get_group_regex_ast(
-    ) const -> std::unique_ptr<RegexAST<NfaStateType>> const& {
+    ) const -> std::unique_ptr<RegexAST<TypedNfaState>> const& {
         return m_group_regex_ast;
     }
 
 private:
-    std::unique_ptr<RegexAST<NfaStateType>> m_group_regex_ast;
+    std::unique_ptr<RegexAST<TypedNfaState>> m_group_regex_ast;
     std::unique_ptr<Tag> m_tag;
 };
 
-template <typename NfaStateType>
-[[nodiscard]] auto RegexASTEmpty<NfaStateType>::serialize() const -> std::u32string {
-    return fmt::format(U"{}", RegexAST<NfaStateType>::serialize_negative_tags());
+template <typename TypedNfaState>
+[[nodiscard]] auto RegexASTEmpty<TypedNfaState>::serialize() const -> std::u32string {
+    return fmt::format(U"{}", RegexAST<TypedNfaState>::serialize_negative_tags());
 }
 
-template <typename NfaStateType>
-RegexASTLiteral<NfaStateType>::RegexASTLiteral(uint32_t character) : m_character(character) {}
+template <typename TypedNfaState>
+RegexASTLiteral<TypedNfaState>::RegexASTLiteral(uint32_t character) : m_character(character) {}
 
-template <typename NfaStateType>
-void RegexASTLiteral<NfaStateType>::add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state)
+template <typename TypedNfaState>
+void RegexASTLiteral<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state)
         const {
     nfa->add_root_interval(Interval(m_character, m_character), end_state);
 }
 
-template <typename NfaStateType>
-[[nodiscard]] auto RegexASTLiteral<NfaStateType>::serialize() const -> std::u32string {
+template <typename TypedNfaState>
+[[nodiscard]] auto RegexASTLiteral<TypedNfaState>::serialize() const -> std::u32string {
     return fmt::format(
             U"{}{}",
             static_cast<char32_t>(m_character),
-            RegexAST<NfaStateType>::serialize_negative_tags()
+            RegexAST<TypedNfaState>::serialize_negative_tags()
     );
 }
 
-template <typename NfaStateType>
-RegexASTInteger<NfaStateType>::RegexASTInteger(uint32_t digit) {
+template <typename TypedNfaState>
+RegexASTInteger<TypedNfaState>::RegexASTInteger(uint32_t digit) {
     digit = digit - '0';
     m_digits.push_back(digit);
 }
 
-template <typename NfaStateType>
-RegexASTInteger<NfaStateType>::RegexASTInteger(RegexASTInteger* left, uint32_t digit)
+template <typename TypedNfaState>
+RegexASTInteger<TypedNfaState>::RegexASTInteger(RegexASTInteger* left, uint32_t digit)
         : m_digits(std::move(left->m_digits)) {
     digit = digit - '0';
     m_digits.push_back(digit);
 }
 
-template <typename NfaStateType>
-void RegexASTInteger<NfaStateType>::add_to_nfa(
-        [[maybe_unused]] Nfa<NfaStateType>* nfa,
-        [[maybe_unused]] NfaStateType* end_state
+template <typename TypedNfaState>
+void RegexASTInteger<TypedNfaState>::add_to_nfa(
+        [[maybe_unused]] Nfa<TypedNfaState>* nfa,
+        [[maybe_unused]] TypedNfaState* end_state
 ) const {
     throw std::runtime_error("Unsupported");
 }
 
-template <typename NfaStateType>
-[[nodiscard]] auto RegexASTInteger<NfaStateType>::serialize() const -> std::u32string {
+template <typename TypedNfaState>
+[[nodiscard]] auto RegexASTInteger<TypedNfaState>::serialize() const -> std::u32string {
     auto const digits_string = fmt::format("{}", fmt::join(m_digits, ""));
     return fmt::format(
             U"{}{}",
             std::u32string(digits_string.begin(), digits_string.end()),
-            RegexAST<NfaStateType>::serialize_negative_tags()
+            RegexAST<TypedNfaState>::serialize_negative_tags()
     );
 }
 
-template <typename NfaStateType>
-RegexASTOr<NfaStateType>::RegexASTOr(
-        std::unique_ptr<RegexAST<NfaStateType>> left,
-        std::unique_ptr<RegexAST<NfaStateType>> right
+template <typename TypedNfaState>
+RegexASTOr<TypedNfaState>::RegexASTOr(
+        std::unique_ptr<RegexAST<TypedNfaState>> left,
+        std::unique_ptr<RegexAST<TypedNfaState>> right
 )
         : m_left(std::move(left)),
           m_right(std::move(right)) {
     m_left->set_negative_tags(m_right->get_subtree_positive_tags());
     m_right->set_negative_tags(m_left->get_subtree_positive_tags());
-    RegexAST<NfaStateType>::set_subtree_positive_tags(m_left->get_subtree_positive_tags());
-    RegexAST<NfaStateType>::add_subtree_positive_tags(m_right->get_subtree_positive_tags());
+    RegexAST<TypedNfaState>::set_subtree_positive_tags(m_left->get_subtree_positive_tags());
+    RegexAST<TypedNfaState>::add_subtree_positive_tags(m_right->get_subtree_positive_tags());
 }
 
-template <typename NfaStateType>
-void RegexASTOr<NfaStateType>::add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state)
+template <typename TypedNfaState>
+void RegexASTOr<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state)
         const {
     m_left->add_to_nfa_with_negative_tags(nfa, end_state);
     m_right->add_to_nfa_with_negative_tags(nfa, end_state);
 }
 
-template <typename NfaStateType>
-[[nodiscard]] auto RegexASTOr<NfaStateType>::serialize() const -> std::u32string {
+template <typename TypedNfaState>
+[[nodiscard]] auto RegexASTOr<TypedNfaState>::serialize() const -> std::u32string {
     return fmt::format(
             U"({})|({}){}",
             nullptr != m_left ? m_left->serialize() : U"null",
             nullptr != m_right ? m_right->serialize() : U"null",
-            RegexAST<NfaStateType>::serialize_negative_tags()
+            RegexAST<TypedNfaState>::serialize_negative_tags()
     );
 }
 
-template <typename NfaStateType>
-RegexASTCat<NfaStateType>::RegexASTCat(
-        std::unique_ptr<RegexAST<NfaStateType>> left,
-        std::unique_ptr<RegexAST<NfaStateType>> right
+template <typename TypedNfaState>
+RegexASTCat<TypedNfaState>::RegexASTCat(
+        std::unique_ptr<RegexAST<TypedNfaState>> left,
+        std::unique_ptr<RegexAST<TypedNfaState>> right
 )
         : m_left(std::move(left)),
           m_right(std::move(right)) {
-    RegexAST<NfaStateType>::set_subtree_positive_tags(m_left->get_subtree_positive_tags());
-    RegexAST<NfaStateType>::add_subtree_positive_tags(m_right->get_subtree_positive_tags());
+    RegexAST<TypedNfaState>::set_subtree_positive_tags(m_left->get_subtree_positive_tags());
+    RegexAST<TypedNfaState>::add_subtree_positive_tags(m_right->get_subtree_positive_tags());
 }
 
-template <typename NfaStateType>
-void RegexASTCat<NfaStateType>::add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state)
+template <typename TypedNfaState>
+void RegexASTCat<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state)
         const {
-    NfaStateType* saved_root = nfa->get_root();
-    NfaStateType* intermediate_state = nfa->new_state();
+    TypedNfaState* saved_root = nfa->get_root();
+    TypedNfaState* intermediate_state = nfa->new_state();
     m_left->add_to_nfa_with_negative_tags(nfa, intermediate_state);
     nfa->set_root(intermediate_state);
     m_right->add_to_nfa_with_negative_tags(nfa, end_state);
     nfa->set_root(saved_root);
 }
 
-template <typename NfaStateType>
-[[nodiscard]] auto RegexASTCat<NfaStateType>::serialize() const -> std::u32string {
+template <typename TypedNfaState>
+[[nodiscard]] auto RegexASTCat<TypedNfaState>::serialize() const -> std::u32string {
     return fmt::format(
             U"{}{}{}",
             nullptr != m_left ? m_left->serialize() : U"null",
             nullptr != m_right ? m_right->serialize() : U"null",
-            RegexAST<NfaStateType>::serialize_negative_tags()
+            RegexAST<TypedNfaState>::serialize_negative_tags()
     );
 }
 
-template <typename NfaStateType>
-RegexASTMultiplication<NfaStateType>::RegexASTMultiplication(
-        std::unique_ptr<RegexAST<NfaStateType>> operand,
+template <typename TypedNfaState>
+RegexASTMultiplication<TypedNfaState>::RegexASTMultiplication(
+        std::unique_ptr<RegexAST<TypedNfaState>> operand,
         uint32_t const min,
         uint32_t const max
 )
         : m_operand(std::move(operand)),
           m_min(min),
           m_max(max) {
-    RegexAST<NfaStateType>::set_subtree_positive_tags(m_operand->get_subtree_positive_tags());
+    RegexAST<TypedNfaState>::set_subtree_positive_tags(m_operand->get_subtree_positive_tags());
 }
 
-template <typename NfaStateType>
-void RegexASTMultiplication<NfaStateType>::add_to_nfa(
-        Nfa<NfaStateType>* nfa,
-        NfaStateType* end_state
+template <typename TypedNfaState>
+void RegexASTMultiplication<TypedNfaState>::add_to_nfa(
+        Nfa<TypedNfaState>* nfa,
+        TypedNfaState* end_state
 ) const {
-    NfaStateType* saved_root = nfa->get_root();
-    if (0 == m_min) {
+    TypedNfaState* saved_root = nfa->get_root();
+    if (m_min == 0) {
         nfa->get_root()->add_epsilon_transition(end_state);
     } else {
         for (uint32_t i = 1; i < m_min; i++) {
-            NfaStateType* intermediate_state = nfa->new_state();
+            TypedNfaState* intermediate_state = nfa->new_state();
             m_operand->add_to_nfa_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
@@ -859,14 +861,14 @@ void RegexASTMultiplication<NfaStateType>::add_to_nfa(
         nfa->set_root(end_state);
         m_operand->add_to_nfa_with_negative_tags(nfa, end_state);
     } else if (m_max > m_min) {
-        if (0 != m_min) {
-            NfaStateType* intermediate_state = nfa->new_state();
+        if (m_min != 0) {
+            TypedNfaState* intermediate_state = nfa->new_state();
             m_operand->add_to_nfa_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
         for (uint32_t i = m_min + 1; i < m_max; ++i) {
             m_operand->add_to_nfa_with_negative_tags(nfa, end_state);
-            NfaStateType* intermediate_state = nfa->new_state();
+            TypedNfaState* intermediate_state = nfa->new_state();
             m_operand->add_to_nfa_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
@@ -875,8 +877,8 @@ void RegexASTMultiplication<NfaStateType>::add_to_nfa(
     nfa->set_root(saved_root);
 }
 
-template <typename NfaStateType>
-[[nodiscard]] auto RegexASTMultiplication<NfaStateType>::serialize() const -> std::u32string {
+template <typename TypedNfaState>
+[[nodiscard]] auto RegexASTMultiplication<TypedNfaState>::serialize() const -> std::u32string {
     auto const min_string = std::to_string(m_min);
     auto const max_string = std::to_string(m_max);
 
@@ -885,40 +887,71 @@ template <typename NfaStateType>
             nullptr != m_operand ? m_operand->serialize() : U"null",
             std::u32string(min_string.begin(), min_string.end()),
             is_infinite() ? U"inf" : std::u32string(max_string.begin(), max_string.end()),
-            RegexAST<NfaStateType>::serialize_negative_tags()
+            RegexAST<TypedNfaState>::serialize_negative_tags()
     );
 }
 
-template <typename NfaStateType>
-void RegexASTCapture<NfaStateType>::add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state)
-        const {
-    NfaStateType* root = nfa->get_root();
-    auto* capture_group_start_state = nfa->new_state();
-    root->add_positive_tagged_start_transition(m_tag.get(), capture_group_start_state);
+template <typename TypedNfaState>
+auto RegexASTCapture<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* dest_state)
+        const -> void {
+    // TODO: move this into a documentation file in the future, and reference it here.
+    // The NFA constructed for a capture group follows the structure below, with tagged transitions
+    // explicitly labeled for clarity:
+    //         +---------------------+
+    //         |       `m_root`      |
+    //         +---------------------+
+    //                    | `m_tag` start
+    //                    | (positive tagged start transition)
+    //                    v
+    //         +---------------------+
+    //         |`capture_start_state`|
+    //         +---------------------+
+    //                    |
+    //                    | (epsilon transition)
+    //                    v
+    //         +---------------------+
+    //         | `m_group_regex_ast` |
+    //         |    (nested NFA)     |
+    //         +---------------------+
+    //                    | `m_negative_tags`
+    //                    | (negative tagged transition)
+    //                    v
+    //         +---------------------+
+    //         | `capture_end_state` |
+    //         +---------------------+
+    //                    | `m_tag` end
+    //                    | (positive tagged end transition)
+    //                    v
+    //         +---------------------+
+    //         |     `dest_state`    |
+    //         +---------------------+
+    auto [capture_start_state, capture_end_state]
+            = nfa->new_start_and_end_states_with_positive_tagged_transitions(
+                    m_tag.get(),
+                    dest_state
+            );
 
-    auto* state_with_positive_tagged_transition
-            = nfa->new_state_with_positive_tagged_transition(m_tag.get(), end_state);
-    nfa->set_root(capture_group_start_state);
-    m_group_regex_ast->add_to_nfa_with_negative_tags(nfa, state_with_positive_tagged_transition);
-
-    nfa->set_root(root);
+    auto* initial_root = nfa->get_root();
+    nfa->set_root(capture_start_state);
+    m_group_regex_ast->add_to_nfa_with_negative_tags(nfa, capture_end_state);
+    nfa->set_root(initial_root);
 }
 
-template <typename NfaStateType>
-[[nodiscard]] auto RegexASTCapture<NfaStateType>::serialize() const -> std::u32string {
-    auto const tag_name_u32 = std::u32string(m_tag->get_name().begin(), m_tag->get_name().end());
+template <typename TypedNfaState>
+[[nodiscard]] auto RegexASTCapture<TypedNfaState>::serialize() const -> std::u32string {
+    auto const tag_name_u32 = std::u32string(m_tag->get_name().cbegin(), m_tag->get_name().cend());
     return fmt::format(
             U"({})<{}>{}",
-            nullptr != m_group_regex_ast ? m_group_regex_ast->serialize() : U"null",
+            m_group_regex_ast->serialize(),
             tag_name_u32,
-            RegexAST<NfaStateType>::serialize_negative_tags()
+            RegexAST<TypedNfaState>::serialize_negative_tags()
     );
 }
 
-template <typename NfaStateType>
-RegexASTGroup<NfaStateType>::RegexASTGroup(
+template <typename TypedNfaState>
+RegexASTGroup<TypedNfaState>::RegexASTGroup(
         RegexASTGroup const* left,
-        RegexASTLiteral<NfaStateType> const* right
+        RegexASTLiteral<TypedNfaState> const* right
 ) {
     if (right == nullptr) {
         throw std::runtime_error("RegexASTGroup1: right == nullptr: A bracket expression in the "
@@ -930,16 +963,16 @@ RegexASTGroup<NfaStateType>::RegexASTGroup(
     m_ranges.emplace_back(right->get_character(), right->get_character());
 }
 
-template <typename NfaStateType>
-RegexASTGroup<NfaStateType>::RegexASTGroup(RegexASTGroup const* left, RegexASTGroup const* right)
+template <typename TypedNfaState>
+RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTGroup const* left, RegexASTGroup const* right)
         : m_negate(left->m_negate),
           m_ranges(left->m_ranges) {
     assert(right->m_ranges.size() == 1);  // Only add LiteralRange
     m_ranges.push_back(right->m_ranges[0]);
 }
 
-template <typename NfaStateType>
-RegexASTGroup<NfaStateType>::RegexASTGroup(RegexASTLiteral<NfaStateType> const* right) {
+template <typename TypedNfaState>
+RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTLiteral<TypedNfaState> const* right) {
     if (right == nullptr) {
         throw std::runtime_error("RegexASTGroup2: right == nullptr: A bracket expression in the "
                                  "schema contains illegal characters, remember to escape special "
@@ -949,16 +982,16 @@ RegexASTGroup<NfaStateType>::RegexASTGroup(RegexASTLiteral<NfaStateType> const* 
     m_ranges.emplace_back(right->get_character(), right->get_character());
 }
 
-template <typename NfaStateType>
-RegexASTGroup<NfaStateType>::RegexASTGroup(RegexASTGroup const* right) : m_negate(false) {
+template <typename TypedNfaState>
+RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTGroup const* right) : m_negate(false) {
     assert(right->m_ranges.size() == 1);  // Only add LiteralRange
     m_ranges.push_back(right->m_ranges[0]);
 }
 
-template <typename NfaStateType>
-RegexASTGroup<NfaStateType>::RegexASTGroup(
-        RegexASTLiteral<NfaStateType> const* left,
-        RegexASTLiteral<NfaStateType> const* right
+template <typename TypedNfaState>
+RegexASTGroup<TypedNfaState>::RegexASTGroup(
+        RegexASTLiteral<TypedNfaState> const* left,
+        RegexASTLiteral<TypedNfaState> const* right
 ) {
     if (left == nullptr || right == nullptr) {
         throw std::runtime_error(
@@ -972,22 +1005,22 @@ RegexASTGroup<NfaStateType>::RegexASTGroup(
     m_ranges.emplace_back(left->get_character(), right->get_character());
 }
 
-template <typename NfaStateType>
-RegexASTGroup<NfaStateType>::RegexASTGroup(std::vector<uint32_t> const& literals)
+template <typename TypedNfaState>
+RegexASTGroup<TypedNfaState>::RegexASTGroup(std::vector<uint32_t> const& literals)
         : m_negate(false) {
     for (uint32_t literal : literals) {
         m_ranges.emplace_back(literal, literal);
     }
 }
 
-template <typename NfaStateType>
-RegexASTGroup<NfaStateType>::RegexASTGroup(uint32_t min, uint32_t max) : m_negate(false) {
+template <typename TypedNfaState>
+RegexASTGroup<TypedNfaState>::RegexASTGroup(uint32_t min, uint32_t max) : m_negate(false) {
     m_ranges.emplace_back(min, max);
 }
 
 // ranges must be sorted
-template <typename NfaStateType>
-auto RegexASTGroup<NfaStateType>::merge(std::vector<Range> const& ranges) -> std::vector<Range> {
+template <typename TypedNfaState>
+auto RegexASTGroup<TypedNfaState>::merge(std::vector<Range> const& ranges) -> std::vector<Range> {
     std::vector<Range> merged_ranges;
     if (ranges.empty()) {
         return merged_ranges;
@@ -1007,8 +1040,8 @@ auto RegexASTGroup<NfaStateType>::merge(std::vector<Range> const& ranges) -> std
 }
 
 // ranges must be sorted and non-overlapping
-template <typename NfaStateType>
-auto RegexASTGroup<NfaStateType>::complement(std::vector<Range> const& ranges
+template <typename TypedNfaState>
+auto RegexASTGroup<TypedNfaState>::complement(std::vector<Range> const& ranges
 ) -> std::vector<Range> {
     std::vector<Range> complemented;
     uint32_t low = 0;
@@ -1024,8 +1057,8 @@ auto RegexASTGroup<NfaStateType>::complement(std::vector<Range> const& ranges
     return complemented;
 }
 
-template <typename NfaStateType>
-void RegexASTGroup<NfaStateType>::add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateType* end_state)
+template <typename TypedNfaState>
+void RegexASTGroup<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state)
         const {
     // TODO: there should be a better way to do this with a set and keep m_ranges sorted, but we
     // have to consider removing overlap + taking the compliment.
@@ -1040,8 +1073,8 @@ void RegexASTGroup<NfaStateType>::add_to_nfa(Nfa<NfaStateType>* nfa, NfaStateTyp
     }
 }
 
-template <typename NfaStateType>
-[[nodiscard]] auto RegexASTGroup<NfaStateType>::serialize() const -> std::u32string {
+template <typename TypedNfaState>
+[[nodiscard]] auto RegexASTGroup<TypedNfaState>::serialize() const -> std::u32string {
     std::u32string ranges_serialized;
     if (m_is_wildcard) {
         ranges_serialized += U"*";
@@ -1067,7 +1100,7 @@ template <typename NfaStateType>
             U"[{}{}]{}",
             m_negate ? U"^" : U"",
             ranges_serialized,
-            RegexAST<NfaStateType>::serialize_negative_tags()
+            RegexAST<TypedNfaState>::serialize_negative_tags()
     );
 }
 }  // namespace log_surgeon::finite_automata

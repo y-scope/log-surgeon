@@ -6,7 +6,7 @@
 #include <memory>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/LALR1Parser.hpp>
+#include <log_surgeon/Lalr1Parser.hpp>
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/LogParserOutputBuffer.hpp>
 #include <log_surgeon/Parser.hpp>
@@ -15,8 +15,7 @@
 
 namespace log_surgeon {
 // TODO: Compare c-array vs. vectors (its underlying array) for buffers
-class LogParser
-        : public Parser<finite_automata::NfaByteState, finite_automata::DfaByteState> {
+class LogParser : public Parser<finite_automata::ByteNfaState, finite_automata::ByteDfaState> {
 public:
     enum class ParsingAction {
         None,
@@ -27,7 +26,7 @@ public:
     /**
      * Constructs the parser using the given schema file.
      * @param schema_file_path
-     * @throw std::runtime_error from LALR1Parser, RegexAST, or Lexer
+     * @throw std::runtime_error from Lalr1Parser, RegexAST, or Lexer
      * describing the failure parsing the schema file or processing the schema
      * AST.
      */
@@ -36,7 +35,7 @@ public:
     /**
      * Constructs the parser using the given schema AST.
      * @param schema_ast
-     * @throw std::runtime_error from LALR1Parser, RegexAST, or Lexer
+     * @throw std::runtime_error from Lalr1Parser, RegexAST, or Lexer
      * describing the failure processing the schema AST.
      */
     explicit LogParser(std::unique_ptr<log_surgeon::SchemaAST> schema_ast);

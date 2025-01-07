@@ -17,6 +17,8 @@ using std::unique_ptr;
 using std::vector;
 
 namespace log_surgeon {
+using finite_automata::ByteDfaState;
+using finite_automata::ByteNfaState;
 using finite_automata::RegexAST;
 using finite_automata::RegexASTCat;
 using finite_automata::RegexASTGroup;
@@ -24,8 +26,6 @@ using finite_automata::RegexASTInteger;
 using finite_automata::RegexASTLiteral;
 using finite_automata::RegexASTMultiplication;
 using finite_automata::RegexASTOr;
-using finite_automata::DfaByteState;
-using finite_automata::NfaByteState;
 
 LogParser::LogParser(string const& schema_file_path)
         : LogParser::LogParser(SchemaParser::try_schema_file(schema_file_path)) {}
@@ -62,26 +62,24 @@ auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
     for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* rule = dynamic_cast<SchemaVarAST*>(parser_ast.get());
         if (rule->m_name == "timestamp") {
-            unique_ptr<RegexAST<NfaByteState>> first_timestamp_regex_ast(
-                    rule->m_regex_ptr->clone()
+            unique_ptr<RegexAST<ByteNfaState>> first_timestamp_regex_ast(rule->m_regex_ptr->clone()
             );
-            unique_ptr<RegexASTLiteral<NfaByteState>> r1
-                    = make_unique<RegexASTLiteral<NfaByteState>>(utf8::cCharStartOfFile);
+            unique_ptr<RegexASTLiteral<ByteNfaState>> r1
+                    = make_unique<RegexASTLiteral<ByteNfaState>>(utf8::cCharStartOfFile);
             add_rule(
                     "firstTimestamp",
-                    make_unique<RegexASTCat<NfaByteState>>(
+                    make_unique<RegexASTCat<ByteNfaState>>(
                             std::move(r1),
                             std::move(first_timestamp_regex_ast)
                     )
             );
-            unique_ptr<RegexAST<NfaByteState>> newline_timestamp_regex_ast(
-                    rule->m_regex_ptr->clone()
-            );
-            unique_ptr<RegexASTLiteral<NfaByteState>> r2
-                    = make_unique<RegexASTLiteral<NfaByteState>>('\n');
+            unique_ptr<RegexAST<ByteNfaState>> newline_timestamp_regex_ast(rule->m_regex_ptr->clone(
+            ));
+            unique_ptr<RegexASTLiteral<ByteNfaState>> r2
+                    = make_unique<RegexASTLiteral<ByteNfaState>>('\n');
             add_rule(
                     "newLineTimestamp",
-                    make_unique<RegexASTCat<NfaByteState>>(
+                    make_unique<RegexASTCat<ByteNfaState>>(
                             std::move(r2),
                             std::move(newline_timestamp_regex_ast)
                     )
@@ -142,11 +140,9 @@ auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
         }
 
         // For log-specific lexing: modify variable regex to contain a delimiter at the start.
-        unique_ptr<RegexASTGroup<NfaByteState>> delimiter_group
-                = make_unique<RegexASTGroup<NfaByteState>>(
-                        RegexASTGroup<NfaByteState>(delimiters)
-                );
-        rule->m_regex_ptr = make_unique<RegexASTCat<NfaByteState>>(
+        unique_ptr<RegexASTGroup<ByteNfaState>> delimiter_group
+                = make_unique<RegexASTGroup<ByteNfaState>>(RegexASTGroup<ByteNfaState>(delimiters));
+        rule->m_regex_ptr = make_unique<RegexASTCat<ByteNfaState>>(
                 std::move(delimiter_group),
                 std::move(rule->m_regex_ptr)
         );
@@ -197,7 +193,7 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
                 // make a message with just the '\n' character
                 next_token.m_end_pos = next_token.m_start_pos + 1;
                 next_token.m_type_ids_ptr
-                        = &Lexer<NfaByteState, DfaByteState>::cTokenUncaughtStringTypes;
+                        = &Lexer<ByteNfaState, ByteDfaState>::cTokenUncaughtStringTypes;
                 output_buffer->set_token(1, next_token);
                 output_buffer->set_pos(2);
                 m_input_buffer.set_consumed_pos(next_token.m_start_pos);
@@ -263,7 +259,7 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
             Token curr_token = output_buffer->get_curr_token();
             curr_token.m_end_pos = curr_token.m_start_pos + 1;
             curr_token.m_type_ids_ptr
-                    = &Lexer<NfaByteState, DfaByteState>::cTokenUncaughtStringTypes;
+                    = &Lexer<ByteNfaState, ByteDfaState>::cTokenUncaughtStringTypes;
             output_buffer->set_curr_token(curr_token);
             if (0 == m_start_of_log_message.m_start_pos) {
                 m_input_buffer.set_consumed_pos(m_input_buffer.storage().size() - 1);
