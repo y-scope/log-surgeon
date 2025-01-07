@@ -378,7 +378,6 @@ auto Lexer<TypedNfaState, TypedDfaState>::get_rule(uint32_t const variable_id
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::generate() {
     finite_automata::Nfa<TypedNfaState> nfa{std::move(m_rules)};
-    // TODO: DFA ignores tags. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState>>(std::move(nfa));
     auto const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
