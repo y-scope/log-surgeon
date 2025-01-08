@@ -274,7 +274,6 @@ protected:
      */
     auto report_error() -> std::string;
 
-    /* Lexer<TypedNfaState, TypedDfaState> m_lexer; */
     std::stack<MatchedSymbol> m_parse_stack_matches;
     std::stack<ItemSet*> m_parse_stack_states;
     ItemSet* m_root_item_set_ptr{nullptr};
