@@ -120,7 +120,7 @@ public:
      * has nothing on its LHS (i.e., HEAD -> {})
      * @return bool
      */
-    [[nodiscard]] auto is_epsilon() const -> bool { return this->m_body.empty(); }
+    [[nodiscard]] auto is_epsilon() const -> bool { return m_body.empty(); }
 
     uint32_t m_index;
     uint32_t m_head;
@@ -158,16 +158,14 @@ public:
      * @return bool
      */
     [[nodiscard]] auto has_dot_at_end() const -> bool {
-        return this->m_dot == this->m_production->m_body.size();
+        return m_dot == m_production->m_body.size();
     }
 
     /**
      * Returns the next unmatched symbol in the production based on the dot.
      * @return uint32_t
      */
-    [[nodiscard]] auto next_symbol() const -> uint32_t {
-        return this->m_production->m_body.at(this->m_dot);
-    }
+    [[nodiscard]] auto next_symbol() const -> uint32_t { return m_production->m_body.at(m_dot); }
 
     Production* m_production;
     uint32_t m_dot;
@@ -394,6 +392,8 @@ private:
     auto get_input_until_next_newline(Token* error_token) -> std::string;
 
     auto symbol_is_token(uint32_t s) -> bool { return m_terminals.find(s) != m_terminals.end(); }
+
+    using Parser<TypedNfaState, TypedDfaState>::m_lexer;
 
     std::set<uint32_t> m_terminals;
     std::set<uint32_t> m_nullable;
