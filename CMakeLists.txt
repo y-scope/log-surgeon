@@ -68,9 +68,9 @@ set(SOURCE_FILES
     src/log_surgeon/Constants.hpp
     src/log_surgeon/FileReader.cpp
     src/log_surgeon/FileReader.hpp
-    src/log_surgeon/LALR1Parser.cpp
-    src/log_surgeon/LALR1Parser.hpp
-    src/log_surgeon/LALR1Parser.tpp
+    src/log_surgeon/Lalr1Parser.cpp
+    src/log_surgeon/Lalr1Parser.hpp
+    src/log_surgeon/Lalr1Parser.tpp
     src/log_surgeon/Lexer.hpp
     src/log_surgeon/Lexer.tpp
     src/log_surgeon/LexicalRule.hpp
@@ -96,14 +96,13 @@ set(SOURCE_FILES
     src/log_surgeon/finite_automata/PrefixTree.cpp
     src/log_surgeon/finite_automata/PrefixTree.hpp
     src/log_surgeon/finite_automata/RegexAST.hpp
-    src/log_surgeon/finite_automata/RegexDFA.hpp
-    src/log_surgeon/finite_automata/RegexDFAState.hpp
-    src/log_surgeon/finite_automata/RegexDFAStatePair.hpp
-    src/log_surgeon/finite_automata/RegexDFAStateType.hpp
-    src/log_surgeon/finite_automata/RegexNFA.hpp
-    src/log_surgeon/finite_automata/RegexNFAState.hpp
-    src/log_surgeon/finite_automata/RegexNFAStateType.hpp
+    src/log_surgeon/finite_automata/Dfa.hpp
+    src/log_surgeon/finite_automata/DfaState.hpp
+    src/log_surgeon/finite_automata/DfaStatePair.hpp
+    src/log_surgeon/finite_automata/Nfa.hpp
+    src/log_surgeon/finite_automata/NfaState.hpp
     src/log_surgeon/finite_automata/RegisterHandler.hpp
+    src/log_surgeon/finite_automata/StateType.hpp
     src/log_surgeon/finite_automata/Tag.hpp
     src/log_surgeon/finite_automata/TaggedTransition.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.hpp

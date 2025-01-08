@@ -6,13 +6,13 @@
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 
 namespace log_surgeon {
-template <typename NFAStateType>
+template <typename TypedNfaState>
 class LexicalRule {
 public:
     // Constructor
     LexicalRule(
             uint32_t const variable_id,
-            std::unique_ptr<finite_automata::RegexAST<NFAStateType>> regex
+            std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> regex
     )
             : m_variable_id(variable_id),
               m_regex(std::move(regex)) {}
@@ -21,22 +21,22 @@ public:
      * Adds AST representing the lexical rule to the NFA
      * @param nfa
      */
-    auto add_to_nfa(finite_automata::RegexNFA<NFAStateType>* nfa) const -> void;
+    auto add_to_nfa(finite_automata::Nfa<TypedNfaState>* nfa) const -> void;
 
     [[nodiscard]] auto get_variable_id() const -> uint32_t { return m_variable_id; }
 
-    [[nodiscard]] auto get_regex() const -> finite_automata::RegexAST<NFAStateType>* {
+    [[nodiscard]] auto get_regex() const -> finite_automata::RegexAST<TypedNfaState>* {
         // TODO: make the returned pointer constant
         return m_regex.get();
     }
 
 private:
     uint32_t m_variable_id;
-    std::unique_ptr<finite_automata::RegexAST<NFAStateType>> m_regex;
+    std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> m_regex;
 };
 
-template <typename NFAStateType>
-void LexicalRule<NFAStateType>::add_to_nfa(finite_automata::RegexNFA<NFAStateType>* nfa) const {
+template <typename TypedNfaState>
+void LexicalRule<TypedNfaState>::add_to_nfa(finite_automata::Nfa<TypedNfaState>* nfa) const {
     auto* end_state = nfa->new_state();
     end_state->set_accepting(true);
     end_state->set_matching_variable_id(m_variable_id);

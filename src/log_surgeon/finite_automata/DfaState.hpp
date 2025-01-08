@@ -1,5 +1,5 @@
-#ifndef LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_STATE
-#define LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_STATE
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE
+#define LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE
 
 #include <cassert>
 #include <cstdint>
@@ -9,24 +9,22 @@
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/RegexDFAStateType.hpp>
+#include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-template <RegexDFAStateType state_type>
-class RegexDFAState;
+template <StateType state_type>
+class DfaState;
 
-using RegexDFAByteState = RegexDFAState<RegexDFAStateType::Byte>;
-using RegexDFAUTF8State = RegexDFAState<RegexDFAStateType::UTF8>;
+using ByteDfaState = DfaState<StateType::Byte>;
+using Utf8DfaState = DfaState<StateType::Utf8>;
 
-template <RegexDFAStateType state_type>
-class RegexDFAState {
+template <StateType state_type>
+class DfaState {
 public:
-    using Tree = UnicodeIntervalTree<RegexDFAState*>;
+    using Tree = UnicodeIntervalTree<DfaState*>;
 
-    RegexDFAState() {
-        std::fill(std::begin(m_bytes_transition), std::end(m_bytes_transition), nullptr);
-    }
+    DfaState() { std::fill(std::begin(m_bytes_transition), std::end(m_bytes_transition), nullptr); }
 
     auto add_matching_variable_id(uint32_t const variable_id) -> void {
         m_matching_variable_ids.push_back(variable_id);
@@ -40,7 +38,7 @@ public:
         return false == m_matching_variable_ids.empty();
     }
 
-    auto add_byte_transition(uint8_t const& byte, RegexDFAState* dest_state) -> void {
+    auto add_byte_transition(uint8_t const& byte, DfaState* dest_state) -> void {
         m_bytes_transition[byte] = dest_state;
     }
 
@@ -48,20 +46,19 @@ public:
      * @param character The character (byte or utf8) to transition on.
      * @return A pointer to the DFA state reached after transitioning on `character`.
      */
-    [[nodiscard]] auto next(uint32_t character) const -> RegexDFAState*;
+    [[nodiscard]] auto next(uint32_t character) const -> DfaState*;
 
 private:
     std::vector<uint32_t> m_matching_variable_ids;
-    RegexDFAState* m_bytes_transition[cSizeOfByte];
-    // NOTE: We don't need m_tree_transitions for the `state_type == RegexDFAStateType::Byte` case,
-    // so we use an empty class (`std::tuple<>`) in that case.
-    std::conditional_t<state_type == RegexDFAStateType::UTF8, Tree, std::tuple<>>
-            m_tree_transitions;
+    DfaState* m_bytes_transition[cSizeOfByte];
+    // NOTE: We don't need m_tree_transitions for the `state_type == StateType::Byte` case, so we
+    // use an empty class (`std::tuple<>`) in that case.
+    std::conditional_t<state_type == StateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
 
-template <RegexDFAStateType state_type>
-auto RegexDFAState<state_type>::next(uint32_t character) const -> RegexDFAState* {
-    if constexpr (RegexDFAStateType::Byte == state_type) {
+template <StateType state_type>
+auto DfaState<state_type>::next(uint32_t character) const -> DfaState* {
+    if constexpr (StateType::Byte == state_type) {
         return m_bytes_transition[character];
     } else {
         if (character < cSizeOfByte) {
@@ -78,4 +75,4 @@ auto RegexDFAState<state_type>::next(uint32_t character) const -> RegexDFAState*
 }
 }  // namespace log_surgeon::finite_automata
 
-#endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_DFA_STATE
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE

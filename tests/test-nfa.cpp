@@ -7,28 +7,28 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/Nfa.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
-#include <log_surgeon/finite_automata/RegexNFA.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
 using log_surgeon::cSizeOfByte;
-using log_surgeon::finite_automata::RegexNFAByteState;
+using log_surgeon::finite_automata::ByteNfaState;
 using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
 using std::string;
 using std::stringstream;
 using std::vector;
 
-using ByteLexicalRule = log_surgeon::LexicalRule<RegexNFAByteState>;
-using ByteNFA = log_surgeon::finite_automata::RegexNFA<RegexNFAByteState>;
-using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<RegexNFAByteState>;
-using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<RegexNFAByteState>;
-using RegexASTGroupByte = log_surgeon::finite_automata::RegexASTGroup<RegexNFAByteState>;
-using RegexASTLiteralByte = log_surgeon::finite_automata::RegexASTLiteral<RegexNFAByteState>;
+using ByteLexicalRule = log_surgeon::LexicalRule<ByteNfaState>;
+using ByteNfa = log_surgeon::finite_automata::Nfa<ByteNfaState>;
+using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<ByteNfaState>;
+using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<ByteNfaState>;
+using RegexASTGroupByte = log_surgeon::finite_automata::RegexASTGroup<ByteNfaState>;
+using RegexASTLiteralByte = log_surgeon::finite_automata::RegexASTLiteral<ByteNfaState>;
 using RegexASTMultiplicationByte
-        = log_surgeon::finite_automata::RegexASTMultiplication<RegexNFAByteState>;
-using RegexASTOrByte = log_surgeon::finite_automata::RegexASTOr<RegexNFAByteState>;
+        = log_surgeon::finite_automata::RegexASTMultiplication<ByteNfaState>;
+using RegexASTOrByte = log_surgeon::finite_automata::RegexASTOr<ByteNfaState>;
 
 TEST_CASE("Test NFA", "[NFA]") {
     Schema schema;
@@ -44,7 +44,7 @@ TEST_CASE("Test NFA", "[NFA]") {
     auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
-    ByteNFA const nfa{std::move(rules)};
+    ByteNfa const nfa{std::move(rules)};
 
     // Compare against expected output
     string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2},"
