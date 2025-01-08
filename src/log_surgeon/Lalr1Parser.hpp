@@ -77,7 +77,7 @@ public:
      */
     [[nodiscard]] auto token_cast(uint32_t i) const -> Token* {
         assert(i < cSizeOfAllChildren);
-        return &std::get<Token>(NonTerminal::m_all_children[m_children_start + i]);
+        return &std::get<Token>(m_all_children[m_children_start + i]);
     }
 
     /**
@@ -89,7 +89,7 @@ public:
      */
     [[nodiscard]] auto non_terminal_cast(uint32_t i) const -> NonTerminal* {
         assert(i < cSizeOfAllChildren);
-        return &std::get<NonTerminal>(NonTerminal::m_all_children[m_children_start + i]);
+        return &std::get<NonTerminal>(m_all_children[m_children_start + i]);
     }
 
     /**
@@ -274,7 +274,6 @@ protected:
      */
     auto report_error() -> std::string;
 
-    /* Lexer<TypedNfaState, TypedDfaState> m_lexer; */
     std::stack<MatchedSymbol> m_parse_stack_matches;
     std::stack<ItemSet*> m_parse_stack_states;
     ItemSet* m_root_item_set_ptr{nullptr};
