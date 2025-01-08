@@ -447,7 +447,6 @@ auto Lexer<TypedNfaState, TypedDfaState>::nfa_to_dfa(finite_automata::Nfa<TypedN
         unmarked_sets.pop();
         TypedDfaState* dfa_state = dfa_states.at(set);
         std::map<uint32_t, StateSet> ascii_transitions_map;
-        // map<Interval, StateSet> transitions_map;
         for (TypedNfaState const* s0 : set) {
             for (uint32_t i = 0; i < cSizeOfByte; i++) {
                 for (TypedNfaState* const s1 : s0->get_byte_transitions(i)) {
@@ -455,14 +454,6 @@ auto Lexer<TypedNfaState, TypedDfaState>::nfa_to_dfa(finite_automata::Nfa<TypedN
                     ascii_transitions_map[i].insert(closure.begin(), closure.end());
                 }
             }
-            // TODO: add this for the utf8 case
-            /*
-            for (const typename TypedNfaState::Tree::Data& data : s0->get_tree_transitions().all())
-            { for (TypedNfaState* const s1 : data.m_value) { StateSet closure = epsilon_closure(s1);
-                    transitions_map[data.m_interval].insert(closure.begin(), closure.end());
-                }
-            }
-            */
         }
         auto next_dfa_state
                 = [&dfa_states, &create_dfa_state](StateSet const& set) -> TypedDfaState* {
@@ -479,15 +470,6 @@ auto Lexer<TypedNfaState, TypedDfaState>::nfa_to_dfa(finite_automata::Nfa<TypedN
             TypedDfaState* dest_state = next_dfa_state(kv.second);
             dfa_state->add_byte_transition(kv.first, dest_state);
         }
-        // TODO: add this for the utf8 case
-        /*
-        for (const typename map<Interval, typename TypedNfaState::StateSet>::value_type& kv :
-             transitions_map)
-        {
-            TypedDfaState* dest_state = next_dfa_state(kv.second);
-            dfa_state->add_tree_transition(kv.first, dest_state);
-        }
-        */
     }
     return dfa;
 }
