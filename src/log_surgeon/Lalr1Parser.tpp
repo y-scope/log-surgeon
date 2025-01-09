@@ -516,7 +516,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_after_last_newline(
     std::string error_message_reversed;
     bool done = false;
     while (!parse_stack_matches.empty() && !done) {
-        auto top_symbol = std::move(parse_stack_matches.top());
+        MatchedSymbol top_symbol{std::move(parse_stack_matches.top())};
         parse_stack_matches.pop();
         std::visit(
                 Overloaded{
