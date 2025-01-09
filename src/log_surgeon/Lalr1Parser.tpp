@@ -572,7 +572,7 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::report_error() -> std::string {
     assert(m_next_token == std::nullopt);
     assert(!m_parse_stack_matches.empty());
-    auto top_symbol = std::move(m_parse_stack_matches.top());
+    MatchedSymbol top_symbol{std::move(m_parse_stack_matches.top())};
     m_parse_stack_matches.pop();
     auto line_num = get_line_num(top_symbol);
     auto token = std::get<Token>(top_symbol);
