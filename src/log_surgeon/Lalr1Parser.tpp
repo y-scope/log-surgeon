@@ -271,7 +271,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_first_sets() -> void {
     for (uint32_t const& s : m_terminals) {
         m_firsts.insert(std::pair<uint32_t, std::set<uint32_t>>(s, {s}));
     }
-    auto changed = true;
+    bool changed = true;
     while (changed) {
         changed = false;
         for (auto const& p : m_productions) {
@@ -329,7 +329,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_item_sets() -> void
             }
         }
     }
-    auto changed = true;
+    bool changed = true;
     while (changed) {
         changed = false;
         for (auto& kv : m_propagate_map) {
@@ -514,7 +514,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_after_last_newline(
         std::stack<MatchedSymbol>& parse_stack_matches
 ) -> std::string {
     std::string error_message_reversed;
-    auto done = false;
+    bool done = false;
     while (!parse_stack_matches.empty() && !done) {
         auto top_symbol = std::move(parse_stack_matches.top());
         parse_stack_matches.pop();
@@ -623,7 +623,7 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse(Reader& reader) -> NonTerminal {
     reset();
     m_parse_stack_states.push(m_root_item_set_ptr);
-    auto accept = false;
+    bool accept = false;
     while (true) {
         m_input_buffer.read_if_safe(reader);
         auto next_terminal = get_next_symbol();
