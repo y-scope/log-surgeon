@@ -271,7 +271,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_first_sets() -> void {
     for (uint32_t const& s : m_terminals) {
         m_firsts.insert(std::pair<uint32_t, std::set<uint32_t>>(s, {s}));
     }
-    auto changed = true;
+    bool changed = true;
     while (changed) {
         changed = false;
         for (auto const& p : m_productions) {
@@ -329,7 +329,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_item_sets() -> void
             }
         }
     }
-    auto changed = true;
+    bool changed = true;
     while (changed) {
         changed = false;
         for (auto& kv : m_propagate_map) {
@@ -405,7 +405,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_closure(ItemSet* it
             lookaheads.push_back(item.m_lookahead);
         }
         for (auto* const p : m_non_terminals.at(next_symbol)) {
-            for (auto const& l : lookaheads) {
+            for (auto const l : lookaheads) {
                 queue.emplace_back(p, 0, l);
             }
         }
@@ -514,9 +514,9 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_after_last_newline(
         std::stack<MatchedSymbol>& parse_stack_matches
 ) -> std::string {
     std::string error_message_reversed;
-    auto done = false;
+    bool done = false;
     while (!parse_stack_matches.empty() && !done) {
-        auto top_symbol = std::move(parse_stack_matches.top());
+        MatchedSymbol top_symbol{std::move(parse_stack_matches.top())};
         parse_stack_matches.pop();
         std::visit(
                 Overloaded{
@@ -552,8 +552,8 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_until_next_newline(Token* error_token
 ) -> std::string {
     std::string rest_of_line;
-    auto next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd);
-    auto next_has_newline = (error_token->to_string().find('\n') != std::string::npos)
+    bool next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd);
+    bool next_has_newline = (error_token->to_string().find('\n') != std::string::npos)
                             || (error_token->to_string().find('\r') != std::string::npos);
     while (!next_has_newline && !next_is_end_token) {
         auto token = get_next_symbol();
@@ -572,7 +572,7 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::report_error() -> std::string {
     assert(m_next_token == std::nullopt);
     assert(!m_parse_stack_matches.empty());
-    auto top_symbol = std::move(m_parse_stack_matches.top());
+    MatchedSymbol top_symbol{std::move(m_parse_stack_matches.top())};
     m_parse_stack_matches.pop();
     auto line_num = get_line_num(top_symbol);
     auto token = std::get<Token>(top_symbol);
@@ -623,7 +623,7 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse(Reader& reader) -> NonTerminal {
     reset();
     m_parse_stack_states.push(m_root_item_set_ptr);
-    auto accept = false;
+    bool accept = false;
     while (true) {
         m_input_buffer.read_if_safe(reader);
         auto next_terminal = get_next_symbol();
@@ -635,7 +635,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse(Reader& reader) -> NonTerm
         throw std::runtime_error(report_error());
     }
     assert(!m_parse_stack_matches.empty());
-    auto m = std::move(m_parse_stack_matches.top());
+    MatchedSymbol m{std::move(m_parse_stack_matches.top())};
     m_parse_stack_matches.pop();
     assert(m_parse_stack_matches.empty());
     return std::move(std::get<NonTerminal>(m));
