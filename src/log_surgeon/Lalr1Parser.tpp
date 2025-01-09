@@ -405,7 +405,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_closure(ItemSet* it
             lookaheads.push_back(item.m_lookahead);
         }
         for (auto* const p : m_non_terminals.at(next_symbol)) {
-            for (auto const& l : lookaheads) {
+            for (auto const l : lookaheads) {
                 queue.emplace_back(p, 0, l);
             }
         }
