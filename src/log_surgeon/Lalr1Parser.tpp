@@ -635,7 +635,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse(Reader& reader) -> NonTerm
         throw std::runtime_error(report_error());
     }
     assert(!m_parse_stack_matches.empty());
-    auto m = std::move(m_parse_stack_matches.top());
+    MatchedSymbol m{std::move(m_parse_stack_matches.top())};
     m_parse_stack_matches.pop();
     assert(m_parse_stack_matches.empty());
     return std::move(std::get<NonTerminal>(m));
