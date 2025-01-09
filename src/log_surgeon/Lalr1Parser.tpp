@@ -552,8 +552,8 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_until_next_newline(Token* error_token
 ) -> std::string {
     std::string rest_of_line;
-    auto next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd);
-    auto next_has_newline = (error_token->to_string().find('\n') != std::string::npos)
+    bool next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd);
+    bool next_has_newline = (error_token->to_string().find('\n') != std::string::npos)
                             || (error_token->to_string().find('\r') != std::string::npos);
     while (!next_has_newline && !next_is_end_token) {
         auto token = get_next_symbol();
