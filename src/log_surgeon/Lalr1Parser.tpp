@@ -348,7 +348,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_item_sets() -> void
     for (auto const& kv : m_lr0_item_sets) {
         auto lr1_item_set_ptr = std::make_unique<ItemSet>();
         for (auto const& l0_item : kv.second->m_kernel) {
-            for (auto const& lookahead : lookaheads[l0_item]) {
+            for (auto const lookahead : lookaheads[l0_item]) {
                 Item lr1_item(l0_item.m_production, l0_item.m_dot, lookahead);
                 lr1_item_set_ptr->m_kernel.insert(lr1_item);
             }
