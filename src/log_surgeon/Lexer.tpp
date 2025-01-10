@@ -305,7 +305,7 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lexer<TypedNfaState, TypedDfaState>::increase_buffer_capacity(ParserInputBuffer& input_buffer
 ) -> void {
     uint32_t old_storage_size{0};
-    auto flipped_static_buffer{false};
+    bool flipped_static_buffer{false};
     input_buffer.increase_capacity(old_storage_size, flipped_static_buffer);
     if (old_storage_size < input_buffer.storage().size()) {
         if (flipped_static_buffer) {
