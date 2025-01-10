@@ -42,7 +42,7 @@ auto LogEventView::reset() -> void {
         start = 1;
     }
     for (uint32_t i = start; i < m_log_output_buffer->pos(); i++) {
-        Token& token = m_log_output_buffer->get_mutable_token(i);
+        auto& token = m_log_output_buffer->get_mutable_token(i);
         raw_log += token.to_string_view();
     }
     return raw_log;
@@ -51,7 +51,7 @@ auto LogEventView::reset() -> void {
 auto LogEventView::get_logtype() const -> std::string {
     std::string logtype;
     for (uint32_t i = 1; i < m_log_output_buffer->pos(); i++) {
-        Token& token = m_log_output_buffer->get_mutable_token(i);
+        auto& token = m_log_output_buffer->get_mutable_token(i);
         if (token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenUncaughtString) {
             logtype += token.to_string_view();
         } else {

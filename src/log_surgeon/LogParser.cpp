@@ -43,7 +43,7 @@ auto LogParser::add_delimiters(unique_ptr<ParserAST> const& delimiters) -> void 
     }
 }
 
-void LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) {
+auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
     for (auto const& delimiters : schema_ast->m_delimiters) {
         add_delimiters(delimiters);
     }

@@ -72,8 +72,8 @@ public:
     // Currently needed for compression
     [[nodiscard]] auto get_mutable_active_buffer() -> Item* { return m_active_storage; }
 
-    void
-    copy(Item const* storage_to_copy_first, Item const* storage_to_copy_last, uint32_t offset) {
+    auto copy(Item const* storage_to_copy_first, Item const* storage_to_copy_last, uint32_t offset)
+            -> void {
         std::copy(storage_to_copy_first, storage_to_copy_last, m_active_storage + offset);
     }
 
