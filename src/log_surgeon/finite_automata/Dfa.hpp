@@ -48,7 +48,7 @@ private:
 template <typename TypedDfaState>
 template <typename TypedNfaState>
 Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
-    typedef std::set<TypedNfaState const*> StateSet;
+    using StateSet = std::set<TypedNfaState const*>;
 
     std::map<StateSet, TypedDfaState*> dfa_states;
     std::stack<StateSet> unmarked_sets;
@@ -76,14 +76,6 @@ Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
                 }
             }
             // TODO: add this for the utf8 case
-            /*
-            for (auto const& data : s0->get_tree_transitions().all()) {
-                for (auto* const s1 : data.m_value) {
-                    StateSet closure = s1->epsilon_closure();
-                    transitions_map[data.m_interval].insert(closure.begin(), closure.end());
-                }
-            }
-            */
         }
         auto next_dfa_state
                 = [&dfa_states, &create_dfa_state](StateSet const& set) -> TypedDfaState* {
@@ -101,12 +93,6 @@ Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
             dfa_state->add_byte_transition(kv.first, dest_state);
         }
         // TODO: add this for the utf8 case
-        /*
-        for (auto& kv : transitions_map) {
-            TypedDfaState* dest_state = next_dfa_state(kv.second);
-            dfa_state->add_tree_transition(kv.first, dest_state);
-        }
-        */
     }
 }
 
