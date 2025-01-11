@@ -2,6 +2,7 @@
 #define LOG_SURGEON_LEXER_TPP
 
 #include <cassert>
+#include <memory>
 #include <stack>
 #include <string>
 #include <vector>
@@ -378,7 +379,7 @@ template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::generate() {
     finite_automata::Nfa<TypedNfaState> nfa{std::move(m_rules)};
     // TODO: DFA ignores tags. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
-    m_dfa = nfa_to_dfa(nfa);
+    m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState>>(std::move(nfa));
     auto const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
         if (state->next(i) != nullptr) {
@@ -387,91 +388,6 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
             m_is_first_char[i] = false;
         }
     }
-}
-
-template <typename TypedNfaState, typename TypedDfaState>
-auto Lexer<TypedNfaState, TypedDfaState>::epsilon_closure(TypedNfaState const* state_ptr
-) -> std::set<TypedNfaState const*> {
-    std::set<TypedNfaState const*> closure_set;
-    std::stack<TypedNfaState const*> stack;
-    stack.push(state_ptr);
-    while (!stack.empty()) {
-        auto const* current_state = stack.top();
-        stack.pop();
-        if (false == closure_set.insert(current_state).second) {
-            continue;
-        }
-        for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-            stack.push(dest_state);
-        }
-
-        // TODO: currently treat tagged transitions as epsilon transitions
-        for (auto const& positive_tagged_start_transition :
-             current_state->get_positive_tagged_start_transitions())
-        {
-            stack.push(positive_tagged_start_transition.get_dest_state());
-        }
-        auto const& optional_positive_tagged_end_transition
-                = current_state->get_positive_tagged_end_transition();
-        if (optional_positive_tagged_end_transition.has_value()) {
-            stack.push(optional_positive_tagged_end_transition.value().get_dest_state());
-        }
-
-        auto const& optional_negative_tagged_transition
-                = current_state->get_negative_tagged_transition();
-        if (optional_negative_tagged_transition.has_value()) {
-            stack.push(optional_negative_tagged_transition.value().get_dest_state());
-        }
-    }
-    return closure_set;
-}
-
-template <typename TypedNfaState, typename TypedDfaState>
-auto Lexer<TypedNfaState, TypedDfaState>::nfa_to_dfa(finite_automata::Nfa<TypedNfaState>& nfa
-) -> std::unique_ptr<finite_automata::Dfa<TypedDfaState>> {
-    typedef std::set<TypedNfaState const*> StateSet;
-    auto dfa = std::make_unique<finite_automata::Dfa<TypedDfaState>>();
-    std::map<StateSet, TypedDfaState*> dfa_states;
-    std::stack<StateSet> unmarked_sets;
-    auto create_dfa_state
-            = [&dfa, &dfa_states, &unmarked_sets](StateSet const& set) -> TypedDfaState* {
-        auto* state = dfa->new_state(set);
-        dfa_states[set] = state;
-        unmarked_sets.push(set);
-        return state;
-    };
-    auto start_set = epsilon_closure(nfa.get_root());
-    create_dfa_state(start_set);
-    while (!unmarked_sets.empty()) {
-        auto set = unmarked_sets.top();
-        unmarked_sets.pop();
-        auto* dfa_state = dfa_states.at(set);
-        std::map<uint32_t, StateSet> ascii_transitions_map;
-        for (TypedNfaState const* s0 : set) {
-            for (uint32_t i = 0; i < cSizeOfByte; i++) {
-                for (TypedNfaState* const s1 : s0->get_byte_transitions(i)) {
-                    StateSet closure = epsilon_closure(s1);
-                    ascii_transitions_map[i].insert(closure.begin(), closure.end());
-                }
-            }
-        }
-        auto next_dfa_state
-                = [&dfa_states, &create_dfa_state](StateSet const& set) -> TypedDfaState* {
-            TypedDfaState* state{nullptr};
-            auto it = dfa_states.find(set);
-            if (it == dfa_states.end()) {
-                state = create_dfa_state(set);
-            } else {
-                state = it->second;
-            }
-            return state;
-        };
-        for (typename std::map<uint32_t, StateSet>::value_type const& kv : ascii_transitions_map) {
-            auto* dest_state = next_dfa_state(kv.second);
-            dfa_state->add_byte_transition(kv.first, dest_state);
-        }
-    }
-    return dfa;
 }
 }  // namespace log_surgeon
 

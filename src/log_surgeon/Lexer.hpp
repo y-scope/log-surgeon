@@ -28,14 +28,6 @@ public:
             = {(uint32_t)SymbolId::TokenUncaughtString};
 
     /**
-     * Generate a DFA from an NFA
-     * @param finite_automata::Nfa<TypedNfaState> nfa
-     * @return std::unique_ptr<finite_automata::Dfa<TypedDfaState>>
-     */
-    static auto nfa_to_dfa(finite_automata::Nfa<TypedNfaState>& nfa
-    ) -> std::unique_ptr<finite_automata::Dfa<TypedDfaState>>;
-
-    /**
      * Add a delimiters line from the schema to the lexer
      * @param delimiters
      */
@@ -134,12 +126,6 @@ public:
     std::unordered_map<uint32_t, std::string> m_id_symbol;
 
 private:
-    /**
-     * Return epsilon_closure over m_epsilon_transitions
-     * @return
-     */
-    static auto epsilon_closure(TypedNfaState const* state_ptr) -> std::set<TypedNfaState const*>;
-
     /**
      * Get next character from the input buffer
      * @return unsigned char

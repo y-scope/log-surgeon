@@ -7,11 +7,15 @@
 #include <vector>
 
 #include <log_surgeon/finite_automata/DfaStatePair.hpp>
+#include <log_surgeon/finite_automata/Nfa.hpp>
 
 namespace log_surgeon::finite_automata {
 template <typename TypedDfaState>
 class Dfa {
 public:
+    template <typename NfaStateType>
+    explicit Dfa(Nfa<NfaStateType> nfa);
+
     /**
      * Creates a new DFA state based on a set of NFA states and adds it to `m_states`.
      * @param nfa_state_set The set of NFA states represented by this DFA state.
@@ -35,6 +39,57 @@ public:
 private:
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
 };
+
+template <typename TypedDfaState>
+template <typename TypedNfaState>
+Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
+    using StateSet = std::set<TypedNfaState const*>;
+
+    std::map<StateSet, TypedDfaState*> dfa_states;
+    std::stack<StateSet> unmarked_sets;
+    auto create_dfa_state
+            = [this, &dfa_states, &unmarked_sets](StateSet const& set) -> TypedDfaState* {
+        auto* state = new_state(set);
+        dfa_states[set] = state;
+        unmarked_sets.push(set);
+        return state;
+    };
+
+    auto start_set = nfa.get_root()->epsilon_closure();
+    create_dfa_state(start_set);
+    while (false == unmarked_sets.empty()) {
+        auto set = unmarked_sets.top();
+        unmarked_sets.pop();
+        auto* dfa_state = dfa_states.at(set);
+        std::map<uint32_t, StateSet> ascii_transitions_map;
+        // map<Interval, StateSet> transitions_map;
+        for (auto const* s0 : set) {
+            for (uint32_t i = 0; i < cSizeOfByte; i++) {
+                for (auto* const s1 : s0->get_byte_transitions(i)) {
+                    StateSet closure = s1->epsilon_closure();
+                    ascii_transitions_map[i].insert(closure.begin(), closure.end());
+                }
+            }
+            // TODO: add this for the utf8 case
+        }
+        auto next_dfa_state
+                = [&dfa_states, &create_dfa_state](StateSet const& set) -> TypedDfaState* {
+            TypedDfaState* state;
+            auto it = dfa_states.find(set);
+            if (it == dfa_states.end()) {
+                state = create_dfa_state(set);
+            } else {
+                state = it->second;
+            }
+            return state;
+        };
+        for (auto const& kv : ascii_transitions_map) {
+            auto* dest_state = next_dfa_state(kv.second);
+            dfa_state->add_byte_transition(kv.first, dest_state);
+        }
+        // TODO: add this for the utf8 case
+    }
+}
 
 template <typename TypedDfaState>
 template <typename TypedNfaState>
