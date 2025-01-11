@@ -254,19 +254,22 @@ TEST_CASE("Test the Lexer class", "[Lexer]") {
         lexer.add_rule(lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
     }
     lexer.generate();
-
-    log_surgeon::ParserInputBuffer m_input_buffer;
+    
+    log_surgeon::ParserInputBuffer input_buffer;
     string token_string{cTokenString1};
-    m_input_buffer.set_storage(token_string.data(), token_string.size(), 0, true);
+    input_buffer.set_storage(token_string.data(), token_string.size(), 0, true);
+    
+    lexer.reset();
+    lexer.prepend_start_of_file_char(input_buffer);
     log_surgeon::Token token1;
-    auto error_code{lexer.scan(m_input_buffer, token1)};
+    auto error_code{lexer.scan(input_buffer, token1)};
     REQUIRE(log_surgeon::ErrorCode::Success == error_code);
     REQUIRE(nullptr != token1.m_type_ids_ptr);
     REQUIRE(1 == token1.m_type_ids_ptr->size());
     REQUIRE(cVarName == lexer.m_id_symbol[token1.m_type_ids_ptr->at(0)]);
     REQUIRE(cTokenString1 == token1.to_string_view());
 
-    error_code = lexer.scan(m_input_buffer, token1);
+    error_code = lexer.scan(input_buffer, token1);
     REQUIRE(log_surgeon::ErrorCode::Success == error_code);
     REQUIRE(nullptr != token1.m_type_ids_ptr);
     REQUIRE(1 == token1.m_type_ids_ptr->size());
@@ -274,17 +277,18 @@ TEST_CASE("Test the Lexer class", "[Lexer]") {
     REQUIRE(token1.to_string_view().empty());
 
     lexer.reset();
+    lexer.prepend_start_of_file_char(input_buffer);
     log_surgeon::Token token2;
     token_string = cTokenString2;
-    m_input_buffer.set_storage(token_string.data(), token_string.size(), 0, true);
-    error_code = lexer.scan(m_input_buffer, token2);
+    input_buffer.set_storage(token_string.data(), token_string.size(), 0, true);
+    error_code = lexer.scan(input_buffer, token2);
     REQUIRE(log_surgeon::ErrorCode::Success == error_code);
     REQUIRE(nullptr != token2.m_type_ids_ptr);
     REQUIRE(1 == token2.m_type_ids_ptr->size());
     REQUIRE(log_surgeon::cTokenUncaughtString == lexer.m_id_symbol[token2.m_type_ids_ptr->at(0)]);
     REQUIRE(cTokenString2 == token2.to_string_view());
 
-    error_code = lexer.scan(m_input_buffer, token2);
+    error_code = lexer.scan(input_buffer, token2);
     REQUIRE(log_surgeon::ErrorCode::Success == error_code);
     REQUIRE(nullptr != token2.m_type_ids_ptr);
     REQUIRE(1 == token2.m_type_ids_ptr->size());
