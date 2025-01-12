@@ -123,6 +123,43 @@ public:
         return m_dfa;
     }
 
+    [[nodiscard]] auto get_tag_ids_for_symbol(std::string& symbol
+    ) const -> std::optional<std::pair<uint32_t, uint32_t>> {
+        auto const var_id = m_symbol_id.find(symbol);
+        if(m_symbol_id.end() == var_id) {
+            return std::nullopt;
+        }
+        auto const tag_ids = m_var_id_to_tag_ids.find(var_id->second);
+        if (m_var_id_to_tag_ids.end() == tag_ids) {
+            return std::nullopt;
+        }
+        return tag_ids->second;
+    }
+
+    [[nodiscard]] auto get_register_for_tag_id(uint32_t const tag_id
+    ) const -> std::optional<finite_automata::RegisterHandler::register_id_t> {
+        auto const it = m_tag_to_register_id.find(tag_id);
+        if (m_tag_to_register_id.end() != it) {
+            return it->second;
+        }
+        return std::nullopt;
+    }
+
+    [[nodiscard]] auto get_registers_for_symbol(std::string const& symbol) const
+            -> std::optional<std::pair<
+                    finite_automata::RegisterHandler::register_id_t,
+                    finite_automata::RegisterHandler::register_id_t>> {
+        auto const tag_ids = get_tag_ids_for_symbol(symbol);
+        if(tag_ids.has_value()) {
+            auto const start_reg = get_register_for_tag_id(tag_ids.value().first());
+            auto const end_reg = get_register_for_tag_id(tag_ids.value().second());
+            if(start_reg.has_value() && end_reg.has_value()) {
+                return std::make_pair(start_reg.value(), end_reg.value());
+            }
+        }
+        return std::nullopt;
+    }
+
     std::unordered_map<std::string, uint32_t> m_symbol_id;
     std::unordered_map<uint32_t, std::string> m_id_symbol;
 
@@ -149,8 +186,10 @@ private:
     std::unique_ptr<finite_automata::Dfa<TypedDfaState>> m_dfa;
     bool m_asked_for_more_data{false};
     TypedDfaState const* m_prev_state{nullptr};
-    std::unordered_map<uint32_t, uint32_t> m_symbol_to_tag_id;
-    std::unordered_map<uint32_t, finite_automata::RegisterHandler::register_id_t> m_tag_to_register_id;
+    // TODO: maybe optimize by using vectors for performance
+    std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> m_var_id_to_tag_ids;
+    std::unordered_map<uint32_t, finite_automata::RegisterHandler::register_id_t>
+            m_tag_to_register_id;
 };
 
 namespace lexers {

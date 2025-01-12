@@ -307,7 +307,6 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
 
     log_surgeon::Schema schema;
     schema.add_variable(cVarSchema, -1);
-
     log_surgeon::lexers::ByteLexer lexer;
     lexer.add_delimiters(cDelimiters);
 
@@ -320,7 +319,6 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
 
     lexer.m_symbol_id[log_surgeon::cTokenEnd] = (uint32_t)SymbolId::TokenEnd;
     lexer.m_symbol_id[log_surgeon::cTokenUncaughtString] = (uint32_t)SymbolId::TokenUncaughtString;
-
     lexer.m_id_symbol[(uint32_t)SymbolId::TokenEnd] = log_surgeon::cTokenEnd;
     lexer.m_id_symbol[(uint32_t)SymbolId::TokenUncaughtString] = log_surgeon::cTokenUncaughtString;
 
@@ -340,9 +338,15 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
         lexer.add_rule(lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
     }
     lexer.generate();
+
+    string varName{cVarName};
+    auto tag_ids{lexer.get_tag_ids_for_symbol(varName)};
+    REQUIRE(tag_ids.has_value());
+    REQUIRE(std::make_pair(2u,3u) == tag_ids.value());
+    // TODO: add check for get_register_for_tag_id and get_registers_for_symbol when determinzation
+    // is implemented.
     
     log_surgeon::ParserInputBuffer input_buffer;
-    
     lexer.reset();
     lexer.prepend_start_of_file_char(input_buffer);
     log_surgeon::Token token1;
@@ -379,5 +383,5 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     REQUIRE(log_surgeon::cTokenUncaughtString == lexer.m_id_symbol[token3.m_type_ids_ptr->at(0)]);
     REQUIRE(cTokenString3 == token3.to_string_view());
 
-    
+    // TODO: add check for register values when simulation is implemented.
 }
