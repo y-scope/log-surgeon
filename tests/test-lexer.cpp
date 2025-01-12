@@ -212,7 +212,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     }
 }
 
-TEST_CASE("Test the Lexer class", "[Lexer]") {
+TEST_CASE("Test basic Lexer", "[Lexer]") {
     vector<uint32_t> const cDelimiters{' ', '\n'};
     constexpr string_view cVarName{"myVar"};
     constexpr string_view cVarSchema{"myVar:123"};
@@ -294,4 +294,90 @@ TEST_CASE("Test the Lexer class", "[Lexer]") {
     REQUIRE(1 == token2.m_type_ids_ptr->size());
     REQUIRE(log_surgeon::cTokenEnd == lexer.m_id_symbol[token2.m_type_ids_ptr->at(0)]);
     REQUIRE(token2.to_string_view().empty());
+}
+
+
+TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
+    vector<uint32_t> const cDelimiters{' ', '\n'};
+    constexpr string_view cVarName{"myVar"};
+    constexpr string_view cVarSchema{"myVar:userID=(?<uid>123)"};
+    constexpr string_view cTokenString1{"userID=123"};
+    constexpr string_view cTokenString2{"userID=234"};
+    constexpr string_view cTokenString3{"123"};
+
+    log_surgeon::Schema schema;
+    schema.add_variable(cVarSchema, -1);
+
+    log_surgeon::lexers::ByteLexer lexer;
+    lexer.add_delimiters(cDelimiters);
+
+    vector<uint32_t> delimiters;
+    for (uint32_t i = 0; i < log_surgeon::cSizeOfByte; i++) {
+        if (lexer.is_delimiter(i)) {
+            delimiters.push_back(i);
+        }
+    }
+
+    lexer.m_symbol_id[log_surgeon::cTokenEnd] = (uint32_t)SymbolId::TokenEnd;
+    lexer.m_symbol_id[log_surgeon::cTokenUncaughtString] = (uint32_t)SymbolId::TokenUncaughtString;
+
+    lexer.m_id_symbol[(uint32_t)SymbolId::TokenEnd] = log_surgeon::cTokenEnd;
+    lexer.m_id_symbol[(uint32_t)SymbolId::TokenUncaughtString] = log_surgeon::cTokenUncaughtString;
+
+    auto const schema_ast{schema.release_schema_ast_ptr()};
+    for (auto const& m_schema_var : schema_ast->m_schema_vars) {
+        // For log-specific lexing: modify variable regex to contain a delimiter at the start.
+        auto delimiter_group{make_unique<RegexASTGroupByte>(RegexASTGroupByte(delimiters))};
+        auto* rule = dynamic_cast<SchemaVarAST*>(m_schema_var.get());
+        rule->m_regex_ptr = make_unique<RegexASTCatByte>(
+                std::move(delimiter_group),
+                std::move(rule->m_regex_ptr)
+        );
+        if (lexer.m_symbol_id.find(rule->m_name) == lexer.m_symbol_id.end()) {
+            lexer.m_symbol_id[rule->m_name] = lexer.m_symbol_id.size();
+            lexer.m_id_symbol[lexer.m_symbol_id[rule->m_name]] = rule->m_name;
+        }
+        lexer.add_rule(lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
+    }
+    lexer.generate();
+    
+    log_surgeon::ParserInputBuffer input_buffer;
+    
+    lexer.reset();
+    lexer.prepend_start_of_file_char(input_buffer);
+    log_surgeon::Token token1;
+    string token_string{cTokenString1};
+    input_buffer.set_storage(token_string.data(), token_string.size(), 0, true);
+    auto error_code{lexer.scan(input_buffer, token1)};
+    REQUIRE(log_surgeon::ErrorCode::Success == error_code);
+    REQUIRE(nullptr != token1.m_type_ids_ptr);
+    REQUIRE(1 == token1.m_type_ids_ptr->size());
+    REQUIRE(cVarName == lexer.m_id_symbol[token1.m_type_ids_ptr->at(0)]);
+    REQUIRE(cTokenString1 == token1.to_string_view());
+
+    lexer.reset();
+    lexer.prepend_start_of_file_char(input_buffer);
+    log_surgeon::Token token2;
+    token_string = cTokenString2;
+    input_buffer.set_storage(token_string.data(), token_string.size(), 0, true);
+    error_code = lexer.scan(input_buffer, token2);
+    REQUIRE(log_surgeon::ErrorCode::Success == error_code);
+    REQUIRE(nullptr != token2.m_type_ids_ptr);
+    REQUIRE(1 == token2.m_type_ids_ptr->size());
+    REQUIRE(log_surgeon::cTokenUncaughtString == lexer.m_id_symbol[token2.m_type_ids_ptr->at(0)]);
+    REQUIRE(cTokenString2 == token2.to_string_view());
+
+    lexer.reset();
+    lexer.prepend_start_of_file_char(input_buffer);
+    log_surgeon::Token token3;
+    token_string = cTokenString3;
+    input_buffer.set_storage(token_string.data(), token_string.size(), 0, true);
+    error_code = lexer.scan(input_buffer, token3);
+    REQUIRE(log_surgeon::ErrorCode::Success == error_code);
+    REQUIRE(nullptr != token3.m_type_ids_ptr);
+    REQUIRE(1 == token3.m_type_ids_ptr->size());
+    REQUIRE(log_surgeon::cTokenUncaughtString == lexer.m_id_symbol[token3.m_type_ids_ptr->at(0)]);
+    REQUIRE(cTokenString3 == token3.to_string_view());
+
+    
 }
