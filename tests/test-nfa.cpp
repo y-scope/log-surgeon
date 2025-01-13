@@ -137,13 +137,14 @@ TEST_CASE("Test NFA", "[NFA]") {
                                "negative_tagged_transition={}\n";
 
     // Compare expected and actual line-by-line
-    auto const actual_serialized_nfa = nfa.serialize();
-    stringstream ss_actual{actual_serialized_nfa};
+    auto const optional_actual_serialized_nfa = nfa.serialize();
+    REQUIRE(optional_actual_serialized_nfa.has_value());
+    stringstream ss_actual{optional_actual_serialized_nfa.value()};
     stringstream ss_expected{expected_serialized_nfa};
     string actual_line;
     string expected_line;
 
-    CAPTURE(actual_serialized_nfa);
+    CAPTURE(optional_actual_serialized_nfa.value());
     CAPTURE(expected_serialized_nfa);
     while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
         REQUIRE(actual_line == expected_line);

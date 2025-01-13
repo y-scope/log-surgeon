@@ -9,8 +9,8 @@ set(
         ../src/log_surgeon/finite_automata/PrefixTree.hpp
         ../src/log_surgeon/finite_automata/RegexAST.hpp
         ../src/log_surgeon/finite_automata/RegisterHandler.hpp
+        ../src/log_surgeon/finite_automata/SpontaneousTransition.hpp
         ../src/log_surgeon/finite_automata/StateType.hpp
-        ../src/log_surgeon/finite_automata/TaggedTransition.hpp
         ../src/log_surgeon/Lalr1Parser.cpp
         ../src/log_surgeon/Lalr1Parser.hpp
         ../src/log_surgeon/Lalr1Parser.tpp

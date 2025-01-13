@@ -103,8 +103,8 @@ set(SOURCE_FILES
     src/log_surgeon/finite_automata/PrefixTree.hpp
     src/log_surgeon/finite_automata/RegexAST.hpp
     src/log_surgeon/finite_automata/RegisterHandler.hpp
+    src/log_surgeon/finite_automata/SpontaneousTransition.hpp
     src/log_surgeon/finite_automata/StateType.hpp
-    src/log_surgeon/finite_automata/TaggedTransition.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.tpp
     )
