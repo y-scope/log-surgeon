@@ -1,5 +1,5 @@
-#ifndef LOG_SURGEON_FINITE_AUTOMATA_TAGGED_TRANSITION
-#define LOG_SURGEON_FINITE_AUTOMATA_TAGGED_TRANSITION
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_SPONTANEOUS_TRANSITION_HPP
+#define LOG_SURGEON_FINITE_AUTOMATA_SPONTANEOUS_TRANSITION_HPP
 
 #include <algorithm>
 #include <cstdint>
@@ -59,10 +59,10 @@ public:
     }
 
 private:
-    TransitionOperation m_transition_op;
-    std::vector<tag_id_t> m_tag_ids;
+    TransitionOperation const m_transition_op;
+    std::vector<tag_id_t> const m_tag_ids;
     TypedNfaState const* m_dest_state;
 };
 }  // namespace log_surgeon::finite_automata
 
-#endif  // LOG_SURGEON_FINITE_AUTOMATA_TAGGED_TRANSITION
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_SPONTANEOUS_TRANSITION_HPP

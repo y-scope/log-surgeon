@@ -221,7 +221,7 @@ auto Nfa<TypedNfaState>::serialize() const -> std::optional<std::string> {
     std::vector<std::string> serialized_states;
     for (auto const* state : traversal_order) {
         auto const optional_serialized_state{state->serialize(state_ids)};
-        if(false == optional_serialized_state.has_value()) {
+        if (false == optional_serialized_state.has_value()) {
             return std::nullopt;
         }
         serialized_states.emplace_back(state->serialize(state_ids).value());

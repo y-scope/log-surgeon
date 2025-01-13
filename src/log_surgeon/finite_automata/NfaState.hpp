@@ -88,7 +88,7 @@ public:
         return m_matching_variable_id;
     }
 
-    [[nodiscard]] auto get_spotaneous_transitions(
+    [[nodiscard]] auto get_spontaneous_transitions(
     ) const -> std::vector<SpontaneousTransition<NfaState>> const& {
         return m_spontaneous_transitions;
     }
@@ -168,7 +168,7 @@ auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
         if (false == closure_set.insert(current_state).second) {
             continue;
         }
-        for (auto const& spotaneous_transition : current_state->get_spotaneous_transitions()) {
+        for (auto const& spotaneous_transition : current_state->get_spontaneous_transitions()) {
             if (TransitionOperation::None == spotaneous_transition.get_transition_operation()) {
                 stack.push(spotaneous_transition.get_dest_state());
             }
@@ -195,14 +195,11 @@ auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_
 
     std::vector<std::string> serialized_spontaneous_transitions;
     for (auto const& spontaneous_transition : m_spontaneous_transitions) {
-        auto const optional_serialized_transition
-                = spontaneous_transition.serialize(state_ids);
-        if(false == optional_serialized_transition.has_value()) {
+        auto const optional_serialized_transition = spontaneous_transition.serialize(state_ids);
+        if (false == optional_serialized_transition.has_value()) {
             return std::nullopt;
         }
-        serialized_spontaneous_transitions.emplace_back(
-                optional_serialized_transition.value()
-        );
+        serialized_spontaneous_transitions.emplace_back(optional_serialized_transition.value());
     }
 
     return fmt::format(

@@ -86,13 +86,11 @@ public:
         return m_subtree_captures;
     }
 
-    auto set_subtree_captures(std::vector<Capture const*> subtree_captures
-    ) -> void {
+    auto set_subtree_captures(std::vector<Capture const*> subtree_captures) -> void {
         m_subtree_captures = std::move(subtree_captures);
     }
 
-    auto add_subtree_captures(std::vector<Capture const*> const& subtree_captures
-    ) -> void {
+    auto add_subtree_captures(std::vector<Capture const*> const& subtree_captures) -> void {
         m_subtree_captures.insert(
                 m_subtree_captures.end(),
                 subtree_captures.cbegin(),
@@ -656,9 +654,7 @@ public:
                       nullptr == capture ? throw std::invalid_argument("Capture cannot be null")
                                          : std::move(capture)
               } {
-        RegexAST<TypedNfaState>::set_subtree_captures(
-                m_group_regex_ast->get_subtree_captures()
-        );
+        RegexAST<TypedNfaState>::set_subtree_captures(m_group_regex_ast->get_subtree_captures());
         RegexAST<TypedNfaState>::add_subtree_captures({m_capture.get()});
     }
 
@@ -784,8 +780,7 @@ RegexASTOr<TypedNfaState>::RegexASTOr(
     m_left->set_negative_captures(m_right->get_subtree_captures());
     m_right->set_negative_captures(m_left->get_subtree_captures());
     RegexAST<TypedNfaState>::set_subtree_captures(m_left->get_subtree_captures());
-    RegexAST<TypedNfaState>::add_subtree_captures(m_right->get_subtree_captures()
-    );
+    RegexAST<TypedNfaState>::add_subtree_captures(m_right->get_subtree_captures());
 }
 
 template <typename TypedNfaState>
@@ -813,8 +808,7 @@ RegexASTCat<TypedNfaState>::RegexASTCat(
         : m_left(std::move(left)),
           m_right(std::move(right)) {
     RegexAST<TypedNfaState>::set_subtree_captures(m_left->get_subtree_captures());
-    RegexAST<TypedNfaState>::add_subtree_captures(m_right->get_subtree_captures()
-    );
+    RegexAST<TypedNfaState>::add_subtree_captures(m_right->get_subtree_captures());
 }
 
 template <typename TypedNfaState>
@@ -847,8 +841,7 @@ RegexASTMultiplication<TypedNfaState>::RegexASTMultiplication(
         : m_operand(std::move(operand)),
           m_min(min),
           m_max(max) {
-    RegexAST<TypedNfaState>::set_subtree_captures(m_operand->get_subtree_captures(
-    ));
+    RegexAST<TypedNfaState>::set_subtree_captures(m_operand->get_subtree_captures());
 }
 
 template <typename TypedNfaState>

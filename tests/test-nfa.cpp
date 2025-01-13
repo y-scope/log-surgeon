@@ -49,10 +49,7 @@ TEST_CASE("Test NFA", "[NFA]") {
     // Compare against expected output
     // capture order(tags in brackets): letter1(0,1), letter2(2,3), letter(4,5), containerID(6,7)
     string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2},"
-                                     "epsilon_transitions={},"
-                                     "positive_tagged_start_transitions={},"
-                                     "positive_tagged_end_transitions={},"
-                                     "negative_tagged_transition={}\n";
+                                     "spontaneous_transition={}\n";
     expected_serialized_nfa += "1:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_start_transitions={3[4]},"
