@@ -169,10 +169,7 @@ auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
             continue;
         }
         for (auto const& spontaneous_transition : current_state->get_spontaneous_transitions()) {
-            if (TransitionOperation::None == spontaneous_transition.get_transition_operation()) {
-                stack.push(spontaneous_transition.get_dest_state());
-            }
-            // TODO: currently only handle transitions that don't modify tags.
+            stack.push(spontaneous_transition.get_dest_state());
         }
     }
     return closure_set;

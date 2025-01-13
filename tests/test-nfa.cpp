@@ -51,87 +51,39 @@ TEST_CASE("Test NFA", "[NFA]") {
     string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2},"
                                      "spontaneous_transition={}\n";
     expected_serialized_nfa += "1:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={3[4]},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={3[set:4]}\n";
     expected_serialized_nfa += "2:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={4[0,1,2,3,4,5,6,7]}\n";
+                               "spontaneous_transition={4[negate:0,1,2,3,4,5,6,7]}\n";
     expected_serialized_nfa += "3:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={5[0],6[2]},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={5[set:0],6[set:2]}\n";
     expected_serialized_nfa += "4:accepting_tag=0,byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={}\n";
     expected_serialized_nfa += "5:byte_transitions={a-->7,b-->7},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={}\n";
     expected_serialized_nfa += "6:byte_transitions={c-->8,d-->8},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={}\n";
     expected_serialized_nfa += "7:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={9[1]},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={9[set:1]}\n";
     expected_serialized_nfa += "8:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={10[3]},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={10[set:3]}\n";
     expected_serialized_nfa += "9:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={11[2,3]}\n";
+                               "spontaneous_transition={11[negate:2,3]}\n";
     expected_serialized_nfa += "10:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={11[0,1]}\n";
+                               "spontaneous_transition={11[negate:0,1]}\n";
     expected_serialized_nfa += "11:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={12[5]},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={12[set:5]}\n";
     expected_serialized_nfa += "12:byte_transitions={B-->13},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={}\n";
     expected_serialized_nfa += "13:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={14[6]},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={14[set:6]}\n";
     expected_serialized_nfa += "14:byte_transitions={0-->15,1-->15,2-->15,3-->15,4-->15,5-->15,6-->"
                                "15,7-->15,8-->15,9-->15},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={}\n";
     expected_serialized_nfa += "15:byte_transitions={0-->15,1-->15,2-->15,3-->15,4-->15,5-->15,6-->"
                                "15,7-->15,8-->15,9-->15},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={16[7]},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={16[set:7]}\n";
     expected_serialized_nfa += "16:byte_transitions={C-->4},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={}\n";
 
     // Compare expected and actual line-by-line
     auto const optional_actual_serialized_nfa = nfa.serialize();

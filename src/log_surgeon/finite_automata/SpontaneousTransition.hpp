@@ -55,7 +55,18 @@ public:
         if (state_id_it == state_ids.end()) {
             return std::nullopt;
         }
-        return fmt::format("{}[{}]", state_id_it->second, fmt::join(m_tag_ids, ","));
+        std::string transition_op_string;
+        if (TransitionOperation::SetTags == m_transition_op) {
+            transition_op_string = "set:";
+        } else if (TransitionOperation::NegateTags == m_transition_op) {
+            transition_op_string = "negate:";
+        }
+        return fmt::format(
+                "{}[{}{}]",
+                state_id_it->second,
+                transition_op_string,
+                fmt::join(m_tag_ids, ",")
+        );
     }
 
 private:

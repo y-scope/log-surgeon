@@ -205,6 +205,9 @@ auto Nfa<TypedNfaState>::get_bfs_traversal_order() const -> std::vector<TypedNfa
                 add_to_queue_and_visited(dest_state);
             }
         }
+        for (auto const& spontaneous_transition : current_state->get_spontaneous_transitions()) {
+            add_to_queue_and_visited(spontaneous_transition.get_dest_state());
+        }
     }
     return visited_order;
 }
