@@ -33,9 +33,9 @@ class Nfa;
  * Unique capture pointers are used to differentiate each capture group node. Every node will
  * maintain two sets of captures:
  * 1. `m_subtree_positive_captures`: the set of captures matched by all capture groups within the
- * subtree rooted at this node.
+ *    subtree rooted at this node.
  * 2. `m_negative_captures`: the set of captures that are guaranteed to be unmatched when traversing
- * this node, as the alternative path contains these captures.
+ *    this node, as the alternative path contains these captures.
  *
  * ASTs built using this class are assumed to be constructed in a bottom-up manner, where all
  * descendant nodes are created first.
