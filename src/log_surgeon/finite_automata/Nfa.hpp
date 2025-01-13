@@ -92,6 +92,11 @@ public:
 
     auto get_root() -> TypedNfaState* { return m_root; }
 
+    [[nodiscard]] auto get_capture_to_tag_ids(
+    ) const -> std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> {
+        return m_capture_to_tag_ids;
+    }
+
 private:
     /**
      * Creates start and end tags for the specified capture if they don't currently exist.
@@ -114,7 +119,7 @@ private:
 
     std::vector<std::unique_ptr<TypedNfaState>> m_states;
     // TODO: Lexer currently enforces unique naming across capture groups. However, this limits use
-    // cases. Figure out how to handle non-unqiue capture group names here.
+    // cases. Possibly initialize this in the lexer and pass it in during construction. 
     std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> m_capture_to_tag_ids;
     TypedNfaState* m_root;
     UniqueIdGenerator m_unique_id_generator;
