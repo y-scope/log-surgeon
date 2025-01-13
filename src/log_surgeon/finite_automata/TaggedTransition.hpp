@@ -10,24 +10,18 @@
 
 #include <fmt/format.h>
 
-#include <log_surgeon/finite_automata/Capture.hpp>
-
 namespace log_surgeon::finite_automata {
+using tag_id_t = std::uint32_t;
+
 /**
- * Represents an NFA transition indicating that a capture group has been matched.
- * NOTE: `m_capture` is always expected to be non-null.
+ * Represents an NFA transition indicating that a tag has been matched.
  * @tparam TypedNfaState Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename TypedNfaState>
 class PositiveTaggedTransition {
 public:
-    /**
-     * @param capture
-     * @param dest_state
-     * @throw std::invalid_argument if `capture` is `nullptr`.
-     */
-    PositiveTaggedTransition(Capture const* capture, TypedNfaState const* dest_state)
-            : m_capture{nullptr == capture ? throw std::invalid_argument("Capture cannot be null") : capture},
+    PositiveTaggedTransition(tag_id_t const tag_id, TypedNfaState const* dest_state)
+            : m_tag_id{tag_id},
               m_dest_state{dest_state} {}
 
     [[nodiscard]] auto get_dest_state() const -> TypedNfaState const* { return m_dest_state; }
@@ -43,37 +37,23 @@ public:
         if (state_id_it == state_ids.end()) {
             return std::nullopt;
         }
-        return fmt::format("{}[{}]", state_id_it->second, m_capture->get_name());
+        return fmt::format("{}[{}]", state_id_it->second, m_tag_id);
     }
 
 private:
-    Capture const* m_capture;
+    tag_id_t m_tag_id;
     TypedNfaState const* m_dest_state;
 };
 
 /**
- * Represents an NFA transition indicating that a capture group has been unmatched.
- * NOTE: All captures in `m_captures` are always expected to be non-null.
+ * Represents an NFA transition indicating that a tag has been unmatched.
  * @tparam TypedNfaState Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename TypedNfaState>
 class NegativeTaggedTransition {
 public:
-    /**
-     * @param captures
-     * @param dest_state
-     * @throw std::invalid_argument if any elements in `captures` is `nullptr`.
-     */
-    NegativeTaggedTransition(std::vector<Capture const*> captures, TypedNfaState const* dest_state)
-            : m_captures{[&captures] {
-                  if (std::ranges::any_of(captures, [](Capture const* capture) {
-                          return nullptr == capture;
-                      }))
-                  {
-                      throw std::invalid_argument("Captures cannot contain null elements");
-                  }
-                  return std::move(captures);
-              }()},
+    NegativeTaggedTransition(std::vector<tag_id_t> const tag_ids, TypedNfaState const* dest_state)
+            : m_tag_ids{tag_ids},
               m_dest_state{dest_state} {}
 
     [[nodiscard]] auto get_dest_state() const -> TypedNfaState const* { return m_dest_state; }
@@ -89,14 +69,11 @@ public:
         if (state_id_it == state_ids.end()) {
             return std::nullopt;
         }
-
-        auto const capture_names = m_captures | std::ranges::views::transform(&Capture::get_name);
-
-        return fmt::format("{}[{}]", state_id_it->second, fmt::join(capture_names, ","));
+        return fmt::format("{}[{}]", state_id_it->second, fmt::join(m_tag_ids, ","));
     }
 
 private:
-    std::vector<Capture const*> m_captures;
+    std::vector<tag_id_t> m_tag_ids;
     TypedNfaState const* m_dest_state;
 };
 }  // namespace log_surgeon::finite_automata

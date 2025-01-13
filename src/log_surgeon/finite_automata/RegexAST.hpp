@@ -110,7 +110,7 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add_to_nfa_with_negative_captures(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const
+    auto add_to_nfa_with_negative_tags(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const
             -> void {
         // Handle negative captures as:
         // root --(regex)--> state_with_negative_tagged_transition --(negative captures)-->
@@ -793,8 +793,8 @@ RegexASTOr<TypedNfaState>::RegexASTOr(
 template <typename TypedNfaState>
 void RegexASTOr<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state)
         const {
-    m_left->add_to_nfa_with_negative_captures(nfa, end_state);
-    m_right->add_to_nfa_with_negative_captures(nfa, end_state);
+    m_left->add_to_nfa_with_negative_tags(nfa, end_state);
+    m_right->add_to_nfa_with_negative_tags(nfa, end_state);
 }
 
 template <typename TypedNfaState>
@@ -824,9 +824,9 @@ void RegexASTCat<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaSta
         const {
     TypedNfaState* saved_root = nfa->get_root();
     TypedNfaState* intermediate_state = nfa->new_state();
-    m_left->add_to_nfa_with_negative_captures(nfa, intermediate_state);
+    m_left->add_to_nfa_with_negative_tags(nfa, intermediate_state);
     nfa->set_root(intermediate_state);
-    m_right->add_to_nfa_with_negative_captures(nfa, end_state);
+    m_right->add_to_nfa_with_negative_tags(nfa, end_state);
     nfa->set_root(saved_root);
 }
 
@@ -864,27 +864,27 @@ void RegexASTMultiplication<TypedNfaState>::add_to_nfa(
     } else {
         for (uint32_t i = 1; i < m_min; i++) {
             TypedNfaState* intermediate_state = nfa->new_state();
-            m_operand->add_to_nfa_with_negative_captures(nfa, intermediate_state);
+            m_operand->add_to_nfa_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
-        m_operand->add_to_nfa_with_negative_captures(nfa, end_state);
+        m_operand->add_to_nfa_with_negative_tags(nfa, end_state);
     }
     if (is_infinite()) {
         nfa->set_root(end_state);
-        m_operand->add_to_nfa_with_negative_captures(nfa, end_state);
+        m_operand->add_to_nfa_with_negative_tags(nfa, end_state);
     } else if (m_max > m_min) {
         if (m_min != 0) {
             TypedNfaState* intermediate_state = nfa->new_state();
-            m_operand->add_to_nfa_with_negative_captures(nfa, intermediate_state);
+            m_operand->add_to_nfa_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
         for (uint32_t i = m_min + 1; i < m_max; ++i) {
-            m_operand->add_to_nfa_with_negative_captures(nfa, end_state);
+            m_operand->add_to_nfa_with_negative_tags(nfa, end_state);
             TypedNfaState* intermediate_state = nfa->new_state();
-            m_operand->add_to_nfa_with_negative_captures(nfa, intermediate_state);
+            m_operand->add_to_nfa_with_negative_tags(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
         }
-        m_operand->add_to_nfa_with_negative_captures(nfa, end_state);
+        m_operand->add_to_nfa_with_negative_tags(nfa, end_state);
     }
     nfa->set_root(saved_root);
 }
@@ -945,7 +945,7 @@ auto RegexASTCapture<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNf
 
     auto* initial_root = nfa->get_root();
     nfa->set_root(capture_start_state);
-    m_group_regex_ast->add_to_nfa_with_negative_captures(nfa, capture_end_state);
+    m_group_regex_ast->add_to_nfa_with_negative_tags(nfa, capture_end_state);
     nfa->set_root(initial_root);
 }
 
