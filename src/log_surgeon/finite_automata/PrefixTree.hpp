@@ -14,10 +14,10 @@ namespace log_surgeon::finite_automata {
  * a sequence of positions for an individual tag:
  * - Positive position node: Indicates the capture was matched at the position.
  * - Negative position node: Indicates the capture was unmatched. If a negative node is the entire
- * path, it indicates the tag was never matched. If the negative tag is along a path containing
- * positive nodes, it functions as a placeholder. This can be useful for nested capture groups, to
- * maintain a one-to-one mapping between the contained capture group and the enclosing capture
- * group.
+ *   path, it indicates the tag was never matched. If the negative tag is along a path containing
+ *   positive nodes, it functions as a placeholder. This can be useful for nested capture groups, to
+ *   maintain a one-to-one mapping between the contained capture group and the enclosing capture
+ *   group.
  */
 class PrefixTree {
 public:
