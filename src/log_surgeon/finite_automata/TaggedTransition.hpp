@@ -52,8 +52,8 @@ private:
 template <typename TypedNfaState>
 class NegativeTaggedTransition {
 public:
-    NegativeTaggedTransition(std::vector<tag_id_t> const tag_ids, TypedNfaState const* dest_state)
-            : m_tag_ids{tag_ids},
+    NegativeTaggedTransition(std::vector<tag_id_t> tag_ids, TypedNfaState const* dest_state)
+            : m_tag_ids{std::move(tag_ids)},
               m_dest_state{dest_state} {}
 
     [[nodiscard]] auto get_dest_state() const -> TypedNfaState const* { return m_dest_state; }
