@@ -22,7 +22,7 @@ class Nfa {
 public:
     using StateVec = std::vector<TypedNfaState*>;
 
-    explicit Nfa(std::vector<LexicalRule<TypedNfaState>> rules);
+    explicit Nfa(std::vector<LexicalRule<TypedNfaState>> const& rules);
 
     /**
      * Creates a unique_ptr for an NFA state with no tagged transitions and adds it to `m_states`.
@@ -89,16 +89,12 @@ public:
 private:
     std::vector<std::unique_ptr<TypedNfaState>> m_states;
     TypedNfaState* m_root;
-    // Store the rules locally as they contain information needed by the NFA. E.g., transitions in
-    // the NFA point to captures in the rule ASTs.
-    std::vector<LexicalRule<TypedNfaState>> m_rules;
 };
 
 template <typename TypedNfaState>
-Nfa<TypedNfaState>::Nfa(std::vector<LexicalRule<TypedNfaState>> rules)
-        : m_root{new_state()},
-          m_rules{std::move(rules)} {
-    for (auto const& rule : m_rules) {
+Nfa<TypedNfaState>::Nfa(std::vector<LexicalRule<TypedNfaState>> const& rules)
+        : m_root{new_state()} {
+    for (auto const& rule : rules) {
         rule.add_to_nfa(this);
     }
 }

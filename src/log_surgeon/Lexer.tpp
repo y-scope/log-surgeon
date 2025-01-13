@@ -391,7 +391,8 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
             m_var_id_to_capture_ids[rule.get_variable_id()].push_back(capture_id);
         }
     }
-    finite_automata::Nfa<TypedNfaState> nfa{std::move(m_rules)};
+
+    finite_automata::Nfa<TypedNfaState> nfa{m_rules};
     // TODO: DFA ignores captures. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState>>(std::move(nfa));
     auto const* state = m_dfa->get_root();
