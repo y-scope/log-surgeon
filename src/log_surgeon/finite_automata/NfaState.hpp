@@ -168,9 +168,9 @@ auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
         if (false == closure_set.insert(current_state).second) {
             continue;
         }
-        for (auto const& spotaneous_transition : current_state->get_spontaneous_transitions()) {
-            if (TransitionOperation::None == spotaneous_transition.get_transition_operation()) {
-                stack.push(spotaneous_transition.get_dest_state());
+        for (auto const& spontaneous_transition : current_state->get_spontaneous_transitions()) {
+            if (TransitionOperation::None == spontaneous_transition.get_transition_operation()) {
+                stack.push(spontaneous_transition.get_dest_state());
             }
             // TODO: currently only handle transitions that don't modify tags.
         }

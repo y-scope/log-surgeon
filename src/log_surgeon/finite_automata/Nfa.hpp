@@ -224,7 +224,7 @@ auto Nfa<TypedNfaState>::serialize() const -> std::optional<std::string> {
         if (false == optional_serialized_state.has_value()) {
             return std::nullopt;
         }
-        serialized_states.emplace_back(state->serialize(state_ids).value());
+        serialized_states.emplace_back(optional_serialized_state.value());
     }
     return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
 }
