@@ -358,17 +358,17 @@ void Lexer<TypedNfaState, TypedDfaState>::add_delimiters(std::vector<uint32_t> c
 
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::add_rule(
-        uint32_t const& id,
+        symbol_id_t const& var_id,
         std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
 ) {
-    m_rules.emplace_back(id, std::move(rule));
+    m_rules.emplace_back(var_id, std::move(rule));
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lexer<TypedNfaState, TypedDfaState>::get_rule(uint32_t const variable_id
+auto Lexer<TypedNfaState, TypedDfaState>::get_rule(symbol_id_t const var_id
 ) -> finite_automata::RegexAST<TypedNfaState>* {
     for (auto const& rule : m_rules) {
-        if (rule.get_variable_id() == variable_id) {
+        if (rule.get_variable_id() == var_id) {
             return rule.get_regex();
         }
     }
@@ -377,8 +377,22 @@ auto Lexer<TypedNfaState, TypedDfaState>::get_rule(uint32_t const variable_id
 
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::generate() {
+    for (auto const& rule : m_rules) {
+        for (auto* capture : rule.get_captures()) {
+            std::string const capture_name{capture->get_name()};
+            symbol_id_t capture_id{0};
+            if (m_symbol_id.find(capture_name) == m_symbol_id.end()) {
+                capture_id = m_symbol_id.size();
+                m_symbol_id[capture_name] = capture_id;
+                m_id_symbol[capture_id] = capture_name;
+            } else {
+                capture_id = m_symbol_id.find(capture_name)->second;
+            }
+            m_var_id_to_capture_ids[rule.get_variable_id()].push_back(capture_id);
+        }
+    }
     finite_automata::Nfa<TypedNfaState> nfa{std::move(m_rules)};
-    // TODO: DFA ignores tags. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
+    // TODO: DFA ignores captures. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState>>(std::move(nfa));
     auto const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {

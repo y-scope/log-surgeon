@@ -24,6 +24,10 @@ namespace log_surgeon {
 template <typename TypedNfaState, typename TypedDfaState>
 class Lexer {
 public:
+    using register_id_t = finite_automata::RegisterHandler::register_id_t;
+    using symbol_id_t = uint32_t;
+    using tag_id_t = uint32_t;
+
     static inline std::vector<uint32_t> const cTokenEndTypes = {(uint32_t)SymbolId::TokenEnd};
     static inline std::vector<uint32_t> const cTokenUncaughtStringTypes
             = {(uint32_t)SymbolId::TokenUncaughtString};
@@ -123,45 +127,48 @@ public:
         return m_dfa;
     }
 
-    [[nodiscard]] auto get_tag_ids_for_symbol(std::string& symbol
-    ) const -> std::optional<std::pair<uint32_t, uint32_t>> {
-        auto const var_id = m_symbol_id.find(symbol);
-        if(m_symbol_id.end() == var_id) {
+    [[nodiscard]] auto get_capture_ids_for_var_id(symbol_id_t const var_id
+    ) const -> std::optional<std::vector<symbol_id_t>> {
+        auto const capture_ids{m_var_id_to_capture_ids.find(var_id)};
+        if (m_var_id_to_capture_ids.end() == capture_ids) {
             return std::nullopt;
         }
-        auto const tag_ids = m_var_id_to_tag_ids.find(var_id->second);
-        if (m_var_id_to_tag_ids.end() == tag_ids) {
+        return capture_ids->second;
+    }
+
+    [[nodiscard]] auto get_tag_ids_for_capture_id(symbol_id_t const capture_id
+    ) const -> std::optional<std::pair<tag_id_t, tag_id_t>> {
+        auto const tag_ids{m_capture_to_tag_ids.find(capture_id)};
+        if (m_capture_to_tag_ids.end() == tag_ids) {
             return std::nullopt;
         }
         return tag_ids->second;
     }
 
-    [[nodiscard]] auto get_register_for_tag_id(uint32_t const tag_id
-    ) const -> std::optional<finite_automata::RegisterHandler::register_id_t> {
+    [[nodiscard]] auto get_register_for_tag_id(tag_id_t const tag_id
+    ) const -> std::optional<register_id_t> {
         auto const it = m_tag_to_register_id.find(tag_id);
-        if (m_tag_to_register_id.end() != it) {
-            return it->second;
+        if (m_tag_to_register_id.end() == it) {
+            return std::nullopt;
         }
-        return std::nullopt;
+        return it->second;
     }
 
-    [[nodiscard]] auto get_registers_for_symbol(std::string const& symbol) const
-            -> std::optional<std::pair<
-                    finite_automata::RegisterHandler::register_id_t,
-                    finite_automata::RegisterHandler::register_id_t>> {
-        auto const tag_ids = get_tag_ids_for_symbol(symbol);
-        if(tag_ids.has_value()) {
+    [[nodiscard]] auto get_registers_for_capture(symbol_id_t capture_id
+    ) const -> std::optional<std::pair<register_id_t, register_id_t>> {
+        auto const tag_ids = get_tag_ids_for_capture_id(capture_id);
+        if (tag_ids.has_value()) {
             auto const start_reg = get_register_for_tag_id(tag_ids.value().first());
             auto const end_reg = get_register_for_tag_id(tag_ids.value().second());
-            if(start_reg.has_value() && end_reg.has_value()) {
+            if (start_reg.has_value() && end_reg.has_value()) {
                 return std::make_pair(start_reg.value(), end_reg.value());
             }
         }
         return std::nullopt;
     }
 
-    std::unordered_map<std::string, uint32_t> m_symbol_id;
-    std::unordered_map<uint32_t, std::string> m_id_symbol;
+    std::unordered_map<std::string, symbol_id_t> m_symbol_id;
+    std::unordered_map<symbol_id_t, std::string> m_id_symbol;
 
 private:
     /**
@@ -186,10 +193,9 @@ private:
     std::unique_ptr<finite_automata::Dfa<TypedDfaState>> m_dfa;
     bool m_asked_for_more_data{false};
     TypedDfaState const* m_prev_state{nullptr};
-    // TODO: maybe optimize by using vectors for performance
-    std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> m_var_id_to_tag_ids;
-    std::unordered_map<uint32_t, finite_automata::RegisterHandler::register_id_t>
-            m_tag_to_register_id;
+    std::unordered_map<symbol_id_t, std::vector<symbol_id_t>> m_var_id_to_capture_ids;
+    std::unordered_map<symbol_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_to_tag_ids;
+    std::unordered_map<tag_id_t, register_id_t> m_tag_to_register_id;
 };
 
 namespace lexers {

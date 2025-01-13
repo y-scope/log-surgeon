@@ -254,11 +254,11 @@ TEST_CASE("Test basic Lexer", "[Lexer]") {
         lexer.add_rule(lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
     }
     lexer.generate();
-    
+
     log_surgeon::ParserInputBuffer input_buffer;
     string token_string{cTokenString1};
     input_buffer.set_storage(token_string.data(), token_string.size(), 0, true);
-    
+
     lexer.reset();
     lexer.prepend_start_of_file_char(input_buffer);
     log_surgeon::Token token1;
@@ -296,10 +296,10 @@ TEST_CASE("Test basic Lexer", "[Lexer]") {
     REQUIRE(token2.to_string_view().empty());
 }
 
-
 TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     vector<uint32_t> const cDelimiters{' ', '\n'};
     constexpr string_view cVarName{"myVar"};
+    constexpr string_view cCaptureName{"uid"};
     constexpr string_view cVarSchema{"myVar:userID=(?<uid>123)"};
     constexpr string_view cTokenString1{"userID=123"};
     constexpr string_view cTokenString2{"userID=234"};
@@ -340,12 +340,25 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     lexer.generate();
 
     string varName{cVarName};
-    auto tag_ids{lexer.get_tag_ids_for_symbol(varName)};
+    auto const var_id{lexer.m_symbol_id.find(varName)};
+    REQUIRE(lexer.m_symbol_id.end() != var_id);
+
+    string captureName{cCaptureName};
+    auto const capture_id{lexer.m_symbol_id.find(captureName)};
+    REQUIRE(lexer.m_symbol_id.end() != capture_id);
+
+    auto capture_ids{lexer.get_capture_ids_for_var_id(var_id->second)};
+    REQUIRE(capture_ids.has_value());
+    REQUIRE(1 == capture_ids.value().size());
+    REQUIRE(capture_id->second == capture_ids.value()[0]);
+
+    auto tag_ids{lexer.get_tag_ids_for_capture_id(capture_ids.value()[0])};
     REQUIRE(tag_ids.has_value());
-    REQUIRE(std::make_pair(2u,3u) == tag_ids.value());
-    // TODO: add check for get_register_for_tag_id and get_registers_for_symbol when determinzation
+    REQUIRE(std::make_pair(2u, 3u) == tag_ids.value());
+
+    // TODO: add check for get_register_for_tag_id and get_registers_for_symbol when determinization
     // is implemented.
-    
+
     log_surgeon::ParserInputBuffer input_buffer;
     lexer.reset();
     lexer.prepend_start_of_file_char(input_buffer);

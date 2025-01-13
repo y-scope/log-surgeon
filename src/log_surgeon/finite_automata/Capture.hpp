@@ -1,14 +1,14 @@
-#ifndef LOG_SURGEON_FINITE_AUTOMATA_TAG
-#define LOG_SURGEON_FINITE_AUTOMATA_TAG
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_CAPTURE
+#define LOG_SURGEON_FINITE_AUTOMATA_CAPTURE
 
 #include <string>
 #include <string_view>
 #include <utility>
 
 namespace log_surgeon::finite_automata {
-class Tag {
+class Capture {
 public:
-    explicit Tag(std::string name) : m_name{std::move(name)} {}
+    explicit Capture(std::string name) : m_name{std::move(name)} {}
 
     [[nodiscard]] auto get_name() const -> std::string_view { return m_name; }
 
@@ -17,4 +17,4 @@ private:
 };
 }  // namespace log_surgeon::finite_automata
 
-#endif  // LOG_SURGEON_FINITE_AUTOMATA_TAG
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_CAPTURE

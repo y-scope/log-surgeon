@@ -33,37 +33,37 @@ public:
     /**
      * Creates a unique_ptr for an NFA state with a positive tagged end transition and adds it to
      * `m_states`.
-     * @param tag
+     * @param capture
      * @param dest_state
      * @return A new state with a positive tagged end transition to `dest_state`.
      */
     [[nodiscard]] auto new_state_with_positive_tagged_end_transition(
-            Tag const* tag,
+            Capture const* capture,
             TypedNfaState const* dest_state
     ) -> TypedNfaState*;
 
     /**
      * Creates a unique_ptr for an NFA state with a negative tagged transition and adds it to
      * `m_states`.
-     * @param tags
+     * @param captures
      * @param dest_state
      * @return TypedNfaState*
      */
     [[nodiscard]] auto new_state_with_negative_tagged_transition(
-            std::vector<Tag const*> tags,
+            std::vector<Capture const*> captures,
             TypedNfaState const* dest_state
     ) -> TypedNfaState*;
 
     /**
      * Creates the start and end states for a capture group.
-     * @param tag The tag associated with the capture group.
+     * @param capture The capture associated with the capture group.
      * @param dest_state
      * @return A pair of states:
      * - A new state with a positive tagged start transition from `m_root`.
      * - A new state with a positive tagged end transition to `dest_state`.
      */
     [[nodiscard]] auto new_start_and_end_states_with_positive_tagged_transitions(
-            Tag const* tag,
+            Capture const* capture,
             TypedNfaState const* dest_state
     ) -> std::pair<TypedNfaState*, TypedNfaState*>;
 
@@ -90,7 +90,7 @@ private:
     std::vector<std::unique_ptr<TypedNfaState>> m_states;
     TypedNfaState* m_root;
     // Store the rules locally as they contain information needed by the NFA. E.g., transitions in
-    // the NFA point to tags in the rule ASTs.
+    // the NFA point to captures in the rule ASTs.
     std::vector<LexicalRule<TypedNfaState>> m_rules;
 };
 
@@ -111,31 +111,31 @@ auto Nfa<TypedNfaState>::new_state() -> TypedNfaState* {
 
 template <typename TypedNfaState>
 auto Nfa<TypedNfaState>::new_state_with_positive_tagged_end_transition(
-        Tag const* tag,
+        Capture const* capture,
         TypedNfaState const* dest_state
 ) -> TypedNfaState* {
-    m_states.emplace_back(std::make_unique<TypedNfaState>(tag, dest_state));
+    m_states.emplace_back(std::make_unique<TypedNfaState>(capture, dest_state));
     return m_states.back().get();
 }
 
 template <typename TypedNfaState>
 auto Nfa<TypedNfaState>::new_state_with_negative_tagged_transition(
-        std::vector<Tag const*> tags,
+        std::vector<Capture const*> captures,
         TypedNfaState const* dest_state
 ) -> TypedNfaState* {
-    m_states.emplace_back(std::make_unique<TypedNfaState>(std::move(tags), dest_state));
+    m_states.emplace_back(std::make_unique<TypedNfaState>(std::move(captures), dest_state));
     return m_states.back().get();
 }
 
 template <typename TypedNfaState>
 auto Nfa<TypedNfaState>::new_start_and_end_states_with_positive_tagged_transitions(
-        Tag const* tag,
+        Capture const* capture,
         TypedNfaState const* dest_state
 ) -> std::pair<TypedNfaState*, TypedNfaState*> {
     auto* start_state = new_state();
-    m_root->add_positive_tagged_start_transition(tag, start_state);
+    m_root->add_positive_tagged_start_transition(capture, start_state);
 
-    auto* end_state = new_state_with_positive_tagged_end_transition(tag, dest_state);
+    auto* end_state = new_state_with_positive_tagged_end_transition(capture, dest_state);
     return {start_state, end_state};
 }
 

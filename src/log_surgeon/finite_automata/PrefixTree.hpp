@@ -12,11 +12,12 @@ namespace log_surgeon::finite_automata {
  * Represents a prefix tree to store register data during TDFA simulation. Each node in the tree
  * stores a single position in the lexed string. Each path from the root to an index corresponds to
  * a sequence of positions for an individual tag:
- * - Positive position node: Indicates the tag was matched at the position.
- * - Negative position node: Indicates the tag was unmatched. If a negative node is the entire path,
- *   it indicates the tag was never matched. If the negative tag is along a path containing positive
- *   nodes, it functions as a placeholder. This can be useful for nested capture groups, to maintain
- *   a one-to-one mapping between the contained capture group and the enclosing capture group.
+ * - Positive position node: Indicates the capture was matched at the position.
+ * - Negative position node: Indicates the capture was unmatched. If a negative node is the entire
+ * path, it indicates the tag was never matched. If the negative tag is along a path containing
+ * positive nodes, it functions as a placeholder. This can be useful for nested capture groups, to
+ * maintain a one-to-one mapping between the contained capture group and the enclosing capture
+ * group.
  */
 class PrefixTree {
 public:
