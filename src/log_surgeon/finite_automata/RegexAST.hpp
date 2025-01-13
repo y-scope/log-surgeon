@@ -110,17 +110,15 @@ public:
      * @param nfa
      * @param end_state
      */
-    auto add_to_nfa_with_negative_tags(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const
-            -> void {
+    auto
+    add_to_nfa_with_negative_tags(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const -> void {
         // Handle negative captures as:
         // root --(regex)--> state_with_negative_tagged_transition --(negative captures)-->
         // end_state
         if (false == m_negative_captures.empty()) {
-            auto* state_with_negative_tagged_transition
-                    = nfa->new_state_with_negative_tagged_transition(
-                            m_negative_captures,
-                            end_state
-                    );
+            auto* state_with_negative_tagged_transition{
+                    nfa->new_state_with_negative_tagged_transition(m_negative_captures, end_state)
+            };
             add_to_nfa(nfa, state_with_negative_tagged_transition);
         } else {
             add_to_nfa(nfa, end_state);
@@ -138,12 +136,14 @@ protected:
             return U"";
         }
 
-        auto const transformed_negative_captures
-                = m_negative_captures | std::ranges::views::transform([](Capture const* capture) {
-                      return fmt::format("<~{}>", capture->get_name());
-                  });
-        auto const negative_captures_string
-                = fmt::format("{}", fmt::join(transformed_negative_captures, ""));
+        auto const transformed_negative_captures{
+                m_negative_captures | std::ranges::views::transform([](Capture const* capture) {
+                    return fmt::format("<~{}>", capture->get_name());
+                })
+        };
+        auto const negative_captures_string{
+                fmt::format("{}", fmt::join(transformed_negative_captures, ""))
+        };
 
         return fmt::format(
                 U"{}",
@@ -951,8 +951,9 @@ auto RegexASTCapture<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNf
 
 template <typename TypedNfaState>
 [[nodiscard]] auto RegexASTCapture<TypedNfaState>::serialize() const -> std::u32string {
-    auto const capture_name_u32
-            = std::u32string(m_capture->get_name().cbegin(), m_capture->get_name().cend());
+    auto const capture_name_u32{
+            std::u32string(m_capture->get_name().cbegin(), m_capture->get_name().cend())
+    };
     return fmt::format(
             U"({})<{}>{}",
             m_group_regex_ast->serialize(),

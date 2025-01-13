@@ -226,7 +226,7 @@ TEST_CASE("Test basic Lexer", "[Lexer]") {
     lexer.add_delimiters(cDelimiters);
 
     vector<uint32_t> delimiters;
-    for (uint32_t i = 0; i < log_surgeon::cSizeOfByte; i++) {
+    for (uint32_t i{0}; i < log_surgeon::cSizeOfByte; i++) {
         if (lexer.is_delimiter(i)) {
             delimiters.push_back(i);
         }
@@ -242,7 +242,7 @@ TEST_CASE("Test basic Lexer", "[Lexer]") {
     for (auto const& m_schema_var : schema_ast->m_schema_vars) {
         // For log-specific lexing: modify variable regex to contain a delimiter at the start.
         auto delimiter_group{make_unique<RegexASTGroupByte>(RegexASTGroupByte(delimiters))};
-        auto* rule = dynamic_cast<SchemaVarAST*>(m_schema_var.get());
+        auto* rule{dynamic_cast<SchemaVarAST*>(m_schema_var.get())};
         rule->m_regex_ptr = make_unique<RegexASTCatByte>(
                 std::move(delimiter_group),
                 std::move(rule->m_regex_ptr)
@@ -311,7 +311,7 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     lexer.add_delimiters(cDelimiters);
 
     vector<uint32_t> delimiters;
-    for (uint32_t i = 0; i < log_surgeon::cSizeOfByte; i++) {
+    for (uint32_t i{0}; i < log_surgeon::cSizeOfByte; i++) {
         if (lexer.is_delimiter(i)) {
             delimiters.push_back(i);
         }
@@ -326,7 +326,7 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     for (auto const& m_schema_var : schema_ast->m_schema_vars) {
         // For log-specific lexing: modify variable regex to contain a delimiter at the start.
         auto delimiter_group{make_unique<RegexASTGroupByte>(RegexASTGroupByte(delimiters))};
-        auto* rule = dynamic_cast<SchemaVarAST*>(m_schema_var.get());
+        auto* rule{dynamic_cast<SchemaVarAST*>(m_schema_var.get())};
         rule->m_regex_ptr = make_unique<RegexASTCatByte>(
                 std::move(delimiter_group),
                 std::move(rule->m_regex_ptr)

@@ -119,7 +119,7 @@ private:
 
     std::vector<std::unique_ptr<TypedNfaState>> m_states;
     // TODO: Lexer currently enforces unique naming across capture groups. However, this limits use
-    // cases. Possibly initialize this in the lexer and pass it in during construction. 
+    // cases. Possibly initialize this in the lexer and pass it in during construction.
     std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> m_capture_to_tag_ids;
     TypedNfaState* m_root;
     UniqueIdGenerator m_unique_id_generator;
@@ -186,7 +186,7 @@ auto Nfa<TypedNfaState>::new_start_and_end_states_with_positive_tagged_transitio
     auto [start_tag, end_tag]{get_or_create_capture_tags(capture)};
     auto* start_state = new_state();
     m_root->add_positive_tagged_start_transition(start_tag, start_state);
-    auto* end_state = new_state_with_positive_tagged_end_transition(end_tag, dest_state);
+    auto* end_state{new_state_with_positive_tagged_end_transition(end_tag, dest_state)};
     return {start_state, end_state};
 }
 
