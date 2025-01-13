@@ -5,6 +5,7 @@
 #include <memory>
 #include <stack>
 #include <string>
+#include <stdexcept>
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
@@ -386,7 +387,7 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
                 m_symbol_id[capture_name] = capture_id;
                 m_id_symbol[capture_id] = capture_name;
             } else {
-                capture_id = m_symbol_id.find(capture_name)->second;
+                throw std::invalid_argument("`m_rules` contains capture names that are not unique.");
             }
             m_var_id_to_capture_ids[rule.get_variable_id()].push_back(capture_id);
         }

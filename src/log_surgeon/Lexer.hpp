@@ -56,7 +56,8 @@ public:
     auto get_rule(uint32_t variable_id) -> finite_automata::RegexAST<TypedNfaState>*;
 
     /**
-     * Generate DFA for lexer
+     * Generate DFA for lexer.
+     * @throw std::invalid_argument if `m_rules` contains multipe captures with the same name.
      */
     auto generate() -> void;
 
