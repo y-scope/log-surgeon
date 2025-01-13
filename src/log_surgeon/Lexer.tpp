@@ -4,8 +4,8 @@
 #include <cassert>
 #include <memory>
 #include <stack>
-#include <string>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
@@ -387,7 +387,8 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
                 m_symbol_id[capture_name] = capture_id;
                 m_id_symbol[capture_id] = capture_name;
             } else {
-                throw std::invalid_argument("`m_rules` contains capture names that are not unique.");
+                throw std::invalid_argument("`m_rules` contains capture names that are not unique."
+                );
             }
             m_var_id_to_capture_ids[rule.get_variable_id()].push_back(capture_id);
         }
@@ -395,8 +396,8 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
 
     finite_automata::Nfa<TypedNfaState> nfa{m_rules};
     for (auto const& [capture, tag_ids] : nfa.get_capture_to_tag_ids()) {
-    std::string capture_name{capture->get_name()};
-    auto capture_id{m_symbol_id[capture_name]};
+        std::string capture_name{capture->get_name()};
+        auto capture_id{m_symbol_id[capture_name]};
         m_capture_id_to_tag_ids.emplace(capture_id, tag_ids);
     }
 
