@@ -20,12 +20,32 @@
 #include <log_surgeon/LexicalRule.hpp>
 
 namespace log_surgeon::finite_automata {
+class UniqueIdGenerator {
+public:
+    UniqueIdGenerator() : current_id{0} {}
+
+    [[nodiscard]] auto generate_id() -> uint32_t { return current_id++; }
+
+    [[nodiscard]] auto get_num_ids() const -> uint32_t { return current_id; }
+    
+private:
+    uint32_t current_id;
+};
+
+/**
+ * Represents a NFA(non-deterministic finite automata) for recognizing a language based on the set
+ * of rules used during initialization. Currently use as an intermediate model for generating the
+ * DFA.
+ *
+ * Currently we assume all capture groups have unique names.
+ * @tparam TypedNfaState
+ */
 template <typename TypedNfaState>
 class Nfa {
 public:
     using StateVec = std::vector<TypedNfaState*>;
 
-    explicit Nfa(std::vector<LexicalRule<TypedNfaState>> rules);
+    explicit Nfa(std::vector<LexicalRule<TypedNfaState>> const& rules);
 
     /**
      * Creates a unique_ptr for an NFA state with no tagged transitions and adds it to `m_states`.
@@ -34,39 +54,27 @@ public:
     [[nodiscard]] auto new_state() -> TypedNfaState*;
 
     /**
-     * Creates a unique_ptr for an NFA state with a positive tagged end transition and adds it to
-     * `m_states`.
-     * @param tag
-     * @param dest_state
-     * @return A new state with a positive tagged end transition to `dest_state`.
-     */
-    [[nodiscard]] auto new_state_with_positive_tagged_end_transition(
-            Tag const* tag,
-            TypedNfaState const* dest_state
-    ) -> TypedNfaState*;
-
-    /**
      * Creates a unique_ptr for an NFA state with a negative tagged transition and adds it to
      * `m_states`.
-     * @param tags
+     * @param captures
      * @param dest_state
      * @return TypedNfaState*
      */
-    [[nodiscard]] auto new_state_with_negative_tagged_transition(
-            std::vector<Tag const*> tags,
+    [[nodiscard]] auto new_state_for_negative_captures(
+            std::vector<Capture const*> const& captures,
             TypedNfaState const* dest_state
     ) -> TypedNfaState*;
 
     /**
      * Creates the start and end states for a capture group.
-     * @param tag The tag associated with the capture group.
+     * @param capture The capture associated with the capture group.
      * @param dest_state
      * @return A pair of states:
-     * - A new state with a positive tagged start transition from `m_root`.
-     * - A new state with a positive tagged end transition to `dest_state`.
+     * - A state from `m_root` with an outgoing transition that sets the start tag for the capture.
+     * - A state with an outgoing transition to `dest_state` that sets the end tag for the capture.
      */
-    [[nodiscard]] auto new_start_and_end_states_with_positive_tagged_transitions(
-            Tag const* tag,
+    [[nodiscard]] auto new_start_and_end_states_for_capture(
+            Capture const* capture,
             TypedNfaState const* dest_state
     ) -> std::pair<TypedNfaState*, TypedNfaState*>;
 
@@ -78,8 +86,9 @@ public:
 
     /**
      * @return A string representation of the NFA.
+     * @return Forwards `NfaState::serialize`'s return value (std::nullopt) on failure.
      */
-    [[nodiscard]] auto serialize() const -> std::string;
+    [[nodiscard]] auto serialize() const -> std::optional<std::string>;
 
     auto add_root_interval(Interval interval, TypedNfaState* dest_state) -> void {
         m_root->add_interval(interval, dest_state);
@@ -87,27 +96,51 @@ public:
 
     auto set_root(TypedNfaState* root) -> void { m_root = root; }
 
-    auto get_root() -> TypedNfaState* { return m_root; }
+    auto get_root() const -> TypedNfaState* { return m_root; }
 
-    [[nodiscard]] auto get_num_tags() const -> size_t { return m_tags.size(); }
+    [[nodiscard]] auto get_num_tags() const -> size_t { return m_tag_id_generator.get_num_ids(); }
+
+    [[nodiscard]] auto get_capture_to_tag_ids(
+    ) const -> std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> {
+        return m_capture_to_tag_ids;
+    }
 
 private:
-    std::vector<std::unique_ptr<TypedNfaState>> m_states;
-    TypedNfaState* m_root;
-    std::set<Tag const*> m_tags;
+    /**
+     * Creates start and end tags for the specified capture if they don't currently exist.
+     * @param capture
+     * @return The start and end tags corresponding to `capture`.
+     */
+    auto get_or_create_capture_tags(Capture const* capture) -> std::pair<tag_id_t, tag_id_t>;
 
-    // Store the rules locally as they contain information needed by the NFA. E.g., transitions in
-    // the NFA point to tags in the rule ASTs.
-    std::vector<LexicalRule<TypedNfaState>> m_rules;
+    std::vector<std::unique_ptr<TypedNfaState>> m_states;
+    // TODO: Lexer currently enforces unique naming across capture groups. However, this limits use
+    // cases. Possibly initialize this in the lexer and pass it in during construction.
+    std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> m_capture_to_tag_ids;
+    TypedNfaState* m_root;
+    UniqueIdGenerator m_tag_id_generator;
 };
 
 template <typename TypedNfaState>
-Nfa<TypedNfaState>::Nfa(std::vector<LexicalRule<TypedNfaState>> rules)
-        : m_root{new_state()},
-          m_rules{std::move(rules)} {
-    for (auto const& rule : m_rules) {
+Nfa<TypedNfaState>::Nfa(std::vector<LexicalRule<TypedNfaState>> const& rules)
+        : m_root{new_state()} {
+    for (auto const& rule : rules) {
         rule.add_to_nfa(this);
     }
+}
+
+template <typename TypedNfaState>
+auto Nfa<TypedNfaState>::get_or_create_capture_tags(Capture const* capture
+) -> std::pair<tag_id_t, tag_id_t> {
+    auto const existing_tags{m_capture_to_tag_ids.find(capture)};
+    if (m_capture_to_tag_ids.end() == existing_tags) {
+        auto start_tag{m_tag_id_generator.generate_id()};
+        auto end_tag{m_tag_id_generator.generate_id()};
+        auto new_tags{std::make_pair(start_tag, end_tag)};
+        m_capture_to_tag_ids.emplace(capture, new_tags);
+        return new_tags;
+    }
+    return existing_tags->second;
 }
 
 template <typename TypedNfaState>
@@ -117,33 +150,39 @@ auto Nfa<TypedNfaState>::new_state() -> TypedNfaState* {
 }
 
 template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::new_state_with_positive_tagged_end_transition(
-        Tag const* tag,
+auto Nfa<TypedNfaState>::new_state_for_negative_captures(
+        std::vector<Capture const*> const& captures,
         TypedNfaState const* dest_state
 ) -> TypedNfaState* {
-    m_tags.insert(tag);
-    m_states.emplace_back(std::make_unique<TypedNfaState>(tag, dest_state));
+    std::vector<tag_id_t> tags;
+    for (auto const capture : captures) {
+        auto [start_tag, end_tag]{get_or_create_capture_tags(capture)};
+        tags.push_back(start_tag);
+        tags.push_back(end_tag);
+    }
+
+    m_states.emplace_back(std::make_unique<TypedNfaState>(
+            TransitionOperation::NegateTags,
+            std::move(tags),
+            dest_state
+    ));
     return m_states.back().get();
 }
 
 template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::new_state_with_negative_tagged_transition(
-        std::vector<Tag const*> tags,
-        TypedNfaState const* dest_state
-) -> TypedNfaState* {
-    m_states.emplace_back(std::make_unique<TypedNfaState>(std::move(tags), dest_state));
-    return m_states.back().get();
-}
-
-template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::new_start_and_end_states_with_positive_tagged_transitions(
-        Tag const* tag,
+auto Nfa<TypedNfaState>::new_start_and_end_states_for_capture(
+        Capture const* capture,
         TypedNfaState const* dest_state
 ) -> std::pair<TypedNfaState*, TypedNfaState*> {
+    auto [start_tag, end_tag]{get_or_create_capture_tags(capture)};
     auto* start_state = new_state();
-    m_root->add_positive_tagged_start_transition(tag, start_state);
-
-    auto* end_state = new_state_with_positive_tagged_end_transition(tag, dest_state);
+    m_root->add_spontaneous_transition(TransitionOperation::SetTags, {start_tag}, start_state);
+    m_states.push_back(std::make_unique<TypedNfaState>(
+            TransitionOperation::SetTags,
+            std::vector{end_tag},
+            dest_state
+    ));
+    auto* end_state{m_states.back().get()};
     return {start_state, end_state};
 }
 
@@ -173,33 +212,15 @@ auto Nfa<TypedNfaState>::get_bfs_traversal_order() const -> std::vector<TypedNfa
                 add_to_queue_and_visited(dest_state);
             }
         }
-        for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-            add_to_queue_and_visited(dest_state);
-        }
-        for (auto const& positive_tagged_start_transition :
-             current_state->get_positive_tagged_start_transitions())
-        {
-            add_to_queue_and_visited(positive_tagged_start_transition.get_dest_state());
-        }
-
-        auto const& optional_positive_tagged_end_transition
-                = current_state->get_positive_tagged_end_transition();
-        if (optional_positive_tagged_end_transition.has_value()) {
-            add_to_queue_and_visited(optional_positive_tagged_end_transition.value().get_dest_state(
-            ));
-        }
-
-        auto const& optional_negative_tagged_transition
-                = current_state->get_negative_tagged_transition();
-        if (optional_negative_tagged_transition.has_value()) {
-            add_to_queue_and_visited(optional_negative_tagged_transition.value().get_dest_state());
+        for (auto const& spontaneous_transition : current_state->get_spontaneous_transitions()) {
+            add_to_queue_and_visited(spontaneous_transition.get_dest_state());
         }
     }
     return visited_order;
 }
 
 template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::serialize() const -> std::string {
+auto Nfa<TypedNfaState>::serialize() const -> std::optional<std::string> {
     auto const traversal_order = get_bfs_traversal_order();
 
     std::unordered_map<TypedNfaState const*, uint32_t> state_ids;
@@ -209,10 +230,11 @@ auto Nfa<TypedNfaState>::serialize() const -> std::string {
 
     std::vector<std::string> serialized_states;
     for (auto const* state : traversal_order) {
-        // `state_ids` is well-formed as its generated from `get_bfs_traversal_order` so we can
-        // safely assume `state->serialize(state_ids)` will return a valid value.
-        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        serialized_states.emplace_back(state->serialize(state_ids).value());
+        auto const optional_serialized_state{state->serialize(state_ids)};
+        if (false == optional_serialized_state.has_value()) {
+            return std::nullopt;
+        }
+        serialized_states.emplace_back(optional_serialized_state.value());
     }
     return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
 }

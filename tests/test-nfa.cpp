@@ -44,106 +44,56 @@ TEST_CASE("Test NFA", "[NFA]") {
     auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
-    ByteNfa const nfa{std::move(rules)};
+    ByteNfa const nfa{rules};
 
     // Compare against expected output
+    // capture order(tags in brackets): letter1(0,1), letter2(2,3), letter(4,5), containerID(6,7)
     string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2},"
-                                     "epsilon_transitions={},"
-                                     "positive_tagged_start_transitions={},"
-                                     "positive_tagged_end_transitions={},"
-                                     "negative_tagged_transition={}\n";
+                                     "spontaneous_transition={}\n";
     expected_serialized_nfa += "1:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={3[letter]},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
-    expected_serialized_nfa
-            += "2:byte_transitions={},"
-               "epsilon_transitions={},"
-               "positive_tagged_start_transitions={},"
-               "positive_tagged_end_transitions={},"
-               "negative_tagged_transition={4[letter1,letter2,letter,containerID]}\n";
+                               "spontaneous_transition={3[set:4]}\n";
+    expected_serialized_nfa += "2:byte_transitions={},"
+                               "spontaneous_transition={4[negate:0,1,2,3,4,5,6,7]}\n";
     expected_serialized_nfa += "3:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={5[letter1],6[letter2]},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={5[set:0],6[set:2]}\n";
     expected_serialized_nfa += "4:accepting_tag=0,byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={}\n";
     expected_serialized_nfa += "5:byte_transitions={a-->7,b-->7},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={}\n";
     expected_serialized_nfa += "6:byte_transitions={c-->8,d-->8},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={}\n";
     expected_serialized_nfa += "7:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={9[letter1]},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={9[set:1]}\n";
     expected_serialized_nfa += "8:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={10[letter2]},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={10[set:3]}\n";
     expected_serialized_nfa += "9:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={11[letter2]}\n";
+                               "spontaneous_transition={11[negate:2,3]}\n";
     expected_serialized_nfa += "10:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={11[letter1]}\n";
+                               "spontaneous_transition={11[negate:0,1]}\n";
     expected_serialized_nfa += "11:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={12[letter]},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={12[set:5]}\n";
     expected_serialized_nfa += "12:byte_transitions={B-->13},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={}\n";
     expected_serialized_nfa += "13:byte_transitions={},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={14[containerID]},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={14[set:6]}\n";
     expected_serialized_nfa += "14:byte_transitions={0-->15,1-->15,2-->15,3-->15,4-->15,5-->15,6-->"
                                "15,7-->15,8-->15,9-->15},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={}\n";
     expected_serialized_nfa += "15:byte_transitions={0-->15,1-->15,2-->15,3-->15,4-->15,5-->15,6-->"
                                "15,7-->15,8-->15,9-->15},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={16[containerID]},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={16[set:7]}\n";
     expected_serialized_nfa += "16:byte_transitions={C-->4},"
-                               "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={}\n";
+                               "spontaneous_transition={}\n";
 
     // Compare expected and actual line-by-line
-    auto const actual_serialized_nfa = nfa.serialize();
-    stringstream ss_actual{actual_serialized_nfa};
+    auto const optional_actual_serialized_nfa = nfa.serialize();
+    REQUIRE(optional_actual_serialized_nfa.has_value());
+    stringstream ss_actual{optional_actual_serialized_nfa.value()};
     stringstream ss_expected{expected_serialized_nfa};
     string actual_line;
     string expected_line;
 
-    CAPTURE(actual_serialized_nfa);
+    CAPTURE(optional_actual_serialized_nfa.value());
     CAPTURE(expected_serialized_nfa);
     while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
         REQUIRE(actual_line == expected_line);

@@ -20,7 +20,7 @@ namespace log_surgeon::finite_automata {
 template <typename TypedDfaState, typename TypedNfaState>
 class Dfa {
 public:
-    explicit Dfa(Nfa<TypedNfaState> nfa);
+    explicit Dfa(Nfa<TypedNfaState> const& nfa);
 
     auto get_root() const -> TypedDfaState const* { return m_states.at(0).get(); }
 
@@ -41,7 +41,7 @@ private:
      * Generate the DFA states from the given NFA using the superset determinization algorithm.
      * @oaram nfa The NFA used to generate the DFA.
      */
-    auto generate() -> void;
+    auto generate(Nfa<TypedNfaState> const& nfa) -> void;
 
     /**
      * Creates a new DFA state based on a set of NFA states and adds it to `m_states`.
@@ -52,17 +52,16 @@ private:
 
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
     RegisterHandler m_register_handler;
-    Nfa<TypedNfaState> m_nfa;
 };
 
 template <typename TypedDfaState, typename TypedNfaState>
-Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> nfa) : m_nfa(std::move(nfa)) {
-    generate();
+Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
+    generate(nfa);
 }
 
 // TODO: handle utf8 case in DFA generation.
 template <typename TypedDfaState, typename TypedNfaState>
-auto Dfa<TypedDfaState, TypedNfaState>::generate() -> void {
+auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) -> void {
     std::map<ConfigurationSet, TypedDfaState*> dfa_states;
     std::stack<ConfigurationSet> unexplored_sets;
     auto create_dfa_state
@@ -84,15 +83,15 @@ auto Dfa<TypedDfaState, TypedNfaState>::generate() -> void {
         return state;
     };
 
-    for (uint32_t i = 0; i < 4 * m_nfa.get_num_tags(); i++) {
+    for (uint32_t i = 0; i < 4 * nfa.get_num_tags(); i++) {
         constexpr PrefixTree::position_t cDefaultPos{0};
         m_register_handler.add_register(PrefixTree::cRootId, cDefaultPos);
     }
-    std::vector<uint32_t> initial_registers(m_nfa.get_num_tags() * 2);
+    std::vector<uint32_t> initial_registers(nfa.get_num_tags() * 2);
     std::iota(initial_registers.begin(), initial_registers.end(), 0);
 
     DetermizationConfiguration<TypedNfaState>
-            initial_configuration{m_nfa.get_root(), initial_registers, {}, {}};
+            initial_configuration{nfa.get_root(), initial_registers, {}, {}};
     auto configuration_set = initial_configuration.epsilon_closure();
     create_dfa_state(configuration_set);
     while (false == unexplored_sets.empty()) {
