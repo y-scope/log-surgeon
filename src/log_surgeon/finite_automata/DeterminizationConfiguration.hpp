@@ -54,7 +54,7 @@ public:
      * @return The set of all configurations reachable from the current configuration via any number
      * of epsilon transitions.
      */
-    auto epsilon_closure() const -> std::set<DetermizationConfiguration>;
+    auto spontaneous_closure() const -> std::set<DetermizationConfiguration>;
 
     [[nodiscard]] auto get_state() const -> TypedNfaState const* { return m_nfa_state; }
 
@@ -82,7 +82,7 @@ auto DetermizationConfiguration<TypedNfaState>::spontaneous_transition(
 }
 
 template <typename TypedNfaState>
-auto DetermizationConfiguration<TypedNfaState>::epsilon_closure(
+auto DetermizationConfiguration<TypedNfaState>::spontaneous_closure(
 ) const -> std::set<DetermizationConfiguration> {
     std::set<DetermizationConfiguration> reachable_set;
     std::stack<DetermizationConfiguration> unexplored_stack;

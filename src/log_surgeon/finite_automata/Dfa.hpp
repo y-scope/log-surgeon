@@ -34,6 +34,11 @@ public:
      */
     [[nodiscard]] auto get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t>;
 
+    [[nodiscard]] auto get_tag_id_to_final_reg_id(
+    ) const -> std::unordered_map<tag_id_t, RegisterHandler::register_id_t> {
+        return m_tag_id_to_final_reg_id;
+    }
+
 private:
     typedef std::set<DetermizationConfiguration<TypedNfaState>> ConfigurationSet;
 
@@ -51,6 +56,7 @@ private:
     auto new_state(ConfigurationSet const& nfa_state_set) -> TypedDfaState*;
 
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
+    std::unordered_map<tag_id_t, RegisterHandler::register_id_t> m_tag_id_to_final_reg_id;
     RegisterHandler m_register_handler;
 };
 
@@ -83,16 +89,22 @@ auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) 
         return state;
     };
 
-    for (uint32_t i = 0; i < 4 * nfa.get_num_tags(); i++) {
-        constexpr PrefixTree::position_t cDefaultPos{0};
-        m_register_handler.add_register(PrefixTree::cRootId, cDefaultPos);
+    for (uint32_t i = 0; i < nfa.get_num_tags(); ++i) {
+        for (uint32_t j = 0; j < 2; ++j) {
+            constexpr PrefixTree::position_t cDefaultPos{0};
+            m_register_handler.add_register(PrefixTree::cRootId, cDefaultPos);
+        }
     }
-    std::vector<uint32_t> initial_registers(nfa.get_num_tags() * 2);
+    for (uint32_t i = 0; i < nfa.get_num_tags(); ++i) {
+        m_tag_id_to_final_reg_id[i] = nfa.get_num_tags() + i;
+    }
+
+    std::vector<uint32_t> initial_registers(nfa.get_num_tags());
     std::iota(initial_registers.begin(), initial_registers.end(), 0);
 
     DetermizationConfiguration<TypedNfaState>
             initial_configuration{nfa.get_root(), initial_registers, {}, {}};
-    auto configuration_set = initial_configuration.epsilon_closure();
+    auto configuration_set = initial_configuration.spontaneous_closure();
     create_dfa_state(configuration_set);
     while (false == unexplored_sets.empty()) {
         configuration_set = unexplored_sets.top();
@@ -101,7 +113,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) 
         auto* dfa_state = dfa_states.at(configuration_set);
         std::map<uint32_t, ConfigurationSet> ascii_transitions_map;
         for (auto const& configuration : configuration_set) {
-            for (uint32_t i = 0; i < cSizeOfByte; i++) {
+            for (uint32_t i = 0; i < cSizeOfByte; ++i) {
                 auto const* nfa_state = configuration.get_state();
                 for (auto const* next_nfa_state : nfa_state->get_byte_transitions(i)) {
                     DetermizationConfiguration<TypedNfaState> next_configuration{
@@ -110,7 +122,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) 
                             configuration.get_sequence(),
                             {}
                     };
-                    auto closure = next_configuration.epsilon_closure();
+                    auto closure = next_configuration.spontaneous_closure();
                     ascii_transitions_map[i].insert(closure.begin(), closure.end());
                 }
             }
