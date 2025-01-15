@@ -42,6 +42,8 @@ public:
         return m_transition_op;
     }
 
+    [[nodiscard]] auto get_tag_ids() const -> std::vector<tag_id_t> { return m_tag_ids; }
+
     [[nodiscard]] auto get_dest_state() const -> TypedNfaState const* { return m_dest_state; }
 
     /**

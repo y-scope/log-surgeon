@@ -14,13 +14,13 @@ public:
     DetermizationConfiguration(
             TypedNfaState const* nfa_state,
             std::vector<uint32_t> register_ids,
-            std::vector<Tag const*> history,
-            std::vector<Tag const*> sequence
+            std::vector<tag_id_t> tag_history,
+            std::vector<tag_id_t> tag_sequence
     )
             : m_nfa_state(nfa_state),
               m_register_ids(std::move(register_ids)),
-              m_history(std::move(history)),
-              m_sequence(std::move(sequence)) {}
+              m_tag_history(std::move(tag_history)),
+              m_tag_sequence(std::move(tag_sequence)) {}
 
     /**
      * Used for ordering in a set by considering the configuration's NFA state.
@@ -33,13 +33,13 @@ public:
 
     auto configuration_with_new_state_and_tags(
             TypedNfaState const* new_nfa_state,
-            std::vector<Tag const*> const& tags
+            std::vector<tag_id_t> const& tag_ids
     ) const -> DetermizationConfiguration {
-        auto sequence{m_sequence};
-        for (auto const* tag : tags) {
+        auto sequence{m_tag_sequence};
+        for (auto const tag : tag_ids) {
             sequence.push_back(tag);
         }
-        return DetermizationConfiguration(new_nfa_state, m_register_ids, m_history, sequence);
+        return DetermizationConfiguration(new_nfa_state, m_register_ids, m_tag_history, sequence);
     }
 
     /**
@@ -47,7 +47,8 @@ public:
      * includes all configurations reachable from the current configuration via a single epsilon
      * transition.
      */
-    auto epsilon_transition(std::stack<DetermizationConfiguration>& unexplored_stack) const -> void;
+    auto spontaneous_transition(std::stack<DetermizationConfiguration>& unexplored_stack
+    ) const -> void;
 
     /**
      * @return The set of all configurations reachable from the current configuration via any number
@@ -59,44 +60,24 @@ public:
 
     [[nodiscard]] auto get_register_ids() const -> std::vector<uint32_t> { return m_register_ids; }
 
-    [[nodiscard]] auto get_sequence() const -> std::vector<Tag const*> { return m_sequence; }
+    [[nodiscard]] auto get_sequence() const -> std::vector<tag_id_t> { return m_tag_sequence; }
 
 private:
     TypedNfaState const* m_nfa_state;
     std::vector<uint32_t> m_register_ids;
-    std::vector<Tag const*> m_history;
-    std::vector<Tag const*> m_sequence;
+    std::vector<tag_id_t> m_tag_history;
+    std::vector<tag_id_t> m_tag_sequence;
 };
 
 template <typename TypedNfaState>
-auto DetermizationConfiguration<TypedNfaState>::epsilon_transition(
+auto DetermizationConfiguration<TypedNfaState>::spontaneous_transition(
         std::stack<DetermizationConfiguration>& unexplored_stack
 ) const -> void {
-    for (auto const* dest_state : m_nfa_state->get_epsilon_transitions()) {
-        unexplored_stack.push(configuration_with_new_state_and_tags(dest_state, {}));
-    }
-
-    for (auto const& positive_tagged_start_transition :
-         m_nfa_state->get_positive_tagged_start_transitions())
-    {
-        auto const* dest_state = positive_tagged_start_transition.get_dest_state();
-        auto const* tag = positive_tagged_start_transition.get_tag();
-        unexplored_stack.push(configuration_with_new_state_and_tags(dest_state, {tag}));
-    }
-
-    auto const& optional_positive_tagged_end_transition
-            = m_nfa_state->get_positive_tagged_end_transition();
-    if (optional_positive_tagged_end_transition.has_value()) {
-        auto const* dest_state{optional_positive_tagged_end_transition.value().get_dest_state()};
-        auto const* tag{optional_positive_tagged_end_transition.value().get_tag()};
-        unexplored_stack.push(configuration_with_new_state_and_tags(dest_state, {tag}));
-    }
-
-    auto const& optional_negative_tagged_transition = m_nfa_state->get_negative_tagged_transition();
-    if (optional_negative_tagged_transition.has_value()) {
-        auto const* dest_state = optional_negative_tagged_transition.value().get_dest_state();
-        auto tags = optional_negative_tagged_transition.value().get_tags();
-        unexplored_stack.push(configuration_with_new_state_and_tags(dest_state, tags));
+    for (auto const& spontaneous_transition : m_nfa_state->get_spontaneous_transitions()) {
+        unexplored_stack.push(configuration_with_new_state_and_tags(
+                spontaneous_transition.get_dest_state(),
+                spontaneous_transition.get_tag_ids()
+        ));
     }
 }
 
@@ -114,7 +95,7 @@ auto DetermizationConfiguration<TypedNfaState>::epsilon_closure(
             continue;
         }
 
-        current_configuration.epsilon_transition(unexplored_stack);
+        current_configuration.spontaneous_transition(unexplored_stack);
     }
     return reachable_set;
 }
