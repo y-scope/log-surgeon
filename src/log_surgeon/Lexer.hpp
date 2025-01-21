@@ -24,7 +24,7 @@ namespace log_surgeon {
 template <typename TypedNfaState, typename TypedDfaState>
 class Lexer {
 public:
-    using register_id_t = finite_automata::RegisterHandler::register_id_t;
+    using register_id_t = finite_automata::register_id_t;
     using symbol_id_t = uint32_t;
     using tag_id_t = finite_automata::tag_id_t;
 

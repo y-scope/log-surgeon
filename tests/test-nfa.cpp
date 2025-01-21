@@ -22,13 +22,6 @@ using std::vector;
 
 using ByteLexicalRule = log_surgeon::LexicalRule<ByteNfaState>;
 using ByteNfa = log_surgeon::finite_automata::Nfa<ByteNfaState>;
-using RegexASTCatByte = log_surgeon::finite_automata::RegexASTCat<ByteNfaState>;
-using RegexASTCaptureByte = log_surgeon::finite_automata::RegexASTCapture<ByteNfaState>;
-using RegexASTGroupByte = log_surgeon::finite_automata::RegexASTGroup<ByteNfaState>;
-using RegexASTLiteralByte = log_surgeon::finite_automata::RegexASTLiteral<ByteNfaState>;
-using RegexASTMultiplicationByte
-        = log_surgeon::finite_automata::RegexASTMultiplication<ByteNfaState>;
-using RegexASTOrByte = log_surgeon::finite_automata::RegexASTOr<ByteNfaState>;
 
 TEST_CASE("Test NFA", "[NFA]") {
     Schema schema;
