@@ -10,8 +10,6 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/core.h>
-
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/NfaState.hpp>
 #include <log_surgeon/LexicalRule.hpp>
@@ -191,23 +189,7 @@ auto Nfa<TypedNfaState>::get_bfs_traversal_order() const -> std::vector<TypedNfa
 }
 
 template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::serialize() const -> std::string {
-    auto const traversal_order = get_bfs_traversal_order();
-
-    std::unordered_map<TypedNfaState const*, uint32_t> state_ids;
-    for (auto const* state : traversal_order) {
-        state_ids.emplace(state, state_ids.size());
-    }
-
-    std::vector<std::string> serialized_states;
-    for (auto const* state : traversal_order) {
-        // `state_ids` is well-formed as its generated from `get_bfs_traversal_order` so we can
-        // safely assume `state->serialize(state_ids)` will return a valid value.
-        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        serialized_states.emplace_back(state->serialize(state_ids).value());
-    }
-    return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
-}
+auto Nfa<TypedNfaState>::serialize() const -> std::string;
 }  // namespace log_surgeon::finite_automata
 
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP

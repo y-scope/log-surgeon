@@ -95,15 +95,19 @@ set(SOURCE_FILES
     src/log_surgeon/Token.hpp
     src/log_surgeon/finite_automata/PrefixTree.cpp
     src/log_surgeon/finite_automata/PrefixTree.hpp
+    src/log_surgeon/finite_automata/RegexAST.cpp
     src/log_surgeon/finite_automata/RegexAST.hpp
     src/log_surgeon/finite_automata/Dfa.hpp
     src/log_surgeon/finite_automata/DfaState.hpp
     src/log_surgeon/finite_automata/DfaStatePair.hpp
+    src/log_surgeon/finite_automata/Nfa.cpp
     src/log_surgeon/finite_automata/Nfa.hpp
+    src/log_surgeon/finite_automata/NfaState.cpp
     src/log_surgeon/finite_automata/NfaState.hpp
     src/log_surgeon/finite_automata/RegisterHandler.hpp
     src/log_surgeon/finite_automata/StateType.hpp
     src/log_surgeon/finite_automata/Tag.hpp
+    src/log_surgeon/finite_automata/TaggedTransition.cpp
     src/log_surgeon/finite_automata/TaggedTransition.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.tpp
@@ -135,7 +139,7 @@ else()
             )
 endif()
 
-target_link_libraries(log_surgeon PUBLIC fmt::fmt)
+target_link_libraries(log_surgeon PRIVATE fmt::fmt)
 
 target_include_directories(log_surgeon
         PUBLIC

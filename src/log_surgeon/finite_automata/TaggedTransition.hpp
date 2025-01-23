@@ -8,8 +8,6 @@
 #include <string>
 #include <unordered_map>
 
-#include <fmt/format.h>
-
 #include <log_surgeon/finite_automata/Tag.hpp>
 
 namespace log_surgeon::finite_automata {
@@ -38,13 +36,7 @@ public:
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids
-    ) const -> std::optional<std::string> {
-        auto const state_id_it = state_ids.find(m_dest_state);
-        if (state_id_it == state_ids.end()) {
-            return std::nullopt;
-        }
-        return fmt::format("{}[{}]", state_id_it->second, m_tag->get_name());
-    }
+    ) const -> std::optional<std::string>;
 
 private:
     Tag const* m_tag;
@@ -81,16 +73,7 @@ public:
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids
-    ) const -> std::optional<std::string> {
-        auto const state_id_it = state_ids.find(m_dest_state);
-        if (state_id_it == state_ids.end()) {
-            return std::nullopt;
-        }
-
-        auto const tag_names = m_tags | std::ranges::views::transform(&Tag::get_name);
-
-        return fmt::format("{}[{}]", state_id_it->second, fmt::join(tag_names, ","));
-    }
+    ) const -> std::optional<std::string>;
 
 private:
     std::vector<Tag const*> m_tags;

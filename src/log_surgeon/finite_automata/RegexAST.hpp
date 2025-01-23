@@ -15,10 +15,6 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/core.h>
-#include <fmt/ranges.h>
-#include <fmt/xchar.h>
-
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Tag.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
@@ -127,23 +123,7 @@ protected:
     RegexAST(RegexAST&& rhs) noexcept = delete;
     auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = delete;
 
-    [[nodiscard]] auto serialize_negative_tags() const -> std::u32string {
-        if (m_negative_tags.empty()) {
-            return U"";
-        }
-
-        auto const transformed_negative_tags
-                = m_negative_tags | std::ranges::views::transform([](Tag const* tag) {
-                      return fmt::format("<~{}>", tag->get_name());
-                  });
-        auto const negative_tags_string
-                = fmt::format("{}", fmt::join(transformed_negative_tags, ""));
-
-        return fmt::format(
-                U"{}",
-                std::u32string(negative_tags_string.begin(), negative_tags_string.end())
-        );
-    }
+    [[nodiscard]] auto serialize_negative_tags() const -> std::u32string;
 
 private:
     std::vector<Tag const*> m_subtree_positive_tags;
@@ -714,9 +694,7 @@ private:
 };
 
 template <typename TypedNfaState>
-[[nodiscard]] auto RegexASTEmpty<TypedNfaState>::serialize() const -> std::u32string {
-    return fmt::format(U"{}", RegexAST<TypedNfaState>::serialize_negative_tags());
-}
+[[nodiscard]] auto RegexASTEmpty<TypedNfaState>::serialize() const -> std::u32string;
 
 template <typename TypedNfaState>
 RegexASTLiteral<TypedNfaState>::RegexASTLiteral(uint32_t character) : m_character(character) {}
@@ -728,13 +706,7 @@ void RegexASTLiteral<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNf
 }
 
 template <typename TypedNfaState>
-[[nodiscard]] auto RegexASTLiteral<TypedNfaState>::serialize() const -> std::u32string {
-    return fmt::format(
-            U"{}{}",
-            static_cast<char32_t>(m_character),
-            RegexAST<TypedNfaState>::serialize_negative_tags()
-    );
-}
+[[nodiscard]] auto RegexASTLiteral<TypedNfaState>::serialize() const -> std::u32string;
 
 template <typename TypedNfaState>
 RegexASTInteger<TypedNfaState>::RegexASTInteger(uint32_t digit) {
@@ -758,14 +730,7 @@ void RegexASTInteger<TypedNfaState>::add_to_nfa(
 }
 
 template <typename TypedNfaState>
-[[nodiscard]] auto RegexASTInteger<TypedNfaState>::serialize() const -> std::u32string {
-    auto const digits_string = fmt::format("{}", fmt::join(m_digits, ""));
-    return fmt::format(
-            U"{}{}",
-            std::u32string(digits_string.begin(), digits_string.end()),
-            RegexAST<TypedNfaState>::serialize_negative_tags()
-    );
-}
+[[nodiscard]] auto RegexASTInteger<TypedNfaState>::serialize() const -> std::u32string;
 
 template <typename TypedNfaState>
 RegexASTOr<TypedNfaState>::RegexASTOr(
@@ -788,14 +753,7 @@ void RegexASTOr<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaStat
 }
 
 template <typename TypedNfaState>
-[[nodiscard]] auto RegexASTOr<TypedNfaState>::serialize() const -> std::u32string {
-    return fmt::format(
-            U"({})|({}){}",
-            nullptr != m_left ? m_left->serialize() : U"null",
-            nullptr != m_right ? m_right->serialize() : U"null",
-            RegexAST<TypedNfaState>::serialize_negative_tags()
-    );
-}
+[[nodiscard]] auto RegexASTOr<TypedNfaState>::serialize() const -> std::u32string;
 
 template <typename TypedNfaState>
 RegexASTCat<TypedNfaState>::RegexASTCat(
@@ -820,14 +778,7 @@ void RegexASTCat<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaSta
 }
 
 template <typename TypedNfaState>
-[[nodiscard]] auto RegexASTCat<TypedNfaState>::serialize() const -> std::u32string {
-    return fmt::format(
-            U"{}{}{}",
-            nullptr != m_left ? m_left->serialize() : U"null",
-            nullptr != m_right ? m_right->serialize() : U"null",
-            RegexAST<TypedNfaState>::serialize_negative_tags()
-    );
-}
+[[nodiscard]] auto RegexASTCat<TypedNfaState>::serialize() const -> std::u32string;
 
 template <typename TypedNfaState>
 RegexASTMultiplication<TypedNfaState>::RegexASTMultiplication(
@@ -878,18 +829,7 @@ void RegexASTMultiplication<TypedNfaState>::add_to_nfa(
 }
 
 template <typename TypedNfaState>
-[[nodiscard]] auto RegexASTMultiplication<TypedNfaState>::serialize() const -> std::u32string {
-    auto const min_string = std::to_string(m_min);
-    auto const max_string = std::to_string(m_max);
-
-    return fmt::format(
-            U"({}){{{},{}}}{}",
-            nullptr != m_operand ? m_operand->serialize() : U"null",
-            std::u32string(min_string.begin(), min_string.end()),
-            is_infinite() ? U"inf" : std::u32string(max_string.begin(), max_string.end()),
-            RegexAST<TypedNfaState>::serialize_negative_tags()
-    );
-}
+[[nodiscard]] auto RegexASTMultiplication<TypedNfaState>::serialize() const -> std::u32string;
 
 template <typename TypedNfaState>
 auto RegexASTCapture<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* dest_state)
@@ -938,15 +878,7 @@ auto RegexASTCapture<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNf
 }
 
 template <typename TypedNfaState>
-[[nodiscard]] auto RegexASTCapture<TypedNfaState>::serialize() const -> std::u32string {
-    auto const tag_name_u32 = std::u32string(m_tag->get_name().cbegin(), m_tag->get_name().cend());
-    return fmt::format(
-            U"({})<{}>{}",
-            m_group_regex_ast->serialize(),
-            tag_name_u32,
-            RegexAST<TypedNfaState>::serialize_negative_tags()
-    );
-}
+[[nodiscard]] auto RegexASTCapture<TypedNfaState>::serialize() const -> std::u32string;
 
 template <typename TypedNfaState>
 RegexASTGroup<TypedNfaState>::RegexASTGroup(
@@ -1074,35 +1006,7 @@ void RegexASTGroup<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaS
 }
 
 template <typename TypedNfaState>
-[[nodiscard]] auto RegexASTGroup<TypedNfaState>::serialize() const -> std::u32string {
-    std::u32string ranges_serialized;
-    if (m_is_wildcard) {
-        ranges_serialized += U"*";
-    } else {
-        auto const transformed_ranges
-                = m_ranges
-                  | std::ranges::views::transform([](std::pair<uint32_t, uint32_t> const& range) {
-                        auto const [begin, end] = range;
-                        return fmt::format(
-                                U"{}-{}",
-                                static_cast<char32_t>(begin),
-                                static_cast<char32_t>(end)
-                        );
-                    });
-        for (auto const& range_u32string : transformed_ranges) {
-            if (false == ranges_serialized.empty()) {
-                ranges_serialized += U", ";  // Add separator
-            }
-            ranges_serialized += range_u32string;
-        }
-    }
-    return fmt::format(
-            U"[{}{}]{}",
-            m_negate ? U"^" : U"",
-            ranges_serialized,
-            RegexAST<TypedNfaState>::serialize_negative_tags()
-    );
-}
+[[nodiscard]] auto RegexASTGroup<TypedNfaState>::serialize() const -> std::u32string;
 }  // namespace log_surgeon::finite_automata
 
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_REGEX_AST_HPP
