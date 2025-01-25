@@ -1,8 +1,6 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_DFA_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_DFA_HPP
 
-#include <algorithm>
-#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -157,12 +155,13 @@ auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) 
                     auto closure{next_configuration.spontaneous_closure()};
                     auto const new_reg_ops{assign_transition_reg_ops(closure, tag_with_op_to_reg_id)
                     };
-                    if(ascii_transitions_map.contains(i)) {
+                    if (ascii_transitions_map.contains(i)) {
                         auto& byte_reg_ops{ascii_transitions_map.at(i).first};
-                        byte_reg_ops.insert(byte_reg_ops.end(), new_reg_ops.begin(), new_reg_ops.end());
+                        byte_reg_ops
+                                .insert(byte_reg_ops.end(), new_reg_ops.begin(), new_reg_ops.end());
                         ascii_transitions_map.at(i).second.insert(closure.begin(), closure.end());
                     } else {
-                        ascii_transitions_map.emplace(i, std::make_pair(new_reg_ops,closure));
+                        ascii_transitions_map.emplace(i, std::make_pair(new_reg_ops, closure));
                     }
                 }
             }

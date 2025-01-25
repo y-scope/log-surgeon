@@ -1,18 +1,25 @@
 #include "SchemaParser.hpp"
 
+#include <cerrno>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <memory>
 #include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <tuple>
+#include <type_traits>
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/FileReader.hpp>
 #include <log_surgeon/finite_automata/Capture.hpp>
+#include <log_surgeon/finite_automata/NfaState.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/Lalr1Parser.hpp>
-#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/Reader.hpp>
 #include <log_surgeon/utils.hpp>
 
 using ParserValueRegex = log_surgeon::ParserValue<std::unique_ptr<

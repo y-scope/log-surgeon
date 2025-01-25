@@ -4,12 +4,13 @@
 #include <cstdint>
 #include <optional>
 #include <ranges>
-#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <log_surgeon/finite_automata/RegisterOperation.hpp>
 #include <log_surgeon/finite_automata/StateType.hpp>
@@ -21,7 +22,7 @@ class DfaState;
 template <StateType state_type>
 class DfaTransition {
 public:
-    DfaTransition() {}
+    DfaTransition() = default;
 
     DfaTransition(std::vector<RegisterOperation> reg_ops, DfaState<state_type>* dest_state)
             : m_reg_ops{std::move(reg_ops)},

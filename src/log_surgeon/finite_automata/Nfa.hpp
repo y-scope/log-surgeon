@@ -21,8 +21,6 @@
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 
-#include "NfaState.hpp"
-
 namespace log_surgeon::finite_automata {
 class UniqueIdGenerator {
 public:

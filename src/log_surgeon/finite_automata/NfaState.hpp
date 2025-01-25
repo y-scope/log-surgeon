@@ -1,19 +1,25 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_NFA_STATE
 #define LOG_SURGEON_FINITE_AUTOMATA_NFA_STATE
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include <fmt/core.h>
 #include <fmt/format.h>
 
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/SpontaneousTransition.hpp>
 #include <log_surgeon/finite_automata/StateType.hpp>
+#include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
@@ -51,10 +57,11 @@ public:
 
     auto add_spontaneous_transition(
             TagOperationType const op_type,
-            std::vector<tag_id_t> tag_ids,
+            std::vector<tag_id_t> const& tag_ids,
             NfaState const* dest_state
     ) -> void {
         std::vector<TagOperation> tag_ops;
+        tag_ops.reserve(tag_ids.size());
         for (auto const tag_id : tag_ids) {
             tag_ops.emplace_back(tag_id, op_type);
         }
