@@ -83,11 +83,11 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer, 
             m_match_pos = prev_byte_buf_pos;
             m_match_line = m_line;
         }
-        auto* next = state->next(next_char).second;
+        auto* next = state->next(next_char).get_dest_state();
         if (next_char == '\n') {
             m_line++;
             if (m_has_delimiters && !m_match) {
-                next = m_dfa->get_root()->next(next_char).second;
+                next = m_dfa->get_root()->next(next_char).get_dest_state();
                 m_match = true;
                 m_type_ids = &(next->get_matching_variable_ids());
                 m_start_pos = prev_byte_buf_pos;
@@ -336,7 +336,7 @@ void Lexer<TypedNfaState, TypedDfaState>::reset() {
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::prepend_start_of_file_char(ParserInputBuffer& input_buffer
 ) {
-    m_prev_state = m_dfa->get_root()->next(utf8::cCharStartOfFile).second;
+    m_prev_state = m_dfa->get_root()->next(utf8::cCharStartOfFile).get_dest_state();
     m_asked_for_more_data = true;
     m_start_pos = input_buffer.storage().pos();
     m_match_pos = input_buffer.storage().pos();
@@ -407,7 +407,7 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
 
     auto const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
-        if (state->next(i).second != nullptr) {
+        if (state->next(i).get_dest_state() != nullptr) {
             m_is_first_char[i] = true;
         } else {
             m_is_first_char[i] = false;

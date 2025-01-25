@@ -1,4 +1,3 @@
-#include <cstdint>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -6,13 +5,13 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/finite_automata/Nfa.hpp>
+#include <log_surgeon/finite_automata/NfaState.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
-using log_surgeon::cSizeOfByte;
 using log_surgeon::finite_automata::ByteNfaState;
 using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
@@ -44,11 +43,11 @@ TEST_CASE("Test NFA", "[NFA]") {
     string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2},"
                                      "spontaneous_transition={}\n";
     expected_serialized_nfa += "1:byte_transitions={},"
-                               "spontaneous_transition={3[set:4]}\n";
+                               "spontaneous_transition={3[4p]}\n";
     expected_serialized_nfa += "2:byte_transitions={},"
-                               "spontaneous_transition={4[negate:0,1,2,3,4,5,6,7]}\n";
+                               "spontaneous_transition={4[0n,1n,2n,3n,4n,5n,6n,7n]}\n";
     expected_serialized_nfa += "3:byte_transitions={},"
-                               "spontaneous_transition={5[set:0],6[set:2]}\n";
+                               "spontaneous_transition={5[0p],6[2p]}\n";
     expected_serialized_nfa += "4:accepting_tag=0,byte_transitions={},"
                                "spontaneous_transition={}\n";
     expected_serialized_nfa += "5:byte_transitions={a-->7,b-->7},"
@@ -56,25 +55,25 @@ TEST_CASE("Test NFA", "[NFA]") {
     expected_serialized_nfa += "6:byte_transitions={c-->8,d-->8},"
                                "spontaneous_transition={}\n";
     expected_serialized_nfa += "7:byte_transitions={},"
-                               "spontaneous_transition={9[set:1]}\n";
+                               "spontaneous_transition={9[1p]}\n";
     expected_serialized_nfa += "8:byte_transitions={},"
-                               "spontaneous_transition={10[set:3]}\n";
+                               "spontaneous_transition={10[3p]}\n";
     expected_serialized_nfa += "9:byte_transitions={},"
-                               "spontaneous_transition={11[negate:2,3]}\n";
+                               "spontaneous_transition={11[2n,3n]}\n";
     expected_serialized_nfa += "10:byte_transitions={},"
-                               "spontaneous_transition={11[negate:0,1]}\n";
+                               "spontaneous_transition={11[0n,1n]}\n";
     expected_serialized_nfa += "11:byte_transitions={},"
-                               "spontaneous_transition={12[set:5]}\n";
+                               "spontaneous_transition={12[5p]}\n";
     expected_serialized_nfa += "12:byte_transitions={B-->13},"
                                "spontaneous_transition={}\n";
     expected_serialized_nfa += "13:byte_transitions={},"
-                               "spontaneous_transition={14[set:6]}\n";
+                               "spontaneous_transition={14[6p]}\n";
     expected_serialized_nfa += "14:byte_transitions={0-->15,1-->15,2-->15,3-->15,4-->15,5-->15,6-->"
                                "15,7-->15,8-->15,9-->15},"
                                "spontaneous_transition={}\n";
     expected_serialized_nfa += "15:byte_transitions={0-->15,1-->15,2-->15,3-->15,4-->15,5-->15,6-->"
                                "15,7-->15,8-->15,9-->15},"
-                               "spontaneous_transition={16[set:7]}\n";
+                               "spontaneous_transition={16[7p]}\n";
     expected_serialized_nfa += "16:byte_transitions={C-->4},"
                                "spontaneous_transition={}\n";
 

@@ -1,4 +1,3 @@
-#include <cstdint>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -6,14 +5,14 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Dfa.hpp>
+#include <log_surgeon/finite_automata/DfaState.hpp>
 #include <log_surgeon/finite_automata/Nfa.hpp>
-#include <log_surgeon/finite_automata/RegexAST.hpp>
+#include <log_surgeon/finite_automata/NfaState.hpp>
+#include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
-using log_surgeon::cSizeOfByte;
 using log_surgeon::finite_automata::ByteDfaState;
 using log_surgeon::finite_automata::ByteNfaState;
 using log_surgeon::Schema;
@@ -43,30 +42,28 @@ TEST_CASE("Test DFA", "[DFA]") {
     ByteNfa const nfa{rules};
     ByteDfa const dfa{nfa};
 
-    // Compare against expected output
-    // capture order(tags in brackets): letter1(0,1), letter2(2,3), letter(4,5), containerID(6,7)
-    string expected_serialized_nfa = "0:byte_transitions={A-()->1,Z-()->2}\n";
-    expected_serialized_nfa += "1:byte_transitions={a-(16p,17p)->3,b-(16p,17p)->3,c-(17p,18p)->4,"
+    string expected_serialized_dfa = "0:byte_transitions={A-()->1,Z-()->2}\n";
+    expected_serialized_dfa += "1:byte_transitions={a-(16p,17p)->3,b-(16p,17p)->3,c-(17p,18p)->4,"
                                "d-(17p,18p)->4}\n";
-    expected_serialized_nfa += "2:accepting_tags={0},byte_transitions={}\n";
-    expected_serialized_nfa += "3:byte_transitions={B-(19p,20n,21n,22p)->5}\n";
-    expected_serialized_nfa += "4:byte_transitions={B-(23n,24n,25p,26p)->5}\n";
-    expected_serialized_nfa += "5:byte_transitions={0-(27p)->6,1-(27p)->6,2-(27p)->6,3-(27p)->6,"
+    expected_serialized_dfa += "2:accepting_tags={0},byte_transitions={}\n";
+    expected_serialized_dfa += "3:byte_transitions={B-(19p,20n,21n,22p)->5}\n";
+    expected_serialized_dfa += "4:byte_transitions={B-(23n,24n,25p,26p)->5}\n";
+    expected_serialized_dfa += "5:byte_transitions={0-(27p)->6,1-(27p)->6,2-(27p)->6,3-(27p)->6,"
                                "4-(27p)->6,5-(27p)->6,6-(27p)->6,7-(27p)->6,8-(27p)->6,"
                                "9-(27p)->6}\n";
-    expected_serialized_nfa += "6:byte_transitions={0-()->6,1-()->6,2-()->6,3-()->6,4-()->6,5-()->6,"
-                               "6-()->6,7-()->6,8-()->6,9-()->6,C-(28p)->7}\n";
-    expected_serialized_nfa += "7:accepting_tags={0},byte_transitions={}\n";
+    expected_serialized_dfa += "6:byte_transitions={0-()->6,1-()->6,2-()->6,3-()->6,4-()->6,"
+                               "5-()->6,6-()->6,7-()->6,8-()->6,9-()->6,C-(28p)->7}\n";
+    expected_serialized_dfa += "7:accepting_tags={0},byte_transitions={}\n";
 
     // Compare expected and actual line-by-line
     auto const actual_serialized_dfa{dfa.serialize()};
     stringstream ss_actual{actual_serialized_dfa};
-    stringstream ss_expected{expected_serialized_nfa};
+    stringstream ss_expected{expected_serialized_dfa};
     string actual_line;
     string expected_line;
 
     CAPTURE(actual_serialized_dfa);
-    CAPTURE(expected_serialized_nfa);
+    CAPTURE(expected_serialized_dfa);
     while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
         REQUIRE(actual_line == expected_line);
     }

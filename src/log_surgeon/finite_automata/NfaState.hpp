@@ -32,11 +32,12 @@ public:
     NfaState() = default;
 
     NfaState(
-            TransitionOperation transition_op,
+            TagOperationType const op_type,
             std::vector<tag_id_t> tag_ids,
             NfaState const* dest_state
-    )
-            : m_spontaneous_transitions{{transition_op, std::move(tag_ids), dest_state}} {}
+    ) {
+        add_spontaneous_transition(op_type, std::move(tag_ids), dest_state);
+    }
 
     auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
 
@@ -49,11 +50,15 @@ public:
     }
 
     auto add_spontaneous_transition(
-            TransitionOperation const transition_op,
+            TagOperationType const op_type,
             std::vector<tag_id_t> tag_ids,
             NfaState const* dest_state
     ) -> void {
-        m_spontaneous_transitions.emplace_back(transition_op, std::move(tag_ids), dest_state);
+        std::vector<TagOperation> tag_ops;
+        for (auto const tag_id : tag_ids) {
+            tag_ops.emplace_back(tag_id, op_type);
+        }
+        m_spontaneous_transitions.emplace_back(std::move(tag_ops), dest_state);
     }
 
     auto add_byte_transition(uint8_t byte, NfaState* dest_state) -> void {

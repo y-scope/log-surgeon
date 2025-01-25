@@ -3,16 +3,21 @@ set(
         ../src/log_surgeon/FileReader.cpp
         ../src/log_surgeon/FileReader.hpp
         ../src/log_surgeon/finite_automata/Capture.hpp
+        ../src/log_surgeon/finite_automata/Dfa.hpp
+        ../src/log_surgeon/finite_automata/DfaState.hpp
+        ../src/log_surgeon/finite_automata/DfaStatePair.hpp
+        ../src/log_surgeon/finite_automata/DfaTransition.hpp
         ../src/log_surgeon/finite_automata/Nfa.hpp
         ../src/log_surgeon/finite_automata/NfaState.hpp
         ../src/log_surgeon/finite_automata/PrefixTree.cpp
         ../src/log_surgeon/finite_automata/PrefixTree.hpp
         ../src/log_surgeon/finite_automata/RegexAST.hpp
         ../src/log_surgeon/finite_automata/Register.hpp
-        ../src/log_surgeon/finite_automata/RegisterAction.hpp
         ../src/log_surgeon/finite_automata/RegisterHandler.hpp
+        ../src/log_surgeon/finite_automata/RegisterOperation.hpp
         ../src/log_surgeon/finite_automata/SpontaneousTransition.hpp
         ../src/log_surgeon/finite_automata/StateType.hpp
+        ../src/log_surgeon/finite_automata/TagOperation.hpp
         ../src/log_surgeon/Lalr1Parser.cpp
         ../src/log_surgeon/Lalr1Parser.hpp
         ../src/log_surgeon/Lalr1Parser.tpp

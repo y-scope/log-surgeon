@@ -4,8 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <queue>
-#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -13,23 +13,25 @@
 #include <vector>
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/NfaState.hpp>
-#include <log_surgeon/finite_automata/Tag.hpp>
+#include <log_surgeon/finite_automata/Capture.hpp>
+#include <log_surgeon/finite_automata/TagOperation.hpp>
+#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 #include <log_surgeon/LexicalRule.hpp>
+
+#include "NfaState.hpp"
 
 namespace log_surgeon::finite_automata {
 class UniqueIdGenerator {
 public:
-    UniqueIdGenerator() : current_id{0} {}
+    [[nodiscard]] auto generate_id() -> uint32_t { return m_current_id++; }
 
-    [[nodiscard]] auto generate_id() -> uint32_t { return current_id++; }
+    [[nodiscard]] auto get_num_ids() const -> uint32_t { return m_current_id; }
 
-    [[nodiscard]] auto get_num_ids() const -> uint32_t { return current_id; }
-    
 private:
-    uint32_t current_id;
+    uint32_t m_current_id{0};
 };
 
 /**
@@ -155,17 +157,15 @@ auto Nfa<TypedNfaState>::new_state_for_negative_captures(
         TypedNfaState const* dest_state
 ) -> TypedNfaState* {
     std::vector<tag_id_t> tags;
-    for (auto const capture : captures) {
+    for (auto const* capture : captures) {
         auto [start_tag, end_tag]{get_or_create_capture_tags(capture)};
         tags.push_back(start_tag);
         tags.push_back(end_tag);
     }
 
-    m_states.emplace_back(std::make_unique<TypedNfaState>(
-            TransitionOperation::NegateTags,
-            std::move(tags),
-            dest_state
-    ));
+    m_states.emplace_back(
+            std::make_unique<TypedNfaState>(TagOperationType::Negate, std::move(tags), dest_state)
+    );
     return m_states.back().get();
 }
 
@@ -176,12 +176,10 @@ auto Nfa<TypedNfaState>::new_start_and_end_states_for_capture(
 ) -> std::pair<TypedNfaState*, TypedNfaState*> {
     auto [start_tag, end_tag]{get_or_create_capture_tags(capture)};
     auto* start_state = new_state();
-    m_root->add_spontaneous_transition(TransitionOperation::SetTags, {start_tag}, start_state);
-    m_states.push_back(std::make_unique<TypedNfaState>(
-            TransitionOperation::SetTags,
-            std::vector{end_tag},
-            dest_state
-    ));
+    m_root->add_spontaneous_transition(TagOperationType::Set, std::vector{start_tag}, start_state);
+    m_states.emplace_back(
+            std::make_unique<TypedNfaState>(TagOperationType::Set, std::vector{end_tag}, dest_state)
+    );
     auto* end_state{m_states.back().get()};
     return {start_state, end_state};
 }

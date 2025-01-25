@@ -1,30 +1,30 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_DETERMINIZATION_CONFIGURATION_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_DETERMINIZATION_CONFIGURATION_HPP
 
+#include <optional>
 #include <set>
 #include <stack>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
-#include <log_surgeon/finite_automata/DfaState.hpp>
 #include <log_surgeon/finite_automata/Register.hpp>
+#include <log_surgeon/finite_automata/TagOperation.hpp>
 
 namespace log_surgeon::finite_automata {
-using OpTagPair = std::pair<TransitionOperation, tag_id_t>;
-using TagSequence = std::vector<OpTagPair>;
-
 template <typename TypedNfaState>
-class   DetermizationConfiguration {
+class DetermizationConfiguration {
 public:
     DetermizationConfiguration(
             TypedNfaState const* nfa_state,
             std::unordered_map<tag_id_t, register_id_t> tag_to_reg_ids,
-            TagSequence tag_history,
-            TagSequence tag_sequence
+            std::vector<TagOperation> tag_history,
+            std::vector<TagOperation> tag_lookahead
     )
             : m_nfa_state(nfa_state),
               m_tag_to_reg_ids(std::move(tag_to_reg_ids)),
-              m_tag_history(std::move(tag_history)),
-              m_tag_sequence(std::move(tag_sequence)) {}
+              m_history(std::move(tag_history)),
+              m_lookahead(std::move(tag_lookahead)) {}
 
     /**
      * Used for ordering in a set by considering the configuration's NFA state.
@@ -37,11 +37,11 @@ public:
 
     auto child_configuration_with_new_state_and_tag(
             TypedNfaState const* new_nfa_state,
-            OpTagPair const& op_tag_pair
+            TagOperation const& tag_op
     ) const -> DetermizationConfiguration {
-        auto sequence{m_tag_sequence};
-        sequence.push_back(op_tag_pair);
-        return DetermizationConfiguration(new_nfa_state, m_tag_to_reg_ids, m_tag_history, sequence);
+        auto lookahead{m_lookahead};
+        lookahead.push_back(tag_op);
+        return DetermizationConfiguration(new_nfa_state, m_tag_to_reg_ids, m_history, lookahead);
     }
 
     /**
@@ -68,56 +68,39 @@ public:
         return m_tag_to_reg_ids;
     }
 
-    [[nodiscard]] auto get_tag_history(tag_id_t const tag_id) const -> OperationSequence {
-        auto tag_history{m_tag_history};
-        return get_tag_history_helper(tag_id, tag_history);
+    [[nodiscard]] auto get_tag_history(tag_id_t const tag_id) const -> std::optional<TagOperation> {
+        for (auto const tag_op : m_history) {
+            if (tag_op.get_tag_id() == tag_id) {
+                return std::make_optional<TagOperation>(tag_op);
+            }
+        }
+        return std::nullopt;
     }
 
-    [[nodiscard]] auto get_sequence() const -> TagSequence { return m_tag_sequence; }
+    [[nodiscard]] auto get_lookahead() const -> std::vector<TagOperation> { return m_lookahead; }
 
 private:
-    [[nodiscard]] static auto
-    get_tag_history_helper(tag_id_t const tag_id, TagSequence& history) -> OperationSequence {
-        OperationSequence tag_history;
-        if (history.empty()) {
-            return tag_history;
-        }
-
-        if (tag_id == history.back().second) {
-            tag_history.push_back(history.back().first);
-        }
-        history.pop_back();
-        auto recursive_tag_history{get_tag_history_helper(tag_id, history)};
-        tag_history.insert(
-                tag_history.begin(),
-                recursive_tag_history.begin(),
-                recursive_tag_history.end()
-        );
-        return tag_history;
-    }
-
     TypedNfaState const* m_nfa_state;
     std::unordered_map<tag_id_t, register_id_t> m_tag_to_reg_ids;
-    TagSequence m_tag_history;
-    TagSequence m_tag_sequence;
+    std::vector<TagOperation> m_history;
+    std::vector<TagOperation> m_lookahead;
 };
 
+// TODO: change the name and return the new elements
 template <typename TypedNfaState>
 auto DetermizationConfiguration<TypedNfaState>::spontaneous_transition(
         std::stack<DetermizationConfiguration>& unexplored_stack
 ) const -> void {
     for (auto const& nfa_spontaneous_transition : m_nfa_state->get_spontaneous_transitions()) {
+        // TODO: this approach is confusing, change it to something more intuitive.
         unexplored_stack.push(*this);
-        for (auto const tag_id : nfa_spontaneous_transition.get_tag_ids()) {
+        for (auto const tag_op : nfa_spontaneous_transition.get_tag_ops()) {
             auto parent_config{unexplored_stack.top()};
             unexplored_stack.pop();
 
-            auto op_tag_pair{
-                    std::make_pair(nfa_spontaneous_transition.get_transition_operation(), tag_id)
-            };
             auto child_config{parent_config.child_configuration_with_new_state_and_tag(
                     nfa_spontaneous_transition.get_dest_state(),
-                    op_tag_pair
+                    tag_op
             )};
             unexplored_stack.push(child_config);
         }
@@ -134,7 +117,7 @@ auto DetermizationConfiguration<TypedNfaState>::spontaneous_closure(
         auto const current_configuration = unexplored_stack.top();
         unexplored_stack.pop();
 
-        auto inserted_configuration = reachable_set.insert(current_configuration);
+        auto const inserted_configuration = reachable_set.insert(current_configuration);
         if (inserted_configuration.second) {
             inserted_configuration.first->spontaneous_transition(unexplored_stack);
         }
