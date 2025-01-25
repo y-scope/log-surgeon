@@ -43,8 +43,8 @@ TEST_CASE("Test DFA", "[DFA]") {
     ByteDfa const dfa{nfa};
 
     string expected_serialized_dfa = "0:byte_transitions={A-()->1,Z-()->2}\n";
-    expected_serialized_dfa += "1:byte_transitions={a-(16p,17p)->3,b-(16p,17p)->3,c-(17p,18p)->4,"
-                               "d-(17p,18p)->4}\n";
+    expected_serialized_dfa += "1:byte_transitions={a-(16p,17p)->3,b-(16p,17p)->3,c-(18p,17p)->4,"
+                               "d-(18p,17p)->4}\n";
     expected_serialized_dfa += "2:accepting_tags={0},byte_transitions={}\n";
     expected_serialized_dfa += "3:byte_transitions={B-(19p,20n,21n,22p)->5}\n";
     expected_serialized_dfa += "4:byte_transitions={B-(23n,24n,25p,26p)->5}\n";

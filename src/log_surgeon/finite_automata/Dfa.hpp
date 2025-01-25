@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_DFA_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_DFA_HPP
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <map>
@@ -92,6 +93,7 @@ private:
 
     /**
      * Determine the out-going transitions from the configuration set based on its NFA states.
+     * @param num_tags Number of tags in the NFA.
      * @param config_set The configuration set.
      * @param tag_id_with_op_to_reg_id Returns an updated mapping from operation tag id to
      * register id.
@@ -99,6 +101,7 @@ private:
      * operations and a destination configuration set.
      */
     auto get_transitions(
+            size_t num_tags,
             ConfigurationSet const& config_set,
             std::unordered_map<tag_id_t, register_id_t>& tag_id_with_op_to_reg_id
     ) -> std::map<uint32_t, std::pair<std::vector<RegisterOperation>, ConfigurationSet>>;
@@ -107,12 +110,14 @@ private:
      * Iterates over the configurations in the closure to:
      * - Add the new registers needed to track the tags to 'm_reg_handler'.
      * - Determine the operations to perform on the new registers.
+     * @param num_tags Number of tags in the NFA.
      * @param closure Returns the set of dfa configurations with updated `tag_to_reg_ids`.
      * @param tag_id_with_op_to_reg_id Returns the updated map of tags with operations to
      * registers.
      * @returns The operations to perform on the new registers.
      */
     auto assign_transition_reg_ops(
+            size_t num_tags,
             std::set<DetermizationConfiguration<TypedNfaState>>& closure,
             std::unordered_map<tag_id_t, register_id_t>& tag_id_with_op_to_reg_id
     ) -> std::vector<RegisterOperation>;
@@ -166,7 +171,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) 
         unexplored_sets.pop();
         std::unordered_map<tag_id_t, register_id_t> tag_id_with_op_to_reg_id;
         for (auto const& [ascii_value, config_pair] :
-             get_transitions(config_set, tag_id_with_op_to_reg_id))
+             get_transitions(nfa.get_num_tags(), config_set, tag_id_with_op_to_reg_id))
         {
             auto& [reg_ops, config_set]{config_pair};
             auto* dest_state{create_or_get_dfa_state(config_set, dfa_states, unexplored_sets)};
@@ -211,6 +216,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::create_or_get_dfa_state(
 
 template <typename TypedDfaState, typename TypedNfaState>
 auto Dfa<TypedDfaState, TypedNfaState>::get_transitions(
+        size_t const num_tags,
         ConfigurationSet const& config_set,
         std::unordered_map<tag_id_t, register_id_t>& tag_id_with_op_to_reg_id
 ) -> std::map<uint32_t, std::pair<std::vector<RegisterOperation>, ConfigurationSet>> {
@@ -227,7 +233,8 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_transitions(
                         {}
                 };
                 auto closure{next_configuration.spontaneous_closure()};
-                auto const new_reg_ops{assign_transition_reg_ops(closure, tag_id_with_op_to_reg_id)
+                auto const new_reg_ops{
+                        assign_transition_reg_ops(num_tags, closure, tag_id_with_op_to_reg_id)
                 };
                 if (ascii_transitions_map.contains(i)) {
                     auto& byte_reg_ops{ascii_transitions_map.at(i).first};
@@ -244,27 +251,36 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_transitions(
 
 template <typename TypedDfaState, typename TypedNfaState>
 auto Dfa<TypedDfaState, TypedNfaState>::assign_transition_reg_ops(
+        size_t const num_tags,
         std::set<DetermizationConfiguration<TypedNfaState>>& closure,
         std::unordered_map<tag_id_t, register_id_t>& tag_id_with_op_to_reg_id
 ) -> std::vector<RegisterOperation> {
-    std::vector<RegisterOperation> register_operations;
+    std::vector<RegisterOperation> reg_ops;
     std::set<DetermizationConfiguration<TypedNfaState>> new_closure;
     for (auto config : closure) {
-        for (tag_id_t tag_id{0}; tag_id < tag_id_with_op_to_reg_id.size(); tag_id++) {
+        for (tag_id_t tag_id{0}; tag_id < num_tags; tag_id++) {
             auto const optional_tag_op{config.get_tag_history(tag_id)};
             if (optional_tag_op.has_value()) {
                 auto const tag_op{optional_tag_op.value()};
-                tag_id_with_op_to_reg_id.try_emplace(tag_id, m_reg_handler.add_register());
-                if (TagOperationType::Set == tag_op.get_type()) {
-                    register_operations.emplace_back(
-                            tag_id_with_op_to_reg_id.at(tag_id),
-                            RegisterOperationType::Set
-                    );
-                } else if (TagOperationType::Negate == tag_op.get_type()) {
-                    register_operations.emplace_back(
-                            tag_id_with_op_to_reg_id.at(tag_id),
-                            RegisterOperationType::Negate
-                    );
+                if (false == tag_id_with_op_to_reg_id.contains(tag_id)) {
+                    tag_id_with_op_to_reg_id.emplace(tag_id, m_reg_handler.add_register());
+                }
+                auto reg_id = tag_id_with_op_to_reg_id.at(tag_id);
+                auto op_type{
+                        TagOperationType::Negate == tag_op.get_type()
+                                ? RegisterOperationType::Negate
+                                : RegisterOperationType::Set
+                };
+                RegisterOperation const new_reg_op{reg_id, op_type};
+                if (std::none_of(
+                            reg_ops.begin(),
+                            reg_ops.end(),
+                            [reg_id](RegisterOperation const& reg_op) {
+                                return reg_op.get_reg_id() == reg_id;
+                            }
+                    ))
+                {
+                    reg_ops.push_back(new_reg_op);
                 }
                 config.set_reg_id(tag_id, tag_id_with_op_to_reg_id.at(tag_id));
             }
@@ -272,7 +288,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::assign_transition_reg_ops(
         new_closure.insert(config);
     }
     closure = new_closure;
-    return register_operations;
+    return reg_ops;
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
