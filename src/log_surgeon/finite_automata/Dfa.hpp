@@ -147,9 +147,6 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
 // TODO: handle utf8 case in DFA generation.
 template <typename TypedDfaState, typename TypedNfaState>
 auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) -> void {
-    std::map<ConfigurationSet, TypedDfaState*> dfa_states;
-    std::queue<ConfigurationSet> unexplored_sets;
-
     std::unordered_map<tag_id_t, register_id_t> initial_tag_id_to_reg_id;
     initialize_registers(
             nfa.get_num_tags(),
@@ -157,22 +154,23 @@ auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) 
             initial_tag_id_to_reg_id,
             m_tag_id_to_final_reg_id
     );
-
     DetermizationConfiguration<TypedNfaState>
-            initial_configuration{nfa.get_root(), initial_tag_id_to_reg_id, {}, {}};
-    auto config_set{initial_configuration.spontaneous_closure()};
-    create_or_get_dfa_state(config_set, dfa_states, unexplored_sets);
-    while (false == unexplored_sets.empty()) {
-        config_set = unexplored_sets.front();
-        unexplored_sets.pop();
+            initial_config{nfa.get_root(), initial_tag_id_to_reg_id, {}, {}};
 
+    std::map<ConfigurationSet, TypedDfaState*> dfa_states;
+    std::queue<ConfigurationSet> unexplored_sets;
+    create_or_get_dfa_state(initial_config.spontaneous_closure(), dfa_states, unexplored_sets);
+    while (false == unexplored_sets.empty()) {
+        auto config_set{unexplored_sets.front()};
+        auto* dfa_state{dfa_states.at(config_set)};
+        unexplored_sets.pop();
         std::unordered_map<tag_id_t, register_id_t> tag_id_with_op_to_reg_id;
         for (auto const& [ascii_value, config_pair] :
              get_transitions(config_set, tag_id_with_op_to_reg_id))
         {
             auto& [reg_ops, config_set]{config_pair};
             auto* dest_state{create_or_get_dfa_state(config_set, dfa_states, unexplored_sets)};
-            dfa_states.at(config_set)->add_byte_transition(ascii_value, {reg_ops, dest_state});
+            dfa_state->add_byte_transition(ascii_value, {reg_ops, dest_state});
         }
     }
 }
