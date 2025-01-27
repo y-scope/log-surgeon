@@ -199,9 +199,8 @@ auto Dfa<TypedDfaState, TypedNfaState>::create_or_get_dfa_state(
         std::map<ConfigurationSet, TypedDfaState*>& dfa_states,
         std::queue<ConfigurationSet>& unexplored_sets
 ) -> TypedDfaState* {
-    // TODO: Does this need to ignore history when checking if `config_set` is in `dfa_states`?
     if (false == dfa_states.contains(config_set)) {
-        // TODO: We need to map to existing states and do copy operations. Add a unit-test.
+        // TODO: We need to map to existing states and do copy operations.
         dfa_states.insert({config_set, new_state(config_set, m_tag_id_to_final_reg_id)});
         unexplored_sets.push(config_set);
     }

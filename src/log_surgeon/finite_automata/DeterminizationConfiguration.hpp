@@ -21,10 +21,10 @@ public:
             std::vector<TagOperation> tag_history,
             std::vector<TagOperation> tag_lookahead
     )
-            : m_nfa_state(nfa_state),
-              m_tag_id_to_reg_ids(std::move(tag_to_reg_ids)),
-              m_history(std::move(tag_history)),
-              m_lookahead(std::move(tag_lookahead)) {}
+            : m_nfa_state{nfa_state},
+              m_tag_id_to_reg_ids{std::move(tag_to_reg_ids)},
+              m_history{std::move(tag_history)},
+              m_lookahead{std::move(tag_lookahead)} {}
 
     auto operator<(DetermizationConfiguration const& rhs) const -> bool {
         if (m_nfa_state != rhs.m_nfa_state) {
