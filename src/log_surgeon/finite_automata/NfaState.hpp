@@ -37,10 +37,9 @@ public:
 
     NfaState() = default;
 
-    explicit NfaState(uint32_t const matching_variable_id) {
-        m_accepting = true;
-        m_matching_variable_id = matching_variable_id;
-    }
+    explicit NfaState(uint32_t const matching_variable_id)
+            : m_accepting{true},
+              m_matching_variable_id{matching_variable_id} {}
 
     NfaState(
             TagOperationType const op_type,
@@ -50,7 +49,7 @@ public:
         add_spontaneous_transition(op_type, std::move(tag_ids), dest_state);
     }
 
-    bool operator<(NfaState const& rhs) const {
+    auto operator<(NfaState const& rhs) const -> bool {
         if (m_accepting < rhs.m_accepting) {
             return true;
         }

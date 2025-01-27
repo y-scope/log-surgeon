@@ -28,7 +28,7 @@ public:
             : m_tag_ops{std::move(tag_ops)},
               m_dest_state{dest_state} {}
 
-    bool operator<(SpontaneousTransition const& rhs) const {
+    auto operator<(SpontaneousTransition const& rhs) const -> bool {
         return std::tie(m_tag_ops, m_dest_state) < std::tie(rhs.m_tag_ops, rhs.m_dest_state);
     }
 

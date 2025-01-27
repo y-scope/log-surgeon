@@ -1,11 +1,10 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_DETERMINIZATION_CONFIGURATION_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_DETERMINIZATION_CONFIGURATION_HPP
 
-#include <algorithm>
+#include <map>
 #include <optional>
 #include <set>
 #include <stack>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -27,9 +26,7 @@ public:
               m_history(std::move(tag_history)),
               m_lookahead(std::move(tag_lookahead)) {}
 
-    bool operator<(DetermizationConfiguration const& rhs) const {
-        return m_nfa_state < rhs.m_nfa_state;
-
+    auto operator<(DetermizationConfiguration const& rhs) const -> bool {
         if (m_nfa_state != rhs.m_nfa_state) {
             return m_nfa_state < rhs.m_nfa_state;
         }
