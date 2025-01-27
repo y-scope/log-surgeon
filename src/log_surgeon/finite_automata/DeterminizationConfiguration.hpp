@@ -27,31 +27,15 @@ public:
               m_history(std::move(tag_history)),
               m_lookahead(std::move(tag_lookahead)) {}
 
-    /**
-     * Used for ordering in a set by considering the configuration's NFA state.
-     * @param rhs The configuration to compare against.
-     * @return Whether `m_nfa_state` in lhs has a lower address than in rhs.
-     */
     bool operator<(DetermizationConfiguration const& rhs) const {
-        if (m_nfa_state != rhs.m_nfa_state) {
-            if (nullptr == m_nfa_state) {
-                return true;
-            }
-            if (nullptr == rhs.m_nfa_state) {
-                return false;
-            }
-            if (*m_nfa_state < *rhs.m_nfa_state) {
-                return true;
-            }
-            if (*rhs.m_nfa_state < *m_nfa_state) {
-                return false;
-            }
-        }
+        return m_nfa_state < rhs.m_nfa_state;
 
+        if (m_nfa_state != rhs.m_nfa_state) {
+            return m_nfa_state < rhs.m_nfa_state;
+        }
         if (m_tag_to_reg_ids != rhs.m_tag_to_reg_ids) {
             return m_tag_to_reg_ids < rhs.m_tag_to_reg_ids;
         }
-
         if (m_history != rhs.m_history) {
             return m_history < rhs.m_history;
         }

@@ -54,6 +54,13 @@ public:
     [[nodiscard]] auto new_state() -> TypedNfaState*;
 
     /**
+     * Creates a unique_ptr for an NFA state that is accepting and adds it to `m_states`.
+     * @param matching_variable_id The variable id that the NFA state accepts.
+     * @return TypedNfaState*
+     */
+    [[nodiscard]] auto new_accepting_state(uint32_t matching_variable_id) -> TypedNfaState*;
+
+    /**
      * Creates a unique_ptr for an NFA state with a negative tagged transition and adds it to
      * `m_states`.
      * @param captures
@@ -146,6 +153,13 @@ auto Nfa<TypedNfaState>::get_or_create_capture_tags(Capture const* capture
 template <typename TypedNfaState>
 auto Nfa<TypedNfaState>::new_state() -> TypedNfaState* {
     m_states.emplace_back(std::make_unique<TypedNfaState>());
+    return m_states.back().get();
+}
+
+template <typename TypedNfaState>
+auto Nfa<TypedNfaState>::new_accepting_state(uint32_t const matching_variable_id
+) -> TypedNfaState* {
+    m_states.emplace_back(std::make_unique<TypedNfaState>(matching_variable_id));
     return m_states.back().get();
 }
 

@@ -37,6 +37,11 @@ public:
 
     NfaState() = default;
 
+    explicit NfaState(uint32_t const matching_variable_id) {
+        m_accepting = true;
+        m_matching_variable_id = matching_variable_id;
+    }
+
     NfaState(
             TagOperationType const op_type,
             std::vector<tag_id_t> tag_ids,
@@ -68,12 +73,6 @@ public:
         }
 
         return m_bytes_transitions < rhs.m_bytes_transitions;
-    }
-
-    auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
-
-    auto set_matching_variable_id(uint32_t const variable_id) -> void {
-        m_matching_variable_id = variable_id;
     }
 
     auto add_spontaneous_transition(NfaState* dest_state) -> void {

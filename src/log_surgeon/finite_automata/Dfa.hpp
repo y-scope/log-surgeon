@@ -51,8 +51,7 @@ public:
      */
     [[nodiscard]] auto get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t>;
 
-    [[nodiscard]] auto get_tag_id_to_final_reg_id(
-    ) const -> std::map<tag_id_t, register_id_t> {
+    [[nodiscard]] auto get_tag_id_to_final_reg_id() const -> std::map<tag_id_t, register_id_t> {
         return m_tag_id_to_final_reg_id;
     }
 
@@ -200,17 +199,13 @@ auto Dfa<TypedDfaState, TypedNfaState>::create_or_get_dfa_state(
         std::map<ConfigurationSet, TypedDfaState*>& dfa_states,
         std::queue<ConfigurationSet>& unexplored_sets
 ) -> TypedDfaState* {
-    TypedDfaState* state{nullptr};
     // TODO: Does this need to ignore history when checking if `config_set` is in `dfa_states`?
-    if (dfa_states.contains(config_set)) {
-        state = dfa_states.at(config_set);
-    } else {
+    if (false == dfa_states.contains(config_set)) {
         // TODO: We need to map to existing states and do copy operations. Add a unit-test.
-        state = new_state(config_set, m_tag_id_to_final_reg_id);
-        dfa_states.insert({config_set, state});
+        dfa_states.insert({config_set, new_state(config_set, m_tag_id_to_final_reg_id)});
         unexplored_sets.push(config_set);
     }
-    return state;
+    return dfa_states.at(config_set);
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
