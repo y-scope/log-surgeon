@@ -5,6 +5,7 @@
 #include <optional>
 #include <ranges>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -21,11 +22,15 @@ namespace log_surgeon::finite_automata {
 template <typename TypedNfaState>
 class SpontaneousTransition {
 public:
-    SpontaneousTransition(TypedNfaState const* dest_state) : m_dest_state{dest_state} {}
+    explicit SpontaneousTransition(TypedNfaState const* dest_state) : m_dest_state{dest_state} {}
 
     SpontaneousTransition(std::vector<TagOperation> tag_ops, TypedNfaState const* dest_state)
             : m_tag_ops{std::move(tag_ops)},
               m_dest_state{dest_state} {}
+
+    bool operator<(SpontaneousTransition const& rhs) const {
+        return std::tie(m_tag_ops, m_dest_state) < std::tie(rhs.m_tag_ops, rhs.m_dest_state);
+    }
 
     [[nodiscard]] auto get_tag_ops() const -> std::vector<TagOperation> { return m_tag_ops; }
 

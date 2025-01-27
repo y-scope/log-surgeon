@@ -4,6 +4,7 @@
 #include <array>
 #include <bitset>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -194,7 +195,7 @@ private:
     TypedDfaState const* m_prev_state{nullptr};
     std::unordered_map<symbol_id_t, std::vector<symbol_id_t>> m_var_id_to_capture_ids;
     std::unordered_map<symbol_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_ids;
-    std::unordered_map<tag_id_t, register_id_t> m_tag_to_final_reg_id;
+    std::map<tag_id_t, register_id_t> m_tag_to_final_reg_id;
 };
 
 namespace lexers {

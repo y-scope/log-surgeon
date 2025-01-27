@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <tuple>
 
 #include <fmt/core.h>
 
@@ -19,6 +20,14 @@ public:
     TagOperation(tag_id_t const tag_id, TagOperationType const type)
             : m_tag_id{tag_id},
               m_type{type} {}
+
+    bool operator<(TagOperation const& rhs) const {
+        return std::tie(m_tag_id, m_type) < std::tie(rhs.m_tag_id, rhs.m_type);
+    }
+
+    bool operator==(TagOperation const& rhs) const {
+        return std::tie(m_tag_id, m_type) == std::tie(rhs.m_tag_id, rhs.m_type);
+    }
 
     [[nodiscard]] auto get_tag_id() const -> tag_id_t { return m_tag_id; }
 

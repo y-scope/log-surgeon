@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_DETERMINIZATION_CONFIGURATION_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_DETERMINIZATION_CONFIGURATION_HPP
 
+#include <algorithm>
 #include <optional>
 #include <set>
 #include <stack>
@@ -17,7 +18,7 @@ class DetermizationConfiguration {
 public:
     DetermizationConfiguration(
             TypedNfaState const* nfa_state,
-            std::unordered_map<tag_id_t, register_id_t> tag_to_reg_ids,
+            std::map<tag_id_t, register_id_t> tag_to_reg_ids,
             std::vector<TagOperation> tag_history,
             std::vector<TagOperation> tag_lookahead
     )
@@ -31,8 +32,30 @@ public:
      * @param rhs The configuration to compare against.
      * @return Whether `m_nfa_state` in lhs has a lower address than in rhs.
      */
-    auto operator<(DetermizationConfiguration const& rhs) const -> bool {
-        return m_nfa_state < rhs.m_nfa_state;
+    bool operator<(DetermizationConfiguration const& rhs) const {
+        if (m_nfa_state != rhs.m_nfa_state) {
+            if (nullptr == m_nfa_state) {
+                return true;
+            }
+            if (nullptr == rhs.m_nfa_state) {
+                return false;
+            }
+            if (*m_nfa_state < *rhs.m_nfa_state) {
+                return true;
+            }
+            if (*rhs.m_nfa_state < *m_nfa_state) {
+                return false;
+            }
+        }
+
+        if (m_tag_to_reg_ids != rhs.m_tag_to_reg_ids) {
+            return m_tag_to_reg_ids < rhs.m_tag_to_reg_ids;
+        }
+
+        if (m_history != rhs.m_history) {
+            return m_history < rhs.m_history;
+        }
+        return m_lookahead < rhs.m_lookahead;
     }
 
     auto child_configuration_with_new_state_and_tag(
@@ -64,7 +87,7 @@ public:
 
     [[nodiscard]] auto get_state() const -> TypedNfaState const* { return m_nfa_state; }
 
-    [[nodiscard]] auto get_tag_to_reg_ids() const -> std::unordered_map<tag_id_t, register_id_t> {
+    [[nodiscard]] auto get_tag_to_reg_ids() const -> std::map<tag_id_t, register_id_t> {
         return m_tag_to_reg_ids;
     }
 
@@ -81,7 +104,7 @@ public:
 
 private:
     TypedNfaState const* m_nfa_state;
-    std::unordered_map<tag_id_t, register_id_t> m_tag_to_reg_ids;
+    std::map<tag_id_t, register_id_t> m_tag_to_reg_ids;
     std::vector<TagOperation> m_history;
     std::vector<TagOperation> m_lookahead;
 };
