@@ -2,6 +2,7 @@
 #define LOG_SURGEON_FINITE_AUTOMATA_REGISTEROPERATION_HPP
 
 #include <cstdint>
+#include <optional>
 #include <string>
 
 #include <fmt/core.h>
@@ -21,6 +22,11 @@ public:
             : m_reg_id{reg_id},
               m_type{type} {}
 
+    RegisterOperation(register_id_t const reg_id, register_id_t const copy_reg_id)
+            : m_reg_id{reg_id},
+              m_type{RegisterOperationType::Copy},
+              m_copy_reg_id{copy_reg_id} {}
+
     [[nodiscard]] auto get_reg_id() const -> register_id_t { return m_reg_id; }
 
     [[nodiscard]] auto get_type() const -> RegisterOperationType { return m_type; }
@@ -28,10 +34,13 @@ public:
     /**
      * @return A string representation of the register opertion.
      */
-    [[nodiscard]] auto serialize() const -> std::string {
+    [[nodiscard]] auto serialize() const -> std::optional<std::string> {
         switch (m_type) {
             case RegisterOperationType::Copy:
-                return fmt::format("{}{}", m_reg_id, "c");
+                if(false == m_copy_reg_id.has_value()) {
+                    return std::nullopt;
+                }
+                return fmt::format("{}{}{}", m_reg_id, "c", m_copy_reg_id.value());
             case RegisterOperationType::Set:
                 return fmt::format("{}{}", m_reg_id, "p");
             case RegisterOperationType::Negate:
@@ -44,6 +53,7 @@ public:
 private:
     register_id_t m_reg_id;
     RegisterOperationType m_type;
+    std::optional<register_id_t> m_copy_reg_id{std::nullopt};
 };
 }  // namespace log_surgeon::finite_automata
 

@@ -42,16 +42,17 @@ TEST_CASE("Test DFA", "[DFA]") {
     ByteNfa const nfa{rules};
     ByteDfa const dfa{nfa};
 
-    string expected_serialized_dfa_end = "2:accepting_tags={0},byte_transitions={}\n";
+    string expected_serialized_dfa_end = "2:accepting_tags={0},accepting_operations={8n,9n,10n,11n,"
+                                         "12n,13n,14n,15n},byte_transitions={}\n";
     expected_serialized_dfa_end += "3:byte_transitions={B-(19p,20n,21n,22p)->5}\n";
     expected_serialized_dfa_end += "4:byte_transitions={B-(23n,24n,25p,26p)->5}\n";
-    expected_serialized_dfa_end
-            += "5:byte_transitions={0-(27p)->6,1-(27p)->6,2-(27p)->6,3-(27p)->6,"
-               "4-(27p)->6,5-(27p)->6,6-(27p)->6,7-(27p)->6,8-(27p)->6,"
-               "9-(27p)->6}\n";
+    expected_serialized_dfa_end += "5:byte_transitions={0-(27p)->6,1-(27p)->6,2-(27p)->6,"
+                                   "3-(27p)->6,4-(27p)->6,5-(27p)->6,6-(27p)->6,7-(27p)->6,"
+                                   "8-(27p)->6,9-(27p)->6}\n";
     expected_serialized_dfa_end += "6:byte_transitions={0-()->6,1-()->6,2-()->6,3-()->6,4-()->6,"
                                    "5-()->6,6-()->6,7-()->6,8-()->6,9-()->6,C-(28p)->7}\n";
-    expected_serialized_dfa_end += "7:accepting_tags={0},byte_transitions={}\n";
+    expected_serialized_dfa_end += "7:accepting_tags={0},accepting_operations={},"
+                                   "byte_transitions={}\n";
 
     string expected_serialized_dfa1 = "0:byte_transitions={A-()->1,Z-()->2}\n";
     expected_serialized_dfa1 += "1:byte_transitions={a-(16p,17p)->3,b-(16p,17p)->3,c-(18p,17p)->4,"

@@ -222,7 +222,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_transitions(
             for (auto const* next_nfa_state : nfa_state->get_byte_transitions(i)) {
                 DetermizationConfiguration<TypedNfaState> next_configuration{
                         next_nfa_state,
-                        configuration.get_tag_to_reg_ids(),
+                        configuration.get_tag_id_to_reg_ids(),
                         configuration.get_lookahead(),
                         {}
                 };
@@ -261,9 +261,8 @@ auto Dfa<TypedDfaState, TypedNfaState>::assign_transition_reg_ops(
                 }
                 auto reg_id = tag_id_with_op_to_reg_id.at(tag_id);
                 auto op_type{
-                        TagOperationType::Negate == tag_op.get_type()
-                                ? RegisterOperationType::Negate
-                                : RegisterOperationType::Set
+                        TagOperationType::Set == tag_op.get_type() ? RegisterOperationType::Set
+                                                                   : RegisterOperationType::Negate
                 };
                 RegisterOperation const new_reg_op{reg_id, op_type};
                 if (std::none_of(
@@ -292,18 +291,25 @@ auto Dfa<TypedDfaState, TypedNfaState>::new_state(
 ) -> TypedDfaState* {
     m_states.emplace_back(std::make_unique<TypedDfaState>());
     auto* dfa_state = m_states.back().get();
-    for (auto const configuration : config_set) {
-        auto const* nfa_state = configuration.get_state();
+    for (auto const config : config_set) {
+        auto const* nfa_state = config.get_state();
         if (nfa_state->is_accepting()) {
             dfa_state->add_matching_variable_id(nfa_state->get_matching_variable_id());
-            // TODO: Make operation sequence a single operation?
-            // TODO: If sequence/lookahead exists for tag then do it to final reg for tag
-            // - What happens if the current register for that tag is a sequence, don't we need
-            //   to copy it?
-            // Otherwise copy current register for tag into final reg
-            for (tag_id_t tag_id{0}; tag_id < tag_id_to_final_reg_id.size(); tag_id++) {
-                // TODO: Properly handle final registers.
-                dfa_state->add_accepting_operation({tag_id, {RegisterOperationType::Copy}});
+            for (auto const [tag_id, final_reg_id] : tag_id_to_final_reg_id) {
+                auto const optional_tag_op{config.get_tag_lookahead(tag_id)};
+
+                if (optional_tag_op.has_value()) {
+                    auto op_type{
+                            TagOperationType::Set == optional_tag_op.value().get_type()
+                                    ? RegisterOperationType::Set
+                                    : RegisterOperationType::Negate
+                    };
+                    dfa_state->add_accepting_op({final_reg_id, op_type});
+                } else {
+                    // Note: `config` must have a reg for this tag so we just call `at`.
+                    auto const prev_reg_id{config.get_tag_id_to_reg_ids().at(tag_id)};
+                    dfa_state->add_accepting_op({final_reg_id, prev_reg_id});
+                }
             }
         }
     }

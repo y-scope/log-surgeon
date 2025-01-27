@@ -55,8 +55,8 @@ public:
         m_bytes_transition[byte] = dfa_transition;
     }
 
-    auto add_accepting_operation(RegisterOperation const& reg_op) -> void {
-        m_accepting_operations.push_back(reg_op);
+    auto add_accepting_op(RegisterOperation const reg_op) -> void {
+        m_accepting_ops.push_back(reg_op);
     }
 
     /**
@@ -75,7 +75,7 @@ public:
 
 private:
     std::vector<uint32_t> m_matching_variable_ids;
-    std::vector<RegisterOperation> m_accepting_operations;
+    std::vector<RegisterOperation> m_accepting_ops;
     DfaTransition<state_type> m_bytes_transition[cSizeOfByte];
     // NOTE: We don't need m_tree_transitions for the `state_type == StateType::Byte` case, so we
     // use an empty class (`std::tuple<>`) in that case.
@@ -110,6 +110,19 @@ auto DfaState<state_type>::serialize(std::unordered_map<DfaState const*, uint32_
                                                  )
                                                : "";
 
+    std::vector<std::string> accepting_op_strings;
+    for (auto const& accepting_op : m_accepting_ops) {
+        auto serialized_accepting_op{accepting_op.serialize()};
+        if (serialized_accepting_op.has_value()) {
+            accepting_op_strings.push_back(serialized_accepting_op.value());
+        }
+    }
+    auto const accepting_ops_string = is_accepting() ? fmt::format(
+                                                               "accepting_operations={{{}}},",
+                                                               fmt::join(accepting_op_strings, ",")
+                                                       )
+                                                     : "";
+
     std::vector<std::string> transition_strings;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
         auto const byte_transition_string{m_bytes_transition[idx].serialize(state_ids)};
@@ -121,9 +134,10 @@ auto DfaState<state_type>::serialize(std::unordered_map<DfaState const*, uint32_
     }
 
     return fmt::format(
-            "{}:{}byte_transitions={{{}}}",
+            "{}:{}{}byte_transitions={{{}}}",
             state_ids.at(this),
             accepting_tags_string,
+            accepting_ops_string,
             fmt::join(transition_strings, ",")
     );
 }
