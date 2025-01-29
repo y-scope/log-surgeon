@@ -27,6 +27,8 @@ public:
               m_type{RegisterOperationType::Copy},
               m_copy_reg_id{copy_reg_id} {}
 
+    auto set_reg_id(register_id_t const reg_id) -> void { m_reg_id = reg_id; }
+
     [[nodiscard]] auto get_reg_id() const -> register_id_t { return m_reg_id; }
 
     [[nodiscard]] auto get_type() const -> RegisterOperationType { return m_type; }
@@ -37,7 +39,7 @@ public:
     [[nodiscard]] auto serialize() const -> std::optional<std::string> {
         switch (m_type) {
             case RegisterOperationType::Copy:
-                if(false == m_copy_reg_id.has_value()) {
+                if (false == m_copy_reg_id.has_value()) {
                     return std::nullopt;
                 }
                 return fmt::format("{}{}{}", m_reg_id, "c", m_copy_reg_id.value());

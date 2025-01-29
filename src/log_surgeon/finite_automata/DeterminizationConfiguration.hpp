@@ -70,7 +70,7 @@ public:
     [[nodiscard]] auto get_tag_id_to_reg_ids() const -> std::map<tag_id_t, register_id_t> {
         return m_tag_id_to_reg_ids;
     }
-    
+
     [[nodiscard]] auto get_tag_history(tag_id_t const tag_id) const -> std::optional<TagOperation> {
         for (auto const tag_op : m_history) {
             if (tag_op.get_tag_id() == tag_id) {
@@ -82,7 +82,8 @@ public:
 
     [[nodiscard]] auto get_lookahead() const -> std::vector<TagOperation> { return m_lookahead; }
 
-    [[nodiscard]] auto get_tag_lookahead(tag_id_t const tag_id) const -> std::optional<TagOperation> {
+    [[nodiscard]] auto get_tag_lookahead(tag_id_t const tag_id
+    ) const -> std::optional<TagOperation> {
         for (auto const tag_op : m_lookahead) {
             if (tag_op.get_tag_id() == tag_id) {
                 return std::make_optional<TagOperation>(tag_op);
