@@ -5,10 +5,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/finite_automata/Nfa.hpp>
 #include <log_surgeon/finite_automata/NfaState.hpp>
-#include <log_surgeon/finite_automata/RegexAST.hpp>
+#include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
