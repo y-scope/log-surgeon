@@ -116,6 +116,7 @@ private:
     // cases. Possibly initialize this in the lexer and pass it in during construction.
     std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> m_capture_to_tag_ids;
     TypedNfaState* m_root;
+    UniqueIdGenerator m_state_id_generator;
     UniqueIdGenerator m_tag_id_generator;
 };
 
@@ -143,14 +144,17 @@ auto Nfa<TypedNfaState>::get_or_create_capture_tags(Capture const* capture
 
 template <typename TypedNfaState>
 auto Nfa<TypedNfaState>::new_state() -> TypedNfaState* {
-    m_states.emplace_back(std::make_unique<TypedNfaState>());
+    m_states.emplace_back(std::make_unique<TypedNfaState>(m_state_id_generator.generate_id()));
     return m_states.back().get();
 }
 
 template <typename TypedNfaState>
 auto Nfa<TypedNfaState>::new_accepting_state(uint32_t const matching_variable_id
 ) -> TypedNfaState* {
-    m_states.emplace_back(std::make_unique<TypedNfaState>(matching_variable_id));
+    m_states.emplace_back(std::make_unique<TypedNfaState>(
+            m_state_id_generator.generate_id(),
+            matching_variable_id
+    ));
     return m_states.back().get();
 }
 
@@ -166,9 +170,12 @@ auto Nfa<TypedNfaState>::new_state_for_negative_captures(
         tags.push_back(end_tag);
     }
 
-    m_states.emplace_back(
-            std::make_unique<TypedNfaState>(TagOperationType::Negate, std::move(tags), dest_state)
-    );
+    m_states.emplace_back(std::make_unique<TypedNfaState>(
+            m_state_id_generator.generate_id(),
+            TagOperationType::Negate,
+            std::move(tags),
+            dest_state
+    ));
     return m_states.back().get();
 }
 
@@ -180,9 +187,12 @@ auto Nfa<TypedNfaState>::new_start_and_end_states_for_capture(
     auto [start_tag, end_tag]{get_or_create_capture_tags(capture)};
     auto* start_state = new_state();
     m_root->add_spontaneous_transition(TagOperationType::Set, std::vector{start_tag}, start_state);
-    m_states.emplace_back(
-            std::make_unique<TypedNfaState>(TagOperationType::Set, std::vector{end_tag}, dest_state)
-    );
+    m_states.emplace_back(std::make_unique<TypedNfaState>(
+            m_state_id_generator.generate_id(),
+            TagOperationType::Set,
+            std::vector{end_tag},
+            dest_state
+    ));
     auto* end_state{m_states.back().get()};
     return {start_state, end_state};
 }

@@ -23,29 +23,33 @@
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-
 template <StateType state_type>
 class NfaState;
 
 using ByteNfaState = NfaState<StateType::Byte>;
 using Utf8NfaState = NfaState<StateType::Utf8>;
 
+using state_id_t = uint32_t;
+
 template <StateType state_type>
 class NfaState {
 public:
     using Tree = UnicodeIntervalTree<NfaState*>;
 
-    NfaState() = default;
+    explicit NfaState(state_id_t const id) : m_id{id} {}
 
-    explicit NfaState(uint32_t const matching_variable_id)
-            : m_accepting{true},
+    NfaState(state_id_t const id, uint32_t const matching_variable_id)
+            : m_id{id},
+              m_accepting{true},
               m_matching_variable_id{matching_variable_id} {}
 
     NfaState(
+            state_id_t const id,
             TagOperationType const op_type,
             std::vector<tag_id_t> tag_ids,
             NfaState const* dest_state
-    ) {
+    )
+            : m_id{id} {
         add_spontaneous_transition(op_type, std::move(tag_ids), dest_state);
     }
 
@@ -129,6 +133,7 @@ public:
     [[nodiscard]] auto get_tree_transitions() -> Tree const& { return m_tree_transitions; }
 
 private:
+    uint32_t m_id;
     bool m_accepting{false};
     uint32_t m_matching_variable_id{0};
     std::vector<SpontaneousTransition<NfaState>> m_spontaneous_transitions;
