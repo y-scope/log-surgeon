@@ -17,6 +17,7 @@
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/UniqueIdGenerator.hpp>
 
+namespace log_surgeon::finite_automata {
 /**
  * Represents a NFA(non-deterministic finite automata) for recognizing a language based on the set
  * of rules used during initialization. Currently use as an intermediate model for generating the
