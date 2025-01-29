@@ -22,6 +22,7 @@ set(
         ../src/log_surgeon/SchemaParser.hpp
         ../src/log_surgeon/Token.cpp
         ../src/log_surgeon/Token.hpp
+        ../src/log_surgeon/UniqueIdGenerator.hpp
 )
 
 set(

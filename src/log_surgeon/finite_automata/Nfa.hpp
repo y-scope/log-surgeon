@@ -15,18 +15,9 @@
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/NfaState.hpp>
 #include <log_surgeon/LexicalRule.hpp>
+#include <log_surgeon/UniqueIdGenerator.hpp>
 
 namespace log_surgeon::finite_automata {
-class UniqueIdGenerator {
-public:
-    UniqueIdGenerator() : current_id{0} {}
-
-    [[nodiscard]] auto generate_id() -> uint32_t { return current_id++; }
-
-private:
-    uint32_t current_id;
-};
-
 /**
  * Represents a NFA(non-deterministic finite automata) for recognizing a language based on the set
  * of rules used during initialization. Currently use as an intermediate model for generating the
