@@ -21,12 +21,13 @@ class RegisterHandler {
 public:
     auto add_registers(uint32_t const num_reg_to_add) -> std::vector<uint32_t> {
         std::vector<uint32_t> added_registers;
-        for(uint32_t i{0}; i < num_reg_to_add; ++i) {
-            added_registers.push_back(add_register());;
+        for (uint32_t i{0}; i < num_reg_to_add; ++i) {
+            added_registers.push_back(add_register());
+            ;
         }
         return added_registers;
     }
-    
+
     auto add_register() -> register_id_t {
         auto const prefix_tree_node_id{
                 m_prefix_tree.insert(PrefixTree::cRootId, PrefixTree::cDefaultPos)
