@@ -68,8 +68,8 @@ public:
 
     /**
      * @param character The character (byte or utf8) to transition on.
-     * @return The register operations to perform, and a pointer to the DFA state reached, after
-     * transitioning on `character`.
+     * @return The DFA transition containing the register operations and destination DFA state
+     * reached after transitioning on `character`.
      */
     [[nodiscard]] auto next(uint32_t character) const -> DfaTransition<state_type>;
 

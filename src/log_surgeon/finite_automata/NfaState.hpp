@@ -53,31 +53,6 @@ public:
         add_spontaneous_transition(op_type, std::move(tag_ids), dest_state);
     }
 
-    auto operator<(NfaState const& rhs) const -> bool {
-        if (m_accepting < rhs.m_accepting) {
-            return true;
-        }
-        if (rhs.m_accepting < m_accepting) {
-            return false;
-        }
-
-        if (m_matching_variable_id < rhs.m_matching_variable_id) {
-            return true;
-        }
-        if (rhs.m_matching_variable_id < m_matching_variable_id) {
-            return false;
-        }
-
-        if (m_spontaneous_transitions < rhs.m_spontaneous_transitions) {
-            return true;
-        }
-        if (rhs.m_spontaneous_transitions < m_spontaneous_transitions) {
-            return true;
-        }
-
-        return m_bytes_transitions < rhs.m_bytes_transitions;
-    }
-
     auto add_spontaneous_transition(NfaState* dest_state) -> void {
         m_spontaneous_transitions.emplace_back(dest_state);
     }

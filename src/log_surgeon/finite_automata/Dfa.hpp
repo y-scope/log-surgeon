@@ -412,7 +412,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::new_state(
 ) -> TypedDfaState* {
     m_states.emplace_back(std::make_unique<TypedDfaState>());
     auto* dfa_state = m_states.back().get();
-    for (auto const config : config_set) {
+    for (auto const& config : config_set) {
         auto const* nfa_state = config.get_state();
         if (nfa_state->is_accepting()) {
             dfa_state->add_matching_variable_id(nfa_state->get_matching_variable_id());
