@@ -2,13 +2,15 @@
 #include <locale>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+#include <fmt/core.h>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/Nfa.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
+#include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
@@ -21,6 +23,7 @@ using std::make_unique;
 using std::string;
 using std::string_view;
 using std::u32string;
+using std::unordered_map;
 using std::vector;
 using std::wstring_convert;
 
@@ -37,6 +40,7 @@ using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultipl
 using RegexASTOrByte
         = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::ByteNfaState>;
 using log_surgeon::SchemaVarAST;
+using log_surgeon::symbol_id_t;
 
 namespace {
 /**
@@ -68,8 +72,13 @@ auto initialize_lexer(Schema schema, ByteLexer& lexer) -> void;
  * @param input The input to test.
  * @param symbol The expected symbol to match.
  */
-auto test_scanning_input(ByteLexer const& lexer, std::string_view input, std::string_view symbol)
-        -> void;
+auto test_scanning_input(ByteLexer const& lexer, string_view input, string_view symbol) -> void;
+
+/**
+ * @param map The map to serialize.
+ * @return The serialized map.
+ */
+auto serialize_id_symbol_map(unordered_map<symbol_id_t, string> const& map) -> string;
 
 auto test_regex_ast(string_view const var_schema, u32string const& expected_serialized_ast)
         -> void {
@@ -131,7 +140,7 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
     CAPTURE(symbol);
 
     lexer.reset();
-    CAPTURE(lexer.m_id_symbol);
+    CAPTURE(serialize_id_symbol_map(lexer.m_id_symbol));
 
     log_surgeon::ParserInputBuffer input_buffer;
     string token_string{input};
@@ -140,7 +149,8 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
 
     log_surgeon::Token token;
     auto error_code{lexer.scan(input_buffer, token)};
-    CAPTURE(token);
+    CAPTURE(token.to_string_view());
+    CAPTURE(*token.m_type_ids_ptr);
     REQUIRE(log_surgeon::ErrorCode::Success == error_code);
     REQUIRE(nullptr != token.m_type_ids_ptr);
     REQUIRE(1 == token.m_type_ids_ptr->size());
@@ -148,7 +158,8 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
     REQUIRE(input == token.to_string_view());
 
     error_code = lexer.scan(input_buffer, token);
-    CAPTURE(token);
+    CAPTURE(token.to_string_view());
+    CAPTURE(*token.m_type_ids_ptr);
     REQUIRE(log_surgeon::ErrorCode::Success == error_code);
     REQUIRE(nullptr != token.m_type_ids_ptr);
     REQUIRE(1 == token.m_type_ids_ptr->size());
@@ -156,6 +167,14 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
     REQUIRE(token.to_string_view().empty());
 
     // TODO: add check for register values when simulation is implemented.
+}
+
+auto serialize_id_symbol_map(unordered_map<symbol_id_t, string> const& map) -> string {
+    string serialized_map;
+    for (auto const& [id, symbol] : map) {
+        serialized_map += fmt::format("{}->{},", id, symbol);
+    }
+    return serialized_map;
 }
 }  // namespace
 
