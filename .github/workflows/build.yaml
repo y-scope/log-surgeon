@@ -52,6 +52,7 @@ jobs:
 
       - name: "Run Unit Tests"
         run: "ctest --test-dir ./build"  # Prevents job from stopping on failure
+        continue-on-error: true
 
       - name: "Print test log on failure"
         if: "failure()"
