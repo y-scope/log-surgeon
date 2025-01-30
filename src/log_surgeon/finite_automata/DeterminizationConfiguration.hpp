@@ -27,8 +27,8 @@ public:
               m_lookahead{std::move(tag_lookahead)} {}
 
     auto operator<(DetermizationConfiguration const& rhs) const -> bool {
-        if (m_nfa_state != rhs.m_nfa_state) {
-            return m_nfa_state < rhs.m_nfa_state;
+        if (m_nfa_state->get_id() != rhs.m_nfa_state->get_id()) {
+            return m_nfa_state->get_id() < rhs.m_nfa_state->get_id();
         }
         if (m_tag_id_to_reg_ids != rhs.m_tag_id_to_reg_ids) {
             return m_tag_id_to_reg_ids < rhs.m_tag_id_to_reg_ids;

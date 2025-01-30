@@ -28,10 +28,6 @@ public:
             : m_tag_ops{std::move(tag_ops)},
               m_dest_state{dest_state} {}
 
-    auto operator<(SpontaneousTransition const& rhs) const -> bool {
-        return std::tie(m_tag_ops, m_dest_state) < std::tie(rhs.m_tag_ops, rhs.m_dest_state);
-    }
-
     [[nodiscard]] auto get_tag_ops() const -> std::vector<TagOperation> { return m_tag_ops; }
 
     [[nodiscard]] auto get_dest_state() const -> TypedNfaState const* { return m_dest_state; }

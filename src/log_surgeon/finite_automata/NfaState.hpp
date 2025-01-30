@@ -92,6 +92,8 @@ public:
 
     [[nodiscard]] auto is_accepting() const -> bool const& { return m_accepting; }
 
+    [[nodiscard]] auto get_id() const -> state_id_t { return m_id; }
+
     [[nodiscard]] auto get_matching_variable_id() const -> uint32_t {
         return m_matching_variable_id;
     }
