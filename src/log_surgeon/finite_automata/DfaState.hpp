@@ -68,10 +68,9 @@ public:
 
     /**
      * @param character The character (byte or utf8) to transition on.
-     * @return The DFA transition containing the register operations and destination DFA state
-     * reached after transitioning on `character`.
+     * @return The destination DFA state reached after transitioning on `character`.
      */
-    [[nodiscard]] auto next(uint32_t character) const -> DfaTransition<state_type>;
+    [[nodiscard]] auto get_dest_state(uint32_t character) const -> DfaState const*;
 
 private:
     std::vector<uint32_t> m_matching_variable_ids;
@@ -83,20 +82,20 @@ private:
 };
 
 template <StateType state_type>
-auto DfaState<state_type>::next(uint32_t character) const -> DfaTransition<state_type> {
+auto DfaState<state_type>::get_dest_state(uint32_t character) const -> DfaState const* {
     if constexpr (StateType::Byte == state_type) {
-        return m_bytes_transition[character];
+        return m_bytes_transition[character].get_dest_state();
     } else {
         if (character < cSizeOfByte) {
-            return m_bytes_transition[character];
+            return m_bytes_transition[character].get_dest_state();
         }
         std::unique_ptr<std::vector<typename Tree::Data>> result
                 = m_tree_transitions.find(Interval(character, character));
         assert(result->size() <= 1);
         if (false == result->empty()) {
-            return result->front().m_value;
+            return result->front().m_value.get_dest_state();
         }
-        return {{}, nullptr};
+        return nullptr;
     }
 }
 

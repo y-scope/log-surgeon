@@ -481,9 +481,9 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_bfs_traversal_order(
         state_queue.pop();
         // TODO: handle the utf8 case
         for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
-            auto const transition{current_state->next(idx)};
-            if (nullptr != transition.get_dest_state()) {
-                add_to_queue_and_visited(transition.get_dest_state());
+            auto const dest_state{current_state->get_dest_state(idx)};
+            if (nullptr != dest_state) {
+                add_to_queue_and_visited(dest_state);
             }
         }
     }
