@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <gsl/pointers>
+#include <iterator>
 #include <memory>
 #include <ranges>
 #include <stdexcept>
@@ -16,7 +17,6 @@
 #include <vector>
 
 #include <fmt/core.h>
-#include <fmt/ranges.h>
 #include <fmt/xchar.h>
 
 #include <log_surgeon/Constants.hpp>
@@ -132,11 +132,14 @@ protected:
             return U"";
         }
 
-        auto const transformed_negative_captures{
-                m_negative_captures | std::ranges::views::transform([](Capture const* capture) {
-                    return fmt::format("<~{}>", capture->get_name());
-                })
-        };
+        std::vector<std::string> transformed_negative_captures;
+        std::transform(
+                m_negative_captures.begin(),
+                m_negative_captures.end(),
+                std::back_inserter(transformed_negative_captures),
+                [](Capture const* capture) { return fmt::format("<~{}>", capture->get_name()); }
+        );
+
         auto const negative_captures_string{
                 fmt::format("{}", fmt::join(transformed_negative_captures, ""))
         };
