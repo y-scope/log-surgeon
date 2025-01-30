@@ -26,6 +26,9 @@ tasks:
       - "src/**/*.h"
       - "src/**/*.hpp"
       - "src/**/*.tpp"
+      - "tests/**/*.cpp"
+      - "tests/**/*.h"
+      - "tests/**/*.hpp"
       - "tests/**/*.tpp"
     cmds:
       - task: "cpp"
