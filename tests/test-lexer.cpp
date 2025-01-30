@@ -131,6 +131,7 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
     CAPTURE(symbol);
 
     lexer.reset();
+    CAPTURE(lexer.m_id_symbol);
 
     log_surgeon::ParserInputBuffer input_buffer;
     string token_string{input};
@@ -139,6 +140,7 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
 
     log_surgeon::Token token;
     auto error_code{lexer.scan(input_buffer, token)};
+    CAPTURE(token);
     REQUIRE(log_surgeon::ErrorCode::Success == error_code);
     REQUIRE(nullptr != token.m_type_ids_ptr);
     REQUIRE(1 == token.m_type_ids_ptr->size());
@@ -146,6 +148,7 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
     REQUIRE(input == token.to_string_view());
 
     error_code = lexer.scan(input_buffer, token);
+    CAPTURE(token);
     REQUIRE(log_surgeon::ErrorCode::Success == error_code);
     REQUIRE(nullptr != token.m_type_ids_ptr);
     REQUIRE(1 == token.m_type_ids_ptr->size());
@@ -308,6 +311,7 @@ TEST_CASE("Test basic Lexer", "[Lexer]") {
     ByteLexer lexer;
     initialize_lexer(std::move(schema.release_schema_ast_ptr()), lexer);
 
+    CAPTURE(cVarSchema);
     test_scanning_input(lexer, cTokenString1, cVarName);
     test_scanning_input(lexer, cTokenString2, log_surgeon::cTokenUncaughtString);
 }
@@ -349,6 +353,7 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     REQUIRE(2u == reg_id0.value());
     REQUIRE(3u == reg_id1.value());
 
+    CAPTURE(cVarSchema);
     test_scanning_input(lexer, cTokenString1, cVarName);
     test_scanning_input(lexer, cTokenString2, log_surgeon::cTokenUncaughtString);
     test_scanning_input(lexer, cTokenString3, log_surgeon::cTokenUncaughtString);
