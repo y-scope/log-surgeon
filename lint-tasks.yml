@@ -26,6 +26,7 @@ tasks:
       - "src/**/*.h"
       - "src/**/*.hpp"
       - "src/**/*.tpp"
+      - "tests/**/*.tpp"
     cmds:
       - task: "cpp"
         vars:
@@ -65,6 +66,7 @@ tasks:
         find src examples tests \
           -type f \
           \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.tpp" \) \
+          ! -path "*/*build*/*" \
           -print0 | \
             xargs -0 clang-format {{.FLAGS}} -Werror
 

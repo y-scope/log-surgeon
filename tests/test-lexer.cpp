@@ -127,6 +127,9 @@ auto initialize_lexer(std::unique_ptr<SchemaAST> schema_ast, ByteLexer& lexer) -
 
 auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_view symbol)
         -> void {
+    CAPTURE(input);
+    CAPTURE(symbol);
+
     lexer.reset();
 
     log_surgeon::ParserInputBuffer input_buffer;
