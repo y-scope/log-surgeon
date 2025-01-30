@@ -141,7 +141,7 @@ protected:
                 [](Capture const* capture) { return fmt::format("<~{}>", capture->get_name()); }
         );
 
-        auto const negative_captures_string{
+        std::string const negative_captures_string{
                 fmt::format("{}", fmt::join(transformed_negative_captures, ""))
         };
 
