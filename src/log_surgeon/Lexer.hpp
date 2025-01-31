@@ -150,11 +150,10 @@ public:
 
     [[nodiscard]] auto get_reg_for_tag_id(tag_id_t const tag_id
     ) const -> std::optional<register_id_t> {
-        auto const it{m_tag_to_final_reg_id.find(tag_id)};
-        if (m_tag_to_final_reg_id.end() == it) {
-            return std::nullopt;
+        if (m_tag_to_final_reg_id.contains(tag_id)) {
+            return m_tag_to_final_reg_id.at(tag_id);
         }
-        return it->second;
+        return std::nullopt;
     }
 
     [[nodiscard]] auto get_registers_for_capture(symbol_id_t capture_id
