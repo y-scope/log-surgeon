@@ -51,7 +51,7 @@ jobs:
           cmake --build ./examples/build --config ${{matrix.build_type}}
 
       - name: "Run Unit Tests"
-        run: "ctest --test-dir ./build"  # Prevents job from stopping on failure
+        run: "ctest --test-dir ./build"
 
       - name: "Print test log on failure"
         if: "failure()"
