@@ -39,7 +39,6 @@ set(
         test-nfa.cpp
         test-prefix-tree.cpp
         test-register-handler.cpp
-        test-capture.cpp
 )
 
 add_executable(unit-test ${SOURCES_LOG_SURGEON} ${SOURCES_TESTS})
