@@ -15,19 +15,21 @@
 #include <log_surgeon/finite_automata/DfaState.hpp>
 #include <log_surgeon/finite_automata/NfaState.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
+#include <log_surgeon/finite_automata/Register.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/ParserInputBuffer.hpp>
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
+using finite_automata::register_id_t;
+using finite_automata::tag_id_t;
+
+using symbol_id_t = uint32_t;
+
 template <typename TypedNfaState, typename TypedDfaState>
 class Lexer {
 public:
-    using register_id_t = finite_automata::RegisterHandler::register_id_t;
-    using symbol_id_t = uint32_t;
-    using tag_id_t = finite_automata::tag_id_t;
-
     static inline std::vector<uint32_t> const cTokenEndTypes = {(uint32_t)SymbolId::TokenEnd};
     static inline std::vector<uint32_t> const cTokenUncaughtStringTypes
             = {(uint32_t)SymbolId::TokenUncaughtString};
@@ -146,21 +148,20 @@ public:
         return tag_ids->second;
     }
 
-    [[nodiscard]] auto get_register_for_tag_id(tag_id_t const tag_id
+    [[nodiscard]] auto get_reg_for_tag_id(tag_id_t const tag_id
     ) const -> std::optional<register_id_t> {
-        auto const it{m_tag_to_register_id.find(tag_id)};
-        if (m_tag_to_register_id.end() == it) {
-            return std::nullopt;
+        if (m_tag_to_final_reg_id.contains(tag_id)) {
+            return m_tag_to_final_reg_id.at(tag_id);
         }
-        return it->second;
+        return std::nullopt;
     }
 
     [[nodiscard]] auto get_registers_for_capture(symbol_id_t capture_id
     ) const -> std::optional<std::pair<register_id_t, register_id_t>> {
         auto const tag_ids{get_tag_ids_for_capture_id(capture_id)};
         if (tag_ids.has_value()) {
-            auto const start_reg{get_register_for_tag_id(tag_ids.value().first())};
-            auto const end_reg{get_register_for_tag_id(tag_ids.value().second())};
+            auto const start_reg{get_reg_for_tag_id(tag_ids.value().first())};
+            auto const end_reg{get_reg_for_tag_id(tag_ids.value().second())};
             if (start_reg.has_value() && end_reg.has_value()) {
                 return std::make_pair(start_reg.value(), end_reg.value());
             }
@@ -196,7 +197,7 @@ private:
     TypedDfaState const* m_prev_state{nullptr};
     std::unordered_map<symbol_id_t, std::vector<symbol_id_t>> m_var_id_to_capture_ids;
     std::unordered_map<symbol_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_ids;
-    std::unordered_map<tag_id_t, register_id_t> m_tag_to_register_id;
+    std::map<tag_id_t, register_id_t> m_tag_to_final_reg_id;
 };
 
 namespace lexers {
