@@ -28,7 +28,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: ["macos-latest", "ubuntu-latest"]
+        os: ["macos-latest", "ubuntu-22.04"]
         build_type: ["Debug", "Release"]
     runs-on: "${{matrix.os}}"
     steps:
@@ -39,7 +39,7 @@ jobs:
         run: "brew install catch2"
 
       - name: "Install Catch2 on Ubuntu"
-        if: "matrix.os == 'ubuntu-latest'"
+        if: "matrix.os == 'ubuntu-22.04'"
         run: "./tools/deps-install/ubuntu/install-catch2.sh 3.6.0"
 
       - name: "Build Executables"
@@ -52,3 +52,7 @@ jobs:
 
       - name: "Run Unit Tests"
         run: "ctest --test-dir ./build"
+
+      - name: "Print test log on failure"
+        if: "failure()"
+        run: "cat ./build/Testing/Temporary/LastTest.log"
