@@ -95,7 +95,8 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
-auto Dfa<TypedDfaState, TypedNfaState>::new_state(std::set<TypedNfaState const*> const& nfa_state_set
+auto Dfa<TypedDfaState, TypedNfaState>::new_state(
+        std::set<TypedNfaState const*> const& nfa_state_set
 ) -> TypedDfaState* {
     m_states.emplace_back(std::make_unique<TypedDfaState>());
     auto* dfa_state = m_states.back().get();
