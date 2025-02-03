@@ -14,6 +14,7 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/NfaState.hpp>
+#include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/UniqueIdGenerator.hpp>
 
@@ -146,7 +147,7 @@ auto Nfa<TypedNfaState>::new_state_for_negative_captures(
     }
 
     m_states.emplace_back(std::make_unique<TypedNfaState>(
-            TransitionOperation::NegateTags,
+            TagOperationType::Negate,
             std::move(tags),
             dest_state
     ));
@@ -160,9 +161,9 @@ auto Nfa<TypedNfaState>::new_start_and_end_states_for_capture(
 ) -> std::pair<TypedNfaState*, TypedNfaState*> {
     auto [start_tag, end_tag]{get_or_create_capture_tags(capture)};
     auto* start_state = new_state();
-    m_root->add_spontaneous_transition(TransitionOperation::SetTags, {start_tag}, start_state);
-    m_states.push_back(std::make_unique<TypedNfaState>(
-            TransitionOperation::SetTags,
+    m_root->add_spontaneous_transition(TagOperationType::Set, {start_tag}, start_state);
+    m_states.emplace_back(std::make_unique<TypedNfaState>(
+            TagOperationType::Set,
             std::vector{end_tag},
             dest_state
     ));
