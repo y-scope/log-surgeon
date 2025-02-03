@@ -1,7 +1,6 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_REGISTER_HANDLER_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_REGISTER_HANDLER_HPP
 
-#include <cstddef>
 #include <cstdint>
 #include <vector>
 
