@@ -4,6 +4,7 @@
 #include <cassert>
 #include <memory>
 #include <stack>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -82,19 +83,19 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer, 
             m_match_pos = prev_byte_buf_pos;
             m_match_line = m_line;
         }
-        auto* next = state->next(next_char);
+        auto* dest_state = state->get_dest_state(next_char);
         if (next_char == '\n') {
             m_line++;
             if (m_has_delimiters && !m_match) {
-                next = m_dfa->get_root()->next(next_char);
+                dest_state = m_dfa->get_root()->get_dest_state(next_char);
                 m_match = true;
-                m_type_ids = &(next->get_matching_variable_ids());
+                m_type_ids = &(dest_state->get_matching_variable_ids());
                 m_start_pos = prev_byte_buf_pos;
                 m_match_pos = input_buffer.storage().pos();
                 m_match_line = m_line;
             }
         }
-        if (input_buffer.log_fully_consumed() || next == nullptr) {
+        if (input_buffer.log_fully_consumed() || nullptr == dest_state) {
             if (m_match) {
                 input_buffer.set_log_fully_consumed(false);
                 input_buffer.set_pos(m_match_pos);
@@ -163,7 +164,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer, 
             state = m_dfa->get_root();
             continue;
         }
-        state = next;
+        state = dest_state;
     }
 }
 
@@ -213,19 +214,19 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
             m_match_pos = prev_byte_buf_pos;
             m_match_line = m_line;
         }
-        TypedDfaState const* next = state->next(next_char);
+        TypedDfaState const* dest_state{state->get_dest_state(next_char)};
         if (next_char == '\n') {
             m_line++;
             if (m_has_delimiters && !m_match) {
-                next = m_dfa->get_root()->next(next_char);
+                dest_state = m_dfa->get_root()->get_dest_state(next_char);
                 m_match = true;
-                m_type_ids = &(next->get_matching_variable_ids());
+                m_type_ids = &(dest_state->get_matching_variable_ids());
                 m_start_pos = prev_byte_buf_pos;
                 m_match_pos = input_buffer.storage().pos();
                 m_match_line = m_line;
             }
         }
-        if (input_buffer.log_fully_consumed() || next == nullptr) {
+        if (input_buffer.log_fully_consumed() || nullptr == dest_state) {
             assert(input_buffer.log_fully_consumed());
             if (!m_match || (m_match && m_match_pos != input_buffer.storage().pos())) {
                 token
@@ -241,8 +242,8 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
                 // BFS (keep track of m_type_ids)
                 if (wildcard == '?') {
                     for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
-                        auto* next_state = state->next(byte);
-                        if (next_state->is_accepting() == false) {
+                        auto* dest_state{state->get_dest_state(byte)};
+                        if (false == dest_state->is_accepting()) {
                             token
                                     = Token{m_last_match_pos,
                                             input_buffer.storage().pos(),
@@ -275,9 +276,9 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
                             if (m_is_delimiter[byte]) {
                                 continue;
                             }
-                            TypedDfaState const* next_state = current_state->next(byte);
-                            if (visited_states.find(next_state) == visited_states.end()) {
-                                unvisited_states.push(next_state);
+                            TypedDfaState const* dest_state{current_state->get_dest_state(byte)};
+                            if (false == visited_states.contains(dest_state)) {
+                                unvisited_states.push(dest_state);
                             }
                         }
                     }
@@ -297,7 +298,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
                 return ErrorCode::Success;
             }
         }
-        state = next;
+        state = dest_state;
     }
 }
 
@@ -335,7 +336,7 @@ void Lexer<TypedNfaState, TypedDfaState>::reset() {
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::prepend_start_of_file_char(ParserInputBuffer& input_buffer
 ) {
-    m_prev_state = m_dfa->get_root()->next(utf8::cCharStartOfFile);
+    m_prev_state = m_dfa->get_root()->get_dest_state(utf8::cCharStartOfFile);
     m_asked_for_more_data = true;
     m_start_pos = input_buffer.storage().pos();
     m_match_pos = input_buffer.storage().pos();
@@ -358,17 +359,17 @@ void Lexer<TypedNfaState, TypedDfaState>::add_delimiters(std::vector<uint32_t> c
 
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::add_rule(
-        uint32_t const& id,
+        symbol_id_t const& var_id,
         std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
 ) {
-    m_rules.emplace_back(id, std::move(rule));
+    m_rules.emplace_back(var_id, std::move(rule));
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lexer<TypedNfaState, TypedDfaState>::get_rule(uint32_t const variable_id
+auto Lexer<TypedNfaState, TypedDfaState>::get_rule(symbol_id_t const var_id
 ) -> finite_automata::RegexAST<TypedNfaState>* {
     for (auto const& rule : m_rules) {
-        if (rule.get_variable_id() == variable_id) {
+        if (rule.get_variable_id() == var_id) {
             return rule.get_regex();
         }
     }
@@ -377,12 +378,34 @@ auto Lexer<TypedNfaState, TypedDfaState>::get_rule(uint32_t const variable_id
 
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::generate() {
-    finite_automata::Nfa<TypedNfaState> nfa{std::move(m_rules)};
-    // TODO: DFA ignores tags. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
-    m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState>>(std::move(nfa));
+    for (auto const& rule : m_rules) {
+        for (auto* capture : rule.get_captures()) {
+            std::string const capture_name{capture->get_name()};
+            symbol_id_t capture_id{0};
+            if (m_symbol_id.find(capture_name) == m_symbol_id.end()) {
+                capture_id = m_symbol_id.size();
+                m_symbol_id[capture_name] = capture_id;
+                m_id_symbol[capture_id] = capture_name;
+            } else {
+                throw std::invalid_argument("`m_rules` contains capture names that are not unique."
+                );
+            }
+            m_var_id_to_capture_ids[rule.get_variable_id()].push_back(capture_id);
+        }
+    }
+
+    finite_automata::Nfa<TypedNfaState> nfa{m_rules};
+    for (auto const& [capture, tag_ids] : nfa.get_capture_to_tag_ids()) {
+        std::string capture_name{capture->get_name()};
+        auto capture_id{m_symbol_id[capture_name]};
+        m_capture_id_to_tag_ids.emplace(capture_id, tag_ids);
+    }
+
+    // TODO: DFA ignores captures. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
+    m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState, TypedNfaState>>(nfa);
     auto const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
-        if (state->next(i) != nullptr) {
+        if (nullptr != state->get_dest_state(i)) {
             m_is_first_char[i] = true;
         } else {
             m_is_first_char[i] = false;
