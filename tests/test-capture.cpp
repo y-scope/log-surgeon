@@ -1,3 +1,5 @@
+#include <utility>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <log_surgeon/finite_automata/Capture.hpp>
@@ -28,7 +30,7 @@ TEST_CASE("Capture operations", "[Capture]") {
 
     SECTION("Move constructor works correctly") {
         Capture original_capture{"source"};
-        Capture moved_capture{std::move(original_capture)};
+        Capture const moved_capture{std::move(original_capture)};
         REQUIRE("source" == moved_capture.get_name());
     }
 }

@@ -4,12 +4,10 @@
 namespace log_surgeon {
 class UniqueIdGenerator {
 public:
-    UniqueIdGenerator() : current_id{0} {}
-
-    [[nodiscard]] auto generate_id() -> uint32_t { return current_id++; }
+    [[nodiscard]] auto generate_id() -> uint32_t { return m_current_id++; }
 
 private:
-    uint32_t current_id;
+    uint32_t m_current_id{0};
 };
 }  // namespace log_surgeon
 
