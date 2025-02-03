@@ -28,10 +28,7 @@ using ByteNfa = log_surgeon::finite_automata::Nfa<ByteNfaState>;
 TEST_CASE("Test Untagged DFA", "[DFA]") {
     Schema schema;
     string const var_name{"capture"};
-    string const var_schema{
-            var_name + ":"
-            + "Z|(A[abcd]B\\d+C)"
-    };
+    string const var_schema{var_name + ":" + "Z|(A[abcd]B\\d+C)"};
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
