@@ -149,6 +149,7 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
 
     log_surgeon::Token token;
     auto error_code{lexer.scan(input_buffer, token)};
+    REQUIRE(nullptr != token.m_type_ids_ptr);
     CAPTURE(token.to_string_view());
     CAPTURE(*token.m_type_ids_ptr);
     REQUIRE(log_surgeon::ErrorCode::Success == error_code);
@@ -158,6 +159,7 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
     REQUIRE(input == token.to_string_view());
 
     error_code = lexer.scan(input_buffer, token);
+    REQUIRE(nullptr != token.m_type_ids_ptr);
     CAPTURE(token.to_string_view());
     CAPTURE(*token.m_type_ids_ptr);
     REQUIRE(log_surgeon::ErrorCode::Success == error_code);
@@ -367,10 +369,8 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     REQUIRE(tag_ids.has_value());
     REQUIRE(std::make_pair(0u, 1u) == tag_ids.value());
 
-    auto reg_id0{lexer.get_reg_for_tag_id(tag_ids.value().first)};
-    auto reg_id1{lexer.get_reg_for_tag_id(tag_ids.value().second)};
-    REQUIRE(2u == reg_id0.value());
-    REQUIRE(3u == reg_id1.value());
+    // TODO: add check for get_register_for_tag_id and get_registers_for_capture when
+    // determinization is implemented.
 
     CAPTURE(cVarSchema);
     test_scanning_input(lexer, cTokenString1, cVarName);
