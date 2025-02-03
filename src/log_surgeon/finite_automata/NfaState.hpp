@@ -30,7 +30,11 @@ class NfaState {
 public:
     using Tree = UnicodeIntervalTree<NfaState*>;
 
-    NfaState() = default;
+    explicit NfaState() {}
+
+    NfaState(uint32_t const matching_variable_id)
+            : m_accepting{true},
+              m_matching_variable_id{matching_variable_id} {}
 
     NfaState(
             TagOperationType const op_type,
@@ -38,12 +42,6 @@ public:
             NfaState const* dest_state
     ) {
         add_spontaneous_transition(op_type, std::move(tag_ids), dest_state);
-    }
-
-    auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
-
-    auto set_matching_variable_id(uint32_t const variable_id) -> void {
-        m_matching_variable_id = variable_id;
     }
 
     auto add_spontaneous_transition(NfaState* dest_state) -> void {
