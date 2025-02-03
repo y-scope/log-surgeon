@@ -23,6 +23,10 @@ public:
      */
     auto add_to_nfa(finite_automata::Nfa<TypedNfaState>* nfa) const -> void;
 
+    [[nodiscard]] auto get_captures() const -> std::vector<finite_automata::Capture const*> {
+        return m_regex->get_subtree_positive_captures();
+    }
+
     [[nodiscard]] auto get_variable_id() const -> uint32_t { return m_variable_id; }
 
     [[nodiscard]] auto get_regex() const -> finite_automata::RegexAST<TypedNfaState>* {
