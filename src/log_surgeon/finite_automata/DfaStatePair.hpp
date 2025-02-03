@@ -69,10 +69,10 @@ auto DfaStatePair<TypedDfaState>::get_reachable_pairs(
 ) const -> void {
     // TODO: Handle UTF-8 (multi-byte transitions) as well
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
-        auto next_state1{m_state1->next(i)};
-        auto next_state2{m_state2->next(i)};
-        if (nullptr != next_state1 && nullptr != next_state2) {
-            DfaStatePair const reachable_pair{next_state1, next_state2};
+        auto const& dest_state1{m_state1->get_dest_state(i)};
+        auto const& dest_state2{m_state2->get_dest_state(i)};
+        if (nullptr != dest_state1 && nullptr != dest_state2) {
+            DfaStatePair const reachable_pair{dest_state1, dest_state2};
             if (false == visited_pairs.contains(reachable_pair)) {
                 unvisited_pairs.insert(reachable_pair);
             }
