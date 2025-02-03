@@ -1,8 +1,10 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <queue>
 #include <string>
 #include <unordered_map>
@@ -11,10 +13,12 @@
 #include <vector>
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/NfaState.hpp>
+#include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
+#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/UniqueIdGenerator.hpp>
 
@@ -90,7 +94,7 @@ public:
 
     auto set_root(TypedNfaState* root) -> void { m_root = root; }
 
-    auto get_root() -> TypedNfaState* { return m_root; }
+    auto get_root() const -> TypedNfaState* { return m_root; }
 
     [[nodiscard]] auto get_capture_to_tag_ids(
     ) const -> std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> {
@@ -156,7 +160,7 @@ auto Nfa<TypedNfaState>::new_state_for_negative_captures(
         TypedNfaState const* dest_state
 ) -> TypedNfaState* {
     std::vector<tag_id_t> tags;
-    for (auto const capture : captures) {
+    for (auto const* capture : captures) {
         auto [start_tag, end_tag]{get_or_create_capture_tags(capture)};
         tags.push_back(start_tag);
         tags.push_back(end_tag);

@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_NFA_STATE
 #define LOG_SURGEON_FINITE_AUTOMATA_NFA_STATE
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <memory>
@@ -8,17 +9,20 @@
 #include <stack>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include <fmt/core.h>
 #include <fmt/format.h>
 
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/SpontaneousTransition.hpp>
 #include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-
 template <StateType state_type>
 class NfaState;
 

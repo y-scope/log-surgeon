@@ -2,7 +2,9 @@
 #define LOG_SURGEON_LEXICAL_RULE_HPP
 #include <cstdint>
 #include <memory>
+#include <vector>
 
+#include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 
 namespace log_surgeon {
