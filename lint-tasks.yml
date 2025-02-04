@@ -69,7 +69,7 @@ tasks:
         find src examples tests \
           -type f \
           \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.tpp" \) \
-          ! -path "*/*build*/*" \
+          ! -path "examples/*build*/*" \
           -print0 | \
             xargs -0 clang-format {{.FLAGS}} -Werror
 
