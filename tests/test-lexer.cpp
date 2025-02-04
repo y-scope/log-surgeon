@@ -320,11 +320,12 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     }
 }
 
-TEST_CASE("Test basic Lexer", "[Lexer]") {
+TEST_CASE("Test Lexer without capture groups", "[Lexer]") {
     constexpr string_view cVarName{"myVar"};
-    constexpr string_view cVarSchema{"myVar:123"};
-    constexpr string_view cTokenString1{"123"};
-    constexpr string_view cTokenString2{"234"};
+    constexpr string_view cVarSchema{"myVar:userID=123"};
+    constexpr string_view cTokenString1{"userID=123"};
+    constexpr string_view cTokenString2{"userID=234"};
+    constexpr string_view cTokenString3{"123"};
 
     Schema schema;
     schema.add_variable(cVarSchema, -1);
@@ -335,10 +336,10 @@ TEST_CASE("Test basic Lexer", "[Lexer]") {
     CAPTURE(cVarSchema);
     test_scanning_input(lexer, cTokenString1, cVarName);
     test_scanning_input(lexer, cTokenString2, log_surgeon::cTokenUncaughtString);
+    test_scanning_input(lexer, cTokenString3, log_surgeon::cTokenUncaughtString);
 }
 
 TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
-    vector<uint32_t> const cDelimiters{' ', '\n'};
     constexpr string_view cVarName{"myVar"};
     constexpr string_view cCaptureName{"uid"};
     constexpr string_view cVarSchema{"myVar:userID=(?<uid>123)"};
