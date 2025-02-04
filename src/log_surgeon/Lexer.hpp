@@ -160,8 +160,8 @@ public:
     ) const -> std::optional<std::pair<register_id_t, register_id_t>> {
         auto const tag_ids{get_tag_ids_for_capture_id(capture_id)};
         if (tag_ids.has_value()) {
-            auto const start_reg{get_reg_for_tag_id(tag_ids.value().first())};
-            auto const end_reg{get_reg_for_tag_id(tag_ids.value().second())};
+            auto const start_reg{get_reg_for_tag_id(tag_ids.value().first)};
+            auto const end_reg{get_reg_for_tag_id(tag_ids.value().second)};
             if (start_reg.has_value() && end_reg.has_value()) {
                 return std::make_pair(start_reg.value(), end_reg.value());
             }
