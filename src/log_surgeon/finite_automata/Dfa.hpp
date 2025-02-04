@@ -2,27 +2,40 @@
 #define LOG_SURGEON_FINITE_AUTOMATA_DFA_HPP
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <set>
+#include <stack>
 #include <vector>
 
+#include <fmt/core.h>
+#include <fmt/format.h>
+
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/DfaStatePair.hpp>
 #include <log_surgeon/finite_automata/Nfa.hpp>
+#include <log_surgeon/finite_automata/Register.hpp>
+#include <log_surgeon/finite_automata/RegisterHandler.hpp>
+#include <log_surgeon/finite_automata/RegisterOperation.hpp>
+#include <log_surgeon/finite_automata/TagOperation.hpp>
 
 namespace log_surgeon::finite_automata {
-template <typename TypedDfaState>
+template <typename TypedDfaState, typename TypedNfaState>
 class Dfa {
 public:
-    template <typename NfaStateType>
-    explicit Dfa(Nfa<NfaStateType> nfa);
+    explicit Dfa(Nfa<TypedNfaState> const& nfa);
+
+    /**
+     * @return A string representation of the DFA.
+     */
+    [[nodiscard]] auto serialize() const -> std::string;
 
     /**
      * Creates a new DFA state based on a set of NFA states and adds it to `m_states`.
      * @param nfa_state_set The set of NFA states represented by this DFA state.
      * @return A pointer to the new DFA state.
      */
-    template <typename TypedNfaState>
-    auto new_state(std::set<TypedNfaState*> const& nfa_state_set) -> TypedDfaState*;
+    auto new_state(std::set<TypedNfaState const*> const& nfa_state_set) -> TypedDfaState*;
 
     auto get_root() const -> TypedDfaState const* { return m_states.at(0).get(); }
 
@@ -31,18 +44,25 @@ public:
      * reachable by any type in `dfa_in`. A type is considered reachable if there is at least one
      * string for which: (1) this dfa returns a set of types containing the type, and (2) `dfa_in`
      * returns any non-empty set of types.
+     *
      * @param dfa_in The dfa with which to take the intersect.
      * @return The set of schema types reachable by `dfa_in`.
      */
     [[nodiscard]] auto get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t>;
 
 private:
+    /**
+     * @return A vector representing the traversal order of the DFA states using breadth-first
+     * search (BFS).
+     */
+    [[nodiscard]] auto get_bfs_traversal_order() const -> std::vector<TypedDfaState const*>;
+
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
+    RegisterHandler m_register_handler;
 };
 
-template <typename TypedDfaState>
-template <typename TypedNfaState>
-Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
+template <typename TypedDfaState, typename TypedNfaState>
+Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
     using StateSet = std::set<TypedNfaState const*>;
 
     std::map<StateSet, TypedDfaState*> dfa_states;
@@ -74,7 +94,7 @@ Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
         }
         auto next_dfa_state
                 = [&dfa_states, &create_dfa_state](StateSet const& set) -> TypedDfaState* {
-            TypedDfaState* state;
+            TypedDfaState* state{nullptr};
             auto it = dfa_states.find(set);
             if (it == dfa_states.end()) {
                 state = create_dfa_state(set);
@@ -85,15 +105,15 @@ Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
         };
         for (auto const& kv : ascii_transitions_map) {
             auto* dest_state = next_dfa_state(kv.second);
-            dfa_state->add_byte_transition(kv.first, dest_state);
+            dfa_state->add_byte_transition(kv.first, {{}, dest_state});
         }
         // TODO: add this for the utf8 case
     }
 }
 
-template <typename TypedDfaState>
-template <typename TypedNfaState>
-auto Dfa<TypedDfaState>::new_state(std::set<TypedNfaState*> const& nfa_state_set
+template <typename TypedDfaState, typename TypedNfaState>
+auto Dfa<TypedDfaState, TypedNfaState>::new_state(
+        std::set<TypedNfaState const*> const& nfa_state_set
 ) -> TypedDfaState* {
     m_states.emplace_back(std::make_unique<TypedDfaState>());
     auto* dfa_state = m_states.back().get();
@@ -105,8 +125,9 @@ auto Dfa<TypedDfaState>::new_state(std::set<TypedNfaState*> const& nfa_state_set
     return dfa_state;
 }
 
-template <typename TypedDfaState>
-auto Dfa<TypedDfaState>::get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t> {
+template <typename TypedDfaState, typename TypedNfaState>
+auto Dfa<TypedDfaState, TypedNfaState>::get_intersect(Dfa const* dfa_in
+) const -> std::set<uint32_t> {
     std::set<uint32_t> schema_types;
     std::set<DfaStatePair<TypedDfaState>> unvisited_pairs;
     std::set<DfaStatePair<TypedDfaState>> visited_pairs;
@@ -123,6 +144,54 @@ auto Dfa<TypedDfaState>::get_intersect(Dfa const* dfa_in) const -> std::set<uint
         unvisited_pairs.erase(current_pair_it);
     }
     return schema_types;
+}
+
+template <typename TypedDfaState, typename TypedNfaState>
+auto Dfa<TypedDfaState, TypedNfaState>::get_bfs_traversal_order(
+) const -> std::vector<TypedDfaState const*> {
+    std::queue<TypedDfaState const*> state_queue;
+    std::unordered_set<TypedDfaState const*> visited_states;
+    std::vector<TypedDfaState const*> visited_order;
+    visited_states.reserve(m_states.size());
+    visited_order.reserve(m_states.size());
+
+    auto add_to_queue_and_visited
+            = [&state_queue, &visited_states](TypedDfaState const* dest_state) {
+                  if (visited_states.insert(dest_state).second) {
+                      state_queue.push(dest_state);
+                  }
+              };
+
+    add_to_queue_and_visited(get_root());
+    while (false == state_queue.empty()) {
+        auto const* current_state = state_queue.front();
+        visited_order.push_back(current_state);
+        state_queue.pop();
+        // TODO: handle the utf8 case
+        for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
+            auto const dest_state{current_state->get_dest_state(idx)};
+            if (nullptr != dest_state) {
+                add_to_queue_and_visited(dest_state);
+            }
+        }
+    }
+    return visited_order;
+}
+
+template <typename TypedDfaState, typename TypedNfaState>
+auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::string {
+    auto const traversal_order = get_bfs_traversal_order();
+
+    std::unordered_map<TypedDfaState const*, uint32_t> state_ids;
+    for (auto const* state : traversal_order) {
+        state_ids.emplace(state, state_ids.size());
+    }
+
+    std::vector<std::string> serialized_states;
+    for (auto const* state : traversal_order) {
+        serialized_states.emplace_back(state->serialize(state_ids));
+    }
+    return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
 }
 }  // namespace log_surgeon::finite_automata
 
