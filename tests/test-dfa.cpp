@@ -112,7 +112,53 @@ TEST_CASE("Test Complex Untagged DFA", "[DFA]") {
     REQUIRE(expected_line.empty());
 }
 
-TEST_CASE("Test Tagged DFA", "[DFA]") {
+TEST_CASE("Test Simple Tagged DFA", "[DFA]") {
+    Schema schema;
+    string const var_name{"capture"};
+    string const var_schema{var_name + ":" + "userID=(?<uID>123)"};
+
+    schema.add_variable(var_schema, -1);
+
+    auto const schema_ast = schema.release_schema_ast_ptr();
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    vector<ByteLexicalRule> rules;
+    rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
+    ByteNfa const nfa{rules};
+    ByteDfa const dfa{nfa};
+
+    string const expected_serialized_dfa{
+            "0:byte_transitions={u-()->1}\n"
+            "1:byte_transitions={s-()->2}\n"
+            "2:byte_transitions={e-()->3}\n"
+            "3:byte_transitions={r-()->4}\n"
+            "4:byte_transitions={I-()->5}\n"
+            "5:byte_transitions={D-()->6}\n"
+            "6:byte_transitions={=-()->7}\n"
+            "7:byte_transitions={1-(4p)->8}\n"
+            "8:byte_transitions={2-()->9}\n"
+            "9:byte_transitions={3-()->10}\n"
+            "10:accepting_tags={0},accepting_operations={2c4,3p},byte_transitions={}\n"
+    };
+
+    // Compare expected and actual line-by-line
+    auto const actual_serialized_dfa{dfa.serialize()};
+    stringstream ss_actual{actual_serialized_dfa};
+    stringstream ss_expected{expected_serialized_dfa};
+    string actual_line;
+    string expected_line;
+
+    CAPTURE(actual_serialized_dfa);
+    CAPTURE(expected_serialized_dfa);
+    while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
+        REQUIRE(actual_line == expected_line);
+    }
+    getline(ss_actual, actual_line);
+    REQUIRE(actual_line.empty());
+    getline(ss_expected, expected_line);
+    REQUIRE(expected_line.empty());
+}
+
+TEST_CASE("Test Complex Tagged DFA", "[DFA]") {
     Schema schema;
     string const var_name{"capture"};
     string const var_schema{
