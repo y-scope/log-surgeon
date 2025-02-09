@@ -359,17 +359,17 @@ void Lexer<TypedNfaState, TypedDfaState>::add_delimiters(std::vector<uint32_t> c
 
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::add_rule(
-        symbol_id_t const& var_id,
+        rule_id_t const rule_id,
         std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
 ) {
-    m_rules.emplace_back(var_id, std::move(rule));
+    m_rules.emplace_back(rule_id, std::move(rule));
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lexer<TypedNfaState, TypedDfaState>::get_rule(symbol_id_t const var_id
+auto Lexer<TypedNfaState, TypedDfaState>::get_rule(rule_id_t const rule_id
 ) -> finite_automata::RegexAST<TypedNfaState>* {
     for (auto const& rule : m_rules) {
-        if (rule.get_variable_id() == var_id) {
+        if (rule.get_variable_id() == rule_id) {
             return rule.get_regex();
         }
     }
@@ -389,11 +389,11 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
             m_symbol_id.emplace(capture_name, capture_id);
             m_id_symbol.emplace(capture_id, capture_name);
 
-            auto const var_id{rule.get_variable_id()};
-            if (false == m_var_id_to_capture_ids.contains(var_id)) {
-                m_var_id_to_capture_ids.emplace(var_id, std::vector<symbol_id_t>{});
+            auto const rule_id{rule.get_variable_id()};
+            if (false == m_rule_id_to_capture_ids.contains(rule_id)) {
+                m_rule_id_to_capture_ids.emplace(rule_id, std::vector<capture_id_t>{});
             }
-            m_var_id_to_capture_ids.at(var_id).push_back(capture_id);
+            m_rule_id_to_capture_ids.at(rule_id).push_back(capture_id);
         }
     }
 

@@ -325,14 +325,14 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     initialize_lexer(std::move(schema.release_schema_ast_ptr()), lexer);
 
     string varName{cVarName};
-    auto const var_id{lexer.m_symbol_id.find(varName)};
-    REQUIRE(lexer.m_symbol_id.end() != var_id);
+    auto const rule_id{lexer.m_symbol_id.find(varName)};
+    REQUIRE(lexer.m_symbol_id.end() != rule_id);
 
     string captureName{cCaptureName};
     auto const capture_id{lexer.m_symbol_id.find(captureName)};
     REQUIRE(lexer.m_symbol_id.end() != capture_id);
 
-    auto capture_ids{lexer.get_capture_ids_from_var_id(var_id->second)};
+    auto capture_ids{lexer.get_capture_ids_from_rule_id(rule_id->second)};
     REQUIRE(capture_ids.has_value());
     REQUIRE(1 == capture_ids.value().size());
     REQUIRE(capture_id->second == capture_ids.value()[0]);
@@ -341,7 +341,7 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     REQUIRE(tag_id_pair.has_value());
     REQUIRE(std::make_pair(0u, 1u) == tag_id_pair.value());
 
-    // TODO: add check for get_reg_id_from_tag_id and get_reg_ids_from_capture when
+    // TODO: add check for get_reg_id_from_tag_id and get_reg_ids_from_capture_id when
     // determinization is implemented.
 
     test_scanning_input(lexer, cTokenString1, cVarName);

@@ -23,7 +23,8 @@
 namespace log_surgeon {
 using finite_automata::reg_id_t;
 using finite_automata::tag_id_t;
-using symbol_id_t = uint32_t;
+using capture_id_t = uint32_t;
+using rule_id_t = uint32_t;
 
 template <typename TypedNfaState, typename TypedDfaState>
 class Lexer {
@@ -40,11 +41,11 @@ public:
 
     /**
      * Add lexical rule to the lexer's list of rules
-     * @param id
-     * @param regex
+     * @param rule_id
+     * @param rule
      */
     auto add_rule(
-            uint32_t const& id,
+            rule_id_t rule_id,
             std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
     ) -> void;
 
@@ -129,15 +130,15 @@ public:
     }
 
     /**
-     * @param var_id ID associated with a variable.
+     * @param rule_id ID associated with a rule.
      * @return A vector of capture IDs corresponding to each rule that contain the variable on
      * success.
      * @return std::nullopt if the variable is never captured in any rule.
      */
-    [[nodiscard]] auto get_capture_ids_from_var_id(symbol_id_t const var_id
-    ) const -> std::optional<std::vector<symbol_id_t>> {
-        if (m_var_id_to_capture_ids.contains(var_id)) {
-            return m_var_id_to_capture_ids.at(var_id);
+    [[nodiscard]] auto get_capture_ids_from_rule_id(rule_id_t const rule_id
+    ) const -> std::optional<std::vector<capture_id_t>> {
+        if (m_rule_id_to_capture_ids.contains(rule_id)) {
+            return m_rule_id_to_capture_ids.at(rule_id);
         }
         return std::nullopt;
     }
@@ -147,7 +148,7 @@ public:
      * @return The start and end tag of the capture on success.
      * @return std::nullopt if no capture is associated with the given capture ID.
      */
-    [[nodiscard]] auto get_tag_id_pair_from_capture_id(symbol_id_t const capture_id
+    [[nodiscard]] auto get_tag_id_pair_from_capture_id(capture_id_t const capture_id
     ) const -> std::optional<std::pair<tag_id_t, tag_id_t>> {
         auto const tag_id_pair{m_capture_id_to_tag_id_pair.find(capture_id)};
         if (m_capture_id_to_tag_id_pair.end() == tag_id_pair) {
@@ -176,7 +177,7 @@ public:
      * @return The start and end final register IDs tracking the position of the capture on success.
      * @return std::nullopt if no capture is associated with the given capture ID.
      */
-    [[nodiscard]] auto get_reg_ids_from_capture(symbol_id_t capture_id
+    [[nodiscard]] auto get_reg_ids_from_capture_id(capture_id_t const capture_id
     ) const -> std::optional<std::pair<reg_id_t, reg_id_t>> {
         auto const optional_tag_id_pair{get_tag_id_pair_from_capture_id(capture_id)};
         if (false == optional_tag_id_pair.has_value()) {
@@ -197,8 +198,8 @@ public:
         return {optional_start_reg_id.value(), optional_end_reg_id.value()};
     }
 
-    std::unordered_map<std::string, symbol_id_t> m_symbol_id;
-    std::unordered_map<symbol_id_t, std::string> m_id_symbol;
+    std::unordered_map<std::string, rule_id_t> m_symbol_id;
+    std::unordered_map<rule_id_t, std::string> m_id_symbol;
 
 private:
     /**
@@ -223,8 +224,8 @@ private:
     std::unique_ptr<finite_automata::Dfa<TypedDfaState>> m_dfa;
     bool m_asked_for_more_data{false};
     TypedDfaState const* m_prev_state{nullptr};
-    std::unordered_map<symbol_id_t, std::vector<symbol_id_t>> m_var_id_to_capture_ids;
-    std::unordered_map<symbol_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_id_pair;
+    std::unordered_map<rule_id_t, std::vector<capture_id_t>> m_rule_id_to_capture_ids;
+    std::unordered_map<capture_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_id_pair;
     std::unordered_map<tag_id_t, reg_id_t> m_tag_to_register_id;
 };
 
