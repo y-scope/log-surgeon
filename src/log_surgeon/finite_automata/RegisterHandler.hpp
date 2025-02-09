@@ -8,7 +8,7 @@
 #include <log_surgeon/finite_automata/PrefixTree.hpp>
 
 namespace log_surgeon::finite_automata {
-using register_id_t = uint32_t;
+using reg_id_t = uint32_t;
 
 /**
  * The register handler maintains a prefix tree that is sufficient to represent all registers.

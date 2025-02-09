@@ -21,7 +21,7 @@
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
-using finite_automata::register_id_t;
+using finite_automata::reg_id_t;
 using finite_automata::tag_id_t;
 using symbol_id_t = uint32_t;
 
@@ -146,7 +146,7 @@ public:
     }
 
     [[nodiscard]] auto get_reg_id_from_tag_id(tag_id_t const tag_id
-    ) const -> std::optional<register_id_t> {
+    ) const -> std::optional<reg_id_t> {
         auto const it{m_tag_to_register_id.find(tag_id)};
         if (m_tag_to_register_id.end() == it) {
             return std::nullopt;
@@ -155,7 +155,7 @@ public:
     }
 
     [[nodiscard]] auto get_reg_ids_from_capture(symbol_id_t capture_id
-    ) const -> std::optional<std::pair<register_id_t, register_id_t>> {
+    ) const -> std::optional<std::pair<reg_id_t, reg_id_t>> {
         auto const optional_tag_ids{get_tag_ids_from_capture_id(capture_id)};
         if (false == optional_tag_ids.has_value()) {
             return std::nullopt;
@@ -203,7 +203,7 @@ private:
     TypedDfaState const* m_prev_state{nullptr};
     std::unordered_map<symbol_id_t, std::vector<symbol_id_t>> m_var_id_to_capture_ids;
     std::unordered_map<symbol_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_ids;
-    std::unordered_map<tag_id_t, register_id_t> m_tag_to_register_id;
+    std::unordered_map<tag_id_t, reg_id_t> m_tag_to_register_id;
 };
 
 namespace lexers {
