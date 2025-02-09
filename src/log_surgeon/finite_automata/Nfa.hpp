@@ -91,8 +91,10 @@ public:
 private:
     /**
      * Creates start and end tags for the specified capture if they don't currently exist.
-     * @param capture
-     * @return The start and end tags corresponding to `capture`.
+     * @param capture The variable to be captured.
+     * @return A pair of tags:
+     * - The start tag for the `capture`.
+     * - The end tag for the `capture`.
      */
     auto get_or_create_capture_tag_pair(Capture const* capture) -> std::pair<tag_id_t, tag_id_t>;
 
