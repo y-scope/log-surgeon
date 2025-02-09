@@ -337,9 +337,9 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     REQUIRE(1 == capture_ids.value().size());
     REQUIRE(capture_id->second == capture_ids.value()[0]);
 
-    auto tag_ids{lexer.get_tag_ids_from_capture_id(capture_ids.value()[0])};
-    REQUIRE(tag_ids.has_value());
-    REQUIRE(std::make_pair(0u, 1u) == tag_ids.value());
+    auto tag_id_pair{lexer.get_tag_id_pair_from_capture_id(capture_ids.value()[0])};
+    REQUIRE(tag_id_pair.has_value());
+    REQUIRE(std::make_pair(0u, 1u) == tag_id_pair.value());
 
     // TODO: add check for get_reg_id_from_tag_id and get_reg_ids_from_capture when
     // determinization is implemented.

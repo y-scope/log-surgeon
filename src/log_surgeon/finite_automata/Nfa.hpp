@@ -85,7 +85,7 @@ public:
 
     [[nodiscard]] auto get_capture_to_tag_id_pair(
     ) const -> std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> {
-        return m_capture_to_tag_ids;
+        return m_capture_to_tag_id_pair;
     }
 
 private:
@@ -94,7 +94,7 @@ private:
      * @param capture
      * @return The start and end tags corresponding to `capture`.
      */
-    auto get_or_create_capture_tags(Capture const* capture) -> std::pair<tag_id_t, tag_id_t>;
+    auto get_or_create_capture_tag_pair(Capture const* capture) -> std::pair<tag_id_t, tag_id_t>;
 
     /**
      * Creates a `unique_ptr` for an NFA state with a positive tagged end transition and adds it to
@@ -111,7 +111,7 @@ private:
     std::vector<std::unique_ptr<TypedNfaState>> m_states;
     // TODO: Lexer currently enforces unique naming across capture groups. However, this limits use
     // cases. Possibly initialize this in the lexer and pass it in during construction.
-    std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> m_capture_to_tag_ids;
+    std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> m_capture_to_tag_id_pair;
     TypedNfaState* m_root;
     UniqueIdGenerator m_unique_id_generator;
 };
@@ -125,14 +125,14 @@ Nfa<TypedNfaState>::Nfa(std::vector<LexicalRule<TypedNfaState>> const& rules)
 }
 
 template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::get_or_create_capture_tags(Capture const* capture
+auto Nfa<TypedNfaState>::get_or_create_capture_tag_pair(Capture const* capture
 ) -> std::pair<tag_id_t, tag_id_t> {
-    auto const existing_tags{m_capture_to_tag_ids.find(capture)};
-    if (m_capture_to_tag_ids.end() == existing_tags) {
+    auto const existing_tags{m_capture_to_tag_id_pair.find(capture)};
+    if (m_capture_to_tag_id_pair.end() == existing_tags) {
         auto start_tag{m_unique_id_generator.generate_id()};
         auto end_tag{m_unique_id_generator.generate_id()};
         auto new_tags{std::make_pair(start_tag, end_tag)};
-        m_capture_to_tag_ids.emplace(capture, new_tags);
+        m_capture_to_tag_id_pair.emplace(capture, new_tags);
         return new_tags;
     }
     return existing_tags->second;
@@ -160,7 +160,7 @@ auto Nfa<TypedNfaState>::new_state_with_negative_tagged_transition(
 ) -> TypedNfaState* {
     std::vector<tag_id_t> tags;
     for (auto const capture : captures) {
-        auto [start_tag, end_tag]{get_or_create_capture_tags(capture)};
+        auto [start_tag, end_tag]{get_or_create_capture_tag_pair(capture)};
         tags.push_back(start_tag);
         tags.push_back(end_tag);
     }
@@ -174,7 +174,7 @@ auto Nfa<TypedNfaState>::new_start_and_end_states_with_positive_tagged_transitio
         Capture const* capture,
         TypedNfaState const* dest_state
 ) -> std::pair<TypedNfaState*, TypedNfaState*> {
-    auto [start_tag, end_tag]{get_or_create_capture_tags(capture)};
+    auto [start_tag, end_tag]{get_or_create_capture_tag_pair(capture)};
     auto* start_state = new_state();
     m_root->add_positive_tagged_start_transition(start_tag, start_state);
     auto* end_state{new_state_with_positive_tagged_end_transition(end_tag, dest_state)};
