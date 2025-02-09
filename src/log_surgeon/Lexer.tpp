@@ -399,8 +399,8 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
 
     finite_automata::Nfa<TypedNfaState> nfa{m_rules};
     for (auto const& [capture, tag_id_pair] : nfa.get_capture_to_tag_id_pair()) {
-        std::string capture_name{capture->get_name()};
-        auto capture_id{m_symbol_id[capture_name]};
+        std::string const capture_name{capture->get_name()};
+        auto const capture_id{m_symbol_id.at(capture_name)};
         m_capture_id_to_tag_id_pair.emplace(capture_id, tag_id_pair);
     }
 
