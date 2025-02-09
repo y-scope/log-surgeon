@@ -116,7 +116,7 @@ auto initialize_lexer(std::unique_ptr<SchemaAST> schema_ast, ByteLexer& lexer) -
                 std::move(delimiter_group),
                 std::move(rule->m_regex_ptr)
         );
-        if (!lexer.m_symbol_id.contains(rule->m_name)) {
+        if (false == lexer.m_symbol_id.contains(rule->m_name)) {
             lexer.m_symbol_id[rule->m_name] = lexer.m_symbol_id.size();
             lexer.m_id_symbol[lexer.m_symbol_id[rule->m_name]] = rule->m_name;
         }
