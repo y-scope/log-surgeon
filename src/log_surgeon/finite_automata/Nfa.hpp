@@ -96,7 +96,8 @@ private:
      * - The start tag for the `capture`.
      * - The end tag for the `capture`.
      */
-    auto get_or_create_capture_tag_pair(Capture const* capture) -> std::pair<tag_id_t, tag_id_t>;
+    [[nodiscard]] auto get_or_create_capture_tag_pair(Capture const* capture
+    ) -> std::pair<tag_id_t, tag_id_t>;
 
     /**
      * Creates a `unique_ptr` for an NFA state with a positive tagged end transition and adds it to
