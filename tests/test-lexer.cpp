@@ -332,7 +332,7 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     auto const capture_id{lexer.m_symbol_id.find(captureName)};
     REQUIRE(lexer.m_symbol_id.end() != capture_id);
 
-    auto capture_ids{lexer.get_capture_ids_for_var_id(var_id->second)};
+    auto capture_ids{lexer.get_capture_ids_from_var_id(var_id->second)};
     REQUIRE(capture_ids.has_value());
     REQUIRE(1 == capture_ids.value().size());
     REQUIRE(capture_id->second == capture_ids.value()[0]);

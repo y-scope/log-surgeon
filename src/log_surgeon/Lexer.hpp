@@ -128,7 +128,7 @@ public:
         return m_dfa;
     }
 
-    [[nodiscard]] auto get_capture_ids_for_var_id(symbol_id_t const var_id
+    [[nodiscard]] auto get_capture_ids_from_var_id(symbol_id_t const var_id
     ) const -> std::optional<std::vector<symbol_id_t>> {
         if (m_var_id_to_capture_ids.contains(var_id)) {
             return m_var_id_to_capture_ids.at(var_id);
