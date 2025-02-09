@@ -379,7 +379,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::get_rule(rule_id_t const rule_id
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::generate() {
     for (auto const& rule : m_rules) {
-        for (auto* capture : rule.get_captures()) {
+        for (auto const* capture : rule.get_captures()) {
             std::string const capture_name{capture->get_name()};
             if (m_symbol_id.contains(capture_name)) {
                 throw std::invalid_argument("`m_rules` contains capture names that are not unique."

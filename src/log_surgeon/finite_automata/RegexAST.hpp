@@ -152,7 +152,6 @@ protected:
     }
 
 private:
-    std::vector<uint32_t> m_subtree_capture_ids;
     std::vector<Capture const*> m_subtree_positive_captures;
     std::vector<Capture const*> m_negative_captures;
 };
