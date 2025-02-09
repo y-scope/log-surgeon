@@ -2,20 +2,20 @@
 #define LOG_SURGEON_LEXER_HPP
 
 #include <array>
-#include <bitset>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Dfa.hpp>
 #include <log_surgeon/finite_automata/DfaState.hpp>
-#include <log_surgeon/finite_automata/Nfa.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/finite_automata/RegisterHandler.hpp>
+#include <log_surgeon/finite_automata/TaggedTransition.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/ParserInputBuffer.hpp>
 #include <log_surgeon/Token.hpp>
