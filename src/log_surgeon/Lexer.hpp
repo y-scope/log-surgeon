@@ -130,11 +130,10 @@ public:
 
     [[nodiscard]] auto get_capture_ids_for_var_id(symbol_id_t const var_id
     ) const -> std::optional<std::vector<symbol_id_t>> {
-        auto const capture_ids{m_var_id_to_capture_ids.find(var_id)};
-        if (m_var_id_to_capture_ids.end() == capture_ids) {
-            return std::nullopt;
+        if (m_var_id_to_capture_ids.contains(var_id)) {
+            return m_var_id_to_capture_ids.at(var_id);
         }
-        return capture_ids->second;
+        return std::nullopt;
     }
 
     [[nodiscard]] auto get_tag_ids_for_capture_id(symbol_id_t const capture_id
