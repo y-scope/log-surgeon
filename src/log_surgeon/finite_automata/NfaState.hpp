@@ -18,7 +18,6 @@
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
-
 template <StateType state_type>
 class NfaState;
 
