@@ -138,8 +138,8 @@ public:
 
     [[nodiscard]] auto get_tag_ids_from_capture_id(symbol_id_t const capture_id
     ) const -> std::optional<std::pair<tag_id_t, tag_id_t>> {
-        auto const tag_ids{m_capture_id_to_tag_ids.find(capture_id)};
-        if (m_capture_id_to_tag_ids.end() == tag_ids) {
+        auto const tag_ids{m_capture_id_to_tag_id_pair.find(capture_id)};
+        if (m_capture_id_to_tag_id_pair.end() == tag_ids) {
             return std::nullopt;
         }
         return tag_ids->second;
@@ -202,7 +202,7 @@ private:
     bool m_asked_for_more_data{false};
     TypedDfaState const* m_prev_state{nullptr};
     std::unordered_map<symbol_id_t, std::vector<symbol_id_t>> m_var_id_to_capture_ids;
-    std::unordered_map<symbol_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_ids;
+    std::unordered_map<symbol_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_id_pair;
     std::unordered_map<tag_id_t, reg_id_t> m_tag_to_register_id;
 };
 

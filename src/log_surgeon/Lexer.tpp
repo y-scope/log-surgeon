@@ -385,22 +385,23 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
                 throw std::invalid_argument("`m_rules` contains capture names that are not unique."
                 );
             }
+
             auto const capture_id{m_symbol_id.size()};
             m_symbol_id.emplace(capture_name, capture_id);
             m_id_symbol.emplace(capture_id, capture_name);
             auto const var_id{rule.get_variable_id()};
             if (false == m_var_id_to_capture_ids.contains(var_id)) {
-                m_var_id_to_capture_ids.emplace(var_id, {});
+                m_var_id_to_capture_ids.emplace(var_id, std::vector<symbol_id_t>{});
             }
             m_var_id_to_capture_ids.at(var_id).push_back(capture_id);
         }
     }
 
     finite_automata::Nfa<TypedNfaState> nfa{m_rules};
-    for (auto const& [capture, tag_ids] : nfa.get_capture_to_tag_ids()) {
+    for (auto const& [capture, tag_id_pair] : nfa.get_capture_to_tag_id_pair()) {
         std::string capture_name{capture->get_name()};
         auto capture_id{m_symbol_id[capture_name]};
-        m_capture_id_to_tag_ids.emplace(capture_id, tag_ids);
+        m_capture_id_to_tag_id_pair.emplace(capture_id, tag_id_pair);
     }
 
     // TODO: DFA ignores captures. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
