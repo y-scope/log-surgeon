@@ -129,15 +129,12 @@ Nfa<TypedNfaState>::Nfa(std::vector<LexicalRule<TypedNfaState>> const& rules)
 template <typename TypedNfaState>
 auto Nfa<TypedNfaState>::get_or_create_capture_tag_pair(Capture const* capture
 ) -> std::pair<tag_id_t, tag_id_t> {
-    auto const existing_tags{m_capture_to_tag_id_pair.find(capture)};
-    if (m_capture_to_tag_id_pair.end() == existing_tags) {
-        auto start_tag{m_unique_id_generator.generate_id()};
-        auto end_tag{m_unique_id_generator.generate_id()};
-        auto new_tags{std::make_pair(start_tag, end_tag)};
-        m_capture_to_tag_id_pair.emplace(capture, new_tags);
-        return new_tags;
+    if (false == m_capture_to_tag_id_pair.contains(capture)) {
+        auto const start_tag{m_unique_id_generator.generate_id()};
+        auto const end_tag{m_unique_id_generator.generate_id()};
+        m_capture_to_tag_id_pair.emplace(capture, std::make_pair(start_tag, end_tag));
     }
-    return existing_tags->second;
+    return m_capture_to_tag_id_pair.at(capture);
 }
 
 template <typename TypedNfaState>
