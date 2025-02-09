@@ -21,13 +21,13 @@
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
+using finite_automata::register_id_t;
+using finite_automata::tag_id_t;
+using symbol_id_t = uint32_t;
+
 template <typename TypedNfaState, typename TypedDfaState>
 class Lexer {
 public:
-    using register_id_t = finite_automata::RegisterHandler::register_id_t;
-    using symbol_id_t = uint32_t;
-    using tag_id_t = finite_automata::tag_id_t;
-
     static inline std::vector<uint32_t> const cTokenEndTypes = {(uint32_t)SymbolId::TokenEnd};
     static inline std::vector<uint32_t> const cTokenUncaughtStringTypes
             = {(uint32_t)SymbolId::TokenUncaughtString};

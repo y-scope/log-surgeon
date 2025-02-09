@@ -8,6 +8,8 @@
 #include <log_surgeon/finite_automata/PrefixTree.hpp>
 
 namespace log_surgeon::finite_automata {
+using register_id_t = uint32_t;
+
 /**
  * The register handler maintains a prefix tree that is sufficient to represent all registers.
  * The register handler also contains a vector of registers, and performs the set, copy, and append
@@ -18,8 +20,6 @@ namespace log_surgeon::finite_automata {
  */
 class RegisterHandler {
 public:
-    using register_id_t = uint32_t;
-
     auto add_register(
             PrefixTree::id_t const prefix_tree_parent_node_id,
             PrefixTree::position_t const position
