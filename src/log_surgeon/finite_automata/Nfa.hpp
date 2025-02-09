@@ -159,7 +159,7 @@ auto Nfa<TypedNfaState>::new_state_with_negative_tagged_transition(
 ) -> TypedNfaState* {
     std::vector<tag_id_t> tags;
     for (auto const capture : captures) {
-        auto [start_tag, end_tag]{get_or_create_capture_tag_pair(capture)};
+        auto const [start_tag, end_tag]{get_or_create_capture_tag_pair(capture)};
         tags.push_back(start_tag);
         tags.push_back(end_tag);
     }
@@ -173,7 +173,7 @@ auto Nfa<TypedNfaState>::new_start_and_end_states_with_positive_tagged_transitio
         Capture const* capture,
         TypedNfaState const* dest_state
 ) -> std::pair<TypedNfaState*, TypedNfaState*> {
-    auto [start_tag, end_tag]{get_or_create_capture_tag_pair(capture)};
+    auto const [start_tag, end_tag]{get_or_create_capture_tag_pair(capture)};
     auto* start_state = new_state();
     m_root->add_positive_tagged_start_transition(start_tag, start_state);
     auto* end_state{new_state_with_positive_tagged_end_transition(end_tag, dest_state)};
