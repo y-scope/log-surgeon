@@ -84,7 +84,7 @@ public:
     auto get_root() -> TypedNfaState* { return m_root; }
 
     [[nodiscard]] auto get_capture_to_tag_id_pair(
-    ) const -> std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> {
+    ) const -> std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> const& {
         return m_capture_to_tag_id_pair;
     }
 
