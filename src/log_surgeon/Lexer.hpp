@@ -136,7 +136,7 @@ public:
         return std::nullopt;
     }
 
-    [[nodiscard]] auto get_tag_ids_for_capture_id(symbol_id_t const capture_id
+    [[nodiscard]] auto get_tag_ids_from_capture_id(symbol_id_t const capture_id
     ) const -> std::optional<std::pair<tag_id_t, tag_id_t>> {
         auto const tag_ids{m_capture_id_to_tag_ids.find(capture_id)};
         if (m_capture_id_to_tag_ids.end() == tag_ids) {
@@ -154,17 +154,25 @@ public:
         return it->second;
     }
 
-    [[nodiscard]] auto get_registers_for_capture(symbol_id_t capture_id
+    [[nodiscard]] auto get_reg_ids_from_capture(symbol_id_t capture_id
     ) const -> std::optional<std::pair<register_id_t, register_id_t>> {
-        auto const tag_ids{get_tag_ids_for_capture_id(capture_id)};
-        if (tag_ids.has_value()) {
-            auto const start_reg{get_reg_id_from_tag_id(tag_ids.value().first())};
-            auto const end_reg{get_reg_id_from_tag_id(tag_ids.value().second())};
-            if (start_reg.has_value() && end_reg.has_value()) {
-                return std::make_pair(start_reg.value(), end_reg.value());
-            }
+        auto const optional_tag_ids{get_tag_ids_from_capture_id(capture_id)};
+        if (false == optional_tag_ids.has_value()) {
+            return std::nullopt;
         }
-        return std::nullopt;
+        auto const [start_tag_id, end_tag_id]{optional_tag_ids.value()};
+
+        auto const optional_start_reg_id{get_reg_id_from_tag_id(start_tag_id)};
+        if (false == optional_start_reg_id.has_value()) {
+            return std::nullopt;
+        }
+
+        auto const optional_end_reg_id{get_reg_id_from_tag_id(end_tag_id)};
+        if (false == optional_end_reg_id.has_value()) {
+            return std::nullopt;
+        }
+
+        return {optional_start_reg_id.value(), optional_end_reg_id.value()};
     }
 
     std::unordered_map<std::string, symbol_id_t> m_symbol_id;
