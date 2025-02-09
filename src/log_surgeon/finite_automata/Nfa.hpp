@@ -19,11 +19,11 @@
 
 namespace log_surgeon::finite_automata {
 /**
- * Represents a NFA(non-deterministic finite automata) for recognizing a language based on the set
- * of rules used during initialization. Currently use as an intermediate model for generating the
- * DFA.
+ * Represents a Non-Deterministic Finite Automaton (NFA) designed to recognize a language based on
+ * a set of rules provided during initialization. This class serves as an intermediate
+ * representation used for generating the corresponding Deterministic Finite Automaton (DFA).
  *
- * Currently we assume all capture groups have unique names.
+ * NOTE: It is assumed that all capture groups have unique names, even across different rules.
  * @tparam TypedNfaState
  */
 template <typename TypedNfaState>
