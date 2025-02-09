@@ -381,16 +381,18 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
     for (auto const& rule : m_rules) {
         for (auto* capture : rule.get_captures()) {
             std::string const capture_name{capture->get_name()};
-            symbol_id_t capture_id{0};
-            if (m_symbol_id.find(capture_name) == m_symbol_id.end()) {
-                capture_id = m_symbol_id.size();
-                m_symbol_id[capture_name] = capture_id;
-                m_id_symbol[capture_id] = capture_name;
-            } else {
+            if (m_symbol_id.contains(capture_name)) {
                 throw std::invalid_argument("`m_rules` contains capture names that are not unique."
                 );
             }
-            m_var_id_to_capture_ids[rule.get_variable_id()].push_back(capture_id);
+            auto const capture_id{m_symbol_id.size()};
+            m_symbol_id.emplace(capture_name, capture_id);
+            m_id_symbol.emplace(capture_id, capture_name);
+            auto const var_id{rule.get_variable_id()};
+            if (false == m_var_id_to_capture_ids.contains(var_id)) {
+                m_var_id_to_capture_ids.emplace(var_id, {});
+            }
+            m_var_id_to_capture_ids.at(var_id).push_back(capture_id);
         }
     }
 
