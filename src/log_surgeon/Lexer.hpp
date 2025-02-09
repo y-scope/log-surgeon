@@ -128,6 +128,12 @@ public:
         return m_dfa;
     }
 
+    /**
+     * @param var_id ID associated with a variable.
+     * @return A vector of capture IDs corresponding to each rule that contain the variable on
+     * success.
+     * @return std::nullopt if the variable is never captured in any rule.
+     */
     [[nodiscard]] auto get_capture_ids_from_var_id(symbol_id_t const var_id
     ) const -> std::optional<std::vector<symbol_id_t>> {
         if (m_var_id_to_capture_ids.contains(var_id)) {
@@ -136,6 +142,11 @@ public:
         return std::nullopt;
     }
 
+    /**
+     * @param capture_id ID associated with a capture within a rule.
+     * @return The start and end tag of the capture on success.
+     * @return std::nullopt if no capture is associated with the given capture ID.
+     */
     [[nodiscard]] auto get_tag_id_pair_from_capture_id(symbol_id_t const capture_id
     ) const -> std::optional<std::pair<tag_id_t, tag_id_t>> {
         auto const tag_id_pair{m_capture_id_to_tag_id_pair.find(capture_id)};
@@ -145,6 +156,12 @@ public:
         return tag_id_pair->second;
     }
 
+    /**
+     * @param tag_id ID associated with a tag.
+     * @return The final register ID tracking the value of the tag ID during DFA simulation on
+     * success.
+     * @return std::nullopt if no tag is associated with the given tag ID.
+     */
     [[nodiscard]] auto get_reg_id_from_tag_id(tag_id_t const tag_id
     ) const -> std::optional<reg_id_t> {
         auto const it{m_tag_to_register_id.find(tag_id)};
@@ -154,6 +171,11 @@ public:
         return it->second;
     }
 
+    /**
+     * @param capture_id ID associated with a capture within a rule.
+     * @return The start and end final register IDs tracking the position of the capture on success.
+     * @return std::nullopt if no capture is associated with the given capture ID.
+     */
     [[nodiscard]] auto get_reg_ids_from_capture(symbol_id_t capture_id
     ) const -> std::optional<std::pair<reg_id_t, reg_id_t>> {
         auto const optional_tag_id_pair{get_tag_id_pair_from_capture_id(capture_id)};
