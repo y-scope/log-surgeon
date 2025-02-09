@@ -56,9 +56,9 @@ auto test_regex_ast(string_view var_schema, u32string const& expected_serialized
 [[nodiscard]] auto u32string_to_string(u32string const& u32_str) -> string;
 
 /**
- * Initiailizes the lexer with the constant delimiters and the given schema.
+ * Initializes the lexer with the constant delimiters and the given schema.
  * @param schema Contains the variables to add to the lexer.
- * @param lexer Returns the initiailzed parser.
+ * @param lexer Returns the initialized parser.
  */
 auto initialize_lexer(Schema schema, ByteLexer& lexer) -> void;
 
