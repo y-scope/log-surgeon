@@ -46,7 +46,7 @@ private:
 };
 
 /**
- * Represents an NFA transition indicating that a tag has been unmatched.
+ * Represents an NFA transition indicating that multiple tags have been unmatched.
  * @tparam TypedNfaState Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename TypedNfaState>
