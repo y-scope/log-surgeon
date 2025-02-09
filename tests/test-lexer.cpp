@@ -341,7 +341,7 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     REQUIRE(tag_ids.has_value());
     REQUIRE(std::make_pair(0u, 1u) == tag_ids.value());
 
-    // TODO: add check for get_register_for_tag_id and get_registers_for_capture when
+    // TODO: add check for get_reg_id_from_tag_id and get_registers_for_capture when
     // determinization is implemented.
 
     test_scanning_input(lexer, cTokenString1, cVarName);

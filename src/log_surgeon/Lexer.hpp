@@ -145,7 +145,7 @@ public:
         return tag_ids->second;
     }
 
-    [[nodiscard]] auto get_register_for_tag_id(tag_id_t const tag_id
+    [[nodiscard]] auto get_reg_id_from_tag_id(tag_id_t const tag_id
     ) const -> std::optional<register_id_t> {
         auto const it{m_tag_to_register_id.find(tag_id)};
         if (m_tag_to_register_id.end() == it) {
@@ -158,8 +158,8 @@ public:
     ) const -> std::optional<std::pair<register_id_t, register_id_t>> {
         auto const tag_ids{get_tag_ids_for_capture_id(capture_id)};
         if (tag_ids.has_value()) {
-            auto const start_reg{get_register_for_tag_id(tag_ids.value().first())};
-            auto const end_reg{get_register_for_tag_id(tag_ids.value().second())};
+            auto const start_reg{get_reg_id_from_tag_id(tag_ids.value().first())};
+            auto const end_reg{get_reg_id_from_tag_id(tag_ids.value().second())};
             if (start_reg.has_value() && end_reg.has_value()) {
                 return std::make_pair(start_reg.value(), end_reg.value());
             }
