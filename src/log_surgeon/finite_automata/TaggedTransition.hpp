@@ -11,7 +11,7 @@
 #include <fmt/format.h>
 
 namespace log_surgeon::finite_automata {
-using tag_id_t = std::uint32_t;
+using tag_id_t = uint32_t;
 
 /**
  * Represents an NFA transition indicating that a tag has been matched.
