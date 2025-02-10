@@ -630,8 +630,8 @@ private:
 /**
  * Represents a capture group AST node.
  * NOTE:
- * - `m_capture` is always expected to be non-null.
- * - `m_capture_regex_ast` is always expected to be non-null.
+ * - `m_capture` must be non-null as it represents the capture group being matched.
+ * - `m_capture_regex_ast` must be non-null as it contains the regex pattern for the capture group.
  * @tparam TypedNfaState Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename TypedNfaState>
