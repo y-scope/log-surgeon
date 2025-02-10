@@ -631,7 +631,7 @@ private:
  * Represents a capture group AST node.
  * NOTE:
  * - `m_capture` is always expected to be non-null.
- * - `m_group_regex_ast` is always expected to be non-null.
+ * - `m_capture_regex_ast` is always expected to be non-null.
  * @tparam TypedNfaState Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename TypedNfaState>
@@ -640,33 +640,33 @@ public:
     ~RegexASTCapture() override = default;
 
     /**
-     * @param group_regex_ast
+     * @param capture_regex_ast
      * @param capture
-     * @throw std::invalid_argument if `group_regex_ast` or `capture` are `nullptr`.
+     * @throw std::invalid_argument if `capture_regex_ast` or `capture` are `nullptr`.
      */
     RegexASTCapture(
-            std::unique_ptr<RegexAST<TypedNfaState>> group_regex_ast,
+            std::unique_ptr<RegexAST<TypedNfaState>> capture_regex_ast,
             std::unique_ptr<Capture> capture
     )
-            : m_group_regex_ast{(
-                      nullptr == group_regex_ast
+            : m_capture_regex_ast{(
+                      nullptr == capture_regex_ast
                               ? throw std::invalid_argument("Group regex AST cannot be null")
-                              : std::move(group_regex_ast)
+                              : std::move(capture_regex_ast)
               )},
               m_capture{
                       nullptr == capture ? throw std::invalid_argument("Capture cannot be null")
                                          : std::move(capture)
               } {
         RegexAST<TypedNfaState>::set_subtree_positive_captures(
-                m_group_regex_ast->get_subtree_positive_captures()
+                m_capture_regex_ast->get_subtree_positive_captures()
         );
         RegexAST<TypedNfaState>::add_subtree_positive_captures({m_capture.get()});
     }
 
     RegexASTCapture(RegexASTCapture const& rhs)
             : RegexAST<TypedNfaState>{rhs},
-              m_group_regex_ast{
-                      std::unique_ptr<RegexAST<TypedNfaState>>(rhs.m_group_regex_ast->clone())
+              m_capture_regex_ast{
+                      std::unique_ptr<RegexAST<TypedNfaState>>(rhs.m_capture_regex_ast->clone())
               },
               m_capture{std::make_unique<Capture>(*rhs.m_capture)} {
         RegexAST<TypedNfaState>::set_subtree_positive_captures(rhs.get_subtree_positive_captures());
@@ -687,7 +687,7 @@ public:
      */
     auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
     ) const -> void override {
-        m_group_regex_ast->set_possible_inputs_to_true(is_possible_input);
+        m_capture_regex_ast->set_possible_inputs_to_true(is_possible_input);
     }
 
     /**
@@ -696,7 +696,7 @@ public:
      * @param delimiters
      */
     auto remove_delimiters_from_wildcard(std::vector<uint32_t>& delimiters) -> void override {
-        m_group_regex_ast->remove_delimiters_from_wildcard(delimiters);
+        m_capture_regex_ast->remove_delimiters_from_wildcard(delimiters);
     }
 
     /**
@@ -709,15 +709,15 @@ public:
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
-    [[nodiscard]] auto get_group_name() const -> std::string_view { return m_capture->get_name(); }
+    [[nodiscard]] auto get_capture_name() const -> std::string_view { return m_capture->get_name(); }
 
-    [[nodiscard]] auto get_group_regex_ast(
+    [[nodiscard]] auto get_capture_regex_ast(
     ) const -> std::unique_ptr<RegexAST<TypedNfaState>> const& {
-        return m_group_regex_ast;
+        return m_capture_regex_ast;
     }
 
 private:
-    std::unique_ptr<RegexAST<TypedNfaState>> m_group_regex_ast;
+    std::unique_ptr<RegexAST<TypedNfaState>> m_capture_regex_ast;
     std::unique_ptr<Capture> m_capture;
 };
 
@@ -921,7 +921,7 @@ auto RegexASTCapture<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNf
     //                    | (epsilon transition)
     //                    v
     //         +---------------------+
-    //         | `m_group_regex_ast` |
+    //         |`m_capture_regex_ast`|
     //         |    (nested NFA)     |
     //         +---------------------+
     //                    | `m_negative_captures`
@@ -944,7 +944,7 @@ auto RegexASTCapture<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNf
 
     auto* initial_root = nfa->get_root();
     nfa->set_root(capture_start_state);
-    m_group_regex_ast->add_to_nfa_with_negative_tags(nfa, capture_end_state);
+    m_capture_regex_ast->add_to_nfa_with_negative_tags(nfa, capture_end_state);
     nfa->set_root(initial_root);
 }
 
@@ -955,7 +955,7 @@ template <typename TypedNfaState>
     };
     return fmt::format(
             U"({})<{}>{}",
-            m_group_regex_ast->serialize(),
+            m_capture_regex_ast->serialize(),
             capture_name_u32,
             RegexAST<TypedNfaState>::serialize_negative_captures()
     );

@@ -211,10 +211,10 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         auto const* regex_ast_capture
                 = dynamic_cast<RegexASTCaptureByte const*>(regex_ast_cat_ptr->get_right());
         REQUIRE(nullptr != regex_ast_capture);
-        REQUIRE("uID" == regex_ast_capture->get_group_name());
+        REQUIRE("uID" == regex_ast_capture->get_capture_name());
 
         auto const* regex_ast_multiplication_ast = dynamic_cast<RegexASTMultiplicationByte*>(
-                regex_ast_capture->get_group_regex_ast().get()
+                regex_ast_capture->get_capture_regex_ast().get()
         );
         REQUIRE(nullptr != regex_ast_multiplication_ast);
         REQUIRE(1 == regex_ast_multiplication_ast->get_min());
