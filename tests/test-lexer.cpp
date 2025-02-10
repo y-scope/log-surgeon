@@ -61,10 +61,10 @@ auto test_regex_ast(string_view var_schema, u32string const& expected_serialized
 
 /**
  * Initializes the lexer with the constant delimiters and the given schema.
- * @param schema Contains the variables to add to the lexer.
+ * @param schema_ast Contains the variables to add to the lexer.
  * @param lexer Returns the initialized parser.
  */
-auto initialize_lexer(Schema schema, ByteLexer& lexer) -> void;
+auto initialize_lexer(std::unique_ptr<SchemaAST> schema_ast, ByteLexer& lexer) -> void;
 
 /**
  * Lexes the given input and verifies the output is a token for the given rule name, folowed by the
