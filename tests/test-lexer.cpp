@@ -61,6 +61,9 @@ auto test_regex_ast(string_view var_schema, u32string const& expected_serialized
 
 /**
  * Initializes the lexer with the constant delimiters and the given schema.
+ * The constant delimiters (space and newline) are used to separate tokens in the input.
+ * The lexer's symbol mappings are initialized based on the schema variables.
+ * Assumes the lexer is in a clean state before initialization.
  * @param schema_ast Contains the variables to add to the lexer.
  * @param lexer Returns the initialized parser.
  */
