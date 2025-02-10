@@ -10,22 +10,16 @@
 #include <utility>
 #include <vector>
 
+#include <log_surgeon/Aliases.hpp>
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Dfa.hpp>
 #include <log_surgeon/finite_automata/DfaState.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
-#include <log_surgeon/finite_automata/RegisterHandler.hpp>
-#include <log_surgeon/finite_automata/TaggedTransition.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/ParserInputBuffer.hpp>
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
-using finite_automata::reg_id_t;
-using finite_automata::tag_id_t;
-using capture_id_t = uint32_t;
-using rule_id_t = uint32_t;
-
 template <typename TypedNfaState, typename TypedDfaState>
 class Lexer {
 public:

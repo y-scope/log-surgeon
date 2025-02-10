@@ -10,9 +10,9 @@
 
 #include <fmt/format.h>
 
-namespace log_surgeon::finite_automata {
-using tag_id_t = uint32_t;
+#include <log_surgeon/Aliases.hpp>
 
+namespace log_surgeon::finite_automata {
 /**
  * Represents an NFA transition indicating that a tag has been matched.
  * @tparam TypedNfaState Specifies the type of transition (bytes or UTF-8 characters).
