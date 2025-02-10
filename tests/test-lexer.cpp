@@ -159,7 +159,7 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
     REQUIRE(log_surgeon::cTokenEnd == lexer.m_id_symbol[token.m_type_ids_ptr->at(0)]);
     REQUIRE(token.to_string_view().empty());
 
-    // TODO: add check for register values when simulation is implemented.
+    // TODO: Add verification of register values after implementing the DFA simulation.
 }
 }  // namespace
 
