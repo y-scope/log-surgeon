@@ -95,7 +95,7 @@ auto initialize_lexer(std::unique_ptr<SchemaAST> schema_ast, ByteLexer& lexer) -
     lexer.add_delimiters(cDelimiters);
 
     vector<uint32_t> delimiters;
-    for (uint32_t i{0}; i < log_surgeon::cSizeOfByte; i++) {
+    for (uint32_t i{0}; i < log_surgeon::cSizeOfByte; ++i) {
         if (lexer.is_delimiter(i)) {
             delimiters.push_back(i);
         }
@@ -117,10 +117,10 @@ auto initialize_lexer(std::unique_ptr<SchemaAST> schema_ast, ByteLexer& lexer) -
                 std::move(rule->m_regex_ptr)
         );
         if (false == lexer.m_symbol_id.contains(rule->m_name)) {
-            lexer.m_symbol_id[rule->m_name] = lexer.m_symbol_id.size();
-            lexer.m_id_symbol[lexer.m_symbol_id[rule->m_name]] = rule->m_name;
+            lexer.m_symbol_id.emplace(rule->m_name, lexer.m_symbol_id.size());
+            lexer.m_id_symbol.emplace(lexer.m_symbol_id.at(rule->m_name), rule->m_name);
         }
-        lexer.add_rule(lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
+        lexer.add_rule(lexer.m_symbol_id.at(rule->m_name), std::move(rule->m_regex_ptr));
     }
     lexer.generate();
 }
