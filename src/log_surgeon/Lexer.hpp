@@ -157,8 +157,8 @@ public:
      */
     [[nodiscard]] auto get_reg_id_from_tag_id(tag_id_t const tag_id
     ) const -> std::optional<reg_id_t> {
-        auto const it{m_tag_to_register_id.find(tag_id)};
-        if (m_tag_to_register_id.end() == it) {
+        auto const it{m_tag_to_reg_id.find(tag_id)};
+        if (m_tag_to_reg_id.end() == it) {
             return std::nullopt;
         }
         return it->second;
@@ -218,7 +218,7 @@ private:
     TypedDfaState const* m_prev_state{nullptr};
     std::unordered_map<rule_id_t, std::vector<capture_id_t>> m_rule_id_to_capture_ids;
     std::unordered_map<capture_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_id_pair;
-    std::unordered_map<tag_id_t, reg_id_t> m_tag_to_register_id;
+    std::unordered_map<tag_id_t, reg_id_t> m_tag_to_reg_id;
 };
 
 namespace lexers {
