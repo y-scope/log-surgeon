@@ -197,22 +197,22 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         auto& schema_var_ast = dynamic_cast<SchemaVarAST&>(*schema_var_ast_ptr);
         REQUIRE(var_name == schema_var_ast.m_name);
 
-        auto* regex_ast_cat_ptr = dynamic_cast<RegexASTCatByte*>(schema_var_ast.m_regex_ptr.get());
+        auto const* regex_ast_cat_ptr = dynamic_cast<RegexASTCatByte*>(schema_var_ast.m_regex_ptr.get());
         REQUIRE(nullptr != regex_ast_cat_ptr);
         REQUIRE(nullptr != regex_ast_cat_ptr->get_left());
         REQUIRE(nullptr != regex_ast_cat_ptr->get_right());
 
-        auto* regex_ast_literal
+        auto const* regex_ast_literal
                 = dynamic_cast<RegexASTLiteralByte const*>(regex_ast_cat_ptr->get_left());
         REQUIRE(nullptr != regex_ast_literal);
         REQUIRE('u' == regex_ast_literal->get_character());
 
-        auto* regex_ast_capture
+        auto const* regex_ast_capture
                 = dynamic_cast<RegexASTCaptureByte const*>(regex_ast_cat_ptr->get_right());
         REQUIRE(nullptr != regex_ast_capture);
         REQUIRE("uID" == regex_ast_capture->get_group_name());
 
-        auto* regex_ast_multiplication_ast = dynamic_cast<RegexASTMultiplicationByte*>(
+        auto const* regex_ast_multiplication_ast = dynamic_cast<RegexASTMultiplicationByte*>(
                 regex_ast_capture->get_group_regex_ast().get()
         );
         REQUIRE(nullptr != regex_ast_multiplication_ast);
@@ -220,7 +220,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE(0 == regex_ast_multiplication_ast->get_max());
         REQUIRE(regex_ast_multiplication_ast->is_infinite());
 
-        auto* regex_ast_group_ast
+        auto const* regex_ast_group_ast
                 = dynamic_cast<RegexASTGroupByte*>(regex_ast_multiplication_ast->get_operand().get()
                 );
         REQUIRE(false == regex_ast_group_ast->is_wildcard());
