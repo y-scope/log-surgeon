@@ -67,12 +67,14 @@ auto test_regex_ast(string_view var_schema, u32string const& expected_serialized
 auto initialize_lexer(Schema schema, ByteLexer& lexer) -> void;
 
 /**
- * Scans the given input to ensure the correct behavior.
+ * Lexes the given input and verifies the output is a token for the given rule name, folowed by the
+ * end of inptut token.
+ *
  * @param lexer The lexer to scan the input with.
- * @param input The input to test.
- * @param symbol The expected symbol to match.
+ * @param input The input to lex.
+ * @param rule_name The expected symbol to match.
  */
-auto test_scanning_input(ByteLexer const& lexer, std::string_view input, std::string_view symbol)
+auto test_scanning_input(ByteLexer const& lexer, std::string_view input, std::string_view rule_name)
         -> void;
 
 auto test_regex_ast(string_view const var_schema, u32string const& expected_serialized_ast)
@@ -126,7 +128,7 @@ auto initialize_lexer(std::unique_ptr<SchemaAST> schema_ast, ByteLexer& lexer) -
     lexer.generate();
 }
 
-auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_view symbol)
+auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_view rule_name)
         -> void {
     lexer.reset();
 
@@ -140,7 +142,7 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
     REQUIRE(log_surgeon::ErrorCode::Success == error_code);
     REQUIRE(nullptr != token.m_type_ids_ptr);
     REQUIRE(1 == token.m_type_ids_ptr->size());
-    REQUIRE(symbol == lexer.m_id_symbol[token.m_type_ids_ptr->at(0)]);
+    REQUIRE(rule_name == lexer.m_id_symbol[token.m_type_ids_ptr->at(0)]);
     REQUIRE(input == token.to_string_view());
 
     error_code = lexer.scan(input_buffer, token);
@@ -326,23 +328,22 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     initialize_lexer(std::move(schema.release_schema_ast_ptr()), lexer);
 
     string const var_name{cVarName};
-    auto const rule_id{lexer.m_symbol_id.find(var_name)};
-    REQUIRE(lexer.m_symbol_id.end() != rule_id);
+    REQUIRE(lexer.m_symbol_id.contains(var_name));
 
     string const capture_name{cCaptureName};
-    auto const capture_id{lexer.m_symbol_id.find(capture_name)};
-    REQUIRE(lexer.m_symbol_id.end() != capture_id);
+    REQUIRE(lexer.m_symbol_id.contains(capture_name));
 
-    auto const capture_ids{lexer.get_capture_ids_from_rule_id(rule_id->second)};
-    REQUIRE(capture_ids.has_value());
-    REQUIRE(1 == capture_ids.value().size());
-    REQUIRE(capture_id->second == capture_ids.value()[0]);
+    auto const optional_capture_ids{lexer.get_capture_ids_from_rule_id(lexer.m_symbol_id.at(var_name
+    ))};
+    REQUIRE(optional_capture_ids.has_value());
+    REQUIRE(1 == optional_capture_ids.value().size());
+    REQUIRE(lexer.m_symbol_id.at(capture_name) == optional_capture_ids.value()[0]);
 
-    auto const tag_id_pair{lexer.get_tag_id_pair_from_capture_id(capture_ids.value()[0])};
+    auto const tag_id_pair{lexer.get_tag_id_pair_from_capture_id(optional_capture_ids.value()[0])};
     REQUIRE(tag_id_pair.has_value());
     REQUIRE(std::make_pair(0U, 1U) == tag_id_pair.value());
 
-    // TODO: add check for get_reg_id_from_tag_id and get_reg_ids_from_capture_id when
+    // TODO: Add check for `get_reg_id_from_tag_id` and `get_reg_ids_from_capture_id` when TDFA's
     // determinization is implemented.
 
     test_scanning_input(lexer, cTokenString1, cVarName);
