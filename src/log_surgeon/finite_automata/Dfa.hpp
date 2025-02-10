@@ -2,6 +2,7 @@
 #define LOG_SURGEON_FINITE_AUTOMATA_DFA_HPP
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <set>
 #include <vector>

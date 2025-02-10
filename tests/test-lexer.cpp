@@ -1,16 +1,20 @@
 #include <codecvt>
+#include <cstdint>
 #include <locale>
+#include <memory>
 #include <string>
 #include <string_view>
-#include <vector>
+#include <utility>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/Nfa.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
+#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/ParserInputBuffer.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
+#include <log_surgeon/Token.hpp>
 
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::Schema;
@@ -91,22 +95,19 @@ auto u32string_to_string(u32string const& u32_str) -> string {
 }
 
 auto initialize_lexer(std::unique_ptr<SchemaAST> schema_ast, ByteLexer& lexer) -> void {
-    vector<uint32_t> const cDelimiters{' ', '\n'};
-    lexer.add_delimiters(cDelimiters);
+    vector<uint32_t> const delimiters{' ', '\n'};
+    lexer.add_delimiters(delimiters);
 
-    vector<uint32_t> delimiters;
-    for (uint32_t i{0}; i < log_surgeon::cSizeOfByte; ++i) {
-        if (lexer.is_delimiter(i)) {
-            delimiters.push_back(i);
-        }
-    }
-
-    lexer.m_symbol_id[log_surgeon::cTokenEnd] = static_cast<uint32_t>(SymbolId::TokenEnd);
-    lexer.m_symbol_id[log_surgeon::cTokenUncaughtString]
-            = static_cast<uint32_t>(SymbolId::TokenUncaughtString);
-    lexer.m_id_symbol[static_cast<uint32_t>(SymbolId::TokenEnd)] = log_surgeon::cTokenEnd;
-    lexer.m_id_symbol[static_cast<uint32_t>(SymbolId::TokenUncaughtString)]
-            = log_surgeon::cTokenUncaughtString;
+    lexer.m_symbol_id.emplace(log_surgeon::cTokenEnd, static_cast<uint32_t>(SymbolId::TokenEnd));
+    lexer.m_symbol_id.emplace(
+            log_surgeon::cTokenUncaughtString,
+            static_cast<uint32_t>(SymbolId::TokenUncaughtString)
+    );
+    lexer.m_id_symbol.emplace(static_cast<uint32_t>(SymbolId::TokenEnd), log_surgeon::cTokenEnd);
+    lexer.m_id_symbol.emplace(
+            static_cast<uint32_t>(SymbolId::TokenUncaughtString),
+            log_surgeon::cTokenUncaughtString
+    );
 
     for (auto const& m_schema_var : schema_ast->m_schema_vars) {
         // For log-specific lexing: modify variable regex to contain a delimiter at the start.
@@ -324,22 +325,22 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     ByteLexer lexer;
     initialize_lexer(std::move(schema.release_schema_ast_ptr()), lexer);
 
-    string varName{cVarName};
-    auto const rule_id{lexer.m_symbol_id.find(varName)};
+    string const var_name{cVarName};
+    auto const rule_id{lexer.m_symbol_id.find(var_name)};
     REQUIRE(lexer.m_symbol_id.end() != rule_id);
 
-    string captureName{cCaptureName};
-    auto const capture_id{lexer.m_symbol_id.find(captureName)};
+    string const capture_name{cCaptureName};
+    auto const capture_id{lexer.m_symbol_id.find(capture_name)};
     REQUIRE(lexer.m_symbol_id.end() != capture_id);
 
-    auto capture_ids{lexer.get_capture_ids_from_rule_id(rule_id->second)};
+    auto const capture_ids{lexer.get_capture_ids_from_rule_id(rule_id->second)};
     REQUIRE(capture_ids.has_value());
     REQUIRE(1 == capture_ids.value().size());
     REQUIRE(capture_id->second == capture_ids.value()[0]);
 
-    auto tag_id_pair{lexer.get_tag_id_pair_from_capture_id(capture_ids.value()[0])};
+    auto const tag_id_pair{lexer.get_tag_id_pair_from_capture_id(capture_ids.value()[0])};
     REQUIRE(tag_id_pair.has_value());
-    REQUIRE(std::make_pair(0u, 1u) == tag_id_pair.value());
+    REQUIRE(std::make_pair(0U, 1U) == tag_id_pair.value());
 
     // TODO: add check for get_reg_id_from_tag_id and get_reg_ids_from_capture_id when
     // determinization is implemented.
