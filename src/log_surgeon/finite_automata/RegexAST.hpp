@@ -709,7 +709,9 @@ public:
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 
-    [[nodiscard]] auto get_capture_name() const -> std::string_view { return m_capture->get_name(); }
+    [[nodiscard]] auto get_capture_name() const -> std::string_view {
+        return m_capture->get_name();
+    }
 
     [[nodiscard]] auto get_capture_regex_ast(
     ) const -> std::unique_ptr<RegexAST<TypedNfaState>> const& {
