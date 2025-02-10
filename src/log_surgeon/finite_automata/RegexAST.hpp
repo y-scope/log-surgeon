@@ -913,7 +913,7 @@ auto RegexASTCapture<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNf
     //         +---------------------+
     //         |       `m_root`      |
     //         +---------------------+
-    //                    | `m_capture` start
+    //                    | `m_capture` start ID
     //                    | (positive tagged start transition)
     //                    v
     //         +---------------------+
@@ -932,7 +932,7 @@ auto RegexASTCapture<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNf
     //         +---------------------+
     //         | `capture_end_state` |
     //         +---------------------+
-    //                    | `m_capture` end
+    //                    | `m_capture` end ID
     //                    | (positive tagged end transition)
     //                    v
     //         +---------------------+
