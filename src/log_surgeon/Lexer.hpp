@@ -44,10 +44,8 @@ public:
      * @param rule_id
      * @param rule
      */
-    auto add_rule(
-            rule_id_t rule_id,
-            std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
-    ) -> void;
+    auto add_rule(rule_id_t rule_id, std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule)
+            -> void;
 
     /**
      * Return regex pattern for a rule name

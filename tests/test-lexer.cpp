@@ -197,7 +197,8 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         auto& schema_var_ast = dynamic_cast<SchemaVarAST&>(*schema_var_ast_ptr);
         REQUIRE(var_name == schema_var_ast.m_name);
 
-        auto const* regex_ast_cat_ptr = dynamic_cast<RegexASTCatByte*>(schema_var_ast.m_regex_ptr.get());
+        auto const* regex_ast_cat_ptr
+                = dynamic_cast<RegexASTCatByte*>(schema_var_ast.m_regex_ptr.get());
         REQUIRE(nullptr != regex_ast_cat_ptr);
         REQUIRE(nullptr != regex_ast_cat_ptr->get_left());
         REQUIRE(nullptr != regex_ast_cat_ptr->get_right());
