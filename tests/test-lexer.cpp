@@ -100,6 +100,13 @@ auto initialize_lexer(std::unique_ptr<SchemaAST> schema_ast, ByteLexer& lexer) -
     vector<uint32_t> const delimiters{' ', '\n'};
     lexer.add_delimiters(delimiters);
 
+    vector<uint32_t> lexer_delimiters;
+    for (uint32_t i{0}; i < log_surgeon::cSizeOfByte; ++i) {
+        if (lexer.is_delimiter(i)) {
+            lexer_delimiters.push_back(i);
+        }
+    }
+
     lexer.m_symbol_id.emplace(log_surgeon::cTokenEnd, static_cast<uint32_t>(SymbolId::TokenEnd));
     lexer.m_symbol_id.emplace(
             log_surgeon::cTokenUncaughtString,
@@ -113,7 +120,7 @@ auto initialize_lexer(std::unique_ptr<SchemaAST> schema_ast, ByteLexer& lexer) -
 
     for (auto const& m_schema_var : schema_ast->m_schema_vars) {
         // For log-specific lexing: modify variable regex to contain a delimiter at the start.
-        auto delimiter_group{make_unique<RegexASTGroupByte>(RegexASTGroupByte(delimiters))};
+        auto delimiter_group{make_unique<RegexASTGroupByte>(RegexASTGroupByte(lexer_delimiters))};
         auto* rule{dynamic_cast<SchemaVarAST*>(m_schema_var.get())};
         rule->m_regex_ptr = make_unique<RegexASTCatByte>(
                 std::move(delimiter_group),
@@ -313,7 +320,6 @@ TEST_CASE("Test basic Lexer", "[Lexer]") {
 }
 
 TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
-    vector<uint32_t> const cDelimiters{' ', '\n'};
     constexpr string_view cVarName{"myVar"};
     constexpr string_view cCaptureName{"uid"};
     constexpr string_view cVarSchema{"myVar:userID=(?<uid>123)"};
