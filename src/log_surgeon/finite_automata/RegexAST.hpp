@@ -648,15 +648,15 @@ public:
             std::unique_ptr<RegexAST<TypedNfaState>> capture_regex_ast,
             std::unique_ptr<Capture> capture
     )
-            : m_capture_regex_ast{(
-                      nullptr == capture_regex_ast
-                              ? throw std::invalid_argument("Group regex AST cannot be null")
-                              : std::move(capture_regex_ast)
-              )},
-              m_capture{
-                      nullptr == capture ? throw std::invalid_argument("Capture cannot be null")
-                                         : std::move(capture)
-              } {
+            : m_capture_regex_ast{std::move(capture_regex_ast)},
+              m_capture{std::move(capture)} {
+        if (nullptr == m_capture_regex_ast) {
+            throw std::invalid_argument("Group regex AST cannot be null");
+        }
+        if (nullptr == m_capture) {
+            throw std::invalid_argument("Capture cannot be null");
+        }
+
         RegexAST<TypedNfaState>::set_subtree_positive_captures(
                 m_capture_regex_ast->get_subtree_positive_captures()
         );
