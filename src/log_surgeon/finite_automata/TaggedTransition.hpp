@@ -14,7 +14,7 @@
 
 namespace log_surgeon::finite_automata {
 /**
- * Represents an NFA transition indicating that a tag has been matched.
+ * Represents an NFA transition indicating that a tag ID has been matched.
  * @tparam TypedNfaState Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename TypedNfaState>
