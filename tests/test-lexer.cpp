@@ -339,9 +339,11 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     REQUIRE(1 == optional_capture_ids.value().size());
     REQUIRE(lexer.m_symbol_id.at(capture_name) == optional_capture_ids.value()[0]);
 
-    auto const tag_id_pair{lexer.get_tag_id_pair_from_capture_id(optional_capture_ids.value()[0])};
-    REQUIRE(tag_id_pair.has_value());
-    REQUIRE(std::make_pair(0U, 1U) == tag_id_pair.value());
+    auto const optional_tag_id_pair{
+            lexer.get_tag_id_pair_from_capture_id(optional_capture_ids.value()[0])
+    };
+    REQUIRE(optional_tag_id_pair.has_value());
+    REQUIRE(std::make_pair(0U, 1U) == optional_tag_id_pair.value());
 
     // TODO: Add check for `get_reg_id_from_tag_id` and `get_reg_ids_from_capture_id` when TDFA's
     // determinization is implemented.
