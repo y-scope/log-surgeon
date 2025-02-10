@@ -142,11 +142,10 @@ public:
      */
     [[nodiscard]] auto get_tag_id_pair_from_capture_id(capture_id_t const capture_id
     ) const -> std::optional<std::pair<tag_id_t, tag_id_t>> {
-        auto const tag_id_pair{m_capture_id_to_tag_id_pair.find(capture_id)};
-        if (m_capture_id_to_tag_id_pair.end() == tag_id_pair) {
-            return std::nullopt;
+        if (m_capture_id_to_tag_id_pair.contains(capture_id)) {
+            return m_capture_id_to_tag_id_pair.at(capture_id);
         }
-        return tag_id_pair->second;
+        return std::nullopt;
     }
 
     /**
@@ -157,11 +156,10 @@ public:
      */
     [[nodiscard]] auto get_reg_id_from_tag_id(tag_id_t const tag_id
     ) const -> std::optional<reg_id_t> {
-        auto const it{m_tag_to_reg_id.find(tag_id)};
-        if (m_tag_to_reg_id.end() == it) {
-            return std::nullopt;
+        if (m_tag_to_reg_id.contains(tag_id)) {
+            return m_tag_to_reg_id.at(tag_id);
         }
-        return it->second;
+        return std::nullopt;
     }
 
     /**
