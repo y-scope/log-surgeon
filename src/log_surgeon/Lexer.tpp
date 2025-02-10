@@ -391,9 +391,7 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
             m_id_symbol.emplace(capture_id, capture_name);
 
             auto const rule_id{rule.get_variable_id()};
-            if (false == m_rule_id_to_capture_ids.contains(rule_id)) {
-                m_rule_id_to_capture_ids.emplace(rule_id, std::vector<capture_id_t>{});
-            }
+            m_rule_id_to_capture_ids.try_emplace(rule_id);
             m_rule_id_to_capture_ids.at(rule_id).push_back(capture_id);
         }
     }
