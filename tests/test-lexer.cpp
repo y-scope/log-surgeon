@@ -68,7 +68,7 @@ auto initialize_lexer(std::unique_ptr<SchemaAST> schema_ast, ByteLexer& lexer) -
 
 /**
  * Lexes the given input and verifies the output is a token for the given rule name, folowed by the
- * end of inptut token.
+ * end of input token.
  *
  * @param lexer The lexer to scan the input with.
  * @param input The input to lex.
