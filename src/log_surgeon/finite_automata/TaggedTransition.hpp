@@ -33,11 +33,10 @@ public:
      */
     [[nodiscard]] auto serialize(std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string> {
-        auto const state_id_it = state_ids.find(m_dest_state);
-        if (state_id_it == state_ids.end()) {
-            return std::nullopt;
+        if (state_ids.contains(m_dest_state)) {
+            return fmt::format("{}[{}]", state_ids.at(m_dest_state), m_tag_id);
         }
-        return fmt::format("{}[{}]", state_id_it->second, m_tag_id);
+        return std::nullopt;
     }
 
 private:
@@ -65,11 +64,10 @@ public:
      */
     [[nodiscard]] auto serialize(std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string> {
-        auto const state_id_it = state_ids.find(m_dest_state);
-        if (state_id_it == state_ids.end()) {
-            return std::nullopt;
+        if (state_ids.contains(m_dest_state)) {
+            return fmt::format("{}[{}]", state_ids.at(m_dest_state), fmt::join(m_tag_ids, ","));
         }
-        return fmt::format("{}[{}]", state_id_it->second, fmt::join(m_tag_ids, ","));
+        return std::nullopt;
     }
 
 private:
