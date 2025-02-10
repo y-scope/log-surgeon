@@ -74,7 +74,7 @@ auto initialize_lexer(Schema schema, ByteLexer& lexer) -> void;
  * @param input The input to lex.
  * @param rule_name The expected symbol to match.
  */
-auto test_scanning_input(ByteLexer const& lexer, std::string_view input, std::string_view rule_name)
+auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_view rule_name)
         -> void;
 
 auto test_regex_ast(string_view const var_schema, u32string const& expected_serialized_ast)
