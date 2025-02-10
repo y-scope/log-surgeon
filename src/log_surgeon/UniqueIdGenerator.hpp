@@ -1,6 +1,8 @@
 #ifndef LOG_SURGEON_UNIQUEIDGENERATOR_HPP
 #define LOG_SURGEON_UNIQUEIDGENERATOR_HPP
 
+#include <cstdint>
+
 namespace log_surgeon {
 class UniqueIdGenerator {
 public:
