@@ -62,7 +62,6 @@ endif()
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 
 set(SOURCE_FILES
-    src/log_surgeon/Aliases.hpp
     src/log_surgeon/Buffer.hpp
     src/log_surgeon/BufferParser.cpp
     src/log_surgeon/BufferParser.hpp
@@ -108,6 +107,7 @@ set(SOURCE_FILES
     src/log_surgeon/SchemaParser.hpp
     src/log_surgeon/Token.cpp
     src/log_surgeon/Token.hpp
+    src/log_surgeon/types.hpp
     src/log_surgeon/UniqueIdGenerator.hpp
     )
 

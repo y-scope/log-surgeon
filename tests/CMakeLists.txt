@@ -1,6 +1,5 @@
 set(
         SOURCES_LOG_SURGEON
-        ../src/log_surgeon/Aliases.hpp
         ../src/log_surgeon/FileReader.cpp
         ../src/log_surgeon/FileReader.hpp
         ../src/log_surgeon/finite_automata/Capture.hpp
@@ -23,6 +22,7 @@ set(
         ../src/log_surgeon/SchemaParser.hpp
         ../src/log_surgeon/Token.cpp
         ../src/log_surgeon/Token.hpp
+        ../src/log_surgeon/types.hpp
         ../src/log_surgeon/UniqueIdGenerator.hpp
 )
 

@@ -10,7 +10,7 @@
 
 #include <fmt/format.h>
 
-#include <log_surgeon/Aliases.hpp>
+#include <log_surgeon/types.hpp>
 
 namespace log_surgeon::finite_automata {
 /**

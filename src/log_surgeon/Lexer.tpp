@@ -8,9 +8,9 @@
 #include <string>
 #include <vector>
 
-#include <log_surgeon/Aliases.hpp>
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
+#include <log_surgeon/types.hpp>
 
 /**
  * utf8 format (https://en.wikipedia.org/wiki/UTF-8)

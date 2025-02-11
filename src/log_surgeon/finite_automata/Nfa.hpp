@@ -12,10 +12,10 @@
 
 #include <fmt/core.h>
 
-#include <log_surgeon/Aliases.hpp>
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/NfaState.hpp>
 #include <log_surgeon/LexicalRule.hpp>
+#include <log_surgeon/types.hpp>
 #include <log_surgeon/UniqueIdGenerator.hpp>
 
 namespace log_surgeon::finite_automata {
