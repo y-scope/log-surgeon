@@ -65,7 +65,7 @@ auto test_regex_ast(string_view var_schema, u32string const& expected_serialized
  * The lexer's symbol mappings are initialized based on the schema variables.
  * Assumes the lexer is in a clean state before initialization.
  * @param schema_ast Contains the variables to add to the lexer.
- * @return The initialized lexer.
+ * @return The lexer.
  */
 [[nodiscard]] auto create_lexer(std::unique_ptr<SchemaAST> schema_ast) -> ByteLexer;
 
