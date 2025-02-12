@@ -319,7 +319,7 @@ TEST_CASE("Test basic Lexer", "[Lexer]") {
     Schema schema;
     schema.add_variable(cVarSchema, -1);
 
-    ByteLexer lexer{initialize_lexer(std::move(schema.release_schema_ast_ptr())};
+    ByteLexer lexer{initialize_lexer(std::move(schema.release_schema_ast_ptr()))};
 
     test_scanning_input(lexer, cTokenString1, cVarName);
     test_scanning_input(lexer, cTokenString2, log_surgeon::cTokenUncaughtString);
