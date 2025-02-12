@@ -60,10 +60,9 @@ auto test_regex_ast(string_view var_schema, u32string const& expected_serialized
 [[nodiscard]] auto u32string_to_string(u32string const& u32_str) -> string;
 
 /**
- * Creates the lexer with the constant delimiters and the given schema.
- * The constant delimiters (space and newline) are used to separate tokens in the input.
- * The lexer's symbol mappings are set based on the schema variables.
- * @param schema_ast Contains the variables to add to the lexer.
+ * Creates a lexer with a constant set of delimiters (space and newline) and the given schema.
+ * The delimiters are used to separate tokens in the input.
+ * @param schema_ast The schema variables are used to set the lexer's symbol mappings.
  * @return The lexer.
  */
 [[nodiscard]] auto create_lexer(std::unique_ptr<SchemaAST> schema_ast) -> ByteLexer;
