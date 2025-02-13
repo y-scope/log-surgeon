@@ -36,18 +36,15 @@ public:
     explicit Nfa(std::vector<LexicalRule<TypedNfaState>> const& rules);
 
     /**
-     * Creates a unique_ptr for an NFA state with no tagged transitions and adds it to `m_states`.
-     * @return TypedNfaState*
+     * @return A pointer to the newly created NFA state with no spontaneous transitions.
      */
     [[nodiscard]] auto new_state() -> TypedNfaState*;
 
     /**
-     * Adds an NFA state to `m_states` and sets an out-going edge negating the tags associated with
-     * alternate paths.
-     *
-     * @param captures The captures of all alternate paths.
-     * @param dest_state The destination state.
-     * @return TypedNfaState*
+     * @param captures A vector containing the captures of all alternate paths.
+     * @param dest_state The destination state to arrive at after negating the captures.
+     * @return A pointer to the newly created NFA state with a spontaneous transition to
+     * `dest_state`negating all the tags associated with `captures`.
      */
     [[nodiscard]] auto new_state_from_negative_captures(
             std::vector<Capture const*> const& captures,
@@ -55,12 +52,13 @@ public:
     ) -> TypedNfaState*;
 
     /**
-     * Creates the start and end states for a capture group.
-     * @param capture The capture associated with the capture group.
-     * @param dest_state
-     * @return A pair of states:
-     * - A state from `m_root` with an outgoing transition that sets the start tag for the capture.
-     * - A state with an outgoing transition to `dest_state` that sets the end tag for the capture.
+     * @param capture The positive capture to be tracked.
+     * @param dest_state The destination state to arrive at after tracking the capture.
+     * @return A pair of pointers to the two newly created NFA states:
+     * - A state arrived at from a spontaneous transition out of `m_root` that sets a tag to track
+     * the capture's start position.
+     * - A state with a spotaneous transition to `dest_state` that sets a tag to track the capture's
+     * end position
      */
     [[nodiscard]] auto new_start_and_end_states_from_positive_capture(
             Capture const* capture,
