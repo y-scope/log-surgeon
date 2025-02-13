@@ -5,7 +5,6 @@
 #include <optional>
 #include <ranges>
 #include <string>
-#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -18,6 +17,7 @@ namespace log_surgeon::finite_automata {
 /**
  * Represents an NFA transition with a collection of tag operations to be performed during the
  * transition.
+ *
  * @tparam TypedNfaState Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename TypedNfaState>
