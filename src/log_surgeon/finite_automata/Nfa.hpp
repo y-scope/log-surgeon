@@ -62,7 +62,7 @@ public:
      * - A state from `m_root` with an outgoing transition that sets the start tag for the capture.
      * - A state with an outgoing transition to `dest_state` that sets the end tag for the capture.
      */
-    [[nodiscard]] auto new_start_and_end_states_for_capture(
+    [[nodiscard]] auto new_start_and_end_states_from_positive_capture(
             Capture const* capture,
             TypedNfaState const* dest_state
     ) -> std::pair<TypedNfaState*, TypedNfaState*>;
@@ -155,7 +155,7 @@ auto Nfa<TypedNfaState>::new_state_from_negative_captures(
 }
 
 template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::new_start_and_end_states_for_capture(
+auto Nfa<TypedNfaState>::new_start_and_end_states_from_positive_capture(
         Capture const* capture,
         TypedNfaState const* dest_state
 ) -> std::pair<TypedNfaState*, TypedNfaState*> {

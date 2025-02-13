@@ -938,7 +938,7 @@ auto RegexASTCapture<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNf
     //         |     `dest_state`    |
     //         +---------------------+
     auto [capture_start_state, capture_end_state]
-            = nfa->new_start_and_end_states_for_capture(m_capture.get(), dest_state);
+            = nfa->new_start_and_end_states_from_positive_capture(m_capture.get(), dest_state);
 
     auto* initial_root = nfa->get_root();
     nfa->set_root(capture_start_state);
