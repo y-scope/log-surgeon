@@ -60,8 +60,8 @@ public:
      * @return A pair of pointers to the two newly created NFA states:
      * - A state arrived at from a spontaneous transition out of `m_root` that sets a tag to track
      * the capture's start position.
-     * - A state with a spotaneous transition to `dest_state` that sets a tag to track the capture's
-     * end position
+     * - A state with a spontaneous transition to `dest_state` that sets a tag to track the
+     * capture's end position
      */
     [[nodiscard]] auto new_start_and_end_states_from_positive_capture(
             Capture const* capture,
