@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <queue>
 #include <string>
 #include <unordered_map>
@@ -11,10 +12,12 @@
 #include <vector>
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/NfaState.hpp>
+#include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
+#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/types.hpp>
 #include <log_surgeon/UniqueIdGenerator.hpp>
@@ -140,7 +143,7 @@ auto Nfa<TypedNfaState>::new_state_from_negative_captures(
         TypedNfaState const* dest_state
 ) -> TypedNfaState* {
     std::vector<tag_id_t> tags;
-    for (auto const capture : captures) {
+    for (auto const* capture : captures) {
         auto const [start_tag, end_tag]{get_or_create_capture_tag_pair(capture)};
         tags.push_back(start_tag);
         tags.push_back(end_tag);
