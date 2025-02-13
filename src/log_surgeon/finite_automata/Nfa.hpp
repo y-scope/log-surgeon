@@ -42,10 +42,11 @@ public:
     [[nodiscard]] auto new_state() -> TypedNfaState*;
 
     /**
-     * Creates a unique_ptr for an NFA state with a negative tagged transition and adds it to
-     * `m_states`.
-     * @param captures
-     * @param dest_state
+     * Adds an NFA state to `m_states` and sets an out-going edge negating the tags associated with
+     * alternate paths.
+     *
+     * @param captures The captures of all alternate paths.
+     * @param dest_state The destination state.
      * @return TypedNfaState*
      */
     [[nodiscard]] auto new_state_from_negative_captures(
