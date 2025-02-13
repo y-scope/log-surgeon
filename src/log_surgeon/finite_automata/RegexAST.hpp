@@ -908,8 +908,8 @@ template <typename TypedNfaState>
 auto RegexASTCapture<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* dest_state)
         const -> void {
     // TODO: move this into a documentation file in the future, and reference it here.
-    // The NFA constructed for a capture group follows the structure below, with tagged transitions
-    // explicitly labeled for clarity:
+    // The NFA constructed for a capture group follows the structure below, with spontaneous
+    // transitions explicitly labeled for clarity:
     //         +---------------------+
     //         |       `m_root`      |
     //         +---------------------+
