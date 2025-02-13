@@ -48,7 +48,7 @@ public:
      * @param dest_state
      * @return TypedNfaState*
      */
-    [[nodiscard]] auto new_state_for_negative_captures(
+    [[nodiscard]] auto new_state_from_negative_captures(
             std::vector<Capture const*> const& captures,
             TypedNfaState const* dest_state
     ) -> TypedNfaState*;
@@ -136,7 +136,7 @@ auto Nfa<TypedNfaState>::new_state() -> TypedNfaState* {
 }
 
 template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::new_state_for_negative_captures(
+auto Nfa<TypedNfaState>::new_state_from_negative_captures(
         std::vector<Capture const*> const& captures,
         TypedNfaState const* dest_state
 ) -> TypedNfaState* {

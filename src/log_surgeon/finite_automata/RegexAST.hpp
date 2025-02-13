@@ -116,7 +116,7 @@ public:
         // root --(regex)--> state_with_spontaneous_transition --(negate tags)--> end_state
         if (false == m_negative_captures.empty()) {
             auto* state_with_spontaneous_transition{
-                    nfa->new_state_for_negative_captures(m_negative_captures, end_state)
+                    nfa->new_state_from_negative_captures(m_negative_captures, end_state)
             };
             add_to_nfa(nfa, state_with_spontaneous_transition);
         } else {
