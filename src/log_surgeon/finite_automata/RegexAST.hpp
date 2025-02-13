@@ -21,6 +21,7 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Capture.hpp>
+#include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
@@ -860,7 +861,7 @@ void RegexASTMultiplication<TypedNfaState>::add_to_nfa(
 ) const {
     TypedNfaState* saved_root = nfa->get_root();
     if (m_min == 0) {
-        nfa->get_root()->add_spontaneous_transition(end_state);
+        nfa->get_root()->add_spontaneous_transition(TagOperationType::None, {}, end_state);
     } else {
         for (uint32_t i = 1; i < m_min; i++) {
             TypedNfaState* intermediate_state = nfa->new_state();

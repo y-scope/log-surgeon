@@ -41,20 +41,16 @@ public:
 
     NfaState(
             TagOperationType const op_type,
-            std::vector<tag_id_t> tag_ids,
+            std::vector<tag_id_t> const& tag_ids,
             NfaState const* dest_state
     ) {
-        add_spontaneous_transition(op_type, std::move(tag_ids), dest_state);
+        add_spontaneous_transition(op_type, tag_ids, dest_state);
     }
 
-    auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
+    auto set_accepting(bool const accepting) -> void { m_accepting = accepting; }
 
     auto set_matching_variable_id(uint32_t const variable_id) -> void {
         m_matching_variable_id = variable_id;
-    }
-
-    auto add_spontaneous_transition(NfaState* dest_state) -> void {
-        m_spontaneous_transitions.emplace_back(dest_state);
     }
 
     auto add_spontaneous_transition(

@@ -12,7 +12,8 @@
 namespace log_surgeon::finite_automata {
 enum class TagOperationType : uint8_t {
     Set,
-    Negate
+    Negate,
+    None
 };
 
 class TagOperation {
