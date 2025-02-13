@@ -7,9 +7,9 @@
 
 #include <fmt/core.h>
 
-namespace log_surgeon::finite_automata {
-using tag_id_t = uint32_t;
+#include <log_surgeon/types.hpp>
 
+namespace log_surgeon::finite_automata {
 enum class TagOperationType : uint8_t {
     Set,
     Negate
