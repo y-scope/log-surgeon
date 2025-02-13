@@ -13,10 +13,9 @@
 
 #include <fmt/format.h>
 
+#include <log_surgeon/finite_automata/SpontaneousTransition.hpp>
 #include <log_surgeon/finite_automata/StateType.hpp>
-#include <log_surgeon/finite_automata/TaggedTransition.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
-#include <log_surgeon/types.hpp>
 
 namespace log_surgeon::finite_automata {
 template <StateType state_type>
@@ -32,62 +31,40 @@ public:
 
     NfaState() = default;
 
-    NfaState(tag_id_t tag_id, NfaState const* dest_state)
-            : m_positive_tagged_end_transition{PositiveTaggedTransition{tag_id, dest_state}} {}
-
-    NfaState(std::vector<tag_id_t> tag_ids, NfaState const* dest_state)
-            : m_negative_tagged_transition{NegativeTaggedTransition{std::move(tag_ids), dest_state}
-              } {}
+    NfaState(
+            TagOperationType const op_type,
+            std::vector<tag_id_t> tag_ids,
+            NfaState const* dest_state
+    ) {
+        add_spontaneous_transition(op_type, std::move(tag_ids), dest_state);
+    }
 
     auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
-
-    [[nodiscard]] auto is_accepting() const -> bool const& { return m_accepting; }
 
     auto set_matching_variable_id(uint32_t const variable_id) -> void {
         m_matching_variable_id = variable_id;
     }
 
-    [[nodiscard]] auto get_matching_variable_id() const -> uint32_t {
-        return m_matching_variable_id;
+    auto add_spontaneous_transition(NfaState* dest_state) -> void {
+        m_spontaneous_transitions.emplace_back(dest_state);
     }
 
-    auto add_positive_tagged_start_transition(tag_id_t const tag_id, NfaState const* dest_state)
-            -> void {
-        m_positive_tagged_start_transitions.emplace_back(tag_id, dest_state);
-    }
-
-    [[nodiscard]] auto get_positive_tagged_start_transitions(
-    ) const -> std::vector<PositiveTaggedTransition<NfaState>> const& {
-        return m_positive_tagged_start_transitions;
-    }
-
-    [[nodiscard]] auto get_positive_tagged_end_transition(
-    ) const -> std::optional<PositiveTaggedTransition<NfaState>> const& {
-        return m_positive_tagged_end_transition;
-    }
-
-    [[nodiscard]] auto get_negative_tagged_transition(
-    ) const -> std::optional<NegativeTaggedTransition<NfaState>> const& {
-        return m_negative_tagged_transition;
-    }
-
-    auto add_epsilon_transition(NfaState* epsilon_transition) -> void {
-        m_epsilon_transitions.push_back(epsilon_transition);
-    }
-
-    [[nodiscard]] auto get_epsilon_transitions() const -> std::vector<NfaState*> const& {
-        return m_epsilon_transitions;
+    auto add_spontaneous_transition(
+            TagOperationType const op_type,
+            std::vector<tag_id_t> const& tag_ids,
+            NfaState const* dest_state
+    ) -> void {
+        std::vector<TagOperation> tag_ops;
+        tag_ops.reserve(tag_ids.size());
+        for (auto const tag_id : tag_ids) {
+            tag_ops.emplace_back(tag_id, op_type);
+        }
+        m_spontaneous_transitions.emplace_back(std::move(tag_ops), dest_state);
     }
 
     auto add_byte_transition(uint8_t byte, NfaState* dest_state) -> void {
         m_bytes_transitions[byte].push_back(dest_state);
     }
-
-    [[nodiscard]] auto get_byte_transitions(uint8_t byte) const -> std::vector<NfaState*> const& {
-        return m_bytes_transitions[byte];
-    }
-
-    auto get_tree_transitions() -> Tree const& { return m_tree_transitions; }
 
     /**
      * Add `dest_state` to `m_bytes_transitions` if all values in interval are a byte, otherwise add
@@ -105,21 +82,32 @@ public:
     /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the NFA state on success.
-     * @return Forwards `PositiveTaggedTransition::serialize`'s return value (std::nullopt) on
-     * failure.
-     * @return Forwards `NegativeTaggedTransition::serialize`'s return value (std::nullopt) on
-     * failure.
+     * @return Forwards `SpontaneousTransition::serialize`'s return value (std::nullopt) on failure.
      */
     [[nodiscard]] auto serialize(std::unordered_map<NfaState const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
+    [[nodiscard]] auto is_accepting() const -> bool const& { return m_accepting; }
+
+    [[nodiscard]] auto get_matching_variable_id() const -> uint32_t {
+        return m_matching_variable_id;
+    }
+
+    [[nodiscard]] auto get_spontaneous_transitions(
+    ) const -> std::vector<SpontaneousTransition<NfaState>> const& {
+        return m_spontaneous_transitions;
+    }
+
+    [[nodiscard]] auto get_byte_transitions(uint8_t byte) const -> std::vector<NfaState*> const& {
+        return m_bytes_transitions[byte];
+    }
+
+    [[nodiscard]] auto get_tree_transitions() -> Tree const& { return m_tree_transitions; }
+
 private:
     bool m_accepting{false};
     uint32_t m_matching_variable_id{0};
-    std::vector<PositiveTaggedTransition<NfaState>> m_positive_tagged_start_transitions;
-    std::optional<PositiveTaggedTransition<NfaState>> m_positive_tagged_end_transition;
-    std::optional<NegativeTaggedTransition<NfaState>> m_negative_tagged_transition;
-    std::vector<NfaState*> m_epsilon_transitions;
+    std::vector<SpontaneousTransition<NfaState>> m_spontaneous_transitions;
     std::array<std::vector<NfaState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
     // StateType::Byte` case, so we use an empty class (`std::tuple<>`)
@@ -185,25 +173,8 @@ auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
         if (false == closure_set.insert(current_state).second) {
             continue;
         }
-        for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-            stack.push(dest_state);
-        }
-
-        // TODO: currently treat tagged transitions as epsilon transitions
-        for (auto const& positive_tagged_start_transition :
-             current_state->get_positive_tagged_start_transitions())
-        {
-            stack.push(positive_tagged_start_transition.get_dest_state());
-        }
-        auto const& optional_positive_tagged_end_transition
-                = current_state->get_positive_tagged_end_transition();
-        if (optional_positive_tagged_end_transition.has_value()) {
-            stack.push(optional_positive_tagged_end_transition.value().get_dest_state());
-        }
-        auto const& optional_negative_tagged_transition
-                = current_state->get_negative_tagged_transition();
-        if (optional_negative_tagged_transition.has_value()) {
-            stack.push(optional_negative_tagged_transition.value().get_dest_state());
+        for (auto const& spontaneous_transition : current_state->get_spontaneous_transitions()) {
+            stack.push(spontaneous_transition.get_dest_state());
         }
     }
     return closure_set;
@@ -212,6 +183,9 @@ auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
 template <StateType state_type>
 auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
+    auto const accepting_tag_string
+            = m_accepting ? fmt::format("accepting_tag={},", m_matching_variable_id) : "";
+
     std::vector<std::string> byte_transitions;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
         for (auto const* dest_state : m_bytes_transitions[idx]) {
@@ -221,58 +195,21 @@ auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_
         }
     }
 
-    std::vector<std::string> epsilon_transitions;
-    for (auto const* dest_state : m_epsilon_transitions) {
-        epsilon_transitions.emplace_back(std::to_string(state_ids.at(dest_state)));
-    }
-
-    std::vector<std::string> serialized_positive_tagged_start_transitions;
-    for (auto const& positive_tagged_start_transition : m_positive_tagged_start_transitions) {
-        auto const optional_serialized_positive_start_transition
-                = positive_tagged_start_transition.serialize(state_ids);
-        if (false == optional_serialized_positive_start_transition.has_value()) {
+    std::vector<std::string> serialized_spontaneous_transitions;
+    for (auto const& spontaneous_transition : m_spontaneous_transitions) {
+        auto const optional_serialized_transition = spontaneous_transition.serialize(state_ids);
+        if (false == optional_serialized_transition.has_value()) {
             return std::nullopt;
         }
-        serialized_positive_tagged_start_transitions.emplace_back(
-                optional_serialized_positive_start_transition.value()
-        );
+        serialized_spontaneous_transitions.emplace_back(optional_serialized_transition.value());
     }
-
-    std::string serialized_positive_tagged_end_transition;
-    if (m_positive_tagged_end_transition.has_value()) {
-        auto const optional_serialized_positive_end_transition
-                = m_positive_tagged_end_transition.value().serialize(state_ids);
-        if (false == optional_serialized_positive_end_transition.has_value()) {
-            return std::nullopt;
-        }
-        serialized_positive_tagged_end_transition
-                = optional_serialized_positive_end_transition.value();
-    }
-
-    std::string negative_tagged_transition_string;
-    if (m_negative_tagged_transition.has_value()) {
-        auto const optional_serialized_negative_transition
-                = m_negative_tagged_transition.value().serialize(state_ids);
-        if (false == optional_serialized_negative_transition.has_value()) {
-            return std::nullopt;
-        }
-        negative_tagged_transition_string = optional_serialized_negative_transition.value();
-    }
-
-    auto const accepting_tag_string
-            = m_accepting ? fmt::format("accepting_tag={},", m_matching_variable_id) : "";
 
     return fmt::format(
-            "{}:{}byte_transitions={{{}}},epsilon_transitions={{{}}},positive_tagged_start_"
-            "transitions={{{}}},positive_tagged_end_transitions={{{}}},negative_tagged_transition={"
-            "{{}}}",
+            "{}:{}byte_transitions={{{}}},spontaneous_transition={{{}}}",
             state_ids.at(this),
             accepting_tag_string,
             fmt::join(byte_transitions, ","),
-            fmt::join(epsilon_transitions, ","),
-            fmt::join(serialized_positive_tagged_start_transitions, ","),
-            serialized_positive_tagged_end_transition,
-            negative_tagged_transition_string
+            fmt::join(serialized_spontaneous_transitions, ",")
     );
 }
 }  // namespace log_surgeon::finite_automata

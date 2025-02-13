@@ -14,6 +14,7 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/NfaState.hpp>
+#include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/types.hpp>
 #include <log_surgeon/UniqueIdGenerator.hpp>
@@ -47,7 +48,7 @@ public:
      * @param dest_state
      * @return TypedNfaState*
      */
-    [[nodiscard]] auto new_state_with_negative_tagged_transition(
+    [[nodiscard]] auto new_state_for_negative_captures(
             std::vector<Capture const*> const& captures,
             TypedNfaState const* dest_state
     ) -> TypedNfaState*;
@@ -57,10 +58,10 @@ public:
      * @param capture The capture associated with the capture group.
      * @param dest_state
      * @return A pair of states:
-     * - A new state with a positive tagged start transition from `m_root`.
-     * - A new state with a positive tagged end transition to `dest_state`.
+     * - A state from `m_root` with an outgoing transition that sets the start tag for the capture.
+     * - A state with an outgoing transition to `dest_state` that sets the end tag for the capture.
      */
-    [[nodiscard]] auto new_start_and_end_states_with_positive_tagged_transitions(
+    [[nodiscard]] auto new_start_and_end_states_for_capture(
             Capture const* capture,
             TypedNfaState const* dest_state
     ) -> std::pair<TypedNfaState*, TypedNfaState*>;
@@ -73,8 +74,9 @@ public:
 
     /**
      * @return A string representation of the NFA.
+     * @return Forwards `NfaState::serialize`'s return value (std::nullopt) on failure.
      */
-    [[nodiscard]] auto serialize() const -> std::string;
+    [[nodiscard]] auto serialize() const -> std::optional<std::string>;
 
     auto add_root_interval(Interval interval, TypedNfaState* dest_state) -> void {
         m_root->add_interval(interval, dest_state);
@@ -99,18 +101,6 @@ private:
      */
     [[nodiscard]] auto get_or_create_capture_tag_pair(Capture const* capture
     ) -> std::pair<tag_id_t, tag_id_t>;
-
-    /**
-     * Creates a `unique_ptr` for an NFA state with a positive tagged end transition and adds it to
-     * `m_states`.
-     * @param tag_id
-     * @param dest_state
-     * @return A new state with a positive tagged end transition to `dest_state`.
-     */
-    [[nodiscard]] auto new_state_with_positive_tagged_end_transition(
-            tag_id_t tag_id,
-            TypedNfaState const* dest_state
-    ) -> TypedNfaState*;
 
     std::vector<std::unique_ptr<TypedNfaState>> m_states;
     // TODO: Lexer currently enforces unique naming across capture groups. However, this limits use
@@ -146,16 +136,7 @@ auto Nfa<TypedNfaState>::new_state() -> TypedNfaState* {
 }
 
 template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::new_state_with_positive_tagged_end_transition(
-        tag_id_t const tag_id,
-        TypedNfaState const* dest_state
-) -> TypedNfaState* {
-    m_states.emplace_back(std::make_unique<TypedNfaState>(tag_id, dest_state));
-    return m_states.back().get();
-}
-
-template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::new_state_with_negative_tagged_transition(
+auto Nfa<TypedNfaState>::new_state_for_negative_captures(
         std::vector<Capture const*> const& captures,
         TypedNfaState const* dest_state
 ) -> TypedNfaState* {
@@ -166,19 +147,24 @@ auto Nfa<TypedNfaState>::new_state_with_negative_tagged_transition(
         tags.push_back(end_tag);
     }
 
-    m_states.emplace_back(std::make_unique<TypedNfaState>(std::move(tags), dest_state));
+    m_states.emplace_back(
+            std::make_unique<TypedNfaState>(TagOperationType::Negate, std::move(tags), dest_state)
+    );
     return m_states.back().get();
 }
 
 template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::new_start_and_end_states_with_positive_tagged_transitions(
+auto Nfa<TypedNfaState>::new_start_and_end_states_for_capture(
         Capture const* capture,
         TypedNfaState const* dest_state
 ) -> std::pair<TypedNfaState*, TypedNfaState*> {
     auto const [start_tag, end_tag]{get_or_create_capture_tag_pair(capture)};
     auto* start_state = new_state();
-    m_root->add_positive_tagged_start_transition(start_tag, start_state);
-    auto* end_state{new_state_with_positive_tagged_end_transition(end_tag, dest_state)};
+    m_root->add_spontaneous_transition(TagOperationType::Set, {start_tag}, start_state);
+    m_states.emplace_back(
+            std::make_unique<TypedNfaState>(TagOperationType::Set, std::vector{end_tag}, dest_state)
+    );
+    auto* end_state{m_states.back().get()};
     return {start_state, end_state};
 }
 
@@ -208,33 +194,15 @@ auto Nfa<TypedNfaState>::get_bfs_traversal_order() const -> std::vector<TypedNfa
                 add_to_queue_and_visited(dest_state);
             }
         }
-        for (auto const* dest_state : current_state->get_epsilon_transitions()) {
-            add_to_queue_and_visited(dest_state);
-        }
-        for (auto const& positive_tagged_start_transition :
-             current_state->get_positive_tagged_start_transitions())
-        {
-            add_to_queue_and_visited(positive_tagged_start_transition.get_dest_state());
-        }
-
-        auto const& optional_positive_tagged_end_transition
-                = current_state->get_positive_tagged_end_transition();
-        if (optional_positive_tagged_end_transition.has_value()) {
-            add_to_queue_and_visited(optional_positive_tagged_end_transition.value().get_dest_state(
-            ));
-        }
-
-        auto const& optional_negative_tagged_transition
-                = current_state->get_negative_tagged_transition();
-        if (optional_negative_tagged_transition.has_value()) {
-            add_to_queue_and_visited(optional_negative_tagged_transition.value().get_dest_state());
+        for (auto const& spontaneous_transition : current_state->get_spontaneous_transitions()) {
+            add_to_queue_and_visited(spontaneous_transition.get_dest_state());
         }
     }
     return visited_order;
 }
 
 template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::serialize() const -> std::string {
+auto Nfa<TypedNfaState>::serialize() const -> std::optional<std::string> {
     auto const traversal_order = get_bfs_traversal_order();
 
     std::unordered_map<TypedNfaState const*, uint32_t> state_ids;
@@ -244,10 +212,11 @@ auto Nfa<TypedNfaState>::serialize() const -> std::string {
 
     std::vector<std::string> serialized_states;
     for (auto const* state : traversal_order) {
-        // `state_ids` is well-formed as its generated from `get_bfs_traversal_order` so we can
-        // safely assume `state->serialize(state_ids)` will return a valid value.
-        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        serialized_states.emplace_back(state->serialize(state_ids).value());
+        auto const optional_serialized_state{state->serialize(state_ids)};
+        if (false == optional_serialized_state.has_value()) {
+            return std::nullopt;
+        }
+        serialized_states.emplace_back(optional_serialized_state.value());
     }
     return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
 }
