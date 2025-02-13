@@ -113,12 +113,12 @@ public:
     auto add_to_nfa_with_negative_captures(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const
             -> void {
         // Handle negative captures as:
-        // root --(regex)--> state_with_spontaenous_transition --(negate tags)--> end_state
+        // root --(regex)--> state_with_spontaneous_transition --(negate tags)--> end_state
         if (false == m_negative_captures.empty()) {
-            auto* state_with_spontaenous_transition{
+            auto* state_with_spontaneous_transition{
                     nfa->new_state_for_negative_captures(m_negative_captures, end_state)
             };
-            add_to_nfa(nfa, state_with_spontaenous_transition);
+            add_to_nfa(nfa, state_with_spontaneous_transition);
         } else {
             add_to_nfa(nfa, end_state);
         }
