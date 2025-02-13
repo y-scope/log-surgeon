@@ -161,7 +161,7 @@ auto Nfa<TypedNfaState>::new_start_and_end_states_from_positive_capture(
         TypedNfaState const* dest_state
 ) -> std::pair<TypedNfaState*, TypedNfaState*> {
     auto const [start_tag, end_tag]{get_or_create_capture_tag_pair(capture)};
-    auto* start_state = new_state();
+    auto* start_state{new_state()};
     m_root->add_spontaneous_transition(TagOperationType::Set, {start_tag}, start_state);
     m_states.emplace_back(
             std::make_unique<TypedNfaState>(TagOperationType::Set, std::vector{end_tag}, dest_state)

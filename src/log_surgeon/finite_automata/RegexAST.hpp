@@ -863,7 +863,7 @@ void RegexASTMultiplication<TypedNfaState>::add_to_nfa(
     if (m_min == 0) {
         nfa->get_root()->add_spontaneous_transition(TagOperationType::None, {}, end_state);
     } else {
-        for (uint32_t i = 1; i < m_min; i++) {
+        for (uint32_t i{1}; i < m_min; ++i) {
             TypedNfaState* intermediate_state = nfa->new_state();
             m_operand->add_to_nfa_with_negative_captures(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
@@ -938,8 +938,9 @@ auto RegexASTCapture<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNf
     //         +---------------------+
     //         |     `dest_state`    |
     //         +---------------------+
-    auto [capture_start_state, capture_end_state]
-            = nfa->new_start_and_end_states_from_positive_capture(m_capture.get(), dest_state);
+    auto [capture_start_state, capture_end_state]{
+            nfa->new_start_and_end_states_from_positive_capture(m_capture.get(), dest_state)
+    };
 
     auto* initial_root = nfa->get_root();
     nfa->set_root(capture_start_state);

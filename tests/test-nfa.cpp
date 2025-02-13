@@ -39,45 +39,30 @@ TEST_CASE("Test NFA", "[NFA]") {
 
     // Compare against expected output
     // capture order(tags in brackets): letter1(0,1), letter2(2,3), letter(4,5), containerID(6,7)
-    string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2},"
-                                     "spontaneous_transition={}\n";
-    expected_serialized_nfa += "1:byte_transitions={},"
-                               "spontaneous_transition={3[4p]}\n";
-    expected_serialized_nfa += "2:byte_transitions={},"
-                               "spontaneous_transition={4[0n,1n,2n,3n,4n,5n,6n,7n]}\n";
-    expected_serialized_nfa += "3:byte_transitions={},"
-                               "spontaneous_transition={5[0p],6[2p]}\n";
-    expected_serialized_nfa += "4:accepting_tag=0,byte_transitions={},"
-                               "spontaneous_transition={}\n";
-    expected_serialized_nfa += "5:byte_transitions={a-->7,b-->7},"
-                               "spontaneous_transition={}\n";
-    expected_serialized_nfa += "6:byte_transitions={c-->8,d-->8},"
-                               "spontaneous_transition={}\n";
-    expected_serialized_nfa += "7:byte_transitions={},"
-                               "spontaneous_transition={9[1p]}\n";
-    expected_serialized_nfa += "8:byte_transitions={},"
-                               "spontaneous_transition={10[3p]}\n";
-    expected_serialized_nfa += "9:byte_transitions={},"
-                               "spontaneous_transition={11[2n,3n]}\n";
-    expected_serialized_nfa += "10:byte_transitions={},"
-                               "spontaneous_transition={11[0n,1n]}\n";
-    expected_serialized_nfa += "11:byte_transitions={},"
-                               "spontaneous_transition={12[5p]}\n";
-    expected_serialized_nfa += "12:byte_transitions={B-->13},"
-                               "spontaneous_transition={}\n";
-    expected_serialized_nfa += "13:byte_transitions={},"
-                               "spontaneous_transition={14[6p]}\n";
-    expected_serialized_nfa += "14:byte_transitions={0-->15,1-->15,2-->15,3-->15,4-->15,5-->15,6-->"
-                               "15,7-->15,8-->15,9-->15},"
-                               "spontaneous_transition={}\n";
-    expected_serialized_nfa += "15:byte_transitions={0-->15,1-->15,2-->15,3-->15,4-->15,5-->15,6-->"
-                               "15,7-->15,8-->15,9-->15},"
-                               "spontaneous_transition={16[7p]}\n";
-    expected_serialized_nfa += "16:byte_transitions={C-->4},"
-                               "spontaneous_transition={}\n";
+    string expected_serialized_nfa{
+            "0:byte_transitions={A-->1,Z-->2},spontaneous_transition={}\n"
+            "1:byte_transitions={},spontaneous_transition={3[4p]}\n"
+            "2:byte_transitions={},spontaneous_transition={4[0n,1n,2n,3n,4n,5n,6n,7n]}\n"
+            "3:byte_transitions={},spontaneous_transition={5[0p],6[2p]}\n"
+            "4:accepting_tag=0,byte_transitions={},spontaneous_transition={}\n"
+            "5:byte_transitions={a-->7,b-->7},spontaneous_transition={}\n"
+            "6:byte_transitions={c-->8,d-->8},spontaneous_transition={}\n"
+            "7:byte_transitions={},spontaneous_transition={9[1p]}\n"
+            "8:byte_transitions={},spontaneous_transition={10[3p]}\n"
+            "9:byte_transitions={},spontaneous_transition={11[2n,3n]}\n"
+            "10:byte_transitions={},spontaneous_transition={11[0n,1n]}\n"
+            "11:byte_transitions={},spontaneous_transition={12[5p]}\n"
+            "12:byte_transitions={B-->13},spontaneous_transition={}\n"
+            "13:byte_transitions={},spontaneous_transition={14[6p]}\n"
+            "14:byte_transitions={0-->15,1-->15,2-->15,3-->15,4-->15,5-->15,6-->15,7-->15,8-->15,9-"
+            "->15},spontaneous_transition={}\n"
+            "15:byte_transitions={0-->15,1-->15,2-->15,3-->15,4-->15,5-->15,6-->15,7-->15,8-->15,9-"
+            "->15},spontaneous_transition={16[7p]}\n"
+            "16:byte_transitions={C-->4},spontaneous_transition={}\n"
+    };
 
     // Compare expected and actual line-by-line
-    auto const optional_actual_serialized_nfa = nfa.serialize();
+    auto const optional_actual_serialized_nfa{nfa.serialize()};
     REQUIRE(optional_actual_serialized_nfa.has_value());
     stringstream ss_actual{optional_actual_serialized_nfa.value()};
     stringstream ss_expected{expected_serialized_nfa};

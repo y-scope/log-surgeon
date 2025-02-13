@@ -187,8 +187,9 @@ auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
 template <StateType state_type>
 auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
-    auto const accepting_tag_string
-            = m_accepting ? fmt::format("accepting_tag={},", m_matching_variable_id) : "";
+    auto const accepting_tag_string{
+            m_accepting ? fmt::format("accepting_tag={},", m_matching_variable_id) : ""
+    };
 
     std::vector<std::string> byte_transitions;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
@@ -201,7 +202,7 @@ auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_
 
     std::vector<std::string> serialized_spontaneous_transitions;
     for (auto const& spontaneous_transition : m_spontaneous_transitions) {
-        auto const optional_serialized_transition = spontaneous_transition.serialize(state_ids);
+        auto const optional_serialized_transition{spontaneous_transition.serialize(state_ids)};
         if (false == optional_serialized_transition.has_value()) {
             return std::nullopt;
         }

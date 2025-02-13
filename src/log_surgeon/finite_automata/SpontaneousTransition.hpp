@@ -53,10 +53,11 @@ auto SpontaneousTransition<TypedNfaState>::serialize(
     if (false == state_ids.contains(m_dest_state)) {
         return std::nullopt;
     }
-    auto transformed_operations
-            = m_tag_ops | std::ranges::views::transform([](TagOperation const& tag_op) {
-                  return tag_op.serialize();
-              });
+    auto transformed_operations{
+            m_tag_ops | std::ranges::views::transform([](TagOperation const& tag_op) {
+                return tag_op.serialize();
+            })
+    };
 
     return fmt::format(
             "{}[{}]",
