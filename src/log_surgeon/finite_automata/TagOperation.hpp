@@ -22,11 +22,11 @@ public:
             : m_tag_id{tag_id},
               m_type{type} {}
 
-    auto operator<(TagOperation const& rhs) const noexcept -> bool {
+    auto operator<(TagOperation const& rhs) const -> bool {
         return std::tie(m_tag_id, m_type) < std::tie(rhs.m_tag_id, rhs.m_type);
     }
 
-    auto operator==(TagOperation const& rhs) const noexcept -> bool {
+    auto operator==(TagOperation const& rhs) const -> bool {
         return std::tie(m_tag_id, m_type) == std::tie(rhs.m_tag_id, rhs.m_type);
     }
 
