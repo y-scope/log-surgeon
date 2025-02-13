@@ -44,9 +44,10 @@ TEST_CASE("Test NFA", "[NFA]") {
     auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
-    ByteNfa const nfa{std::move(rules)};
+    ByteNfa const nfa{rules};
 
     // Compare against expected output
+    // capture order(tags in brackets): letter1(0,1), letter2(2,3), letter(4,5), containerID(6,7)
     string expected_serialized_nfa = "0:byte_transitions={A-->1,Z-->2},"
                                      "epsilon_transitions={},"
                                      "positive_tagged_start_transitions={},"
@@ -54,18 +55,17 @@ TEST_CASE("Test NFA", "[NFA]") {
                                      "negative_tagged_transition={}\n";
     expected_serialized_nfa += "1:byte_transitions={},"
                                "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={3[letter]},"
+                               "positive_tagged_start_transitions={3[4]},"
                                "positive_tagged_end_transitions={},"
                                "negative_tagged_transition={}\n";
-    expected_serialized_nfa
-            += "2:byte_transitions={},"
-               "epsilon_transitions={},"
-               "positive_tagged_start_transitions={},"
-               "positive_tagged_end_transitions={},"
-               "negative_tagged_transition={4[letter1,letter2,letter,containerID]}\n";
+    expected_serialized_nfa += "2:byte_transitions={},"
+                               "epsilon_transitions={},"
+                               "positive_tagged_start_transitions={},"
+                               "positive_tagged_end_transitions={},"
+                               "negative_tagged_transition={4[0,1,2,3,4,5,6,7]}\n";
     expected_serialized_nfa += "3:byte_transitions={},"
                                "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={5[letter1],6[letter2]},"
+                               "positive_tagged_start_transitions={5[0],6[2]},"
                                "positive_tagged_end_transitions={},"
                                "negative_tagged_transition={}\n";
     expected_serialized_nfa += "4:accepting_tag=0,byte_transitions={},"
@@ -86,27 +86,27 @@ TEST_CASE("Test NFA", "[NFA]") {
     expected_serialized_nfa += "7:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={9[letter1]},"
+                               "positive_tagged_end_transitions={9[1]},"
                                "negative_tagged_transition={}\n";
     expected_serialized_nfa += "8:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={10[letter2]},"
+                               "positive_tagged_end_transitions={10[3]},"
                                "negative_tagged_transition={}\n";
     expected_serialized_nfa += "9:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_start_transitions={},"
                                "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={11[letter2]}\n";
+                               "negative_tagged_transition={11[2,3]}\n";
     expected_serialized_nfa += "10:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_start_transitions={},"
                                "positive_tagged_end_transitions={},"
-                               "negative_tagged_transition={11[letter1]}\n";
+                               "negative_tagged_transition={11[0,1]}\n";
     expected_serialized_nfa += "11:byte_transitions={},"
                                "epsilon_transitions={},"
                                "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={12[letter]},"
+                               "positive_tagged_end_transitions={12[5]},"
                                "negative_tagged_transition={}\n";
     expected_serialized_nfa += "12:byte_transitions={B-->13},"
                                "epsilon_transitions={},"
@@ -115,7 +115,7 @@ TEST_CASE("Test NFA", "[NFA]") {
                                "negative_tagged_transition={}\n";
     expected_serialized_nfa += "13:byte_transitions={},"
                                "epsilon_transitions={},"
-                               "positive_tagged_start_transitions={14[containerID]},"
+                               "positive_tagged_start_transitions={14[6]},"
                                "positive_tagged_end_transitions={},"
                                "negative_tagged_transition={}\n";
     expected_serialized_nfa += "14:byte_transitions={0-->15,1-->15,2-->15,3-->15,4-->15,5-->15,6-->"
@@ -128,7 +128,7 @@ TEST_CASE("Test NFA", "[NFA]") {
                                "15,7-->15,8-->15,9-->15},"
                                "epsilon_transitions={},"
                                "positive_tagged_start_transitions={},"
-                               "positive_tagged_end_transitions={16[containerID]},"
+                               "positive_tagged_end_transitions={16[7]},"
                                "negative_tagged_transition={}\n";
     expected_serialized_nfa += "16:byte_transitions={C-->4},"
                                "epsilon_transitions={},"

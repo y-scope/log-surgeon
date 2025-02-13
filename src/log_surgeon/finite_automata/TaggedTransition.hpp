@@ -1,33 +1,27 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_TAGGED_TRANSITION
 #define LOG_SURGEON_FINITE_AUTOMATA_TAGGED_TRANSITION
 
-#include <algorithm>
 #include <cstdint>
 #include <optional>
-#include <ranges>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <fmt/format.h>
 
-#include <log_surgeon/finite_automata/Tag.hpp>
+#include <log_surgeon/types.hpp>
 
 namespace log_surgeon::finite_automata {
 /**
- * Represents an NFA transition indicating that a capture group has been matched.
- * NOTE: `m_tag` is always expected to be non-null.
+ * Represents an NFA transition indicating that a tag ID has been matched.
  * @tparam TypedNfaState Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename TypedNfaState>
 class PositiveTaggedTransition {
 public:
-    /**
-     * @param tag
-     * @param dest_state
-     * @throw std::invalid_argument if `tag` is `nullptr`.
-     */
-    PositiveTaggedTransition(Tag const* tag, TypedNfaState const* dest_state)
-            : m_tag{nullptr == tag ? throw std::invalid_argument("Tag cannot be null") : tag},
+    PositiveTaggedTransition(tag_id_t const tag_id, TypedNfaState const* dest_state)
+            : m_tag_id{tag_id},
               m_dest_state{dest_state} {}
 
     [[nodiscard]] auto get_dest_state() const -> TypedNfaState const* { return m_dest_state; }
@@ -39,38 +33,26 @@ public:
      */
     [[nodiscard]] auto serialize(std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string> {
-        auto const state_id_it = state_ids.find(m_dest_state);
-        if (state_id_it == state_ids.end()) {
-            return std::nullopt;
+        if (state_ids.contains(m_dest_state)) {
+            return fmt::format("{}[{}]", state_ids.at(m_dest_state), m_tag_id);
         }
-        return fmt::format("{}[{}]", state_id_it->second, m_tag->get_name());
+        return std::nullopt;
     }
 
 private:
-    Tag const* m_tag;
+    tag_id_t m_tag_id;
     TypedNfaState const* m_dest_state;
 };
 
 /**
- * Represents an NFA transition indicating that a capture group has been unmatched.
- * NOTE: All tags in `m_tags` are always expected to be non-null.
+ * Represents an NFA transition indicating that multiple tags have been unmatched.
  * @tparam TypedNfaState Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename TypedNfaState>
 class NegativeTaggedTransition {
 public:
-    /**
-     * @param tags
-     * @param dest_state
-     * @throw std::invalid_argument if any elements in `tags` is `nullptr`.
-     */
-    NegativeTaggedTransition(std::vector<Tag const*> tags, TypedNfaState const* dest_state)
-            : m_tags{[&tags] {
-                  if (std::ranges::any_of(tags, [](Tag const* tag) { return nullptr == tag; })) {
-                      throw std::invalid_argument("Tags cannot contain null elements");
-                  }
-                  return std::move(tags);
-              }()},
+    NegativeTaggedTransition(std::vector<tag_id_t> tag_ids, TypedNfaState const* dest_state)
+            : m_tag_ids{std::move(tag_ids)},
               m_dest_state{dest_state} {}
 
     [[nodiscard]] auto get_dest_state() const -> TypedNfaState const* { return m_dest_state; }
@@ -82,18 +64,14 @@ public:
      */
     [[nodiscard]] auto serialize(std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string> {
-        auto const state_id_it = state_ids.find(m_dest_state);
-        if (state_id_it == state_ids.end()) {
-            return std::nullopt;
+        if (state_ids.contains(m_dest_state)) {
+            return fmt::format("{}[{}]", state_ids.at(m_dest_state), fmt::join(m_tag_ids, ","));
         }
-
-        auto const tag_names = m_tags | std::ranges::views::transform(&Tag::get_name);
-
-        return fmt::format("{}[{}]", state_id_it->second, fmt::join(tag_names, ","));
+        return std::nullopt;
     }
 
 private:
-    std::vector<Tag const*> m_tags;
+    std::vector<tag_id_t> m_tag_ids;
     TypedNfaState const* m_dest_state;
 };
 }  // namespace log_surgeon::finite_automata

@@ -16,6 +16,7 @@
 #include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/finite_automata/TaggedTransition.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
+#include <log_surgeon/types.hpp>
 
 namespace log_surgeon::finite_automata {
 template <StateType state_type>
@@ -31,11 +32,12 @@ public:
 
     NfaState() = default;
 
-    NfaState(Tag const* tag, NfaState const* dest_state)
-            : m_positive_tagged_end_transition{PositiveTaggedTransition{tag, dest_state}} {}
+    NfaState(tag_id_t tag_id, NfaState const* dest_state)
+            : m_positive_tagged_end_transition{PositiveTaggedTransition{tag_id, dest_state}} {}
 
-    NfaState(std::vector<Tag const*> tags, NfaState const* dest_state)
-            : m_negative_tagged_transition{NegativeTaggedTransition{std::move(tags), dest_state}} {}
+    NfaState(std::vector<tag_id_t> tag_ids, NfaState const* dest_state)
+            : m_negative_tagged_transition{NegativeTaggedTransition{std::move(tag_ids), dest_state}
+              } {}
 
     auto set_accepting(bool accepting) -> void { m_accepting = accepting; }
 
@@ -49,8 +51,9 @@ public:
         return m_matching_variable_id;
     }
 
-    auto add_positive_tagged_start_transition(Tag const* tag, NfaState const* dest_state) -> void {
-        m_positive_tagged_start_transitions.emplace_back(tag, dest_state);
+    auto add_positive_tagged_start_transition(tag_id_t const tag_id, NfaState const* dest_state)
+            -> void {
+        m_positive_tagged_start_transitions.emplace_back(tag_id, dest_state);
     }
 
     [[nodiscard]] auto get_positive_tagged_start_transitions(

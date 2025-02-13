@@ -1,17 +1,27 @@
 #include <codecvt>
+#include <cstdint>
 #include <locale>
+#include <memory>
 #include <string>
 #include <string_view>
-#include <vector>
+#include <utility>
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <log_surgeon/finite_automata/Nfa.hpp>
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
+#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/ParserInputBuffer.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
+#include <log_surgeon/Token.hpp>
 
+using log_surgeon::lexers::ByteLexer;
+using log_surgeon::Schema;
+using log_surgeon::SchemaAST;
+using log_surgeon::SymbolId;
 using std::codecvt_utf8;
+using std::make_unique;
 using std::string;
 using std::string_view;
 using std::u32string;
@@ -49,9 +59,28 @@ auto test_regex_ast(string_view var_schema, u32string const& expected_serialized
  */
 [[nodiscard]] auto u32string_to_string(u32string const& u32_str) -> string;
 
+/**
+ * Creates a lexer with a constant set of delimiters (space and newline) and the given schema.
+ * The delimiters are used to separate tokens in the input.
+ * @param schema_ast The schema variables are used to set the lexer's symbol mappings.
+ * @return The lexer.
+ */
+[[nodiscard]] auto create_lexer(std::unique_ptr<SchemaAST> schema_ast) -> ByteLexer;
+
+/**
+ * Lexes the given input and verifies the output is a token for the given rule name, folowed by the
+ * end of input token.
+ *
+ * @param lexer The lexer to scan the input with.
+ * @param input The input to lex.
+ * @param rule_name The expected symbol to match.
+ */
+auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_view rule_name)
+        -> void;
+
 auto test_regex_ast(string_view const var_schema, u32string const& expected_serialized_ast)
         -> void {
-    log_surgeon::Schema schema;
+    Schema schema;
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
@@ -67,11 +96,80 @@ auto u32string_to_string(u32string const& u32_str) -> string {
     wstring_convert<codecvt_utf8<char32_t>, char32_t> converter;
     return converter.to_bytes(u32_str.data(), u32_str.data() + u32_str.size());
 }
+
+auto create_lexer(std::unique_ptr<SchemaAST> schema_ast) -> ByteLexer {
+    vector<uint32_t> const delimiters{' ', '\n'};
+
+    ByteLexer lexer;
+    lexer.add_delimiters(delimiters);
+
+    vector<uint32_t> lexer_delimiters;
+    for (uint32_t i{0}; i < log_surgeon::cSizeOfByte; ++i) {
+        if (lexer.is_delimiter(i)) {
+            lexer_delimiters.push_back(i);
+        }
+    }
+
+    lexer.m_symbol_id.emplace(log_surgeon::cTokenEnd, static_cast<uint32_t>(SymbolId::TokenEnd));
+    lexer.m_symbol_id.emplace(
+            log_surgeon::cTokenUncaughtString,
+            static_cast<uint32_t>(SymbolId::TokenUncaughtString)
+    );
+    lexer.m_id_symbol.emplace(static_cast<uint32_t>(SymbolId::TokenEnd), log_surgeon::cTokenEnd);
+    lexer.m_id_symbol.emplace(
+            static_cast<uint32_t>(SymbolId::TokenUncaughtString),
+            log_surgeon::cTokenUncaughtString
+    );
+
+    for (auto const& m_schema_var : schema_ast->m_schema_vars) {
+        // For log-specific lexing: modify variable regex to contain a delimiter at the start.
+        auto delimiter_group{make_unique<RegexASTGroupByte>(RegexASTGroupByte(lexer_delimiters))};
+        auto* rule{dynamic_cast<SchemaVarAST*>(m_schema_var.get())};
+        rule->m_regex_ptr = make_unique<RegexASTCatByte>(
+                std::move(delimiter_group),
+                std::move(rule->m_regex_ptr)
+        );
+        if (false == lexer.m_symbol_id.contains(rule->m_name)) {
+            lexer.m_symbol_id.emplace(rule->m_name, lexer.m_symbol_id.size());
+            lexer.m_id_symbol.emplace(lexer.m_symbol_id.at(rule->m_name), rule->m_name);
+        }
+        lexer.add_rule(lexer.m_symbol_id.at(rule->m_name), std::move(rule->m_regex_ptr));
+    }
+    lexer.generate();
+    return lexer;
+}
+
+auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_view rule_name)
+        -> void {
+    lexer.reset();
+
+    log_surgeon::ParserInputBuffer input_buffer;
+    string token_string{input};
+    input_buffer.set_storage(token_string.data(), token_string.size(), 0, true);
+    lexer.prepend_start_of_file_char(input_buffer);
+
+    log_surgeon::Token token;
+    auto error_code{lexer.scan(input_buffer, token)};
+    REQUIRE(log_surgeon::ErrorCode::Success == error_code);
+    REQUIRE(nullptr != token.m_type_ids_ptr);
+    REQUIRE(1 == token.m_type_ids_ptr->size());
+    REQUIRE(rule_name == lexer.m_id_symbol[token.m_type_ids_ptr->at(0)]);
+    REQUIRE(input == token.to_string_view());
+
+    error_code = lexer.scan(input_buffer, token);
+    REQUIRE(log_surgeon::ErrorCode::Success == error_code);
+    REQUIRE(nullptr != token.m_type_ids_ptr);
+    REQUIRE(1 == token.m_type_ids_ptr->size());
+    REQUIRE(log_surgeon::cTokenEnd == lexer.m_id_symbol[token.m_type_ids_ptr->at(0)]);
+    REQUIRE(token.to_string_view().empty());
+
+    // TODO: Add verification of register values after implementing the DFA simulation.
+}
 }  // namespace
 
 TEST_CASE("Test the Schema class", "[Schema]") {
     SECTION("Add a number variable to schema") {
-        log_surgeon::Schema schema;
+        Schema schema;
         string const var_name = "myNumber";
         string const var_schema = var_name + string(":") + string("123");
         schema.add_variable(string_view(var_schema), -1);
@@ -89,7 +187,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
     }
 
     SECTION("Add a capture variable to schema") {
-        log_surgeon::Schema schema;
+        Schema schema;
         std::string const var_name = "capture";
         string const var_schema = var_name + string(":") + string("u(?<uID>[0-9]+)");
         schema.add_variable(var_schema, -1);
@@ -103,30 +201,31 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         auto& schema_var_ast = dynamic_cast<SchemaVarAST&>(*schema_var_ast_ptr);
         REQUIRE(var_name == schema_var_ast.m_name);
 
-        auto* regex_ast_cat_ptr = dynamic_cast<RegexASTCatByte*>(schema_var_ast.m_regex_ptr.get());
+        auto const* regex_ast_cat_ptr
+                = dynamic_cast<RegexASTCatByte*>(schema_var_ast.m_regex_ptr.get());
         REQUIRE(nullptr != regex_ast_cat_ptr);
         REQUIRE(nullptr != regex_ast_cat_ptr->get_left());
         REQUIRE(nullptr != regex_ast_cat_ptr->get_right());
 
-        auto* regex_ast_literal
+        auto const* regex_ast_literal
                 = dynamic_cast<RegexASTLiteralByte const*>(regex_ast_cat_ptr->get_left());
         REQUIRE(nullptr != regex_ast_literal);
         REQUIRE('u' == regex_ast_literal->get_character());
 
-        auto* regex_ast_capture
+        auto const* regex_ast_capture
                 = dynamic_cast<RegexASTCaptureByte const*>(regex_ast_cat_ptr->get_right());
         REQUIRE(nullptr != regex_ast_capture);
-        REQUIRE("uID" == regex_ast_capture->get_group_name());
+        REQUIRE("uID" == regex_ast_capture->get_capture_name());
 
-        auto* regex_ast_multiplication_ast = dynamic_cast<RegexASTMultiplicationByte*>(
-                regex_ast_capture->get_group_regex_ast().get()
+        auto const* regex_ast_multiplication_ast = dynamic_cast<RegexASTMultiplicationByte*>(
+                regex_ast_capture->get_capture_regex_ast().get()
         );
         REQUIRE(nullptr != regex_ast_multiplication_ast);
         REQUIRE(1 == regex_ast_multiplication_ast->get_min());
         REQUIRE(0 == regex_ast_multiplication_ast->get_max());
         REQUIRE(regex_ast_multiplication_ast->is_infinite());
 
-        auto* regex_ast_group_ast
+        auto const* regex_ast_group_ast
                 = dynamic_cast<RegexASTGroupByte*>(regex_ast_multiplication_ast->get_operand().get()
                 );
         REQUIRE(false == regex_ast_group_ast->is_wildcard());
@@ -207,4 +306,58 @@ TEST_CASE("Test the Schema class", "[Schema]") {
                 // clang-format on
         );
     }
+}
+
+TEST_CASE("Test basic Lexer", "[Lexer]") {
+    constexpr string_view cVarName{"myVar"};
+    constexpr string_view cVarSchema{"myVar:123"};
+    constexpr string_view cTokenString1{"123"};
+    constexpr string_view cTokenString2{"234"};
+
+    Schema schema;
+    schema.add_variable(cVarSchema, -1);
+
+    ByteLexer lexer{create_lexer(std::move(schema.release_schema_ast_ptr()))};
+
+    test_scanning_input(lexer, cTokenString1, cVarName);
+    test_scanning_input(lexer, cTokenString2, log_surgeon::cTokenUncaughtString);
+}
+
+TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
+    constexpr string_view cVarName{"myVar"};
+    constexpr string_view cCaptureName{"uid"};
+    constexpr string_view cVarSchema{"myVar:userID=(?<uid>123)"};
+    constexpr string_view cTokenString1{"userID=123"};
+    constexpr string_view cTokenString2{"userID=234"};
+    constexpr string_view cTokenString3{"123"};
+
+    Schema schema;
+    schema.add_variable(cVarSchema, -1);
+
+    ByteLexer lexer{create_lexer(std::move(schema.release_schema_ast_ptr()))};
+
+    string const var_name{cVarName};
+    REQUIRE(lexer.m_symbol_id.contains(var_name));
+
+    string const capture_name{cCaptureName};
+    REQUIRE(lexer.m_symbol_id.contains(capture_name));
+
+    auto const optional_capture_ids{lexer.get_capture_ids_from_rule_id(lexer.m_symbol_id.at(var_name
+    ))};
+    REQUIRE(optional_capture_ids.has_value());
+    REQUIRE(1 == optional_capture_ids.value().size());
+    REQUIRE(lexer.m_symbol_id.at(capture_name) == optional_capture_ids.value()[0]);
+
+    auto const optional_tag_id_pair{
+            lexer.get_tag_id_pair_from_capture_id(optional_capture_ids.value()[0])
+    };
+    REQUIRE(optional_tag_id_pair.has_value());
+    REQUIRE(std::make_pair(0U, 1U) == optional_tag_id_pair.value());
+
+    // TODO: Add check for `get_reg_id_from_tag_id` and `get_reg_ids_from_capture_id` when TDFA's
+    // determinization is implemented.
+
+    test_scanning_input(lexer, cTokenString1, cVarName);
+    test_scanning_input(lexer, cTokenString2, log_surgeon::cTokenUncaughtString);
+    test_scanning_input(lexer, cTokenString3, log_surgeon::cTokenUncaughtString);
 }

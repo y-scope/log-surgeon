@@ -4,11 +4,13 @@
 #include <cassert>
 #include <memory>
 #include <stack>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
+#include <log_surgeon/types.hpp>
 
 /**
  * utf8 format (https://en.wikipedia.org/wiki/UTF-8)
@@ -358,17 +360,17 @@ void Lexer<TypedNfaState, TypedDfaState>::add_delimiters(std::vector<uint32_t> c
 
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::add_rule(
-        uint32_t const& id,
+        rule_id_t const rule_id,
         std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
 ) {
-    m_rules.emplace_back(id, std::move(rule));
+    m_rules.emplace_back(rule_id, std::move(rule));
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lexer<TypedNfaState, TypedDfaState>::get_rule(uint32_t const variable_id
+auto Lexer<TypedNfaState, TypedDfaState>::get_rule(rule_id_t const rule_id
 ) -> finite_automata::RegexAST<TypedNfaState>* {
     for (auto const& rule : m_rules) {
-        if (rule.get_variable_id() == variable_id) {
+        if (rule.get_variable_id() == rule_id) {
             return rule.get_regex();
         }
     }
@@ -377,8 +379,31 @@ auto Lexer<TypedNfaState, TypedDfaState>::get_rule(uint32_t const variable_id
 
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::generate() {
-    finite_automata::Nfa<TypedNfaState> nfa{std::move(m_rules)};
-    // TODO: DFA ignores tags. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
+    for (auto const& rule : m_rules) {
+        for (auto const* capture : rule.get_captures()) {
+            std::string const capture_name{capture->get_name()};
+            if (m_symbol_id.contains(capture_name)) {
+                throw std::invalid_argument("`m_rules` contains capture names that are not unique."
+                );
+            }
+            auto const capture_id{m_symbol_id.size()};
+            m_symbol_id.emplace(capture_name, capture_id);
+            m_id_symbol.emplace(capture_id, capture_name);
+
+            auto const rule_id{rule.get_variable_id()};
+            m_rule_id_to_capture_ids.try_emplace(rule_id);
+            m_rule_id_to_capture_ids.at(rule_id).push_back(capture_id);
+        }
+    }
+
+    finite_automata::Nfa<TypedNfaState> nfa{m_rules};
+    for (auto const& [capture, tag_id_pair] : nfa.get_capture_to_tag_id_pair()) {
+        std::string const capture_name{capture->get_name()};
+        auto const capture_id{m_symbol_id.at(capture_name)};
+        m_capture_id_to_tag_id_pair.emplace(capture_id, tag_id_pair);
+    }
+
+    // TODO: DFA ignores captures. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState>>(std::move(nfa));
     auto const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {

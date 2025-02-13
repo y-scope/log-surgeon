@@ -9,8 +9,8 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/FileReader.hpp>
+#include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
-#include <log_surgeon/finite_automata/Tag.hpp>
 #include <log_surgeon/Lalr1Parser.hpp>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/utils.hpp>
@@ -167,7 +167,7 @@ static auto regex_capture_rule(NonTerminal const* m) -> std::unique_ptr<ParserAS
     auto& r6 = m->non_terminal_cast(5)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
     return std::make_unique<ParserValueRegex>(make_unique<RegexASTCaptureByte>(
             std::move(r6),
-            std::make_unique<finite_automata::Tag>(r4->m_name)
+            std::make_unique<finite_automata::Capture>(r4->m_name)
     ));
 }
 
@@ -202,7 +202,7 @@ static auto regex_or_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
 static auto regex_match_zero_or_more_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
 
-    // To handle negative tags we treat `R*` as `R+ | ∅`.
+    // To handle negative captures we treat `R*` as `R+ | ∅`.
     return make_unique<ParserValueRegex>(make_unique<RegexASTOrByte>(
             make_unique<RegexASTEmptyByte>(),
             make_unique<RegexASTMultiplicationByte>(std::move(r1), 1, 0)
@@ -248,7 +248,7 @@ static auto regex_match_range_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto& r1 = m->non_terminal_cast(0)->get_parser_ast()->get<unique_ptr<RegexASTByte>>();
 
     if (0 == min) {
-        // To handle negative tags we treat `R*` as `R+ | ∅`.
+        // To handle negative captures we treat `R*` as `R+ | ∅`.
         return make_unique<ParserValueRegex>(make_unique<RegexASTOrByte>(
                 make_unique<RegexASTEmptyByte>(),
                 make_unique<RegexASTMultiplicationByte>(std::move(r1), 1, max)
