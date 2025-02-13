@@ -39,7 +39,7 @@ TEST_CASE("Test NFA", "[NFA]") {
 
     // Compare against expected output
     // capture order(tags in brackets): letter1(0,1), letter2(2,3), letter(4,5), containerID(6,7)
-    string expected_serialized_nfa{
+    string const expected_serialized_nfa{
             "0:byte_transitions={A-->1,Z-->2},spontaneous_transition={}\n"
             "1:byte_transitions={},spontaneous_transition={3[4p]}\n"
             "2:byte_transitions={},spontaneous_transition={4[0n,1n,2n,3n,4n,5n,6n,7n]}\n"
