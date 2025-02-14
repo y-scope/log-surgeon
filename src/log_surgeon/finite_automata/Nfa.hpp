@@ -76,7 +76,7 @@ public:
 
     /**
      * @return A string representation of the NFA on success.
-     * @return Forwards `NfaState::serialize`'s return value (std::nullopt) on failure.
+     * @return Forwards `NfaState::serialize`'s return value (`std::nullopt`) on failure.
      */
     [[nodiscard]] auto serialize() const -> std::optional<std::string>;
 
