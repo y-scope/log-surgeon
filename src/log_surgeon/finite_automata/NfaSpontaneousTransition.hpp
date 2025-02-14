@@ -23,8 +23,6 @@ namespace log_surgeon::finite_automata {
 template <typename TypedNfaState>
 class NfaSpontaneousTransition {
 public:
-    explicit NfaSpontaneousTransition(TypedNfaState const* dest_state) : m_dest_state{dest_state} {}
-
     NfaSpontaneousTransition(std::vector<TagOperation> tag_ops, TypedNfaState const* dest_state)
             : m_tag_ops{std::move(tag_ops)},
               m_dest_state{dest_state} {}
