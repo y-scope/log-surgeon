@@ -43,6 +43,12 @@ public:
      */
     [[nodiscard]] auto new_state() -> TypedNfaState*;
 
+    /*
+     * @param matching_variable_id The id for the variable matched by this state.
+     * @return A point to the newly created accepting NFA state.
+     */
+    [[nodiscard]] auto new_accepting_state(uint32_t matching_variable_id) -> TypedNfaState*;
+
     /**
      * @param captures A vector containing the captures of all alternate paths.
      * @param dest_state The destination state to arrive at after negating the captures.
@@ -134,6 +140,13 @@ auto Nfa<TypedNfaState>::get_or_create_capture_tag_pair(Capture const* capture
 template <typename TypedNfaState>
 auto Nfa<TypedNfaState>::new_state() -> TypedNfaState* {
     m_states.emplace_back(std::make_unique<TypedNfaState>());
+    return m_states.back().get();
+}
+
+template <typename TypedNfaState>
+auto Nfa<TypedNfaState>::new_accepting_state(uint32_t const matching_variable_id
+) -> TypedNfaState* {
+    m_states.emplace_back(std::make_unique<TypedNfaState>(matching_variable_id));
     return m_states.back().get();
 }
 
