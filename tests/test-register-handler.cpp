@@ -35,7 +35,7 @@ TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
     constexpr size_t cRegId2{1};
 
     SECTION("Initial state is empty") {
-        RegisterHandler empty_handler{handler_init(0)};
+        RegisterHandler const empty_handler{handler_init(0)};
         REQUIRE_THROWS_AS(empty_handler.get_reversed_positions(cRegId1), std::out_of_range);
     }
 
