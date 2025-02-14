@@ -19,7 +19,7 @@
 #include <fmt/format.h>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/SpontaneousTransition.hpp>
+#include <log_surgeon/finite_automata/NfaSpontaneousTransition.hpp>
 #include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
@@ -86,7 +86,8 @@ public:
     /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the NFA state on success.
-     * @return Forwards `SpontaneousTransition::serialize`'s return value (std::nullopt) on failure.
+     * @return Forwards `NfaSpontaneousTransition::serialize`'s return value (std::nullopt) on
+     * failure.
      */
     [[nodiscard]] auto serialize(std::unordered_map<NfaState const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
@@ -98,7 +99,7 @@ public:
     }
 
     [[nodiscard]] auto get_spontaneous_transitions(
-    ) const -> std::vector<SpontaneousTransition<NfaState>> const& {
+    ) const -> std::vector<NfaSpontaneousTransition<NfaState>> const& {
         return m_spontaneous_transitions;
     }
 
@@ -111,7 +112,7 @@ public:
 private:
     bool m_accepting{false};
     uint32_t m_matching_variable_id{0};
-    std::vector<SpontaneousTransition<NfaState>> m_spontaneous_transitions;
+    std::vector<NfaSpontaneousTransition<NfaState>> m_spontaneous_transitions;
     std::array<std::vector<NfaState*>, cSizeOfByte> m_bytes_transitions;
     // NOTE: We don't need m_tree_transitions for the `stateType ==
     // StateType::Byte` case, so we use an empty class (`std::tuple<>`)

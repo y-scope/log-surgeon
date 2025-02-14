@@ -1,5 +1,5 @@
-#ifndef LOG_SURGEON_FINITE_AUTOMATA_SPONTANEOUS_TRANSITION_HPP
-#define LOG_SURGEON_FINITE_AUTOMATA_SPONTANEOUS_TRANSITION_HPP
+#ifndef LOG_SURGEON_FINITE_AUTOMATA_NFASPONTANEOUSTRANSITION_HPP
+#define LOG_SURGEON_FINITE_AUTOMATA_NFASPONTANEOUSTRANSITION_HPP
 
 #include <cstdint>
 #include <optional>
@@ -21,11 +21,11 @@ namespace log_surgeon::finite_automata {
  * @tparam TypedNfaState Specifies the type of transition (bytes or UTF-8 characters).
  */
 template <typename TypedNfaState>
-class SpontaneousTransition {
+class NfaSpontaneousTransition {
 public:
-    explicit SpontaneousTransition(TypedNfaState const* dest_state) : m_dest_state{dest_state} {}
+    explicit NfaSpontaneousTransition(TypedNfaState const* dest_state) : m_dest_state{dest_state} {}
 
-    SpontaneousTransition(std::vector<TagOperation> tag_ops, TypedNfaState const* dest_state)
+    NfaSpontaneousTransition(std::vector<TagOperation> tag_ops, TypedNfaState const* dest_state)
             : m_tag_ops{std::move(tag_ops)},
               m_dest_state{dest_state} {}
 
@@ -47,7 +47,7 @@ private:
 };
 
 template <typename TypedNfaState>
-auto SpontaneousTransition<TypedNfaState>::serialize(
+auto NfaSpontaneousTransition<TypedNfaState>::serialize(
         std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     if (false == state_ids.contains(m_dest_state)) {
@@ -67,4 +67,4 @@ auto SpontaneousTransition<TypedNfaState>::serialize(
 }
 }  // namespace log_surgeon::finite_automata
 
-#endif  // LOG_SURGEON_FINITE_AUTOMATA_SPONTANEOUS_TRANSITION_HPP
+#endif  // LOG_SURGEON_FINITE_AUTOMATA_NFASPONTANEOUSTRANSITION_HPP
