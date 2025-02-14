@@ -56,7 +56,7 @@ auto NfaSpontaneousTransition<TypedNfaState>::serialize(
 
     return fmt::format(
             "{}[{}]",
-            state_ids.at(m_dest_state)->second,
+            state_ids.at(m_dest_state),
             fmt::join(transformed_operations, ",")
     );
 }
