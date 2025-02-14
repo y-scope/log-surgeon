@@ -53,6 +53,10 @@ public:
         m_matching_variable_id = variable_id;
     }
 
+    auto add_spontaneous_transition(NfaState const* dest_state) -> void {
+        m_spontaneous_transitions.emplace_back(std::vector<TagOperation>{}, dest_state);
+    }
+
     auto add_spontaneous_transition(
             TagOperationType const op_type,
             std::vector<tag_id_t> const& tag_ids,

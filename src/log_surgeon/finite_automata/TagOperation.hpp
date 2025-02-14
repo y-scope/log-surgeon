@@ -12,8 +12,7 @@
 namespace log_surgeon::finite_automata {
 enum class TagOperationType : uint8_t {
     Set,
-    Negate,
-    None
+    Negate
 };
 
 class TagOperation {
@@ -43,8 +42,8 @@ public:
                 return fmt::format("{}{}", m_tag_id, "p");
             case TagOperationType::Negate:
                 return fmt::format("{}{}", m_tag_id, "n");
-            case TagOperationType::None:
-                return "none";
+            default:
+                return fmt::format("{}{}", m_tag_id, "?");
         }
     }
 
