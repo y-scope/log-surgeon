@@ -21,6 +21,7 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Capture.hpp>
+#include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
@@ -113,13 +114,12 @@ public:
     auto add_to_nfa_with_negative_captures(Nfa<TypedNfaState>* nfa, TypedNfaState* end_state) const
             -> void {
         // Handle negative captures as:
-        // root --(regex)--> state_with_negative_tagged_transition --(negative captures)-->
-        // end_state
+        // root --(regex)--> state_with_spontaneous_transition --(negate tags)--> end_state
         if (false == m_negative_captures.empty()) {
-            auto* state_with_negative_tagged_transition{
-                    nfa->new_state_with_negative_tagged_transition(m_negative_captures, end_state)
+            auto* state_with_spontaneous_transition{
+                    nfa->new_state_from_negative_captures(m_negative_captures, end_state)
             };
-            add_to_nfa(nfa, state_with_negative_tagged_transition);
+            add_to_nfa(nfa, state_with_spontaneous_transition);
         } else {
             add_to_nfa(nfa, end_state);
         }
@@ -861,9 +861,9 @@ void RegexASTMultiplication<TypedNfaState>::add_to_nfa(
 ) const {
     TypedNfaState* saved_root = nfa->get_root();
     if (m_min == 0) {
-        nfa->get_root()->add_epsilon_transition(end_state);
+        nfa->get_root()->add_spontaneous_transition(end_state);
     } else {
-        for (uint32_t i = 1; i < m_min; i++) {
+        for (uint32_t i{1}; i < m_min; ++i) {
             TypedNfaState* intermediate_state = nfa->new_state();
             m_operand->add_to_nfa_with_negative_captures(nfa, intermediate_state);
             nfa->set_root(intermediate_state);
@@ -908,41 +908,39 @@ template <typename TypedNfaState>
 auto RegexASTCapture<TypedNfaState>::add_to_nfa(Nfa<TypedNfaState>* nfa, TypedNfaState* dest_state)
         const -> void {
     // TODO: move this into a documentation file in the future, and reference it here.
-    // The NFA constructed for a capture group follows the structure below, with tagged transitions
-    // explicitly labeled for clarity:
+    // The NFA constructed for a capture group follows the structure below, with spontaneous
+    // transitions explicitly labeled for clarity:
     //         +---------------------+
     //         |       `m_root`      |
     //         +---------------------+
-    //                    | `m_capture` start ID
-    //                    | (positive tagged start transition)
+    //                    |
+    //                    | (set start tag position for `m_capture`)
     //                    v
     //         +---------------------+
     //         |`capture_start_state`|
     //         +---------------------+
     //                    |
-    //                    | (epsilon transition)
+    //                    | (no tag operation)
     //                    v
     //         +---------------------+
     //         |`m_capture_regex_ast`|
     //         |    (nested NFA)     |
     //         +---------------------+
     //                    | `m_negative_captures`
-    //                    | (negative tagged transition)
+    //                    | (negate alternate tags)
     //                    v
     //         +---------------------+
     //         | `capture_end_state` |
     //         +---------------------+
-    //                    | `m_capture` end ID
-    //                    | (positive tagged end transition)
+    //                    |
+    //                    | (set end tag position for `m_capture`)
     //                    v
     //         +---------------------+
     //         |     `dest_state`    |
     //         +---------------------+
-    auto [capture_start_state, capture_end_state]
-            = nfa->new_start_and_end_states_with_positive_tagged_transitions(
-                    m_capture.get(),
-                    dest_state
-            );
+    auto [capture_start_state, capture_end_state]{
+            nfa->new_start_and_end_states_from_positive_capture(m_capture.get(), dest_state)
+    };
 
     auto* initial_root = nfa->get_root();
     nfa->set_root(capture_start_state);

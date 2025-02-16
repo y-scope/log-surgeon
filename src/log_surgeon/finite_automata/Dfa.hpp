@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <stack>
 #include <vector>
 
 #include <log_surgeon/finite_automata/DfaStatePair.hpp>
