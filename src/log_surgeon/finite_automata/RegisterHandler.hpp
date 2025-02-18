@@ -5,7 +5,6 @@
 #include <vector>
 
 #include <log_surgeon/finite_automata/PrefixTree.hpp>
-#include <log_surgeon/finite_automata/Register.hpp>
 
 namespace log_surgeon::finite_automata {
 /**
