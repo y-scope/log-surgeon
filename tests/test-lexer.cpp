@@ -386,8 +386,10 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     REQUIRE(optional_tag_id_pair.has_value());
     REQUIRE(std::make_pair(0U, 1U) == optional_tag_id_pair.value());
 
-    // TODO: Add check for `get_reg_id_from_tag_id` and `get_reg_ids_from_capture_id` when TDFA's
-    // determinization is implemented.
+    auto reg_id0{lexer.get_reg_id_from_tag_id(optional_tag_id_pair.value().first)};
+    auto reg_id1{lexer.get_reg_id_from_tag_id(optional_tag_id_pair.value().second)};
+    REQUIRE(2u == reg_id0.value());
+    REQUIRE(3u == reg_id1.value());
 
     CAPTURE(cVarSchema);
     test_scanning_input(lexer, cTokenString1, cVarName);

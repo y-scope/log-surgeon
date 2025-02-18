@@ -6,8 +6,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <set>
-#include <stack>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -84,11 +82,6 @@ public:
      * @param dest_state
      */
     auto add_interval(Interval interval, NfaState* dest_state) -> void;
-
-    /**
-     * @return The set of all states reachable from the current state via epsilon transitions.
-     */
-    auto epsilon_closure() -> std::set<NfaState const*>;
 
     /**
      * @param state_ids A map of states to their unique identifiers.
@@ -175,24 +168,6 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
             m_tree_transitions.insert(interval, {dest_state});
         }
     }
-}
-
-template <StateType state_type>
-auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
-    std::set<NfaState const*> closure_set;
-    std::stack<NfaState const*> stack;
-    stack.push(this);
-    while (false == stack.empty()) {
-        auto const* current_state = stack.top();
-        stack.pop();
-        if (false == closure_set.insert(current_state).second) {
-            continue;
-        }
-        for (auto const& spontaneous_transition : current_state->get_spontaneous_transitions()) {
-            stack.push(spontaneous_transition.get_dest_state());
-        }
-    }
-    return closure_set;
 }
 
 template <StateType state_type>

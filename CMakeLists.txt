@@ -69,6 +69,7 @@ set(SOURCE_FILES
     src/log_surgeon/FileReader.cpp
     src/log_surgeon/FileReader.hpp
     src/log_surgeon/finite_automata/Capture.hpp
+    src/log_surgeon/finite_automata/DeterminizationConfiguration.hpp
     src/log_surgeon/finite_automata/Dfa.hpp
     src/log_surgeon/finite_automata/DfaState.hpp
     src/log_surgeon/finite_automata/DfaStatePair.hpp
