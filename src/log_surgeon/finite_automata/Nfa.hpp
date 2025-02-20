@@ -45,7 +45,7 @@ public:
 
     /*
      * @param matching_variable_id The id for the variable matched by this state.
-     * @return A point to the newly created accepting NFA state.
+     * @return A pointer to the newly created accepting NFA state.
      */
     [[nodiscard]] auto new_accepting_state(uint32_t matching_variable_id) -> TypedNfaState*;
 
