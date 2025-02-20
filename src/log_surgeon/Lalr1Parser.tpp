@@ -7,6 +7,8 @@
 #include <optional>
 
 #include <log_surgeon/Constants.hpp>
+#include <log_surgeon/NonTerminal.hpp>
+#include <log_surgeon/ItemSet.hpp>
 
 namespace log_surgeon {
 namespace {

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
+#include <log_surgeon/ItemSet.hpp>
 #include <log_surgeon/Reader.hpp>
 
 namespace log_surgeon {

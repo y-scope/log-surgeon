@@ -83,7 +83,7 @@ set(SOURCE_FILES
     src/log_surgeon/finite_automata/TagOperation.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.tpp
-    src/log_surgeon/Lalr1Parser.cpp
+    src/log_surgeon/ItemSet.hpp
     src/log_surgeon/Lalr1Parser.hpp
     src/log_surgeon/Lalr1Parser.tpp
     src/log_surgeon/Lexer.hpp
@@ -95,10 +95,15 @@ set(SOURCE_FILES
     src/log_surgeon/LogParser.hpp
     src/log_surgeon/LogParserOutputBuffer.cpp
     src/log_surgeon/LogParserOutputBuffer.hpp
+    src/log_surgeon/NonTerminal.cpp
+    src/log_surgeon/NonTerminal.hpp
     src/log_surgeon/Parser.tpp
     src/log_surgeon/Parser.hpp
+    src/log_surgeon/ParserAst.cpp
+    src/log_surgeon/ParserAst.hpp
     src/log_surgeon/ParserInputBuffer.cpp
     src/log_surgeon/ParserInputBuffer.hpp
+    src/log_surgeon/Production.hpp
     src/log_surgeon/Reader.hpp
     src/log_surgeon/ReaderParser.cpp
     src/log_surgeon/ReaderParser.hpp

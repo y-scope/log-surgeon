@@ -6,6 +6,8 @@
 #include <utility>
 
 #include <log_surgeon/Lalr1Parser.hpp>
+#include <log_surgeon/NonTerminal.hpp>
+#include <log_surgeon/ParserAst.hpp>
 
 namespace log_surgeon {
 // ASTs used in SchemaParser AST
