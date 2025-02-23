@@ -137,12 +137,9 @@ private:
 
     /**
      * Requests the next token from the lexer.
-     * @param token is populated with the next token found by the parser.
-     * @return ErrorCode::Success
-     * @return ErrorCode::BufferOutOfBounds if end of input reached before
-     * lexing a token.
+     * @return Forwards `lexer::scan()`.
      */
-    auto get_next_symbol(Token& token) -> ErrorCode;
+    auto get_next_symbol() -> std::pair<ErrorCode, std::optional<Token>>;
 
     /**
      * Adds delimiters (originally from the schema AST) to the log parser.

@@ -81,13 +81,15 @@ public:
      * If next token is an uncaught string, the next variable token is already
      * prepped to be returned on the next call
      * @param input_buffer
-     * @param Token&
-     * @return ErrorCode::Success
-     * @return ErrorCode::BufferOutOfBounds if end of input reached before
-     * lexing a token.
+     * @return A pair if lexing is completed:
+     * - `ErrorCode::Success`.
+     * - The lexed token.
+     * @return A pair if the end of the input is reached before lexing is completed:
+     * - `ErrorCode::BufferOutOfBounds`.
+     * - `std::nullopt`.
      * @throw runtime_error("Input buffer about to overflow")
      */
-    auto scan(ParserInputBuffer& input_buffer, Token& token) -> ErrorCode;
+    auto scan(ParserInputBuffer& input_buffer) -> std::pair<ErrorCode, std::optional<Token>>;
 
     /**
      * scan(), but with wild wildcards in the input string (for search)

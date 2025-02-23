@@ -34,6 +34,16 @@ public:
 
     explicit Dfa(Nfa<TypedNfaState> const& nfa);
 
+    auto reset() -> void { m_curr_state = get_root(); }
+
+    /**
+     * Determine the out-going transition  based on the input character. Update the current state
+     * and register values based on the transition.
+     * @param next_char The character to transition on.
+     * @return true when the destination state is accepting or there is no destination state.
+     */
+    auto process_char(char next_char) -> bool;
+
     /**
      * @return A string representation of the DFA.
      */
@@ -184,11 +194,24 @@ private:
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
     std::map<tag_id_t, reg_id_t> m_tag_id_to_final_reg_id;
     RegisterHandler m_reg_handler;
+    TypedDfaState* m_curr_state;
 };
 
 template <typename TypedDfaState, typename TypedNfaState>
-Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
+Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) : m_curr_state{nullptr} {
     generate(nfa);
+}
+
+template <typename TypedDfaState, typename TypedNfaState>
+auto Dfa<TypedDfaState, TypedNfaState>::process_char(char next_char) -> bool {
+    m_curr_state =  m_curr_state->get_dest_state(next_char);
+    if (nullptr == m_curr_state) {
+        return true;
+    }
+    if(m_curr_state->is_accepting()) {
+        return true;
+    }
+    return false;
 }
 
 // TODO: handle utf8 case in DFA generation.

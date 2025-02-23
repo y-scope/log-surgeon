@@ -163,26 +163,31 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
     input_buffer.set_storage(token_string.data(), token_string.size(), 0, true);
     lexer.prepend_start_of_file_char(input_buffer);
 
-    log_surgeon::Token token;
-    auto error_code{lexer.scan(input_buffer, token)};
-    REQUIRE(nullptr != token.m_type_ids_ptr);
-    CAPTURE(token.to_string_view());
-    CAPTURE(*token.m_type_ids_ptr);
-    REQUIRE(log_surgeon::ErrorCode::Success == error_code);
-    REQUIRE(nullptr != token.m_type_ids_ptr);
-    REQUIRE(1 == token.m_type_ids_ptr->size());
-    REQUIRE(rule_name == lexer.m_id_symbol[token.m_type_ids_ptr->at(0)]);
-    REQUIRE(input == token.to_string_view());
+    auto [err1, optional_token1]{lexer.scan(input_buffer)};
+    REQUIRE(log_surgeon::ErrorCode::Success == err1);
+    REQUIRE(optional_token1.has_value());
+    if (optional_token1.has_value()) {
+        auto token{optional_token1.value()};
+        CAPTURE(token.to_string_view());
+        CAPTURE(*token.m_type_ids_ptr);
+        REQUIRE(nullptr != token.m_type_ids_ptr);
+        REQUIRE(1 == token.m_type_ids_ptr->size());
+        REQUIRE(rule_name == lexer.m_id_symbol[token.m_type_ids_ptr->at(0)]);
+        REQUIRE(input == token.to_string_view());
+    }
 
-    error_code = lexer.scan(input_buffer, token);
-    REQUIRE(nullptr != token.m_type_ids_ptr);
-    CAPTURE(token.to_string_view());
-    CAPTURE(*token.m_type_ids_ptr);
-    REQUIRE(log_surgeon::ErrorCode::Success == error_code);
-    REQUIRE(nullptr != token.m_type_ids_ptr);
-    REQUIRE(1 == token.m_type_ids_ptr->size());
-    REQUIRE(log_surgeon::cTokenEnd == lexer.m_id_symbol[token.m_type_ids_ptr->at(0)]);
-    REQUIRE(token.to_string_view().empty());
+    auto [err2, optional_token2]{lexer.scan(input_buffer)};
+    REQUIRE(log_surgeon::ErrorCode::Success == err2);
+    REQUIRE(optional_token2.has_value());
+    if (optional_token2.has_value()) {
+        auto token{optional_token2.value()};
+        REQUIRE(nullptr != token.m_type_ids_ptr);
+        CAPTURE(token.to_string_view());
+        CAPTURE(*token.m_type_ids_ptr);
+        REQUIRE(1 == token.m_type_ids_ptr->size());
+        REQUIRE(log_surgeon::cTokenEnd == lexer.m_id_symbol[token.m_type_ids_ptr->at(0)]);
+        REQUIRE(token.to_string_view().empty());
+    }
 
     // TODO: Add verification of register values after implementing the DFA simulation.
 }
