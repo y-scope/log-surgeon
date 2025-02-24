@@ -18,11 +18,14 @@ namespace {
 [[nodiscard]] auto handler_init(size_t num_registers) -> RegisterHandler;
 
 auto handler_init(size_t const num_registers) -> RegisterHandler {
-    constexpr position_t cDefaultPos{0};
-
     RegisterHandler handler;
-    for (size_t i{0}; i < num_registers; ++i) {
-        handler.add_register(i, cDefaultPos);
+    if (0 == num_registers) {
+        return handler;
+    }
+
+    handler.add_register();
+    for (size_t i{1}; i < num_registers; ++i) {
+        handler.add_register(i);
     }
     return handler;
 }
