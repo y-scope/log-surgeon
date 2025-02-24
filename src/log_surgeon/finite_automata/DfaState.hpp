@@ -106,7 +106,7 @@ auto DfaState<state_type>::get_transition(uint32_t character) const -> DfaTransi
 
 template <StateType state_type>
 auto DfaState<state_type>::get_dest_state(uint32_t const character) const -> DfaState const* {
-    return get_transition(character)->get_dest_state();
+    return get_transition(character).get_dest_state();
 }
 
 template <StateType state_type>

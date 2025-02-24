@@ -44,11 +44,13 @@ auto Lexer<TypedNfaState, TypedDfaState>::flip_states(uint32_t old_storage_size)
 template <typename TypedNfaState, typename TypedDfaState>
 auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer
 ) -> std::pair<ErrorCode, std::optional<Token>> {
-    auto const* state = m_dfa->get_root();
+    TypedDfaState const* state;
     if (m_asked_for_more_data) {
-        state = m_prev_state;
+        state = m_dfa->set(m_prev_state);
         m_asked_for_more_data = false;
     } else {
+        m_dfa->reset();
+        state = m_dfa->get_root();
         if (m_match) {
             m_match = false;
             m_last_match_pos = m_match_pos;
@@ -69,10 +71,10 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer
         m_type_ids = nullptr;
     }
     while (true) {
-        auto prev_byte_buf_pos = input_buffer.storage().pos();
+        auto prev_byte_buf_pos{input_buffer.storage().pos()};
         auto next_char{utf8::cCharErr};
-        if (auto const err = input_buffer.get_next_character(next_char); ErrorCode::Success != err)
-        {
+        auto const err{input_buffer.get_next_character(next_char)};
+        if (ErrorCode::Success != err) {
             m_asked_for_more_data = true;
             m_prev_state = state;
             return {err, std::nullopt};
@@ -85,11 +87,13 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer
             m_match_pos = prev_byte_buf_pos;
             m_match_line = m_line;
         }
-        auto* dest_state = state->get_dest_state(next_char);
-        if (next_char == '\n') {
+        auto* dest_state{m_dfa->process_char(next_char, prev_byte_buf_pos)};
+        if ('\n' == next_char) {
             m_line++;
-            if (m_has_delimiters && !m_match) {
-                dest_state = m_dfa->get_root()->get_dest_state(next_char);
+            // The newline character itself needs to be treated as a match for non-timestamped logs.
+            if (m_has_delimiters && false == m_match) {
+                m_dfa.reset();
+                dest_state = m_dfa->process_char(next_char, prev_byte_buf_pos);
                 m_match = true;
                 m_type_ids = &(dest_state->get_matching_variable_ids());
                 m_start_pos = prev_byte_buf_pos;

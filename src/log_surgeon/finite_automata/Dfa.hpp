@@ -42,12 +42,24 @@ public:
      * and register values based on the transition.
      * @param next_char The character to transition on.
      * @param curr_pos The current position in the lexing.
+     * @return The destination state.
+     *
+     *
+     * This is what it should do, but for backward compatability its doing the above atm.
      * @return The destination state when it is accepting
      * @return `std::nullopt` when the state is not accepting.
      * @return `nullptr` when the input leads to a non-matching sequence.
+     *
+     *
+     * @throws `std::logic_error` if copy operation has no source register.
      * @throws `std::logic_error` if register operation has unhandlded type.
      */
-    auto process_char(char next_char, uint32_t curr_pos) -> std::optional<TypedDfaState*>;
+    auto process_char(char next_char, uint32_t curr_pos) -> TypedDfaState const*;
+
+    auto set(TypedDfaState const* prev_state) -> TypedDfaState const* {
+        m_curr_state = prev_state;
+        return m_curr_state;
+    }
 
     /**
      * @return A string representation of the DFA.
@@ -199,7 +211,7 @@ private:
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
     std::map<tag_id_t, reg_id_t> m_tag_id_to_final_reg_id;
     RegisterHandler m_reg_handler;
-    TypedDfaState* m_curr_state;
+    TypedDfaState const* m_curr_state;
 };
 
 template <typename TypedDfaState, typename TypedNfaState>
@@ -209,10 +221,14 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) : m_curr_s
 
 template <typename TypedDfaState, typename TypedNfaState>
 auto Dfa<TypedDfaState, TypedNfaState>::process_char(char const next_char, uint32_t const curr_pos)
-        -> std::optional<TypedDfaState*> {
+        -> TypedDfaState const* {
     auto const transition{m_curr_state->get_transition(next_char)};
-    auto const reg_ops{m_curr_state->get_reg_ops()};
+    m_curr_state = transition.get_dest_state();
+    if (nullptr == m_curr_state) {
+        return nullptr;
+    }
 
+    auto const reg_ops{transition.get_reg_ops()};
     for (auto const& reg_op : reg_ops) {
         switch (reg_op.get_type()) {
             case RegisterOperationType::Set: {
@@ -224,7 +240,12 @@ auto Dfa<TypedDfaState, TypedNfaState>::process_char(char const next_char, uint3
                 break;
             }
             case RegisterOperationType::Copy: {
-                m_reg_handler.copy_register(reg_op.get_reg_id(), reg_op.get_copy_reg_id());
+                auto copy_reg_id_optional{reg_op.get_copy_reg_id()};
+                if (copy_reg_id_optional.has_value()) {
+                    m_reg_handler.copy_register(reg_op.get_reg_id(), copy_reg_id_optional.value());
+                } else {
+                    throw std::logic_error("Copy operation does not specify register to copy.");
+                }
                 break;
             }
             default: {
@@ -232,15 +253,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::process_char(char const next_char, uint3
             }
         }
     }
-
-    m_curr_state = transition->get_dest_state();
-    if (nullptr == m_curr_state) {
-        return nullptr;
-    }
-    if (m_curr_state->is_accepting()) {
-        return m_curr_state;
-    }
-    return std::nullopt;
+    return m_curr_state;
 }
 
 // TODO: handle utf8 case in DFA generation.
