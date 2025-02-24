@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -92,7 +93,7 @@ public:
 
     auto set_root(TypedNfaState* root) -> void { m_root = root; }
 
-    auto get_root() -> TypedNfaState* { return m_root; }
+    auto get_root() const -> TypedNfaState* { return m_root; }
 
     [[nodiscard]] auto get_capture_to_tag_id_pair(
     ) const -> std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> const& {
