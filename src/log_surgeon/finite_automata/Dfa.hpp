@@ -12,19 +12,17 @@
 #include <log_surgeon/finite_automata/Nfa.hpp>
 
 namespace log_surgeon::finite_automata {
-template <typename TypedDfaState>
+template <typename TypedDfaState, typename TypedNfaState>
 class Dfa {
 public:
-    template <typename NfaStateType>
-    explicit Dfa(Nfa<NfaStateType> nfa);
+    explicit Dfa(Nfa<TypedNfaState> const& nfa);
 
     /**
      * Creates a new DFA state based on a set of NFA states and adds it to `m_states`.
      * @param nfa_state_set The set of NFA states represented by this DFA state.
      * @return A pointer to the new DFA state.
      */
-    template <typename TypedNfaState>
-    auto new_state(std::set<TypedNfaState*> const& nfa_state_set) -> TypedDfaState*;
+    auto new_state(std::set<TypedNfaState const*> const& nfa_state_set) -> TypedDfaState*;
 
     auto get_root() const -> TypedDfaState const* { return m_states.at(0).get(); }
 
@@ -33,6 +31,7 @@ public:
      * reachable by any type in `dfa_in`. A type is considered reachable if there is at least one
      * string for which: (1) this dfa returns a set of types containing the type, and (2) `dfa_in`
      * returns any non-empty set of types.
+     *
      * @param dfa_in The dfa with which to take the intersect.
      * @return The set of schema types reachable by `dfa_in`.
      */
@@ -42,9 +41,8 @@ private:
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
 };
 
-template <typename TypedDfaState>
-template <typename TypedNfaState>
-Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
+template <typename TypedDfaState, typename TypedNfaState>
+Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
     using StateSet = std::set<TypedNfaState const*>;
 
     std::map<StateSet, TypedDfaState*> dfa_states;
@@ -93,9 +91,9 @@ Dfa<TypedDfaState>::Dfa(Nfa<TypedNfaState> nfa) {
     }
 }
 
-template <typename TypedDfaState>
-template <typename TypedNfaState>
-auto Dfa<TypedDfaState>::new_state(std::set<TypedNfaState*> const& nfa_state_set
+template <typename TypedDfaState, typename TypedNfaState>
+auto Dfa<TypedDfaState, TypedNfaState>::new_state(
+        std::set<TypedNfaState const*> const& nfa_state_set
 ) -> TypedDfaState* {
     m_states.emplace_back(std::make_unique<TypedDfaState>());
     auto* dfa_state = m_states.back().get();
@@ -107,8 +105,9 @@ auto Dfa<TypedDfaState>::new_state(std::set<TypedNfaState*> const& nfa_state_set
     return dfa_state;
 }
 
-template <typename TypedDfaState>
-auto Dfa<TypedDfaState>::get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t> {
+template <typename TypedDfaState, typename TypedNfaState>
+auto Dfa<TypedDfaState, TypedNfaState>::get_intersect(Dfa const* dfa_in
+) const -> std::set<uint32_t> {
     std::set<uint32_t> schema_types;
     std::set<DfaStatePair<TypedDfaState>> unvisited_pairs;
     std::set<DfaStatePair<TypedDfaState>> visited_pairs;
