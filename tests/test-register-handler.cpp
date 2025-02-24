@@ -19,6 +19,10 @@ namespace {
 
 auto handler_init(size_t const num_registers) -> RegisterHandler {
     RegisterHandler handler;
+    if (0 == num_registers) {
+        return handler;
+    }
+
     handler.add_register();
     for (size_t i{1}; i < num_registers; ++i) {
         handler.add_register(i);
