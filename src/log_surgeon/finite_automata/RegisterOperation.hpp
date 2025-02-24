@@ -33,6 +33,8 @@ public:
 
     [[nodiscard]] auto get_type() const -> RegisterOperationType { return m_type; }
 
+    [[nodiscard]] auto get_copy_reg_id() const -> std::optional<reg_id_t> { return m_copy_reg_id; }
+
     /**
      * @return A string representation of the register opertion.
      */

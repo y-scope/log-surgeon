@@ -67,7 +67,13 @@ public:
 
     /**
      * @param character The character (byte or utf8) to transition on.
-     * @return The destination DFA state reached after transitioning on `character`.
+     * @return The transitions containing the register operations and destination state.
+     */
+    [[nodiscard]] auto get_transition(uint32_t character) const -> DfaTransition<state_type>;
+
+    /**
+     * @param character The character (byte or utf8) to transition on.
+     * @return The destination state after transitioning on `character`.
      */
     [[nodiscard]] auto get_dest_state(uint32_t character) const -> DfaState const*;
 
@@ -81,12 +87,12 @@ private:
 };
 
 template <StateType state_type>
-auto DfaState<state_type>::get_dest_state(uint32_t character) const -> DfaState const* {
+auto DfaState<state_type>::get_transition(uint32_t character) const -> DfaTransition<state_type> {
     if constexpr (StateType::Byte == state_type) {
-        return m_bytes_transition[character].get_dest_state();
+        return m_bytes_transition[character];
     } else {
         if (character < cSizeOfByte) {
-            return m_bytes_transition[character].get_dest_state();
+            return m_bytes_transition[character];
         }
         std::unique_ptr<std::vector<typename Tree::Data>> result
                 = m_tree_transitions.find(Interval(character, character));
@@ -96,6 +102,11 @@ auto DfaState<state_type>::get_dest_state(uint32_t character) const -> DfaState 
         }
         return nullptr;
     }
+}
+
+template <StateType state_type>
+auto DfaState<state_type>::get_dest_state(uint32_t const character) const -> DfaState const* {
+    return get_transition(character)->get_dest_state();
 }
 
 template <StateType state_type>

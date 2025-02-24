@@ -9,6 +9,7 @@
 #include <optional>
 #include <queue>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -40,9 +41,13 @@ public:
      * Determine the out-going transition  based on the input character. Update the current state
      * and register values based on the transition.
      * @param next_char The character to transition on.
-     * @return true when the destination state is accepting or there is no destination state.
+     * @param curr_pos The current position in the lexing.
+     * @return The destination state when it is accepting
+     * @return `std::nullopt` when the state is not accepting.
+     * @return `nullptr` when the input leads to a non-matching sequence.
+     * @throws `std::logic_error` if register operation has unhandlded type.
      */
-    auto process_char(char next_char) -> bool;
+    auto process_char(char next_char, uint32_t curr_pos) -> std::optional<TypedDfaState*>;
 
     /**
      * @return A string representation of the DFA.
@@ -203,15 +208,39 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) : m_curr_s
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
-auto Dfa<TypedDfaState, TypedNfaState>::process_char(char next_char) -> bool {
-    m_curr_state =  m_curr_state->get_dest_state(next_char);
+auto Dfa<TypedDfaState, TypedNfaState>::process_char(char const next_char, uint32_t const curr_pos)
+        -> std::optional<TypedDfaState*> {
+    auto const transition{m_curr_state->get_transition(next_char)};
+    auto const reg_ops{m_curr_state->get_reg_ops()};
+
+    for (auto const& reg_op : reg_ops) {
+        switch (reg_op.get_type()) {
+            case RegisterOperationType::Set: {
+                m_reg_handler.append_position(reg_op.get_reg_id(), curr_pos);
+                break;
+            }
+            case RegisterOperationType::Negate: {
+                m_reg_handler.append_position(reg_op.get_reg_id(), -1);
+                break;
+            }
+            case RegisterOperationType::Copy: {
+                m_reg_handler.copy_register(reg_op.get_reg_id(), reg_op.get_copy_reg_id());
+                break;
+            }
+            default: {
+                throw std::logic_error("Unhandled register operation type when simulating DFA.");
+            }
+        }
+    }
+
+    m_curr_state = transition->get_dest_state();
     if (nullptr == m_curr_state) {
-        return true;
+        return nullptr;
     }
-    if(m_curr_state->is_accepting()) {
-        return true;
+    if (m_curr_state->is_accepting()) {
+        return m_curr_state;
     }
-    return false;
+    return std::nullopt;
 }
 
 // TODO: handle utf8 case in DFA generation.
