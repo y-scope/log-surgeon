@@ -46,7 +46,7 @@ public:
      * @param character The character (byte or utf8) to transition on.
      * @return A pointer to the DFA state reached after transitioning on `character`.
      */
-    [[nodiscard]] auto next(uint32_t character) const -> DfaState*;
+    [[nodiscard]] auto get_dest_state(uint32_t character) const -> DfaState const*;
 
 private:
     std::vector<uint32_t> m_matching_variable_ids;
@@ -57,7 +57,7 @@ private:
 };
 
 template <StateType state_type>
-auto DfaState<state_type>::next(uint32_t character) const -> DfaState* {
+auto DfaState<state_type>::get_dest_state(uint32_t character) const -> DfaState const* {
     if constexpr (StateType::Byte == state_type) {
         return m_bytes_transition[character];
     } else {

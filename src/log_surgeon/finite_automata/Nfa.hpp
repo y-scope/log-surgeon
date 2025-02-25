@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -45,7 +46,7 @@ public:
 
     /*
      * @param matching_variable_id The id for the variable matched by this state.
-     * @return A point to the newly created accepting NFA state.
+     * @return A pointer to the newly created accepting NFA state.
      */
     [[nodiscard]] auto new_accepting_state(uint32_t matching_variable_id) -> TypedNfaState*;
 
@@ -92,7 +93,7 @@ public:
 
     auto set_root(TypedNfaState* root) -> void { m_root = root; }
 
-    auto get_root() -> TypedNfaState* { return m_root; }
+    auto get_root() const -> TypedNfaState* { return m_root; }
 
     [[nodiscard]] auto get_num_tags() const -> size_t { return m_tag_id_generator.get_num_ids(); }
 
@@ -153,6 +154,13 @@ auto Nfa<TypedNfaState>::new_accepting_state(uint32_t const matching_variable_id
             m_state_id_generator.generate_id(),
             matching_variable_id
     ));
+    return m_states.back().get();
+}
+
+template <typename TypedNfaState>
+auto Nfa<TypedNfaState>::new_accepting_state(uint32_t const matching_variable_id
+) -> TypedNfaState* {
+    m_states.emplace_back(std::make_unique<TypedNfaState>(matching_variable_id));
     return m_states.back().get();
 }
 
