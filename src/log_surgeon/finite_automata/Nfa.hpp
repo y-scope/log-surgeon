@@ -158,13 +158,6 @@ auto Nfa<TypedNfaState>::new_accepting_state(uint32_t const matching_variable_id
 }
 
 template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::new_accepting_state(uint32_t const matching_variable_id
-) -> TypedNfaState* {
-    m_states.emplace_back(std::make_unique<TypedNfaState>(matching_variable_id));
-    return m_states.back().get();
-}
-
-template <typename TypedNfaState>
 auto Nfa<TypedNfaState>::new_state_from_negative_captures(
         std::vector<Capture const*> const& captures,
         TypedNfaState const* dest_state
