@@ -95,7 +95,7 @@ public:
 
     auto get_root() const -> TypedNfaState* { return m_root; }
 
-    [[nodiscard]] auto get_num_tags() const -> size_t { return m_tag_id_generator.get_num_ids(); }
+    [[nodiscard]] auto get_num_tags() const -> uint32_t { return m_tag_id_generator.get_num_ids(); }
 
     [[nodiscard]] auto get_capture_to_tag_id_pair(
     ) const -> std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> const& {
