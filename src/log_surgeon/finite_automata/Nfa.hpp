@@ -46,7 +46,7 @@ public:
 
     /*
      * @param matching_variable_id The id for the variable matched by this state.
-     * @return A point to the newly created accepting NFA state.
+     * @return A pointer to the newly created accepting NFA state.
      */
     [[nodiscard]] auto new_accepting_state(uint32_t matching_variable_id) -> TypedNfaState*;
 
@@ -95,7 +95,7 @@ public:
 
     auto get_root() const -> TypedNfaState* { return m_root; }
 
-    [[nodiscard]] auto get_num_tags() const -> size_t { return m_tag_id_generator.get_num_ids(); }
+    [[nodiscard]] auto get_num_tags() const -> uint32_t { return m_tag_id_generator.get_num_ids(); }
 
     [[nodiscard]] auto get_capture_to_tag_id_pair(
     ) const -> std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> const& {
