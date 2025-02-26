@@ -162,7 +162,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_bfs_traversal_order(
         auto const* current_state = state_queue.front();
         visited_order.push_back(current_state);
         state_queue.pop();
-        // TODO: handle the utf8 case
+        // TODO: Handle the utf8 case
         for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
             auto const dest_state{current_state->get_dest_state(idx)};
             if (nullptr != dest_state) {
