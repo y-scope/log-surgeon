@@ -32,22 +32,27 @@ class NfaState;
 using ByteNfaState = NfaState<StateType::Byte>;
 using Utf8NfaState = NfaState<StateType::Utf8>;
 
+using state_id_t = uint32_t;
+
 template <StateType state_type>
 class NfaState {
 public:
     using Tree = UnicodeIntervalTree<NfaState*>;
 
-    explicit NfaState() {}
+    explicit NfaState(state_id_t const id) : m_id{id} {}
 
-    NfaState(uint32_t const matching_variable_id)
-            : m_accepting{true},
+    NfaState(state_id_t const id, uint32_t const matching_variable_id)
+            : m_id{id},
+              m_accepting{true},
               m_matching_variable_id{matching_variable_id} {}
 
     NfaState(
+            state_id_t const id,
             TagOperationType const op_type,
             std::vector<tag_id_t> const& tag_ids,
             NfaState const* dest_state
-    ) {
+    )
+            : m_id{id} {
         add_spontaneous_transition(op_type, tag_ids, dest_state);
     }
 
@@ -96,6 +101,8 @@ public:
 
     [[nodiscard]] auto is_accepting() const -> bool const& { return m_accepting; }
 
+    [[nodiscard]] auto get_id() const -> state_id_t { return m_id; }
+
     [[nodiscard]] auto get_matching_variable_id() const -> uint32_t {
         return m_matching_variable_id;
     }
@@ -112,6 +119,7 @@ public:
     [[nodiscard]] auto get_tree_transitions() -> Tree const& { return m_tree_transitions; }
 
 private:
+    uint32_t m_id;
     bool m_accepting{false};
     uint32_t m_matching_variable_id{0};
     std::vector<NfaSpontaneousTransition<NfaState>> m_spontaneous_transitions;
