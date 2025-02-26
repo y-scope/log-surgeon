@@ -24,6 +24,7 @@ public:
     using position_t = int32_t;
 
     static constexpr id_t cRootId{0};
+    static constexpr position_t cDefaultPos{0};
 
     PrefixTree() : m_nodes{{std::nullopt, -1}} {}
 

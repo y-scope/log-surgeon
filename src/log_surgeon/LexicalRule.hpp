@@ -2,7 +2,9 @@
 #define LOG_SURGEON_LEXICAL_RULE_HPP
 #include <cstdint>
 #include <memory>
+#include <vector>
 
+#include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 
 namespace log_surgeon {
@@ -41,9 +43,7 @@ private:
 
 template <typename TypedNfaState>
 void LexicalRule<TypedNfaState>::add_to_nfa(finite_automata::Nfa<TypedNfaState>* nfa) const {
-    auto* end_state = nfa->new_state();
-    end_state->set_accepting(true);
-    end_state->set_matching_variable_id(m_variable_id);
+    auto* end_state = nfa->new_accepting_state(m_variable_id);
     m_regex->add_to_nfa_with_negative_captures(nfa, end_state);
 }
 }  // namespace log_surgeon

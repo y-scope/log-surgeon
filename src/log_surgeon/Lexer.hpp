@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -118,7 +119,7 @@ public:
     }
 
     [[nodiscard]] auto get_dfa(
-    ) const -> std::unique_ptr<finite_automata::Dfa<TypedDfaState>> const& {
+    ) const -> std::unique_ptr<finite_automata::Dfa<TypedDfaState, TypedNfaState>> const& {
         return m_dfa;
     }
 
@@ -212,7 +213,7 @@ private:
     std::vector<LexicalRule<TypedNfaState>> m_rules;
     uint32_t m_line{0};
     bool m_has_delimiters{false};
-    std::unique_ptr<finite_automata::Dfa<TypedDfaState>> m_dfa;
+    std::unique_ptr<finite_automata::Dfa<TypedDfaState, TypedNfaState>> m_dfa;
     bool m_asked_for_more_data{false};
     TypedDfaState const* m_prev_state{nullptr};
     std::unordered_map<rule_id_t, std::vector<capture_id_t>> m_rule_id_to_capture_ids;

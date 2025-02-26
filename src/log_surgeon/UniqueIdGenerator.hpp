@@ -8,6 +8,8 @@ class UniqueIdGenerator {
 public:
     [[nodiscard]] auto generate_id() -> uint32_t { return m_current_id++; }
 
+    [[nodiscard]] auto get_num_ids() const -> uint32_t { return m_current_id; }
+
 private:
     uint32_t m_current_id{0};
 };
