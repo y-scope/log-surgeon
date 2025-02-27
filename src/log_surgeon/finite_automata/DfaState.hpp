@@ -49,8 +49,7 @@ public:
         return false == m_matching_variable_ids.empty();
     }
 
-    auto
-    add_byte_transition(uint8_t const byte, DfaTransition<state_type> dfa_transition) -> void {
+    auto add_byte_transition(uint8_t const byte, DfaTransition<state_type> dfa_transition) -> void {
         m_bytes_transition[byte] = dfa_transition;
     }
 
