@@ -79,7 +79,7 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
         std::map<uint8_t, StateSet> ascii_transitions_map;
         // map<Interval, StateSet> transitions_map;
         for (auto const* s0 : set) {
-            for (uint8_t i{0}; i < cSizeOfByte; ++i) {
+            for (uint16_t i{0}; i < cSizeOfByte; ++i) {
                 for (auto* const s1 : s0->get_byte_transitions(i)) {
                     StateSet closure = s1->epsilon_closure();
                     ascii_transitions_map[i].insert(closure.begin(), closure.end());
