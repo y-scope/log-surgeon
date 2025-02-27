@@ -98,7 +98,7 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
             }
             return state;
         };
-        for (auto const [byte, nfa_state_set] : ascii_transitions_map) {
+        for (auto const& [byte, nfa_state_set] : ascii_transitions_map) {
             auto* dest_state{next_dfa_state(nfa_state_set)};
             dfa_state->add_byte_transition(byte, {{}, dest_state});
         }
