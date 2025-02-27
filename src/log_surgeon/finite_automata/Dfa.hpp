@@ -76,10 +76,10 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
         auto set = unmarked_sets.top();
         unmarked_sets.pop();
         auto* dfa_state = dfa_states.at(set);
-        std::map<uint32_t, StateSet> ascii_transitions_map;
+        std::map<uint8_t, StateSet> ascii_transitions_map;
         // map<Interval, StateSet> transitions_map;
         for (auto const* s0 : set) {
-            for (uint32_t i = 0; i < cSizeOfByte; i++) {
+            for (uint8_t i{0}; i < cSizeOfByte; ++i) {
                 for (auto* const s1 : s0->get_byte_transitions(i)) {
                     StateSet closure = s1->epsilon_closure();
                     ascii_transitions_map[i].insert(closure.begin(), closure.end());
@@ -98,9 +98,9 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
             }
             return state;
         };
-        for (auto const& kv : ascii_transitions_map) {
-            auto* dest_state = next_dfa_state(kv.second);
-            dfa_state->add_byte_transition(kv.first, {{}, dest_state});
+        for (auto const [byte, nfa_state_set] : ascii_transitions_map) {
+            auto* dest_state{next_dfa_state(nfa_state_set)};
+            dfa_state->add_byte_transition(byte, {{}, dest_state});
         }
         // TODO: add this for the utf8 case
     }
