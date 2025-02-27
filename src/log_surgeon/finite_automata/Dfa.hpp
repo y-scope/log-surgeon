@@ -178,7 +178,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::string {
     auto const traversal_order = get_bfs_traversal_order();
 
     std::unordered_map<TypedDfaState const*, uint32_t> state_ids;
-    state_ids.reserve(traversal_oerder.size());
+    state_ids.reserve(traversal_order.size());
     for (auto const* state : traversal_order) {
         state_ids.emplace(state, state_ids.size());
     }
