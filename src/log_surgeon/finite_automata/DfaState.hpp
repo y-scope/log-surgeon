@@ -97,12 +97,11 @@ auto DfaState<state_type>::get_dest_state(uint32_t character) const -> DfaState 
 template <StateType state_type>
 auto DfaState<state_type>::serialize(std::unordered_map<DfaState const*, uint32_t> const& state_ids
 ) const -> std::string {
-    auto const accepting_tags_string = is_accepting()
-                                               ? fmt::format(
-                                                         "accepting_tags={{{}}},",
-                                                         fmt::join(m_matching_variable_ids, ",")
-                                                 )
-                                               : "";
+    auto const accepting_tags_string{
+            is_accepting()
+                    ? fmt::format("accepting_tags={{{}}},", fmt::join(m_matching_variable_ids, ","))
+                    : ""
+    };
 
     std::vector<std::string> accepting_op_strings;
     for (auto const& accepting_op : m_accepting_ops) {
