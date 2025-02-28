@@ -38,7 +38,7 @@ public:
     [[nodiscard]] auto get_type() const -> Type { return m_type; }
 
     /**
-     * @return A string representation of the register opertion.
+     * @return A string representation of the register operation.
      */
     [[nodiscard]] auto serialize() const -> std::optional<std::string> {
         switch (m_type) {
