@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE
 #define LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE
 
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -31,11 +32,7 @@ class DfaState {
 public:
     using Tree = UnicodeIntervalTree<DfaState*>;
 
-    DfaState() {
-        for (auto& transition : m_bytes_transition) {
-            transition = DfaTransition<state_type>{{}, nullptr};
-        }
-    }
+    DfaState() { m_bytes_transition.fill(DfaTransition<state_type>{{}, nullptr}); }
 
     auto add_matching_variable_id(uint32_t const variable_id) -> void {
         m_matching_variable_ids.push_back(variable_id);
@@ -73,7 +70,7 @@ public:
 private:
     std::vector<uint32_t> m_matching_variable_ids;
     std::vector<RegisterOperation> m_accepting_ops;
-    DfaTransition<state_type> m_bytes_transition[cSizeOfByte];
+    std::array<DfaTransition<state_type>, cSizeOfByte> m_bytes_transition;
     // NOTE: We don't need m_tree_transitions for the `state_type == StateType::Byte` case, so we
     // use an empty class (`std::tuple<>`) in that case.
     std::conditional_t<state_type == StateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
