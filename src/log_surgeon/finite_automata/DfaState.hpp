@@ -110,11 +110,13 @@ auto DfaState<state_type>::serialize(std::unordered_map<DfaState const*, uint32_
             accepting_op_strings.push_back(serialized_accepting_op.value());
         }
     }
-    auto const accepting_ops_string = is_accepting() ? fmt::format(
-                                                               "accepting_operations={{{}}},",
-                                                               fmt::join(accepting_op_strings, ",")
-                                                       )
-                                                     : "";
+    auto const accepting_ops_string{
+            is_accepting() ? fmt::format(
+                                     "accepting_operations={{{}}},",
+                                     fmt::join(accepting_op_strings, ",")
+                             )
+                           : ""
+    };
 
     std::vector<std::string> transition_strings;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
