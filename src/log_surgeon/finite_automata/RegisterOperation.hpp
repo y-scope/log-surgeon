@@ -38,9 +38,12 @@ public:
     [[nodiscard]] auto get_type() const -> Type { return m_type; }
 
     /**
-     * @return A string representation of the register operation.
-     * @return `std::nullopt` if `m_type` is not a valid type.
-     * @return `std::nullopt` if `m_type` is `Copy` and `m_copy_reg_id` is `std::nullopt`.
+     * Serializes the register operation into a string representation.
+     *
+     * @return A formatted string encoding the operation.
+     * @return `std::nullopt` if:
+     * - the operation type is invalid.
+     * - no source register is specified for a copy operation.
      */
     [[nodiscard]] auto serialize() const -> std::optional<std::string> {
         switch (m_type) {
