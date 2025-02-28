@@ -105,7 +105,7 @@ auto DfaState<state_type>::serialize(std::unordered_map<DfaState const*, uint32_
 
     std::vector<std::string> accepting_op_strings;
     for (auto const& accepting_op : m_accepting_ops) {
-        auto serialized_accepting_op{accepting_op.serialize()};
+        auto const serialized_accepting_op{accepting_op.serialize()};
         if (serialized_accepting_op.has_value()) {
             accepting_op_strings.push_back(serialized_accepting_op.value());
         }
