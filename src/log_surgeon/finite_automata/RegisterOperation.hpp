@@ -39,6 +39,8 @@ public:
 
     /**
      * @return A string representation of the register operation.
+     * @return `std::nullopt` if `m_type` is not a valid type.
+     * @return `std::nullopt` if `m_type` is `Copy` and `m_copy_reg_id` is `std::nullopt`.
      */
     [[nodiscard]] auto serialize() const -> std::optional<std::string> {
         switch (m_type) {
@@ -52,7 +54,7 @@ public:
             case Type::Negate:
                 return fmt::format("{}{}", m_reg_id, "n");
             default:
-                return fmt::format("{}{}", m_reg_id, "?");
+                return std::nullopt;
         }
     }
 
