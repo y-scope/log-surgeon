@@ -10,6 +10,12 @@
 #include <log_surgeon/types.hpp>
 
 namespace log_surgeon::finite_automata {
+/**
+ * Represents a register operation:
+ * - A register ID specifying which register the operation applies to.
+ * - An operation type: `Copy`, `Set`, or `Negate`.
+ * - An optional source register ID for copy operations.
+ */
 class RegisterOperation {
     enum class Type : uint8_t {
         Copy,
