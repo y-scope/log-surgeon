@@ -43,7 +43,7 @@ public:
 
 private:
     std::vector<RegisterOperation> m_reg_ops;
-    DfaState<state_type>* m_dest_state{nullptr};
+    DfaState<state_type> const* m_dest_state{nullptr};
 };
 
 template <StateType state_type>
