@@ -27,7 +27,7 @@ public:
             : m_reg_ops{std::move(reg_ops)},
               m_dest_state{dest_state} {}
 
-    [[nodiscard]] auto get_reg_ops() const -> std::vector<RegisterOperation> { return m_reg_ops; }
+    [[nodiscard]] auto get_reg_ops() const -> std::vector<RegisterOperation> const& { return m_reg_ops; }
 
     [[nodiscard]] auto get_dest_state() const -> DfaState<state_type> const* {
         return m_dest_state;
