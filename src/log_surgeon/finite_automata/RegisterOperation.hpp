@@ -24,12 +24,18 @@ class RegisterOperation {
     };
 
 public:
-    RegisterOperation(reg_id_t const reg_id, Type const type) : m_reg_id{reg_id}, m_type{type} {}
+    static auto create_set_operation(reg_id_t const reg_id) -> RegisterOperation {
+        return {reg_id, Type::Set};
+    }
 
-    RegisterOperation(reg_id_t const reg_id, reg_id_t const copy_reg_id)
-            : m_reg_id{reg_id},
-              m_type{Type::Copy},
-              m_copy_reg_id{copy_reg_id} {}
+    static auto create_negate_operation(reg_id_t const reg_id) -> RegisterOperation {
+        return {reg_id, Type::Negate};
+    }
+
+    static auto create_copy_operation(reg_id_t const dest_reg_id, reg_id_t const src_reg_id)
+            -> RegisterOperation {
+        return {dest_reg_id, src_reg_id};
+    }
 
     auto set_reg_id(reg_id_t const reg_id) -> void { m_reg_id = reg_id; }
 
@@ -62,6 +68,13 @@ public:
     }
 
 private:
+    RegisterOperation(reg_id_t const reg_id, Type const type) : m_reg_id{reg_id}, m_type{type} {}
+
+    RegisterOperation(reg_id_t const reg_id, reg_id_t const copy_reg_id)
+            : m_reg_id{reg_id},
+              m_type{Type::Copy},
+              m_copy_reg_id{copy_reg_id} {}
+
     reg_id_t m_reg_id;
     Type m_type;
     std::optional<reg_id_t> m_copy_reg_id{std::nullopt};
