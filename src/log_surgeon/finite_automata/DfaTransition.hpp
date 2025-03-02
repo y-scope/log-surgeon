@@ -18,6 +18,12 @@ namespace log_surgeon::finite_automata {
 template <StateType state_type>
 class DfaState;
 
+/**
+ * Represents a transition in a DFA. This includes a destination state, as well as all the register
+ * operation to perform when taking this transition.
+ *
+ * @tparam state_type Specifies the type of transition (bytes or UTF-8 characters).
+ */
 template <StateType state_type>
 class DfaTransition {
 public:
@@ -27,7 +33,9 @@ public:
             : m_reg_ops{std::move(reg_ops)},
               m_dest_state{dest_state} {}
 
-    [[nodiscard]] auto get_reg_ops() const -> std::vector<RegisterOperation> const& { return m_reg_ops; }
+    [[nodiscard]] auto get_reg_ops() const -> std::vector<RegisterOperation> const& {
+        return m_reg_ops;
+    }
 
     [[nodiscard]] auto get_dest_state() const -> DfaState<state_type> const* {
         return m_dest_state;
