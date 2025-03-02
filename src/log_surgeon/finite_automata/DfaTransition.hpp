@@ -62,7 +62,7 @@ auto DfaTransition<state_type>::serialize(
         if (false == optional_serialized_op.has_value()) {
             return std::nullopt;
         }
-        transformed_ops.push_back(optional_serialized_op.value());
+        transformed_ops.emplace_back(optional_serialized_op.value());
     }
 
     return fmt::format("-({})->{}", fmt::join(transformed_ops, ","), state_ids.at(m_dest_state));
