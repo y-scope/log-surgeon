@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <stack>
 #include <vector>
@@ -23,8 +24,9 @@ public:
 
     /**
      * @return A string representation of the DFA.
+     * @return Forwards `DfaState::serialize`'s return value (std::nullopt) on failure.
      */
-    [[nodiscard]] auto serialize() const -> std::string;
+    [[nodiscard]] auto serialize() const -> std::optional<std::string>;
 
     /**
      * Creates a new DFA state based on a set of NFA states and adds it to `m_states`.
@@ -164,8 +166,9 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_bfs_traversal_order(
         state_queue.pop();
         // TODO: Handle the utf8 case
         for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
-            auto const dest_state{current_state->get_dest_state(idx)};
-            if (nullptr != dest_state) {
+            auto const& transition{current_state->get_transition(idx)};
+            if (transition.has_value()) {
+                auto const* dest_state{transition->get_dest_state()};
                 try_add_to_queue_and_visited(dest_state);
             }
         }
@@ -174,7 +177,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_bfs_traversal_order(
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
-auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::string {
+auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::optional<std::string> {
     auto const traversal_order = get_bfs_traversal_order();
 
     std::unordered_map<TypedDfaState const*, uint32_t> state_ids;
@@ -185,7 +188,11 @@ auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::string {
 
     std::vector<std::string> serialized_states;
     for (auto const* state : traversal_order) {
-        serialized_states.emplace_back(state->serialize(state_ids));
+        auto const optional_serialized_state{state->serialize(state_ids)};
+        if (false == optional_serialized_state.has_value()) {
+            return std::nullopt;
+        }
+        serialized_states.emplace_back(optional_serialized_state.value());
     }
     return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
 }

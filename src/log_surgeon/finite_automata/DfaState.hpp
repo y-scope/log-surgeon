@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -32,7 +33,7 @@ class DfaState {
 public:
     using Tree = UnicodeIntervalTree<DfaState*>;
 
-    DfaState() { m_bytes_transition.fill(DfaTransition<state_type>{{}, nullptr}); }
+    DfaState() = default;
 
     auto add_matching_variable_id(uint32_t const variable_id) -> void {
         m_matching_variable_ids.push_back(variable_id);
@@ -57,46 +58,41 @@ public:
     /**
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the DFA state.
+     * @return Forwards `DfaTransition::serialize`'s return value (std::nullopt) on failure.
      */
     [[nodiscard]] auto serialize(std::unordered_map<DfaState const*, uint32_t> const& state_ids
-    ) const -> std::string;
+    ) const -> std::optional<std::string>;
 
     /**
      * @param character The character (byte or utf8) to transition on.
-     * @return The destination DFA state reached after transitioning on `character`.
+     * @return The transition, which contains the register operations and destination state.
      */
-    [[nodiscard]] auto get_dest_state(uint32_t character) const -> DfaState const*;
+    [[nodiscard]] auto get_transition(uint32_t character
+    ) const -> std::optional<DfaTransition<state_type>> const&;
 
 private:
     std::vector<uint32_t> m_matching_variable_ids;
     std::vector<RegisterOperation> m_accepting_ops;
-    std::array<DfaTransition<state_type>, cSizeOfByte> m_bytes_transition;
+    std::array<std::optional<DfaTransition<state_type>>, cSizeOfByte> m_bytes_transition;
     // NOTE: We don't need m_tree_transitions for the `state_type == StateType::Byte` case, so we
     // use an empty class (`std::tuple<>`) in that case.
     std::conditional_t<state_type == StateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
 
 template <StateType state_type>
-auto DfaState<state_type>::get_dest_state(uint32_t character) const -> DfaState const* {
+auto DfaState<state_type>::get_transition(uint32_t character
+) const -> std::optional<DfaTransition<state_type>> const& {
     if constexpr (StateType::Byte == state_type) {
-        return m_bytes_transition[character].get_dest_state();
+        return m_bytes_transition[character];
     } else {
-        if (character < cSizeOfByte) {
-            return m_bytes_transition[character].get_dest_state();
-        }
-        std::unique_ptr<std::vector<typename Tree::Data>> result
-                = m_tree_transitions.find(Interval(character, character));
-        assert(result->size() <= 1);
-        if (false == result->empty()) {
-            return result->front().m_value.get_dest_state();
-        }
-        return nullptr;
+        // Handle utf8 case
+        return std::nullopt;
     }
 }
 
 template <StateType state_type>
 auto DfaState<state_type>::serialize(std::unordered_map<DfaState const*, uint32_t> const& state_ids
-) const -> std::string {
+) const -> std::optional<std::string> {
     auto const accepting_tags_string{
             is_accepting()
                     ? fmt::format("accepting_tags={{{}}},", fmt::join(m_matching_variable_ids, ","))
@@ -120,12 +116,16 @@ auto DfaState<state_type>::serialize(std::unordered_map<DfaState const*, uint32_
 
     std::vector<std::string> transition_strings;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
-        auto const byte_transition_string{m_bytes_transition[idx].serialize(state_ids)};
-        if (byte_transition_string.has_value()) {
-            transition_strings.push_back(
-                    fmt::format("{}{}", static_cast<char>(idx), byte_transition_string.value())
-            );
+        if (false == m_bytes_transition[idx].has_value()) {
+            continue;
         }
+        auto const optional_byte_transition_string{m_bytes_transition[idx]->serialize(state_ids)};
+        if (false == optional_byte_transition_string.has_value()) {
+            return std::nullopt;
+        }
+        transition_strings.emplace_back(
+                fmt::format("{}{}", static_cast<char>(idx), optional_byte_transition_string.value())
+        );
     }
 
     return fmt::format(
