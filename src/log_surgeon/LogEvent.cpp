@@ -91,6 +91,7 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
             m_buffer[curr_pos] = c;
             curr_pos++;
         }
+        // TODO: this is bad the token class should handle this copy, now the regs are missing
         Token copied_token{
                 start_pos,
                 curr_pos,

@@ -26,6 +26,7 @@
 #include <log_surgeon/finite_automata/RegisterHandler.hpp>
 #include <log_surgeon/finite_automata/RegisterOperation.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
+#include <log_surgeon/Token.hpp>
 
 namespace log_surgeon::finite_automata {
 template <typename TypedDfaState, typename TypedNfaState>
@@ -45,7 +46,7 @@ public:
      * @return The destination state.
      *
      *
-     * This is what it should do, but for backward compatability its doing the above atm.
+     * This is what it should return, but for backward compatability its doing the above atm.
      * @return The destination state when it is accepting
      * @return `std::nullopt` when the state is not accepting.
      * @return `nullptr` when the input leads to a non-matching sequence.
@@ -81,6 +82,12 @@ public:
 
     [[nodiscard]] auto get_tag_id_to_final_reg_id() const -> std::map<tag_id_t, reg_id_t> {
         return m_tag_id_to_final_reg_id;
+    }
+
+    auto release_reg_handler(Token& token) -> void {
+        token.set_reg_handler(std::move(m_reg_handler));
+        m_reg_handler = RegisterHandler();
+        m_reg_handler.add_registers(m_num_regs);
     }
 
 private:
@@ -212,6 +219,7 @@ private:
     std::map<tag_id_t, reg_id_t> m_tag_id_to_final_reg_id;
     RegisterHandler m_reg_handler;
     TypedDfaState const* m_curr_state;
+    size_t m_num_regs{0};
 };
 
 template <typename TypedDfaState, typename TypedNfaState>
@@ -292,6 +300,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) 
             dfa_state->add_byte_transition(ascii_value, {reg_ops, dest_state});
         }
     }
+    m_num_regs = m_reg_handler.get_num_regs();
 }
 
 template <typename TypedDfaState, typename TypedNfaState>

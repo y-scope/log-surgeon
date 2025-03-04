@@ -1,14 +1,19 @@
 #ifndef LOG_SURGEON_TOKEN_HPP
 #define LOG_SURGEON_TOKEN_HPP
 
-#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include <log_surgeon/finite_automata/RegisterHandler.hpp>
+
 namespace log_surgeon {
 class Token {
 public:
+    auto set_reg_handler(finite_automata::RegisterHandler reg_handler) -> void {
+        m_reg_handler = std::move(reg_handler);
+    }
+
     /**
      * @return The token's value as a string
      */
@@ -41,6 +46,7 @@ public:
     uint32_t m_buffer_size{0};
     uint32_t m_line{0};
     std::vector<uint32_t> const* m_type_ids_ptr{nullptr};
+    finite_automata::RegisterHandler m_reg_handler{};
     std::string m_wrap_around_string{};
 };
 }  // namespace log_surgeon

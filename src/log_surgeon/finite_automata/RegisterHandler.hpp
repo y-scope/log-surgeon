@@ -60,6 +60,8 @@ public:
         return m_prefix_tree.get_reversed_positions(m_registers.at(reg_id));
     }
 
+    [[nodiscard]] auto get_num_regs() const -> size_t { return m_registers.size(); }
+
 private:
     PrefixTree m_prefix_tree;
     std::vector<PrefixTree::id_t> m_registers;
