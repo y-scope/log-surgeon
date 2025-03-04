@@ -19,8 +19,9 @@ template <StateType state_type>
 class DfaState;
 
 /**
- * Represents a transition in a DFA. This includes a destination state, as well as all the register
- * operation to perform when taking this transition.
+ * Represents a transition in a DFA. A transition consists of:
+ * - A destination state.
+ * - A set of register operations to be performed when the transition is taken.
  *
  * @tparam state_type Specifies the type of transition (bytes or UTF-8 characters).
  */
