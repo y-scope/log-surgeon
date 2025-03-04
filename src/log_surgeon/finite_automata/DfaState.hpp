@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE
 #define LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE
 
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -31,11 +32,7 @@ class DfaState {
 public:
     using Tree = UnicodeIntervalTree<DfaState*>;
 
-    DfaState() {
-        for (auto& transition : m_bytes_transition) {
-            transition = DfaTransition<state_type>{{}, nullptr};
-        }
-    }
+    DfaState() { m_bytes_transition.fill(DfaTransition<state_type>{{}, nullptr}); }
 
     auto add_matching_variable_id(uint32_t const variable_id) -> void {
         m_matching_variable_ids.push_back(variable_id);
@@ -49,8 +46,7 @@ public:
         return false == m_matching_variable_ids.empty();
     }
 
-    auto
-    add_byte_transition(uint8_t const& byte, DfaTransition<state_type> dfa_transition) -> void {
+    auto add_byte_transition(uint8_t const byte, DfaTransition<state_type> dfa_transition) -> void {
         m_bytes_transition[byte] = dfa_transition;
     }
 
@@ -80,7 +76,7 @@ public:
 private:
     std::vector<uint32_t> m_matching_variable_ids;
     std::vector<RegisterOperation> m_accepting_ops;
-    DfaTransition<state_type> m_bytes_transition[cSizeOfByte];
+    std::array<DfaTransition<state_type>, cSizeOfByte> m_bytes_transition;
     // NOTE: We don't need m_tree_transitions for the `state_type == StateType::Byte` case, so we
     // use an empty class (`std::tuple<>`) in that case.
     std::conditional_t<state_type == StateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
@@ -112,25 +108,26 @@ auto DfaState<state_type>::get_dest_state(uint32_t const character) const -> Dfa
 template <StateType state_type>
 auto DfaState<state_type>::serialize(std::unordered_map<DfaState const*, uint32_t> const& state_ids
 ) const -> std::string {
-    auto const accepting_tags_string = is_accepting()
-                                               ? fmt::format(
-                                                         "accepting_tags={{{}}},",
-                                                         fmt::join(m_matching_variable_ids, ",")
-                                                 )
-                                               : "";
+    auto const accepting_tags_string{
+            is_accepting()
+                    ? fmt::format("accepting_tags={{{}}},", fmt::join(m_matching_variable_ids, ","))
+                    : ""
+    };
 
     std::vector<std::string> accepting_op_strings;
     for (auto const& accepting_op : m_accepting_ops) {
-        auto serialized_accepting_op{accepting_op.serialize()};
+        auto const serialized_accepting_op{accepting_op.serialize()};
         if (serialized_accepting_op.has_value()) {
             accepting_op_strings.push_back(serialized_accepting_op.value());
         }
     }
-    auto const accepting_ops_string = is_accepting() ? fmt::format(
-                                                               "accepting_operations={{{}}},",
-                                                               fmt::join(accepting_op_strings, ",")
-                                                       )
-                                                     : "";
+    auto const accepting_ops_string{
+            is_accepting() ? fmt::format(
+                                     "accepting_operations={{{}}},",
+                                     fmt::join(accepting_op_strings, ",")
+                             )
+                           : ""
+    };
 
     std::vector<std::string> transition_strings;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
