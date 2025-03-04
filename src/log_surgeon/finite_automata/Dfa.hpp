@@ -357,11 +357,6 @@ auto Dfa<TypedDfaState, TypedNfaState>::assign_transition_reg_ops(
                     tag_id_with_op_to_reg_id.emplace(tag_id, m_reg_handler.add_register());
                 }
                 auto reg_id = tag_id_with_op_to_reg_id.at(tag_id);
-                auto op_type{
-                        TagOperationType::Set == tag_op.get_type() ? RegisterOperation::Type::Set
-                                                                   : RegisterOperation::Type::Negate
-                };
-                RegisterOperation const new_reg_op{reg_id, op_type};
                 if (std::none_of(
                             reg_ops.begin(),
                             reg_ops.end(),
@@ -370,7 +365,11 @@ auto Dfa<TypedDfaState, TypedNfaState>::assign_transition_reg_ops(
                             }
                     ))
                 {
-                    reg_ops.push_back(new_reg_op);
+                    if (TagOperationType::Set == tag_op.get_type()) {
+                        reg_ops.emplace_back(RegisterOperation::create_set_operation(reg_id));
+                    } else if (TagOperationType::Negate == tag_op.get_type()) {
+                        reg_ops.emplace_back(RegisterOperation::create_negate_operation(reg_id));
+                    }
                 }
                 config.set_reg_id(tag_id, tag_id_with_op_to_reg_id.at(tag_id));
             }
@@ -399,7 +398,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::reassign_transition_reg_ops(
             }
         }
         if (false == is_existing_reg_op_mapping) {
-            reg_ops.emplace_back(new_reg_id, old_reg_id);
+            reg_ops.emplace_back(RegisterOperation::create_copy_operation(new_reg_id, old_reg_id));
         }
     }
 }
@@ -417,18 +416,22 @@ auto Dfa<TypedDfaState, TypedNfaState>::new_state(
             dfa_state->add_matching_variable_id(nfa_state->get_matching_variable_id());
             for (auto const [tag_id, final_reg_id] : tag_id_to_final_reg_id) {
                 auto const optional_tag_op{config.get_tag_lookahead(tag_id)};
-
                 if (optional_tag_op.has_value()) {
-                    auto op_type{
-                            TagOperationType::Set == optional_tag_op.value().get_type()
-                                    ? RegisterOperationType::Set
-                                    : RegisterOperationType::Negate
-                    };
-                    dfa_state->add_accepting_op({final_reg_id, op_type});
+                    if (TagOperationType::Set == optional_tag_op.value().get_type()) {
+                        dfa_state->add_accepting_op(
+                                RegisterOperation::create_set_operation(final_reg_id)
+                        );
+                    } else if (TagOperationType::Negate == optional_tag_op.value().get_type()) {
+                        dfa_state->add_accepting_op(
+                                RegisterOperation::create_negate_operation(final_reg_id)
+                        );
+                    }
                 } else {
                     // Note: `config` must have a reg for this tag so we just call `at`.
                     auto const prev_reg_id{config.get_tag_id_to_reg_ids().at(tag_id)};
-                    dfa_state->add_accepting_op({final_reg_id, prev_reg_id});
+                    dfa_state->add_accepting_op(
+                            RegisterOperation::create_copy_operation(final_reg_id, prev_reg_id)
+                    );
                 }
             }
         }
