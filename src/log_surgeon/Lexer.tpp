@@ -44,7 +44,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::flip_states(uint32_t old_storage_size)
 template <typename TypedNfaState, typename TypedDfaState>
 auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer
 ) -> std::pair<ErrorCode, std::optional<Token>> {
-    TypedDfaState const* state{m_dfa->get_root()};
+    auto const* state{m_dfa->get_root()};
     if (m_asked_for_more_data) {
         state = m_prev_state;
         m_dfa->set(m_prev_state);
@@ -225,7 +225,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
             m_match_pos = prev_byte_buf_pos;
             m_match_line = m_line;
         }
-        TypedDfaState const* dest_state{state->get_dest_state(next_char)};
+        auto const* dest_state{state->get_dest_state(next_char)};
         if (next_char == '\n') {
             m_line++;
             if (m_has_delimiters && !m_match) {

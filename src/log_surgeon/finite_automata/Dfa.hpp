@@ -54,7 +54,7 @@ public:
      * @throws `std::logic_error` if copy operation has no source register.
      * @throws `std::logic_error` if register operation has unhandlded type.
      */
-    auto process_char(char next_char, uint32_t curr_pos) -> TypedDfaState const*;
+    auto process_char(uint32_t next_char, uint32_t curr_pos) -> TypedDfaState const*;
 
     auto set(TypedDfaState const* prev_state) -> TypedDfaState const* {
         m_curr_state = prev_state;
@@ -220,8 +220,10 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) : m_curr_s
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
-auto Dfa<TypedDfaState, TypedNfaState>::process_char(char const next_char, uint32_t const curr_pos)
-        -> TypedDfaState const* {
+auto Dfa<TypedDfaState, TypedNfaState>::process_char(
+        uint32_t const next_char,
+        uint32_t const curr_pos
+) -> TypedDfaState const* {
     auto const transition{m_curr_state->get_transition(next_char)};
     m_curr_state = transition.get_dest_state();
     if (nullptr == m_curr_state) {
