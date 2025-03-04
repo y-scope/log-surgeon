@@ -233,15 +233,15 @@ auto Dfa<TypedDfaState, TypedNfaState>::process_char(
     auto const reg_ops{transition.get_reg_ops()};
     for (auto const& reg_op : reg_ops) {
         switch (reg_op.get_type()) {
-            case RegisterOperationType::Set: {
+            case RegisterOperation::Type::Set: {
                 m_reg_handler.append_position(reg_op.get_reg_id(), curr_pos);
                 break;
             }
-            case RegisterOperationType::Negate: {
+            case RegisterOperation::Type::Negate: {
                 m_reg_handler.append_position(reg_op.get_reg_id(), -1);
                 break;
             }
-            case RegisterOperationType::Copy: {
+            case RegisterOperation::Type::Copy: {
                 auto copy_reg_id_optional{reg_op.get_copy_reg_id()};
                 if (copy_reg_id_optional.has_value()) {
                     m_reg_handler.copy_register(reg_op.get_reg_id(), copy_reg_id_optional.value());
