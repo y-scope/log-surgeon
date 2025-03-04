@@ -17,13 +17,13 @@ namespace log_surgeon::finite_automata {
  * - An optional source register ID for copy operations.
  */
 class RegisterOperation {
+public:
     enum class Type : uint8_t {
         Copy,
         Set,
         Negate
     };
 
-public:
     static auto create_set_operation(reg_id_t const reg_id) -> RegisterOperation {
         return {reg_id, Type::Set};
     }
