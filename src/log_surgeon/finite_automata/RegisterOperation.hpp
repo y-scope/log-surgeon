@@ -10,51 +10,73 @@
 #include <log_surgeon/types.hpp>
 
 namespace log_surgeon::finite_automata {
-enum class RegisterOperationType : uint8_t {
-    Copy,
-    Set,
-    Negate
-};
-
+/**
+ * Represents a register operation:
+ * - A register ID specifying which register the operation applies to.
+ * - An operation type: `Copy`, `Set`, or `Negate`.
+ * - An optional source register ID for copy operations.
+ */
 class RegisterOperation {
 public:
-    RegisterOperation(reg_id_t const reg_id, RegisterOperationType const type)
-            : m_reg_id{reg_id},
-              m_type{type} {}
+    enum class Type : uint8_t {
+        Copy,
+        Set,
+        Negate
+    };
 
-    RegisterOperation(reg_id_t const reg_id, reg_id_t const copy_reg_id)
-            : m_reg_id{reg_id},
-              m_type{RegisterOperationType::Copy},
-              m_copy_reg_id{copy_reg_id} {}
+    static auto create_set_operation(reg_id_t const reg_id) -> RegisterOperation {
+        return {reg_id, Type::Set};
+    }
+
+    static auto create_negate_operation(reg_id_t const reg_id) -> RegisterOperation {
+        return {reg_id, Type::Negate};
+    }
+
+    static auto create_copy_operation(reg_id_t const dest_reg_id, reg_id_t const src_reg_id)
+            -> RegisterOperation {
+        return {dest_reg_id, src_reg_id};
+    }
 
     auto set_reg_id(reg_id_t const reg_id) -> void { m_reg_id = reg_id; }
 
     [[nodiscard]] auto get_reg_id() const -> reg_id_t { return m_reg_id; }
 
-    [[nodiscard]] auto get_type() const -> RegisterOperationType { return m_type; }
+    [[nodiscard]] auto get_type() const -> Type { return m_type; }
 
     /**
-     * @return A string representation of the register opertion.
+     * Serializes the register operation into a string representation.
+     *
+     * @return A formatted string encoding the operation.
+     * @return `std::nullopt` if:
+     * - the operation type is invalid.
+     * - no source register is specified for a copy operation.
      */
     [[nodiscard]] auto serialize() const -> std::optional<std::string> {
         switch (m_type) {
-            case RegisterOperationType::Copy:
+            case Type::Copy:
                 if (false == m_copy_reg_id.has_value()) {
                     return std::nullopt;
                 }
                 return fmt::format("{}{}{}", m_reg_id, "c", m_copy_reg_id.value());
-            case RegisterOperationType::Set:
+            case Type::Set:
                 return fmt::format("{}{}", m_reg_id, "p");
-            case RegisterOperationType::Negate:
+            case Type::Negate:
                 return fmt::format("{}{}", m_reg_id, "n");
             default:
-                return fmt::format("{}{}", m_reg_id, "?");
+                return std::nullopt;
         }
     }
 
 private:
+    RegisterOperation(reg_id_t const reg_id, Type const type) : m_reg_id{reg_id}, m_type{type} {}
+
+    RegisterOperation(reg_id_t const reg_id, reg_id_t const copy_reg_id)
+            : m_reg_id{reg_id},
+              m_type{Type::Copy},
+              m_copy_reg_id{copy_reg_id} {}
+
     reg_id_t m_reg_id;
-    RegisterOperationType m_type;
+    Type m_type;
     std::optional<reg_id_t> m_copy_reg_id{std::nullopt};
 };
 }  // namespace log_surgeon::finite_automata
