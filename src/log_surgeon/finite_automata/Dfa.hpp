@@ -358,8 +358,8 @@ auto Dfa<TypedDfaState, TypedNfaState>::assign_transition_reg_ops(
                 }
                 auto reg_id = tag_id_with_op_to_reg_id.at(tag_id);
                 auto op_type{
-                        TagOperationType::Set == tag_op.get_type() ? RegisterOperationType::Set
-                                                                   : RegisterOperationType::Negate
+                        TagOperationType::Set == tag_op.get_type() ? RegisterOperation::Type::Set
+                                                                   : RegisterOperation::Type::Negate
                 };
                 RegisterOperation const new_reg_op{reg_id, op_type};
                 if (std::none_of(
@@ -466,23 +466,23 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_bfs_traversal_order(
     visited_states.reserve(m_states.size());
     visited_order.reserve(m_states.size());
 
-    auto add_to_queue_and_visited
+    auto try_add_to_queue_and_visited
             = [&state_queue, &visited_states](TypedDfaState const* dest_state) {
                   if (visited_states.insert(dest_state).second) {
                       state_queue.push(dest_state);
                   }
               };
 
-    add_to_queue_and_visited(get_root());
+    try_add_to_queue_and_visited(get_root());
     while (false == state_queue.empty()) {
         auto const* current_state = state_queue.front();
         visited_order.push_back(current_state);
         state_queue.pop();
-        // TODO: handle the utf8 case
+        // TODO: Handle the utf8 case
         for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
             auto const dest_state{current_state->get_dest_state(idx)};
             if (nullptr != dest_state) {
-                add_to_queue_and_visited(dest_state);
+                try_add_to_queue_and_visited(dest_state);
             }
         }
     }
@@ -494,6 +494,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::string {
     auto const traversal_order = get_bfs_traversal_order();
 
     std::unordered_map<TypedDfaState const*, uint32_t> state_ids;
+    state_ids.reserve(traversal_order.size());
     for (auto const* state : traversal_order) {
         state_ids.emplace(state, state_ids.size());
     }
