@@ -46,7 +46,7 @@ public:
      * @param state_ids A map of states to their unique identifiers.
      * @return A string representation of the DFA transition on success.
      * @return Forwards `RegisterOperation::serialize`'s return value (std::nullopt) on failure.
-     * @return std::nullopt if `m_dest_state` is not in `statd_ids`.
+     * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(
             std::unordered_map<DfaState<state_type> const*, uint32_t> const& state_ids
