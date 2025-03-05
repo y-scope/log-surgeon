@@ -79,15 +79,11 @@ private:
     std::conditional_t<state_type == StateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
 
+// TODO: Handle UTF-8.
 template <StateType state_type>
 auto DfaState<state_type>::get_transition(uint32_t character
 ) const -> std::optional<DfaTransition<state_type>> const& {
-    if constexpr (StateType::Byte == state_type) {
-        return m_bytes_transition[character];
-    } else {
-        // Handle utf8 case
-        return std::nullopt;
-    }
+    return m_bytes_transition[character];
 }
 
 template <StateType state_type>
