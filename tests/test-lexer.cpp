@@ -19,6 +19,7 @@
 #include <log_surgeon/types.hpp>
 
 using log_surgeon::capture_id_t;
+using log_surgeon::finite_automata::PrefixTree;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::Schema;
 using log_surgeon::SchemaAST;
@@ -85,8 +86,11 @@ auto test_scanning_input(
         ByteLexer& lexer,
         std::string_view input,
         std::string_view rule_name,
-        std::map<capture_id_t, std::vector<std::pair<uint32_t, uint32_t>>> const&
-                expected_capture_map
+        std::map<
+                capture_id_t,
+                std::pair<
+                        std::vector<PrefixTree::position_t>,
+                        std::vector<PrefixTree::position_t>>> const& expected_capture_map
 ) -> void;
 /**
  * @param map The map to serialize.
@@ -159,8 +163,11 @@ auto test_scanning_input(
         ByteLexer& lexer,
         std::string_view input,
         std::string_view rule_name,
-        std::map<capture_id_t, std::vector<std::pair<uint32_t, uint32_t>>> const&
-                expected_capture_map
+        std::map<
+                capture_id_t,
+                std::pair<
+                        std::vector<PrefixTree::position_t>,
+                        std::vector<PrefixTree::position_t>>> const& expected_capture_map
 ) -> void {
     CAPTURE(input);
     CAPTURE(rule_name);
@@ -195,32 +202,36 @@ auto test_scanning_input(
             return;
         }
         for (auto const capture_id : optional_capture_ids.value()) {
-            CAPTURE(expected_capture_map);
-            CAPTURE(capture_id);
             REQUIRE(expected_capture_map.contains(capture_id));
             auto optional_reg_ids{lexer.get_reg_ids_from_capture_id(capture_id)};
             REQUIRE(optional_reg_ids.has_value());
             if (false == optional_reg_ids.has_value()) {
                 return;
             }
-            for (auto reg_id : optional_reg_ids.value()) {
-                
-            }
+            auto const [start_reg_id, end_reg_id]{optional_reg_ids.value()};
+            auto const actual_start_positions{token.get_reg_positions(start_reg_id)};
+            auto const actual_end_positions{token.get_reg_positions(end_reg_id)};
+            auto const [expected_start_positions, expected_end_positions]{
+                    expected_capture_map.at(capture_id)
+            };
+            REQUIRE(expected_start_positions == actual_start_positions);
+            REQUIRE(expected_end_positions == actual_end_positions);
         }
     }
 
     auto [err2, optional_token2]{lexer.scan(input_buffer)};
     REQUIRE(log_surgeon::ErrorCode::Success == err2);
     REQUIRE(optional_token2.has_value());
-    if (optional_token2.has_value()) {
-        auto token{optional_token2.value()};
-        REQUIRE(nullptr != token.m_type_ids_ptr);
-        CAPTURE(token.to_string_view());
-        CAPTURE(*token.m_type_ids_ptr);
-        REQUIRE(1 == token.m_type_ids_ptr->size());
-        REQUIRE(log_surgeon::cTokenEnd == lexer.m_id_symbol[token.m_type_ids_ptr->at(0)]);
-        REQUIRE(token.to_string_view().empty());
+    if (false == optional_token2.has_value()) {
+        return;
     }
+    token = optional_token2.value();
+    REQUIRE(nullptr != token.m_type_ids_ptr);
+    CAPTURE(token.to_string_view());
+    CAPTURE(*token.m_type_ids_ptr);
+    REQUIRE(1 == token.m_type_ids_ptr->size());
+    REQUIRE(log_surgeon::cTokenEnd == lexer.m_id_symbol[token.m_type_ids_ptr->at(0)]);
+    REQUIRE(token.to_string_view().empty());
 }
 
 auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> string {
@@ -432,7 +443,7 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
             lexer,
             cTokenString1,
             cVarName,
-            {{lexer.m_symbol_id.at(capture_name), {{1, 2}}}}
+            {{lexer.m_symbol_id.at(capture_name), {{7}, {9}}}}
     );
     test_scanning_input(lexer, cTokenString2, log_surgeon::cTokenUncaughtString, {});
     test_scanning_input(lexer, cTokenString3, log_surgeon::cTokenUncaughtString, {});

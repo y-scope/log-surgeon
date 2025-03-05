@@ -5,7 +5,9 @@
 #include <string_view>
 #include <vector>
 
+#include <log_surgeon/finite_automata/PrefixTree.hpp>
 #include <log_surgeon/finite_automata/RegisterHandler.hpp>
+#include <log_surgeon/types.hpp>
 
 namespace log_surgeon {
 class Token {
@@ -39,6 +41,11 @@ public:
      * @return The length of the token string
      */
     [[nodiscard]] auto get_length() const -> uint32_t;
+
+    [[nodiscard]] auto get_reg_positions(reg_id_t const reg_id
+    ) const -> std::vector<finite_automata::PrefixTree::position_t> {
+        return m_reg_handler.get_reversed_positions(reg_id);
+    }
 
     uint32_t m_start_pos{0};
     uint32_t m_end_pos{0};

@@ -190,7 +190,7 @@ public:
             return std::nullopt;
         }
 
-        return {optional_start_reg_id.value(), optional_end_reg_id.value()};
+        return std::make_pair(optional_start_reg_id.value(), optional_end_reg_id.value());
     }
 
     std::unordered_map<std::string, rule_id_t> m_symbol_id;
