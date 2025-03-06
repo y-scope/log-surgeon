@@ -57,6 +57,13 @@ public:
      */
     auto process_char(uint32_t next_char, uint32_t curr_pos) -> TypedDfaState const*;
 
+    /**
+     * Applies the register operations for the accepting state.
+     * @param dfa_state An accepting DFA state.
+     * @param curr_pos The current position in the lexing.
+     */
+    auto process_state(TypedDfaState const* dfa_state, uint32_t curr_pos) -> void;
+
     auto set(TypedDfaState const* prev_state) -> TypedDfaState const* {
         m_curr_state = prev_state;
         return m_curr_state;
@@ -264,6 +271,38 @@ auto Dfa<TypedDfaState, TypedNfaState>::process_char(
         }
     }
     return m_curr_state;
+}
+
+template <typename TypedDfaState, typename TypedNfaState>
+auto Dfa<TypedDfaState, TypedNfaState>::process_state(
+        TypedDfaState const* dfa_state,
+        uint32_t const curr_pos
+) -> void {
+    auto const reg_ops{dfa_state->get_accepting_reg_ops()};
+    for (auto const& reg_op : reg_ops) {
+        switch (reg_op.get_type()) {
+            case RegisterOperation::Type::Set: {
+                m_reg_handler.append_position(reg_op.get_reg_id(), curr_pos);
+                break;
+            }
+            case RegisterOperation::Type::Negate: {
+                m_reg_handler.append_position(reg_op.get_reg_id(), -1);
+                break;
+            }
+            case RegisterOperation::Type::Copy: {
+                auto copy_reg_id_optional{reg_op.get_copy_reg_id()};
+                if (copy_reg_id_optional.has_value()) {
+                    m_reg_handler.copy_register(reg_op.get_reg_id(), copy_reg_id_optional.value());
+                } else {
+                    throw std::logic_error("Copy operation does not specify register to copy.");
+                }
+                break;
+            }
+            default: {
+                throw std::logic_error("Unhandled register operation type when simulating DFA.");
+            }
+        }
+    }
 }
 
 // TODO: handle utf8 case in DFA generation.

@@ -443,7 +443,7 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
             lexer,
             cTokenString1,
             cVarName,
-            {{lexer.m_symbol_id.at(capture_name), {{7}, {9}}}}
+            {{lexer.m_symbol_id.at(capture_name), {{7}, {10}}}}
     );
     test_scanning_input(lexer, cTokenString2, log_surgeon::cTokenUncaughtString, {});
     test_scanning_input(lexer, cTokenString3, log_surgeon::cTokenUncaughtString, {});

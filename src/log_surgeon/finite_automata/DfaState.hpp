@@ -73,6 +73,10 @@ public:
      */
     [[nodiscard]] auto get_dest_state(uint32_t character) const -> DfaState const*;
 
+    [[nodiscard]] auto get_accepting_reg_ops() const -> std::vector<RegisterOperation> const& {
+        return m_accepting_ops;
+    }
+
 private:
     std::vector<uint32_t> m_matching_variable_ids;
     std::vector<RegisterOperation> m_accepting_ops;
