@@ -64,10 +64,10 @@ public:
     ) const -> std::optional<std::string>;
 
     /**
-     * @param character The character (byte or utf8) to transition on.
+     * @param character The character to transition on.
      * @return The transition, which contains the register operations and destination state.
      */
-    [[nodiscard]] auto get_transition(uint32_t character
+    [[nodiscard]] auto get_transition(uint8_t character
     ) const -> std::optional<DfaTransition<state_type>> const&;
 
 private:
@@ -80,9 +80,9 @@ private:
 };
 
 // TODO: Handle UTF-8.
-template <StateType state_type>
-auto DfaState<state_type>::get_transition(uint32_t character
-) const -> std::optional<DfaTransition<state_type>> const& {
+template <>
+[[nodiscard]] inline auto DfaState<StateType::Byte>::get_transition(uint8_t const character
+) const -> std::optional<DfaTransition<StateType::Byte>> const& {
     return m_bytes_transition[character];
 }
 
