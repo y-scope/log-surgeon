@@ -33,12 +33,18 @@ TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
     constexpr position_t cAppendPos2{10};
     constexpr position_t cAppendPos3{15};
 
-    SECTION("Initial state is empty") {
-        RegisterHandler const empty_handler{handler_init(0)};
-        REQUIRE_THROWS_AS(empty_handler.get_reversed_positions(cRegId1), std::out_of_range);
-    }
-
     RegisterHandler handler{handler_init(cNumRegisters)};
+
+    SECTION("Throws out of range correctly") {
+        constexpr size_t cInvalidRegId{10};
+        RegisterHandler const empty_handler{handler_init(0)};
+
+        REQUIRE_THROWS_AS(empty_handler.get_reversed_positions(cRegId1), std::out_of_range);
+        REQUIRE_THROWS_AS(handler.copy_register(cInvalidRegId, cRegId2), std::out_of_range);
+        REQUIRE_THROWS_AS(handler.copy_register(cRegId1, cInvalidRegId), std::out_of_range);
+        REQUIRE_THROWS_AS(handler.append_position(cInvalidRegId, cInitialPos1), std::out_of_range);
+        REQUIRE_THROWS_AS(handler.get_reversed_positions(cInvalidRegId), std::out_of_range);
+    }
 
     SECTION("Initial register is empty") {
         auto positions{handler.get_reversed_positions(cRegId1)};
@@ -58,15 +64,6 @@ TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
         handler.copy_register(cRegId2, cRegId1);
         REQUIRE(std::vector<position_t>{cAppendPos3, cAppendPos2, cAppendPos1}
                 == handler.get_reversed_positions(cRegId2));
-    }
-
-    SECTION("Throws out of range correctly") {
-        constexpr size_t cInvalidRegId{10};
-
-        REQUIRE_THROWS_AS(handler.copy_register(cInvalidRegId, cRegId2), std::out_of_range);
-        REQUIRE_THROWS_AS(handler.copy_register(cRegId1, cInvalidRegId), std::out_of_range);
-        REQUIRE_THROWS_AS(handler.append_position(cInvalidRegId, cInitialPos1), std::out_of_range);
-        REQUIRE_THROWS_AS(handler.get_reversed_positions(cInvalidRegId), std::out_of_range);
     }
 
     SECTION("Handles negative position values correctly") {
