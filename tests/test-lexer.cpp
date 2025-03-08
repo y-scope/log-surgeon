@@ -409,6 +409,8 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     constexpr string_view cTokenString1{"userID=123"};
     constexpr string_view cTokenString2{"userID=234"};
     constexpr string_view cTokenString3{"123"};
+    std::pair<std::vector<PrefixTree::position_t>, std::vector<PrefixTree::position_t>> const
+            capture_positions{{7}, {10}};
 
     Schema schema;
     schema.add_variable(cVarSchema, -1);
@@ -443,8 +445,40 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
             lexer,
             cTokenString1,
             cVarName,
-            {{lexer.m_symbol_id.at(capture_name), {{7}, {10}}}}
+            {{lexer.m_symbol_id.at(capture_name), capture_positions}}
     );
     test_scanning_input(lexer, cTokenString2, log_surgeon::cTokenUncaughtString, {});
     test_scanning_input(lexer, cTokenString3, log_surgeon::cTokenUncaughtString, {});
+}
+
+TEST_CASE("Test capture group repetition and backtracking", "[Lexer]") {
+    string const capture_name{"val"};
+    constexpr string_view cVarName{"myVar"};
+    constexpr string_view cVarSchema{"myVar:([a-zA-Z]+=(?<val>\\d+),){4}"};
+    constexpr string_view cTokenString1{"userID=123,"};
+    constexpr string_view cTokenString2{"userID=123,age=30,height=70,weight=100,"};
+    std::pair<std::vector<PrefixTree::position_t>, std::vector<PrefixTree::position_t>> const
+            capture_positions1{{7}, {10}};
+    std::pair<std::vector<PrefixTree::position_t>, std::vector<PrefixTree::position_t>> const
+            capture_positions2{{35, 25, 15, 7}, {37, 27, 17, 10}};
+
+    Schema schema;
+    schema.add_variable(cVarSchema, -1);
+    ByteLexer lexer{create_lexer(std::move(schema.release_schema_ast_ptr()))};
+
+    CAPTURE(cVarSchema);
+    /*
+    test_scanning_input(
+            lexer,
+            cTokenString1,
+            cVarName,
+            {{lexer.m_symbol_id.at(capture_name), capture_positions1}}
+    );
+    */
+    test_scanning_input(
+            lexer,
+            cTokenString2,
+            cVarName,
+            {{lexer.m_symbol_id.at(capture_name), capture_positions2}}
+    );
 }
