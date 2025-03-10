@@ -53,7 +53,9 @@ TEST_CASE("Test Simple Untagged DFA", "[DFA]") {
     };
 
     // Compare expected and actual line-by-line
-    auto const actual_serialized_dfa{dfa.serialize()};
+    auto const optional_actual_serialized_dfa{dfa.serialize()};
+    REQUIRE(optional_actual_serialized_dfa.has_value());
+    auto const& actual_serialized_dfa{optional_actual_serialized_dfa.value()};
     stringstream ss_actual{actual_serialized_dfa};
     stringstream ss_expected{expected_serialized_dfa};
     string actual_line;
@@ -95,7 +97,9 @@ TEST_CASE("Test Complex Untagged DFA", "[DFA]") {
     };
 
     // Compare expected and actual line-by-line
-    auto const actual_serialized_dfa{dfa.serialize()};
+    auto const optional_actual_serialized_dfa{dfa.serialize()};
+    REQUIRE(optional_actual_serialized_dfa.has_value());
+    auto const& actual_serialized_dfa{optional_actual_serialized_dfa.value()};
     stringstream ss_actual{actual_serialized_dfa};
     stringstream ss_expected{expected_serialized_dfa};
     string actual_line;
