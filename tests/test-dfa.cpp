@@ -145,13 +145,14 @@ TEST_CASE("Test Simple Tagged DFA", "[DFA]") {
     };
 
     // Compare expected and actual line-by-line
-    auto const actual_serialized_dfa{dfa.serialize()};
-    stringstream ss_actual{actual_serialized_dfa};
+    auto const optional_actual_serialized_dfa{dfa.serialize()};
+    REQUIRE(optional_actual_serialized_dfa.has_value());
+    stringstream ss_actual{optional_actual_serialized_dfa.value()};
     stringstream ss_expected{expected_serialized_dfa};
     string actual_line;
     string expected_line;
 
-    CAPTURE(actual_serialized_dfa);
+    CAPTURE(optional_actual_serialized_dfa.value());
     CAPTURE(expected_serialized_dfa);
     while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
         REQUIRE(actual_line == expected_line);
@@ -195,13 +196,14 @@ TEST_CASE("Test Complex Tagged DFA", "[DFA]") {
     };
 
     // Compare expected and actual line-by-line
-    auto const actual_serialized_dfa{dfa.serialize()};
-    stringstream ss_actual{actual_serialized_dfa};
+    auto const optional_actual_serialized_dfa{dfa.serialize()};
+    REQUIRE(optional_actual_serialized_dfa.has_value());
+    stringstream ss_actual{optional_actual_serialized_dfa.value()};
     stringstream ss_expected{expected_serialized_dfa};
     string actual_line;
     string expected_line;
 
-    CAPTURE(actual_serialized_dfa);
+    CAPTURE(optional_actual_serialized_dfa.value());
     CAPTURE(expected_serialized_dfa);
     while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
         REQUIRE(actual_line == expected_line);
