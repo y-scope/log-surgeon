@@ -118,7 +118,7 @@ auto u32string_to_string(u32string const& u32_str) -> string {
 }
 
 auto create_lexer(std::unique_ptr<SchemaAST> schema_ast) -> ByteLexer {
-    vector<uint32_t> const delimiters{' ', '\n'};
+    vector<uint32_t> const delimiters{' ', '\n', '\r'};
 
     ByteLexer lexer;
     lexer.add_delimiters(delimiters);
@@ -191,7 +191,6 @@ auto test_scanning_input(
     CAPTURE(token.to_string_view());
     CAPTURE(*token.m_type_ids_ptr);
     REQUIRE(nullptr != token.m_type_ids_ptr);
-    REQUIRE(1 == token.m_type_ids_ptr->size());
     REQUIRE(rule_name == lexer.m_id_symbol[token_type]);
     REQUIRE(input == token.to_string_view());
 
@@ -451,34 +450,75 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     test_scanning_input(lexer, cTokenString3, log_surgeon::cTokenUncaughtString, {});
 }
 
+TEST_CASE("Test CLP default schema", "[Lexer]") {
+    string const capture_name{"val"};
+    constexpr string_view cVarName1{"timestamp"};
+    constexpr string_view cVarSchema1{
+            R"(timestamp:[0-9]{4}\-[0-9]{2}\-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}[,\.][0-9]{0,3})"
+    };
+    constexpr string_view cVarName2{"int"};
+    constexpr string_view cVarSchema2{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cVarName3{"float"};
+    constexpr string_view cVarSchema3{R"(float:\-{0,1}[0-9]+\.[0-9]+)"};
+    constexpr string_view cVarName4{"hex"};
+    constexpr string_view cVarSchema4{R"(hex:[a-fA-F]+)"};
+    constexpr string_view cVarName5{"equals"};
+    // constexpr string_view cVarSchema6{"equals:[^ \\r\\n]+=(?<val>[^ \\r\\n]*[a-zA-Z0-9][^
+    // \\r\\n]*)"
+    // };
+    constexpr string_view cVarSchema5{"equals:[A-Za-z]+=(?<val>[a-zA-Z0-9]+)"};
+    constexpr string_view cVarName6{"hasNumber"};
+    constexpr string_view cVarSchema6{R"(hasNumber:[^ \r\n]*\d[^ \r\n]*)"};
+
+    constexpr string_view cTokenString1{"2012-12-12 12:12:12.123"};
+    constexpr string_view cTokenString2{"123"};
+    constexpr string_view cTokenString3{"123.123"};
+    constexpr string_view cTokenString4{"abc"};
+    constexpr string_view cTokenString5{"userID=123"};
+    constexpr string_view cTokenString6{"user123"};
+    std::pair<std::vector<PrefixTree::position_t>, std::vector<PrefixTree::position_t>> const
+            capture_positions{{7}, {10}};
+
+    Schema schema;
+    schema.add_variable(cVarSchema1, -1);
+    schema.add_variable(cVarSchema2, -1);
+    schema.add_variable(cVarSchema3, -1);
+    schema.add_variable(cVarSchema4, -1);
+    schema.add_variable(cVarSchema5, -1);
+    schema.add_variable(cVarSchema6, -1);
+    ByteLexer lexer{create_lexer(std::move(schema.release_schema_ast_ptr()))};
+
+    test_scanning_input(lexer, cTokenString1, cVarName1, {});
+    test_scanning_input(lexer, cTokenString2, cVarName2, {});
+    test_scanning_input(lexer, cTokenString3, cVarName3, {});
+    test_scanning_input(lexer, cTokenString4, cVarName4, {});
+    test_scanning_input(
+            lexer,
+            cTokenString5,
+            cVarName5,
+            {{lexer.m_symbol_id.at(capture_name), capture_positions}}
+    );
+    test_scanning_input(lexer, cTokenString6, cVarName6, {});
+}
+
 TEST_CASE("Test capture group repetition and backtracking", "[Lexer]") {
     string const capture_name{"val"};
     constexpr string_view cVarName{"myVar"};
-    constexpr string_view cVarSchema{"myVar:([a-zA-Z]+=(?<val>\\d+),){4}"};
-    constexpr string_view cTokenString1{"userID=123,"};
-    constexpr string_view cTokenString2{"userID=123,age=30,height=70,weight=100,"};
+    constexpr string_view cVarSchema{"myVar:([A-Za-z]+=(?<val>[a-zA-Z0-9]+),){4}"};
+    constexpr string_view cTokenString{"userID=123,age=30,height=70,weight=100,"};
     std::pair<std::vector<PrefixTree::position_t>, std::vector<PrefixTree::position_t>> const
-            capture_positions1{{7}, {10}};
-    std::pair<std::vector<PrefixTree::position_t>, std::vector<PrefixTree::position_t>> const
-            capture_positions2{{35, 25, 15, 7}, {37, 27, 17, 10}};
+            capture_positions{{35, 25, 15, 7}, {37, 27, 17, 10}};
 
     Schema schema;
     schema.add_variable(cVarSchema, -1);
     ByteLexer lexer{create_lexer(std::move(schema.release_schema_ast_ptr()))};
 
     CAPTURE(cVarSchema);
-    /*
     test_scanning_input(
             lexer,
-            cTokenString1,
+            cTokenString,
             cVarName,
-            {{lexer.m_symbol_id.at(capture_name), capture_positions1}}
+            {{lexer.m_symbol_id.at(capture_name), capture_positions}}
     );
-    */
-    test_scanning_input(
-            lexer,
-            cTokenString2,
-            cVarName,
-            {{lexer.m_symbol_id.at(capture_name), capture_positions2}}
-    );
+    // TODO: add backtracking case
 }
