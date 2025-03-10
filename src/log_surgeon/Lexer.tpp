@@ -84,11 +84,12 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer, 
             m_match_pos = prev_byte_buf_pos;
             m_match_line = m_line;
         }
-        auto* dest_state = state->get_dest_state(next_char);
+        auto const& optional_transition{state->get_transition(next_char)};
         if (next_char == '\n') {
             m_line++;
             if (m_has_delimiters && !m_match) {
-                dest_state = m_dfa->get_root()->get_dest_state(next_char);
+                auto const* dest_state{m_dfa->get_root()->get_transition(next_char)->get_dest_state(
+                )};
                 m_match = true;
                 m_type_ids = &(dest_state->get_matching_variable_ids());
                 m_start_pos = prev_byte_buf_pos;
@@ -96,7 +97,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer, 
                 m_match_line = m_line;
             }
         }
-        if (input_buffer.log_fully_consumed() || nullptr == dest_state) {
+        if (input_buffer.log_fully_consumed() || false == optional_transition.has_value()) {
             if (m_match) {
                 input_buffer.set_log_fully_consumed(false);
                 input_buffer.set_pos(m_match_pos);
@@ -165,7 +166,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer, 
             state = m_dfa->get_root();
             continue;
         }
-        state = dest_state;
+        state = optional_transition->get_dest_state();
     }
 }
 
@@ -215,11 +216,12 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
             m_match_pos = prev_byte_buf_pos;
             m_match_line = m_line;
         }
-        TypedDfaState const* dest_state{state->get_dest_state(next_char)};
+        auto const& optional_transition{state->get_transition(next_char)};
         if (next_char == '\n') {
             m_line++;
             if (m_has_delimiters && !m_match) {
-                dest_state = m_dfa->get_root()->get_dest_state(next_char);
+                auto const* dest_state{m_dfa->get_root()->get_transition(next_char)->get_dest_state(
+                )};
                 m_match = true;
                 m_type_ids = &(dest_state->get_matching_variable_ids());
                 m_start_pos = prev_byte_buf_pos;
@@ -227,7 +229,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
                 m_match_line = m_line;
             }
         }
-        if (input_buffer.log_fully_consumed() || nullptr == dest_state) {
+        if (input_buffer.log_fully_consumed() || false == optional_transition.has_value()) {
             assert(input_buffer.log_fully_consumed());
             if (!m_match || (m_match && m_match_pos != input_buffer.storage().pos())) {
                 token
@@ -243,7 +245,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
                 // BFS (keep track of m_type_ids)
                 if (wildcard == '?') {
                     for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
-                        auto* dest_state{state->get_dest_state(byte)};
+                        auto const* dest_state{state->get_transition(byte)->get_dest_state()};
                         if (false == dest_state->is_accepting()) {
                             token
                                     = Token{m_last_match_pos,
@@ -277,7 +279,14 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
                             if (m_is_delimiter[byte]) {
                                 continue;
                             }
-                            TypedDfaState const* dest_state{current_state->get_dest_state(byte)};
+                            auto const& optional_wildcard_transition{
+                                    current_state->get_transition(byte)
+                            };
+                            if (false == optional_wildcard_transition.has_value()) {
+                                unvisited_states.push(nullptr);
+                                continue;
+                            }
+                            auto const* dest_state{optional_wildcard_transition->get_dest_state()};
                             if (false == visited_states.contains(dest_state)) {
                                 unvisited_states.push(dest_state);
                             }
@@ -299,7 +308,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
                 return ErrorCode::Success;
             }
         }
-        state = dest_state;
+        state = optional_transition->get_dest_state();
     }
 }
 
@@ -337,7 +346,7 @@ void Lexer<TypedNfaState, TypedDfaState>::reset() {
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::prepend_start_of_file_char(ParserInputBuffer& input_buffer
 ) {
-    m_prev_state = m_dfa->get_root()->get_dest_state(utf8::cCharStartOfFile);
+    m_prev_state = m_dfa->get_root()->get_transition(utf8::cCharStartOfFile)->get_dest_state();
     m_asked_for_more_data = true;
     m_start_pos = input_buffer.storage().pos();
     m_match_pos = input_buffer.storage().pos();
@@ -407,11 +416,7 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
     m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState, TypedNfaState>>(nfa);
     auto const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
-        if (nullptr != state->get_dest_state(i)) {
-            m_is_first_char[i] = true;
-        } else {
-            m_is_first_char[i] = false;
-        }
+        m_is_first_char[i] = state->get_transition(i).has_value();
     }
 }
 }  // namespace log_surgeon

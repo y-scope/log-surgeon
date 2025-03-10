@@ -5,10 +5,9 @@
 #include <vector>
 
 #include <log_surgeon/finite_automata/PrefixTree.hpp>
+#include <log_surgeon/types.hpp>
 
 namespace log_surgeon::finite_automata {
-using register_id_t = uint32_t;
-
 /**
  * The register handler maintains a prefix tree that is sufficient to represent all registers.
  * The register handler also contains a vector of registers, and performs the set, copy, and append
@@ -27,7 +26,7 @@ public:
         return added_registers;
     }
 
-    auto add_register() -> register_id_t {
+    auto add_register() -> reg_id_t {
         auto const prefix_tree_node_id{
                 m_prefix_tree.insert(PrefixTree::cRootId, PrefixTree::cDefaultPos)
         };
@@ -35,7 +34,7 @@ public:
         return m_registers.size() - 1;
     }
 
-    auto add_register(PrefixTree::id_t const prefix_tree_parent_node_id) -> register_id_t {
+    auto add_register(PrefixTree::id_t const prefix_tree_parent_node_id) -> reg_id_t {
         auto const prefix_tree_node_id{
                 m_prefix_tree.insert(prefix_tree_parent_node_id, PrefixTree::cDefaultPos)
         };
@@ -43,21 +42,20 @@ public:
         return m_registers.size() - 1;
     }
 
-    auto set_register(register_id_t const reg_id, PrefixTree::position_t const position) -> void {
+    auto set_register(reg_id_t const reg_id, PrefixTree::position_t const position) -> void {
         m_prefix_tree.set(m_registers.at(reg_id), position);
     }
 
-    auto copy_register(register_id_t const dest_reg_id, register_id_t const source_reg_id) -> void {
+    auto copy_register(reg_id_t const dest_reg_id, reg_id_t const source_reg_id) -> void {
         m_registers.at(dest_reg_id) = m_registers.at(source_reg_id);
     }
 
-    auto
-    append_position(register_id_t const reg_id, PrefixTree::position_t const position) -> void {
+    auto append_position(reg_id_t const reg_id, PrefixTree::position_t const position) -> void {
         auto const node_id{m_registers.at(reg_id)};
         m_registers.at(reg_id) = m_prefix_tree.insert(node_id, position);
     }
 
-    [[nodiscard]] auto get_reversed_positions(register_id_t const reg_id
+    [[nodiscard]] auto get_reversed_positions(reg_id_t const reg_id
     ) const -> std::vector<PrefixTree::position_t> {
         return m_prefix_tree.get_reversed_positions(m_registers.at(reg_id));
     }
