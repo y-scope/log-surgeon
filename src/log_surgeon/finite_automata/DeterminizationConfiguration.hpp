@@ -50,7 +50,12 @@ public:
     ) const -> DeterminizationConfiguration {
         auto lookahead{m_lookahead};
         lookahead.push_back(tag_op);
-        return DeterminizationConfiguration(new_nfa_state, m_tag_id_to_reg_ids, m_history, lookahead);
+        return DeterminizationConfiguration(
+                new_nfa_state,
+                m_tag_id_to_reg_ids,
+                m_history,
+                lookahead
+        );
     }
 
     /**
