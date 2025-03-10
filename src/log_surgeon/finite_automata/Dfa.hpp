@@ -30,7 +30,7 @@ namespace log_surgeon::finite_automata {
 template <typename TypedDfaState, typename TypedNfaState>
 class Dfa {
 public:
-    using ConfigurationSet = std::set<DetermizationConfiguration<TypedNfaState>>;
+    using ConfigurationSet = std::set<DeterminizationConfiguration<TypedNfaState>>;
 
     explicit Dfa(Nfa<TypedNfaState> const& nfa);
 
@@ -202,7 +202,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) 
             initial_tag_id_to_reg_id,
             m_tag_id_to_final_reg_id
     );
-    DetermizationConfiguration<TypedNfaState>
+    DeterminizationConfiguration<TypedNfaState>
             initial_config{nfa.get_root(), initial_tag_id_to_reg_id, {}, {}};
 
     std::map<ConfigurationSet, TypedDfaState*> dfa_states;
@@ -318,7 +318,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_transitions(
         auto const* nfa_state{configuration.get_state()};
         for (uint32_t i{0}; i < cSizeOfByte; ++i) {
             for (auto const* next_nfa_state : nfa_state->get_byte_transitions(i)) {
-                DetermizationConfiguration<TypedNfaState> next_configuration{
+                DeterminizationConfiguration<TypedNfaState> next_configuration{
                         next_nfa_state,
                         configuration.get_tag_id_to_reg_ids(),
                         configuration.get_lookahead(),
@@ -348,7 +348,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::assign_transition_reg_ops(
         std::map<tag_id_t, reg_id_t>& tag_id_with_op_to_reg_id
 ) -> std::vector<RegisterOperation> {
     std::vector<RegisterOperation> reg_ops;
-    std::set<DetermizationConfiguration<TypedNfaState>> new_closure;
+    std::set<DeterminizationConfiguration<TypedNfaState>> new_closure;
     for (auto config : closure) {
         for (tag_id_t tag_id{0}; tag_id < num_tags; tag_id++) {
             auto const optional_tag_op{config.get_tag_history(tag_id)};

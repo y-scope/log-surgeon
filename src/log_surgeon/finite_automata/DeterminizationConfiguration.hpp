@@ -14,9 +14,9 @@
 
 namespace log_surgeon::finite_automata {
 template <typename TypedNfaState>
-class DetermizationConfiguration {
+class DeterminizationConfiguration {
 public:
-    DetermizationConfiguration(
+    DeterminizationConfiguration(
             TypedNfaState const* nfa_state,
             std::map<tag_id_t, reg_id_t> tag_to_reg_ids,
             std::vector<TagOperation> tag_history,
@@ -31,7 +31,7 @@ public:
         }
     }
 
-    auto operator<(DetermizationConfiguration const& rhs) const -> bool {
+    auto operator<(DeterminizationConfiguration const& rhs) const -> bool {
         if (m_nfa_state->get_id() != rhs.m_nfa_state->get_id()) {
             return m_nfa_state->get_id() < rhs.m_nfa_state->get_id();
         }
@@ -47,24 +47,24 @@ public:
     auto child_configuration_with_new_state_and_tag(
             TypedNfaState const* new_nfa_state,
             TagOperation const& tag_op
-    ) const -> DetermizationConfiguration {
+    ) const -> DeterminizationConfiguration {
         auto lookahead{m_lookahead};
         lookahead.push_back(tag_op);
-        return DetermizationConfiguration(new_nfa_state, m_tag_id_to_reg_ids, m_history, lookahead);
+        return DeterminizationConfiguration(new_nfa_state, m_tag_id_to_reg_ids, m_history, lookahead);
     }
 
     /**
      * @unexplored_stack Returns the stack of configurations updated to contain configurations
      * reachable from this configuration via a single spontaneous transition.
      */
-    auto update_reachable_configs(std::stack<DetermizationConfiguration>& unexplored_stack
+    auto update_reachable_configs(std::stack<DeterminizationConfiguration>& unexplored_stack
     ) const -> void;
 
     /**
      * @return The set of all configurations reachable from the current configuration via any number
      * of spontaneous transitions.
      */
-    auto spontaneous_closure() const -> std::set<DetermizationConfiguration>;
+    auto spontaneous_closure() const -> std::set<DeterminizationConfiguration>;
 
     auto set_reg_id(tag_id_t const tag_id, reg_id_t const reg_id) {
         m_tag_id_to_reg_ids[tag_id] = reg_id;
@@ -105,8 +105,8 @@ private:
 };
 
 template <typename TypedNfaState>
-auto DetermizationConfiguration<TypedNfaState>::update_reachable_configs(
-        std::stack<DetermizationConfiguration>& unexplored_stack
+auto DeterminizationConfiguration<TypedNfaState>::update_reachable_configs(
+        std::stack<DeterminizationConfiguration>& unexplored_stack
 ) const -> void {
     for (auto const& nfa_spontaneous_transition : m_nfa_state->get_spontaneous_transitions()) {
         auto parent_config{*this};
@@ -122,10 +122,10 @@ auto DetermizationConfiguration<TypedNfaState>::update_reachable_configs(
 }
 
 template <typename TypedNfaState>
-auto DetermizationConfiguration<TypedNfaState>::spontaneous_closure(
-) const -> std::set<DetermizationConfiguration> {
-    std::set<DetermizationConfiguration> reachable_set;
-    std::stack<DetermizationConfiguration> unexplored_stack;
+auto DeterminizationConfiguration<TypedNfaState>::spontaneous_closure(
+) const -> std::set<DeterminizationConfiguration> {
+    std::set<DeterminizationConfiguration> reachable_set;
+    std::stack<DeterminizationConfiguration> unexplored_stack;
     unexplored_stack.push(*this);
     while (false == unexplored_stack.empty()) {
         auto current_configuration = unexplored_stack.top();
