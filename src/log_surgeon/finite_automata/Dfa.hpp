@@ -4,10 +4,15 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <stack>
 #include <vector>
 
+#include <fmt/core.h>
+#include <fmt/format.h>
+
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/DfaStatePair.hpp>
 #include <log_surgeon/finite_automata/Nfa.hpp>
 
@@ -16,6 +21,12 @@ template <typename TypedDfaState, typename TypedNfaState>
 class Dfa {
 public:
     explicit Dfa(Nfa<TypedNfaState> const& nfa);
+
+    /**
+     * @return A string representation of the DFA.
+     * @return Forwards `DfaState::serialize`'s return value (std::nullopt) on failure.
+     */
+    [[nodiscard]] auto serialize() const -> std::optional<std::string>;
 
     /**
      * Creates a new DFA state based on a set of NFA states and adds it to `m_states`.
@@ -38,6 +49,12 @@ public:
     [[nodiscard]] auto get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t>;
 
 private:
+    /**
+     * @return A vector representing the traversal order of the DFA states using breadth-first
+     * search (BFS).
+     */
+    [[nodiscard]] auto get_bfs_traversal_order() const -> std::vector<TypedDfaState const*>;
+
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
 };
 
@@ -61,10 +78,10 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
         auto set = unmarked_sets.top();
         unmarked_sets.pop();
         auto* dfa_state = dfa_states.at(set);
-        std::map<uint32_t, StateSet> ascii_transitions_map;
+        std::map<uint8_t, StateSet> ascii_transitions_map;
         // map<Interval, StateSet> transitions_map;
         for (auto const* s0 : set) {
-            for (uint32_t i = 0; i < cSizeOfByte; i++) {
+            for (uint16_t i{0}; i < cSizeOfByte; ++i) {
                 for (auto* const s1 : s0->get_byte_transitions(i)) {
                     StateSet closure = s1->epsilon_closure();
                     ascii_transitions_map[i].insert(closure.begin(), closure.end());
@@ -83,9 +100,9 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
             }
             return state;
         };
-        for (auto const& kv : ascii_transitions_map) {
-            auto* dest_state = next_dfa_state(kv.second);
-            dfa_state->add_byte_transition(kv.first, dest_state);
+        for (auto const& [byte, nfa_state_set] : ascii_transitions_map) {
+            auto* dest_state{next_dfa_state(nfa_state_set)};
+            dfa_state->add_byte_transition(byte, {{}, dest_state});
         }
         // TODO: add this for the utf8 case
     }
@@ -124,6 +141,60 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_intersect(Dfa const* dfa_in
         unvisited_pairs.erase(current_pair_it);
     }
     return schema_types;
+}
+
+template <typename TypedDfaState, typename TypedNfaState>
+auto Dfa<TypedDfaState, TypedNfaState>::get_bfs_traversal_order(
+) const -> std::vector<TypedDfaState const*> {
+    std::queue<TypedDfaState const*> state_queue;
+    std::unordered_set<TypedDfaState const*> visited_states;
+    std::vector<TypedDfaState const*> visited_order;
+    visited_states.reserve(m_states.size());
+    visited_order.reserve(m_states.size());
+
+    auto try_add_to_queue_and_visited
+            = [&state_queue, &visited_states](TypedDfaState const* dest_state) {
+                  if (visited_states.insert(dest_state).second) {
+                      state_queue.push(dest_state);
+                  }
+              };
+
+    try_add_to_queue_and_visited(get_root());
+    while (false == state_queue.empty()) {
+        auto const* current_state = state_queue.front();
+        visited_order.push_back(current_state);
+        state_queue.pop();
+        // TODO: Handle the utf8 case
+        for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
+            auto const& transition{current_state->get_transition(idx)};
+            if (transition.has_value()) {
+                auto const* dest_state{transition->get_dest_state()};
+                try_add_to_queue_and_visited(dest_state);
+            }
+        }
+    }
+    return visited_order;
+}
+
+template <typename TypedDfaState, typename TypedNfaState>
+auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::optional<std::string> {
+    auto const traversal_order = get_bfs_traversal_order();
+
+    std::unordered_map<TypedDfaState const*, uint32_t> state_ids;
+    state_ids.reserve(traversal_order.size());
+    for (auto const* state : traversal_order) {
+        state_ids.emplace(state, state_ids.size());
+    }
+
+    std::vector<std::string> serialized_states;
+    for (auto const* state : traversal_order) {
+        auto const optional_serialized_state{state->serialize(state_ids)};
+        if (false == optional_serialized_state.has_value()) {
+            return std::nullopt;
+        }
+        serialized_states.emplace_back(optional_serialized_state.value());
+    }
+    return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
 }
 }  // namespace log_surgeon::finite_automata
 
