@@ -21,7 +21,6 @@
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/NonTerminal.hpp>
 #include <log_surgeon/Parser.hpp>
-#include <log_surgeon/ParserAst.hpp>
 #include <log_surgeon/Production.hpp>
 
 namespace log_surgeon {

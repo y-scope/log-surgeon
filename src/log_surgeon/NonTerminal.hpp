@@ -4,13 +4,14 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <variant>
 
 #include <log_surgeon/ParserAst.hpp>
 #include <log_surgeon/Production.hpp>
 #include <log_surgeon/Token.hpp>
-#include <log_surgeon/types.hpp>
 
 namespace log_surgeon {
+using MatchedSymbol = std::variant<Token, NonTerminal>;
 
 class NonTerminal {
 public:
@@ -20,8 +21,7 @@ public:
 
     /**
      * Return the ith child's (body of production) MatchedSymbol as a Token.
-     * Note: only children are needed (and stored) for performing semantic
-     * actions (for the AST)
+     * Note: only children are needed (and stored) for performing semantic actions (for the AST)
      * @param i
      * @return Token*
      */
@@ -31,9 +31,8 @@ public:
     }
 
     /**
-     * Return the ith child's (body of production) MatchedSymbol as a
-     * NonTerminal. Note: only children are needed (and stored) for performing
-     * semantic actions (for the AST)
+     * Return the ith child's (body of production) MatchedSymbol as a NonTerminal. Note: only
+     * children are needed (and stored) for performing semantic actions (for the AST)
      * @param i
      * @return NonTerminal*
      */
@@ -43,8 +42,8 @@ public:
     }
 
     /**
-     * Return the AST that relates this non_terminal's children together (based
-     * on the production/syntax-rule that was determined to have generated them)
+     * Return the AST that relates this non_terminal's children together (based on the
+     * production/syntax-rule that was determined to have generated them)
      * @return std::unique_ptr<ParserAST>
      */
     auto get_parser_ast() -> std::unique_ptr<ParserAST>& { return m_ast; }
@@ -55,5 +54,6 @@ public:
     Production* m_production;
     std::unique_ptr<ParserAST> m_ast;
 };
+}  // namespace log_surgeon
 
 #endif  // LOG_SURGEON_NONTERMINAL_HPP

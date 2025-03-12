@@ -5,12 +5,13 @@
 #include <set>
 #include <tuple>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include <log_surgeon/Production.hpp>
 
 namespace log_surgeon {
-struct ItemSet;
+class ItemSet;
 using Action = std::variant<bool, ItemSet*, Production*>;
 
 /**
@@ -20,7 +21,7 @@ using Action = std::variant<bool, ItemSet*, Production*>;
  * tracks the current matching progress of its associated m_production, where
  * everything exclusively to the left of m_dot is already matched.
  */
-struct Item {
+class Item {
 public:
     Item() = default;
 
@@ -64,7 +65,7 @@ public:
  * to based on the symbol received from the lexer m_actions is the action to
  * perform based on the symbol received from the lexer.
  */
-struct ItemSet {
+class ItemSet {
 public:
     /**
      * Comparison operator for tie-breakers (not 100% sure where this is used)
