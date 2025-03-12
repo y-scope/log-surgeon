@@ -174,3 +174,44 @@ TEST_CASE("Test Repetition NFA", "[NFA]") {
     getline(ss_expected, expected_line);
     REQUIRE(expected_line.empty());
 }
+
+TEST_CASE("Test integer NFA", "[NFA]") {
+    Schema schema;
+    string const var_name{"capture"};
+    string const var_schema{var_name + ":" + "\\-{0,1}\\d+"};
+    schema.add_variable(var_schema, -1);
+
+    auto const schema_ast = schema.release_schema_ast_ptr();
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    vector<ByteLexicalRule> rules;
+    rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
+    ByteNfa const nfa{rules};
+
+    // Compare against expected output
+    // capture order(tags in brackets): letter1(0,1), letter2(2,3), letter(4,5), containerID(6,7)
+    string const expected_serialized_nfa{
+            "0:byte_transitions={--->1},spontaneous_transition={1[]}\n"
+            "1:byte_transitions={0-->2,1-->2,2-->2,3-->2,4-->2,5-->2,6-->2,7-->2,8-->2,9-->2},"
+            "spontaneous_transition={}\n"
+            "2:accepting_tag=0,byte_transitions={0-->2,1-->2,2-->2,3-->2,4-->2,5-->2,6-->2,7-->2,8-"
+            "->2,9-->2},spontaneous_transition={}\n"
+    };
+
+    // Compare expected and actual line-by-line
+    auto const optional_actual_serialized_nfa{nfa.serialize()};
+    REQUIRE(optional_actual_serialized_nfa.has_value());
+    stringstream ss_actual{optional_actual_serialized_nfa.value()};
+    stringstream ss_expected{expected_serialized_nfa};
+    string actual_line;
+    string expected_line;
+
+    CAPTURE(optional_actual_serialized_nfa.value());
+    CAPTURE(expected_serialized_nfa);
+    while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
+        REQUIRE(actual_line == expected_line);
+    }
+    getline(ss_actual, actual_line);
+    REQUIRE(actual_line.empty());
+    getline(ss_expected, expected_line);
+    REQUIRE(expected_line.empty());
+}
