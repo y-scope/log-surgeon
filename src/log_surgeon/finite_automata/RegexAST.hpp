@@ -187,7 +187,7 @@ public:
             [[maybe_unused]] Nfa<TypedNfaState>* nfa,
             [[maybe_unused]] TypedNfaState* end_state
     ) const -> void override {
-        // Do nothing as adding an empty node to the NFA is a null operation.
+        nfa->get_root()->add_spontaneous_transition(end_state);
     }
 
     [[nodiscard]] auto serialize() const -> std::u32string override;

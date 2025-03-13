@@ -177,8 +177,7 @@ TEST_CASE("Test Repetition NFA", "[NFA]") {
 
 TEST_CASE("Test integer NFA", "[NFA]") {
     Schema schema;
-    string const var_name{"capture"};
-    string const var_schema{var_name + ":" + "\\-{0,1}\\d+"};
+    string const var_schema{"int:\\-{0,1}\\d+"};
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();

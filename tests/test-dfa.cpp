@@ -249,3 +249,42 @@ TEST_CASE("Test Repetition Tagged DFA", "[DFA]") {
     getline(ss_expected, expected_line);
     REQUIRE(expected_line.empty());
 }
+
+TEST_CASE("Test integer DFA", "[DFA]") {
+    Schema schema;
+    string const var_schema{"int:\\-{0,1}\\d+"};
+    schema.add_variable(var_schema, -1);
+
+    auto const schema_ast = schema.release_schema_ast_ptr();
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    vector<ByteLexicalRule> rules;
+    rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
+    ByteNfa const nfa{rules};
+    ByteDfa const dfa{nfa};
+
+    string const expected_serialized_dfa{
+            "0:byte_transitions={--()->1,0-()->2,1-()->2,2-()->2,3-()->2,4-()->2,5-()->2,6-()->2,7-"
+            "()->2,8-()->2,9-()->2}\n"
+            "1:byte_transitions={0-()->2,1-()->2,2-()->2,3-()->2,4-()->2,5-()->2,6-()->2,7-()->2,8-"
+            "()->2,9-()->2}\n"
+            "2:accepting_tags={0},accepting_operations={},byte_transitions={0-()->2,1-()->2,2-()->"
+            "2,3-()->2,4-()->2,5-()->2,6-()->2,7-()->2,8-()->2,9-()->2}\n"
+    };
+
+    // Compare expected and actual line-by-line
+    auto const actual_serialized_dfa{dfa.serialize()};
+    stringstream ss_actual{actual_serialized_dfa};
+    stringstream ss_expected{expected_serialized_dfa};
+    string actual_line;
+    string expected_line;
+
+    CAPTURE(actual_serialized_dfa);
+    CAPTURE(expected_serialized_dfa);
+    while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
+        REQUIRE(actual_line == expected_line);
+    }
+    getline(ss_actual, actual_line);
+    REQUIRE(actual_line.empty());
+    getline(ss_expected, expected_line);
+    REQUIRE(expected_line.empty());
+}
