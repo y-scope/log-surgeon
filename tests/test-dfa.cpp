@@ -288,3 +288,46 @@ TEST_CASE("Test integer DFA", "[DFA]") {
     getline(ss_expected, expected_line);
     REQUIRE(expected_line.empty());
 }
+
+TEST_CASE("Test equals DFA", "[DFA]") {
+    Schema schema;
+    string const var_schema{R"(equals:[A]+=(?<val>[=AB]*A[=AB]*))"};
+    schema.add_variable(var_schema, -1);
+
+    auto const schema_ast = schema.release_schema_ast_ptr();
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    vector<ByteLexicalRule> rules;
+    rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
+    ByteNfa const nfa{rules};
+    ByteDfa const dfa{nfa};
+
+    // TODO: while correct, this is really weird looking, and probably will lead to inefficiencies
+    // i.e., setting the same register multiple times in a single transition.
+    string const expected_serialized_dfa{
+            "0:byte_transitions={A-()->1}\n"
+            "1:byte_transitions={=-()->2,A-()->1}\n"
+            "2:byte_transitions={=-(4p,4p)->3,A-(4p,4p,4p)->4,B-(4p,4p)->3}\n"
+            "3:byte_transitions={=-()->3,A-()->4,B-()->3}\n"
+            "4:accepting_tags={0},accepting_operations={2c4,3p},byte_transitions={=-()->5,A-()->4,"
+            "B-()->5}\n"
+            "5:accepting_tags={0},accepting_operations={2c4,3p},byte_transitions={=-()->5,A-()->4,"
+            "B-()->5}\n"
+    };
+
+    // Compare expected and actual line-by-line
+    auto const actual_serialized_dfa{dfa.serialize()};
+    stringstream ss_actual{actual_serialized_dfa};
+    stringstream ss_expected{expected_serialized_dfa};
+    string actual_line;
+    string expected_line;
+
+    CAPTURE(actual_serialized_dfa);
+    CAPTURE(expected_serialized_dfa);
+    while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
+        REQUIRE(actual_line == expected_line);
+    }
+    getline(ss_actual, actual_line);
+    REQUIRE(actual_line.empty());
+    getline(ss_expected, expected_line);
+    REQUIRE(expected_line.empty());
+}

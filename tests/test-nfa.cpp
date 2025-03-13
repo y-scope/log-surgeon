@@ -187,13 +187,54 @@ TEST_CASE("Test integer NFA", "[NFA]") {
     ByteNfa const nfa{rules};
 
     // Compare against expected output
-    // capture order(tags in brackets): letter1(0,1), letter2(2,3), letter(4,5), containerID(6,7)
     string const expected_serialized_nfa{
             "0:byte_transitions={--->1},spontaneous_transition={1[]}\n"
             "1:byte_transitions={0-->2,1-->2,2-->2,3-->2,4-->2,5-->2,6-->2,7-->2,8-->2,9-->2},"
             "spontaneous_transition={}\n"
             "2:accepting_tag=0,byte_transitions={0-->2,1-->2,2-->2,3-->2,4-->2,5-->2,6-->2,7-->2,8-"
             "->2,9-->2},spontaneous_transition={}\n"
+    };
+
+    // Compare expected and actual line-by-line
+    auto const optional_actual_serialized_nfa{nfa.serialize()};
+    REQUIRE(optional_actual_serialized_nfa.has_value());
+    stringstream ss_actual{optional_actual_serialized_nfa.value()};
+    stringstream ss_expected{expected_serialized_nfa};
+    string actual_line;
+    string expected_line;
+
+    CAPTURE(optional_actual_serialized_nfa.value());
+    CAPTURE(expected_serialized_nfa);
+    while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
+        REQUIRE(actual_line == expected_line);
+    }
+    getline(ss_actual, actual_line);
+    REQUIRE(actual_line.empty());
+    getline(ss_expected, expected_line);
+    REQUIRE(expected_line.empty());
+}
+
+TEST_CASE("Test equal NFA", "[NFA]") {
+    Schema schema;
+    string const var_schema{R"(equals:[A]+=(?<val>[=AB]*A[=AB]*))"};
+    schema.add_variable(var_schema, -1);
+
+    auto const schema_ast = schema.release_schema_ast_ptr();
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    vector<ByteLexicalRule> rules;
+    rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
+    ByteNfa const nfa{rules};
+
+    // Compare against expected output
+    string const expected_serialized_nfa{
+            "0:byte_transitions={A-->1},spontaneous_transition={}\n"
+            "1:byte_transitions={=-->2,A-->1},spontaneous_transition={}\n"
+            "2:byte_transitions={},spontaneous_transition={3[0p]}\n"
+            "3:byte_transitions={=-->4,A-->4,B-->4},spontaneous_transition={4[]}\n"
+            "4:byte_transitions={=-->4,A-->4,A-->5,B-->4},spontaneous_transition={}\n"
+            "5:byte_transitions={=-->6,A-->6,B-->6},spontaneous_transition={6[]}\n"
+            "6:byte_transitions={=-->6,A-->6,B-->6},spontaneous_transition={7[1p]}\n"
+            "7:accepting_tag=0,byte_transitions={},spontaneous_transition={}\n"
     };
 
     // Compare expected and actual line-by-line

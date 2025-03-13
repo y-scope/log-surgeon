@@ -385,7 +385,9 @@ auto Dfa<TypedDfaState, TypedNfaState>::try_get_mapping(
                 {
                     reg_map_lhs_to_rhs.insert({lhs_reg_id, rhs_reg_id});
                     reg_map_rhs_to_lhs.insert({rhs_reg_id, lhs_reg_id});
-                } else if (reg_map_lhs_to_rhs.at(lhs_reg_id) != rhs_reg_id
+                } else if (false == reg_map_lhs_to_rhs.contains(lhs_reg_id)
+                           || false == reg_map_rhs_to_lhs.contains(rhs_reg_id)
+                           || reg_map_lhs_to_rhs.at(lhs_reg_id) != rhs_reg_id
                            || reg_map_rhs_to_lhs.at(rhs_reg_id) != lhs_reg_id)
                 {
                     return std::nullopt;

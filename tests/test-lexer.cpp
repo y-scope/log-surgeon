@@ -463,10 +463,7 @@ TEST_CASE("Test CLP default schema", "[Lexer]") {
     constexpr string_view cVarName4{"hex"};
     constexpr string_view cVarSchema4{R"(hex:[a-fA-F]+)"};
     constexpr string_view cVarName5{"equals"};
-    // constexpr string_view cVarSchema6{"equals:[^ \\r\\n]+=(?<val>[^ \\r\\n]*[a-zA-Z0-9][^
-    // \\r\\n]*)"
-    // };
-    constexpr string_view cVarSchema5{"equals:[A-Za-z]+=(?<val>[a-zA-Z0-9]+)"};
+    constexpr string_view cVarSchema5{R"(equals:[^ \r\n=]+=(?<val>[^ \r\n]*[A-Za-z0-9][^ \r\n]*))"};
     constexpr string_view cVarName6{"hasNumber"};
     constexpr string_view cVarSchema6{R"(hasNumber:[^ \r\n]*\d[^ \r\n]*)"};
 
