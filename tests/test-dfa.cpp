@@ -331,3 +331,60 @@ TEST_CASE("Test equals DFA", "[DFA]") {
     getline(ss_expected, expected_line);
     REQUIRE(expected_line.empty());
 }
+
+TEST_CASE("Test equals DFA with hasA", "[DFA]") {
+    Schema schema;
+    string const var_schema1{R"(equals:[A]+=(?<val>[=AB]*A[=AB]*))"};
+    string const var_schema2{R"(hasA:[AB]*[A][=AB]*)"};
+    schema.add_variable(var_schema1, -1);
+    schema.add_variable(var_schema2, -1);
+
+    auto const schema_ast = schema.release_schema_ast_ptr();
+    auto& equals_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    auto& has_a_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[1]);
+    vector<ByteLexicalRule> rules;
+    rules.emplace_back(0, std::move(equals_ast.m_regex_ptr));
+    rules.emplace_back(1, std::move(has_a_ast.m_regex_ptr));
+    ByteNfa const nfa{rules};
+    ByteDfa const dfa{nfa};
+
+    // TODO: Track all tags, not just an arbitrary paths tags (in this case some paths miss equals'
+    // tags).
+    string const expected_serialized_dfa{
+            "0:byte_transitions={A-()->1,B-()->2}\n"
+            "1:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->3,A-()->1,"
+            "B-()->4}\n"
+            "2:byte_transitions={A-()->5,B-()->2}\n"
+            "3:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-(4p,4p)->6,"
+            "A-(4p,4p,4p)->7,B-(4p,4p)->6}\n"
+            "4:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->8,A-()->5,"
+            "B-()->4}\n"
+            "5:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->8,A-()->5,"
+            "B-()->4}\n"
+            "6:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->6,A-()->7,"
+            "B-()->6}\n"
+            "7:accepting_tags={0,1},accepting_operations={2c4,3p,2c0,3c1},"
+            "byte_transitions={=-()->9,A-()->7,B-()->9}\n"
+            "8:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->8,A-()->8,"
+            "B-()->8}\n"
+            "9:accepting_tags={0,1},accepting_operations={2c4,3p,2c0,3c1},"
+            "byte_transitions={=-()->9,A-()->7,B-()->9}\n"
+    };
+
+    // Compare expected and actual line-by-line
+    auto const actual_serialized_dfa{dfa.serialize()};
+    stringstream ss_actual{actual_serialized_dfa};
+    stringstream ss_expected{expected_serialized_dfa};
+    string actual_line;
+    string expected_line;
+
+    CAPTURE(actual_serialized_dfa);
+    CAPTURE(expected_serialized_dfa);
+    while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
+        REQUIRE(actual_line == expected_line);
+    }
+    getline(ss_actual, actual_line);
+    REQUIRE(actual_line.empty());
+    getline(ss_expected, expected_line);
+    REQUIRE(expected_line.empty());
+}

@@ -465,7 +465,7 @@ TEST_CASE("Test CLP default schema", "[Lexer]") {
     constexpr string_view cVarName5{"equals"};
     constexpr string_view cVarSchema5{R"(equals:[^ \r\n=]+=(?<val>[^ \r\n]*[A-Za-z0-9][^ \r\n]*))"};
     constexpr string_view cVarName6{"hasNumber"};
-    constexpr string_view cVarSchema6{R"(hasNumber:[^ \r\n]*\d[^ \r\n]*)"};
+    constexpr string_view cVarSchema6{R"(hasNumber:={0,1}[^ \r\n=]*\d[^ \r\n=]*={0,1})"};
 
     constexpr string_view cTokenString1{"2012-12-12 12:12:12.123"};
     constexpr string_view cTokenString2{"123"};
