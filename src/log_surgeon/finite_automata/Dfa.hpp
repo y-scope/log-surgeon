@@ -445,8 +445,14 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_transitions(
                         assign_transition_reg_ops(num_tags, closure, tag_id_with_op_to_reg_id)
                 };
                 if (ascii_transitions_map.contains(i)) {
-                    auto& byte_reg_ops{ascii_transitions_map.at(i).first};
-                    byte_reg_ops.insert(byte_reg_ops.end(), new_reg_ops.begin(), new_reg_ops.end());
+                    for (auto const& new_reg_op : new_reg_ops) {
+                        auto& byte_reg_ops{ascii_transitions_map.at(i).first};
+                        if (byte_reg_ops.end()
+                            == std::find(byte_reg_ops.begin(), byte_reg_ops.end(), new_reg_op))
+                        {
+                            byte_reg_ops.push_back(new_reg_op);
+                        }
+                    }
                     ascii_transitions_map.at(i).second.insert(closure.begin(), closure.end());
                 } else {
                     ascii_transitions_map.emplace(i, std::make_pair(new_reg_ops, closure));

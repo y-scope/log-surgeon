@@ -24,6 +24,11 @@ public:
         Negate
     };
 
+    bool operator==(RegisterOperation const& rhs) const {
+        return m_reg_id == rhs.m_reg_id && m_type == rhs.m_type
+               && m_copy_reg_id == rhs.m_copy_reg_id;
+    }
+
     static auto create_set_operation(reg_id_t const reg_id) -> RegisterOperation {
         return {reg_id, Type::Set};
     }
