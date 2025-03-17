@@ -6,6 +6,7 @@
 #include <memory>
 #include <variant>
 
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/ParserAst.hpp>
 #include <log_surgeon/Production.hpp>
 #include <log_surgeon/Token.hpp>
@@ -17,7 +18,12 @@ class NonTerminal {
 public:
     NonTerminal() : m_children_start(0), m_production(nullptr), m_ast(nullptr) {}
 
-    explicit NonTerminal(Production*);
+    explicit NonTerminal(Production* production)
+            : m_children_start(m_next_children_start),
+              m_production(production),
+              m_ast(nullptr) {
+        m_next_children_start += production->m_body.size();
+    }
 
     /**
      * Return the ith child's (body of production) MatchedSymbol as a Token.
@@ -49,7 +55,7 @@ public:
     auto get_parser_ast() -> std::unique_ptr<ParserAST>& { return m_ast; }
 
     static MatchedSymbol m_all_children[];
-    static uint32_t m_next_children_start;
+    static inline uint32_t m_next_children_start{0};
     uint32_t m_children_start;
     Production* m_production;
     std::unique_ptr<ParserAST> m_ast;
