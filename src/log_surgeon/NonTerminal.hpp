@@ -12,6 +12,7 @@
 #include <log_surgeon/Token.hpp>
 
 namespace log_surgeon {
+class NonTerminal;
 using MatchedSymbol = std::variant<Token, NonTerminal>;
 
 class NonTerminal {
