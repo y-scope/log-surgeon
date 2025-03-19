@@ -1,0 +1,142 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+chat:
+  auto_reply: true
+  integrations:
+    linear:
+      usage: "auto"
+    jira:
+      usage: "auto"
+
+# General settings
+early_access: false
+enable_free_tier: true
+language: "en-CA"
+tone_instructions: ""
+
+knowledge_base:
+  issues:
+    scope: "auto"
+  jira:
+    usage: "auto"
+    project_keys: []
+  learnings:
+    scope: "auto"
+  linear:
+    usage: "auto"
+    team_keys: []
+  opt_out: false
+  pull_requests:
+    scope: "auto"
+  web_search:
+    enabled: true
+
+reviews:
+  # Auto-review settings
+  abort_on_close: true
+  auto_review:
+    auto_incremental_review: false
+    base_branches: []
+    drafts: false
+    enabled: false
+    ignore_title_keywords: []
+    labels: []
+  request_changes_workflow: false
+
+  # Misc settings
+  finishing_touches:
+    docstrings:
+      enabled: true
+  profile: "chill"
+  poem: false
+
+  # Per-path settings
+  path_filters: []
+  path_instructions:
+    - path: "**/*.{cpp,hpp,java,js,jsx,tpp,ts,tsx}"
+      instructions: >-
+        - Prefer `false == <expression>` rather than `!<expression>`.
+
+  # Review status settings
+  commit_status: true
+  fail_commit_status: false
+  review_status: true
+
+  # Summary generation and related issues/PRs/reviewers settings
+  auto_apply_labels: false
+  assess_linked_issues: true
+  changed_files_summary: true
+  collapse_walkthrough: false
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  high_level_summary_in_walkthrough: false
+  labeling_instructions: []
+  related_issues: true
+  related_prs: true
+  sequence_diagrams: true
+  suggested_labels: true
+  suggested_reviewers: true
+
+  # Title generation settings
+  auto_title_placeholder: "@coderabbitai"
+  auto_title_instructions: ""
+
+  tools:
+    actionlint:
+      enabled: true
+    ast-grep:
+      packages: []
+      rule_dirs: []
+      util_dirs: []
+      essential_rules: true
+    biome:
+      enabled: true
+    buf:
+      enabled: true
+    checkov:
+      enabled: true
+    circleci:
+      enabled: true
+    cppcheck:
+      enabled: true
+    detekt:
+      enabled: true
+    eslint:
+      enabled: true
+    github-checks:
+      enabled: true
+      timeout_ms: 90000
+    gitleaks:
+      enabled: true
+    golangci-lint:
+      enabled: true
+    hadolint:
+      enabled: true
+    languagetool:
+      enabled: true
+      enabled_only: false
+      level: "default"
+      enabled_rules: []
+      disabled_rules: []
+      enabled_categories: []
+      disabled_categories: []
+    markdownlint:
+      enabled: true
+    phpstan:
+      enabled: true
+      level: "default"
+    pmd:
+      enabled: true
+    regal:
+      enabled: true
+    rubocop:
+      enabled: true
+    ruff:
+      enabled: true
+    semgrep:
+      enabled: true
+    shellcheck:
+      enabled: true
+    swiftlint:
+      enabled: true
+    yamllint:
+      enabled: true
