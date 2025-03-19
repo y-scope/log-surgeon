@@ -2,16 +2,11 @@
 #define LOG_SURGEON_PRODUCTION_HPP
 
 #include <cstdint>
-#include <functional>
-#include <memory>
 #include <vector>
 
-#include <log_surgeon/ParserAst.hpp>
+#include <log_surgeon/types.hpp>
 
 namespace log_surgeon {
-class NonTerminal;
-using SemanticRule = std::function<std::unique_ptr<ParserAST>(NonTerminal*)>;
-
 /**
  * Structure representing a production of the form "m_head -> {m_body}". The code fragment to
  * execute upon reducing "{m_body} -> m_head" is m_semantic_rule, which is purely a function of the

@@ -22,6 +22,7 @@
 #include <log_surgeon/NonTerminal.hpp>
 #include <log_surgeon/Parser.hpp>
 #include <log_surgeon/Production.hpp>
+#include <log_surgeon/types.hpp>
 
 namespace log_surgeon {
 template <class... Ts>

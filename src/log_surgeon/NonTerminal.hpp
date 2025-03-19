@@ -4,17 +4,14 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
-#include <variant>
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/ParserAst.hpp>
 #include <log_surgeon/Production.hpp>
 #include <log_surgeon/Token.hpp>
+#include <log_surgeon/types.hpp>
 
 namespace log_surgeon {
-class NonTerminal;
-using MatchedSymbol = std::variant<Token, NonTerminal>;
-
 class NonTerminal {
 public:
     NonTerminal() : m_children_start(0), m_production(nullptr), m_ast(nullptr) {}

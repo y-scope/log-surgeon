@@ -5,15 +5,12 @@
 #include <set>
 #include <tuple>
 #include <unordered_map>
-#include <variant>
 #include <vector>
 
 #include <log_surgeon/Production.hpp>
+#include <log_surgeon/types.hpp>
 
 namespace log_surgeon {
-class ItemSet;
-using Action = std::variant<bool, ItemSet*, Production*>;
-
 /**
  * Structure representing an item in a LALR1 state.
  * An item (1) is associated with a m_production and a single m_lookahead which
