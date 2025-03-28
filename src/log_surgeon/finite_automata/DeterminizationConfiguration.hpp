@@ -59,7 +59,7 @@ public:
     }
 
     /**
-     * @unexplored_stack Returns the stack of configurations updated to contain configurations
+     * @param unexplored_stack Returns the stack of configurations updated to contain configurations
      * reachable from this configuration via a single spontaneous transition.
      */
     auto update_reachable_configs(std::stack<DeterminizationConfiguration>& unexplored_stack
