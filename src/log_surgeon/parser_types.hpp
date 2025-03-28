@@ -1,16 +1,87 @@
-#ifndef LOG_SURGEON_ITEMSET_HPP
-#define LOG_SURGEON_ITEMSET_HPP
+#ifndef LOG_SURGEON_PARSER_TYPES_HPP
+#define LOG_SURGEON_PARSER_TYPES_HPP
 
+#include <cassert>
 #include <cstdint>
+#include <memory>
 #include <set>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
 
-#include <log_surgeon/Production.hpp>
+#include <log_surgeon/ParserAst.hpp>
+#include <log_surgeon/Token.hpp>
 #include <log_surgeon/types.hpp>
 
 namespace log_surgeon {
+/**
+ * Structure representing a production of the form "m_head -> {m_body}". The code fragment to
+ * execute upon reducing "{m_body} -> m_head" is m_semantic_rule, which is purely a function of the
+ * MatchedSymbols for {m_body}. m_index is the productions position in the parsers production
+ * vector.
+ */
+class Production {
+public:
+    /**
+     * Returns if the production is an epsilon production. An epsilon production has nothing on its
+     * LHS (i.e., HEAD -> {})
+     * @return bool
+     */
+    [[nodiscard]] auto is_epsilon() const -> bool { return m_body.empty(); }
+
+    uint32_t m_index;
+    uint32_t m_head;
+    std::vector<uint32_t> m_body;
+    SemanticRule m_semantic_rule;
+};
+
+class NonTerminal {
+public:
+    NonTerminal() : m_children_start(0), m_production(nullptr), m_ast(nullptr) {}
+
+    explicit NonTerminal(Production* production)
+            : m_children_start(m_next_children_start),
+              m_production(production),
+              m_ast(nullptr) {
+        m_next_children_start += production->m_body.size();
+    }
+
+    /**
+     * Return the ith child's (body of production) MatchedSymbol as a Token.
+     * Note: only children are needed (and stored) for performing semantic actions (for the AST)
+     * @param i
+     * @return Token*
+     */
+    [[nodiscard]] auto token_cast(uint32_t i) const -> Token* {
+        assert(i < cSizeOfAllChildren);
+        return &std::get<Token>(m_all_children[m_children_start + i]);
+    }
+
+    /**
+     * Return the ith child's (body of production) MatchedSymbol as a NonTerminal. Note: only
+     * children are needed (and stored) for performing semantic actions (for the AST)
+     * @param i
+     * @return NonTerminal*
+     */
+    [[nodiscard]] auto non_terminal_cast(uint32_t i) const -> NonTerminal* {
+        assert(i < cSizeOfAllChildren);
+        return &std::get<NonTerminal>(m_all_children[m_children_start + i]);
+    }
+
+    /**
+     * Return the AST that relates this non_terminal's children together (based on the
+     * production/syntax-rule that was determined to have generated them)
+     * @return std::unique_ptr<ParserAST>
+     */
+    auto get_parser_ast() -> std::unique_ptr<ParserAST>& { return m_ast; }
+
+    static MatchedSymbol m_all_children[];
+    static inline uint32_t m_next_children_start{0};
+    uint32_t m_children_start;
+    Production* m_production;
+    std::unique_ptr<ParserAST> m_ast;
+};
+
 /**
  * Structure representing an item in a LALR1 state.
  * An item (1) is associated with a m_production and a single m_lookahead which
@@ -84,4 +155,4 @@ public:
 };
 }  // namespace log_surgeon
 
-#endif  // LOG_SURGEON_ITEMSET_HPP
+#endif  // LOG_SURGEON_PARSER_TYPES_HPP

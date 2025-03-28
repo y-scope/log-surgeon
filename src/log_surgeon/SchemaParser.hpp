@@ -6,7 +6,7 @@
 #include <utility>
 
 #include <log_surgeon/Lalr1Parser.hpp>
-#include <log_surgeon/NonTerminal.hpp>
+#include <log_surgeon/parser_types.hpp>
 #include <log_surgeon/ParserAst.hpp>
 
 namespace log_surgeon {

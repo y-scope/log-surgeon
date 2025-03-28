@@ -1,8 +1,5 @@
-#include <cstdint>
-
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/NonTerminal.hpp>
-#include <log_surgeon/Production.hpp>
+#include <log_surgeon/parser_types.hpp>
 #include <log_surgeon/types.hpp>
 
 namespace log_surgeon {
