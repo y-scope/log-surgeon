@@ -53,6 +53,7 @@ tasks:
         yamllint \
           --config-file "{{.ROOT_DIR}}/tools/yscope-dev-utils/lint-configs/.yamllint.yml" \
           --strict \
+          .coderabbit.yaml \
           .github \
           .clang-format \
           lint-tasks.yml \
