@@ -17,11 +17,9 @@
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/ItemSet.hpp>
 #include <log_surgeon/Lexer.hpp>
-#include <log_surgeon/NonTerminal.hpp>
 #include <log_surgeon/Parser.hpp>
-#include <log_surgeon/Production.hpp>
+#include <log_surgeon/parser_types.hpp>
 
 namespace log_surgeon {
 template <class... Ts>
