@@ -18,8 +18,8 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/Lexer.hpp>
-#include <log_surgeon/parser_types.hpp>
 #include <log_surgeon/Parser.hpp>
+#include <log_surgeon/parser_types.hpp>
 #include <log_surgeon/types.hpp>
 
 namespace log_surgeon {
