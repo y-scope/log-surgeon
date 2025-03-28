@@ -33,9 +33,11 @@ namespace {
  * @param actual_dfa The actual DFA serialized string to be compared.
  * @param expected_serialized_dfa The expected DFA serialized string for comparison.
  */
-void compare_serialized_dfa(ByteDfa const& actual_dfa, std::string const& expected_serialized_dfa);
+auto compare_serialized_dfa(ByteDfa const& actual_dfa, std::string const& expected_serialized_dfa)
+        -> void;
 
-void compare_serialized_dfa(ByteDfa const& actual_dfa, std::string const& expected_serialized_dfa) {
+auto compare_serialized_dfa(ByteDfa const& actual_dfa, std::string const& expected_serialized_dfa)
+        -> void {
     auto const optional_actual_serialized_dfa = actual_dfa.serialize();
     REQUIRE(optional_actual_serialized_dfa.has_value());
     auto const& actual_serialized_dfa = optional_actual_serialized_dfa.value();
@@ -64,7 +66,7 @@ TEST_CASE("Test Simple Untagged DFA", "[DFA]") {
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(0));
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
     ByteNfa const nfa{rules};
@@ -94,7 +96,7 @@ TEST_CASE("Test Complex Untagged DFA", "[DFA]") {
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(0));
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
     ByteNfa const nfa{rules};
@@ -122,7 +124,7 @@ TEST_CASE("Test Simple Tagged DFA", "[DFA]") {
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(0));
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
     ByteNfa const nfa{rules};
@@ -156,7 +158,7 @@ TEST_CASE("Test Complex Tagged DFA", "[DFA]") {
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(0));
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
     ByteNfa const nfa{rules};

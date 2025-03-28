@@ -44,7 +44,7 @@ public:
         return m_lookahead < rhs.m_lookahead;
     }
 
-    auto child_configuration_with_new_state_and_tag(
+    [[nodiscard]] auto child_configuration_with_new_state_and_tag(
             TypedNfaState const* new_nfa_state,
             TagOperation const& tag_op
     ) const -> DeterminizationConfiguration {
@@ -69,10 +69,10 @@ public:
      * @return The set of all configurations reachable from the current configuration via any number
      * of spontaneous transitions.
      */
-    auto spontaneous_closure() const -> std::set<DeterminizationConfiguration>;
+    [[nodiscard]] auto spontaneous_closure() const -> std::set<DeterminizationConfiguration>;
 
     auto set_reg_id(tag_id_t const tag_id, reg_id_t const reg_id) -> void {
-        m_tag_id_to_reg_ids[tag_id] = reg_id;
+        m_tag_id_to_reg_ids.insert_or_assign(tag_id, reg_id);
     }
 
     [[nodiscard]] auto get_state() const -> TypedNfaState const* { return m_nfa_state; }

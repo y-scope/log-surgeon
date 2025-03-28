@@ -87,7 +87,7 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
  * @param map The map to serialize.
  * @return The serialized map.
  */
-auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> string;
+[[nodiscard]] auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> string;
 
 auto test_regex_ast(string_view const var_schema, u32string const& expected_serialized_ast)
         -> void {
@@ -95,7 +95,7 @@ auto test_regex_ast(string_view const var_schema, u32string const& expected_seri
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
-    auto const* capture_rule_ast = dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars[0].get());
+    auto const* capture_rule_ast = dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars.at(0).get());
     REQUIRE(capture_rule_ast != nullptr);
 
     auto const actual_string = u32string_to_string(capture_rule_ast->m_regex_ptr->serialize());
@@ -171,7 +171,7 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
     REQUIRE(log_surgeon::ErrorCode::Success == error_code);
     REQUIRE(nullptr != token.m_type_ids_ptr);
     REQUIRE(1 == token.m_type_ids_ptr->size());
-    REQUIRE(rule_name == lexer.m_id_symbol[token.m_type_ids_ptr->at(0)]);
+    REQUIRE(rule_name == lexer.m_id_symbol.at(token.m_type_ids_ptr->at(0)));
     REQUIRE(input == token.to_string_view());
 
     error_code = lexer.scan(input_buffer, token);
@@ -181,7 +181,7 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
     REQUIRE(log_surgeon::ErrorCode::Success == error_code);
     REQUIRE(nullptr != token.m_type_ids_ptr);
     REQUIRE(1 == token.m_type_ids_ptr->size());
-    REQUIRE(log_surgeon::cTokenEnd == lexer.m_id_symbol[token.m_type_ids_ptr->at(0)]);
+    REQUIRE(log_surgeon::cTokenEnd == lexer.m_id_symbol.at(token.m_type_ids_ptr->at(0)));
     REQUIRE(token.to_string_view().empty());
 
     // TODO: Add verification of register values after implementing the DFA simulation.
@@ -207,7 +207,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE(schema_ast->m_schema_vars.size() == 1);
         REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());
 
-        auto& schema_var_ast_ptr = schema_ast->m_schema_vars[0];
+        auto& schema_var_ast_ptr = schema_ast->m_schema_vars.at(0);
         REQUIRE(nullptr != schema_var_ast_ptr);
         auto& schema_var_ast = dynamic_cast<SchemaVarAST&>(*schema_var_ast_ptr);
         REQUIRE(var_name == schema_var_ast.m_name);
@@ -225,7 +225,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE(schema_ast->m_schema_vars.size() == 1);
         REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());
 
-        auto& schema_var_ast_ptr = schema_ast->m_schema_vars[0];
+        auto& schema_var_ast_ptr = schema_ast->m_schema_vars.at(0);
         REQUIRE(nullptr != schema_var_ast_ptr);
         auto& schema_var_ast = dynamic_cast<SchemaVarAST&>(*schema_var_ast_ptr);
         REQUIRE(var_name == schema_var_ast.m_name);
@@ -259,8 +259,8 @@ TEST_CASE("Test the Schema class", "[Schema]") {
                 );
         REQUIRE(false == regex_ast_group_ast->is_wildcard());
         REQUIRE(1 == regex_ast_group_ast->get_ranges().size());
-        REQUIRE('0' == regex_ast_group_ast->get_ranges()[0].first);
-        REQUIRE('9' == regex_ast_group_ast->get_ranges()[0].second);
+        REQUIRE('0' == regex_ast_group_ast->get_ranges().at(0).first);
+        REQUIRE('9' == regex_ast_group_ast->get_ranges().at(0).second);
     }
 
     SECTION("Test AST with tags") {
@@ -378,10 +378,10 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     ))};
     REQUIRE(optional_capture_ids.has_value());
     REQUIRE(1 == optional_capture_ids.value().size());
-    REQUIRE(lexer.m_symbol_id.at(capture_name) == optional_capture_ids.value()[0]);
+    REQUIRE(lexer.m_symbol_id.at(capture_name) == optional_capture_ids.value().at(0));
 
     auto const optional_tag_id_pair{
-            lexer.get_tag_id_pair_from_capture_id(optional_capture_ids.value()[0])
+            lexer.get_tag_id_pair_from_capture_id(optional_capture_ids.value().at(0))
     };
     REQUIRE(optional_tag_id_pair.has_value());
     REQUIRE(std::make_pair(0U, 1U) == optional_tag_id_pair.value());

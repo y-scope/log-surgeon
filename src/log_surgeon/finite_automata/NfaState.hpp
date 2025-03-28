@@ -72,7 +72,7 @@ public:
     }
 
     auto add_byte_transition(uint8_t byte, NfaState* dest_state) -> void {
-        m_bytes_transitions[byte].push_back(dest_state);
+        m_bytes_transitions.at(byte).push_back(dest_state);
     }
 
     /**
@@ -106,7 +106,7 @@ public:
     }
 
     [[nodiscard]] auto get_byte_transitions(uint8_t byte) const -> std::vector<NfaState*> const& {
-        return m_bytes_transitions[byte];
+        return m_bytes_transitions.at(byte);
     }
 
     [[nodiscard]] auto get_tree_transitions() -> Tree const& { return m_tree_transitions; }
@@ -179,7 +179,7 @@ auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_
 
     std::vector<std::string> byte_transitions;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
-        for (auto const* dest_state : m_bytes_transitions[idx]) {
+        for (auto const* dest_state : m_bytes_transitions.at(idx)) {
             byte_transitions.emplace_back(
                     fmt::format("{}-->{}", static_cast<char>(idx), state_ids.at(dest_state))
             );

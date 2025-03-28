@@ -46,10 +46,10 @@ public:
 
     /**
      * Return regex pattern for a rule name
-     * @param variable_id
+     * @param rule_id
      * @return finite_automata::RegexAST*
      */
-    auto get_rule(uint32_t variable_id) -> finite_automata::RegexAST<TypedNfaState>*;
+    [[nodiscard]] auto get_rule(uint32_t rule_id) -> finite_automata::RegexAST<TypedNfaState>*;
 
     /**
      * Generate DFA for lexer.
@@ -199,7 +199,7 @@ private:
      * Get next character from the input buffer
      * @return unsigned char
      */
-    auto get_next_character() -> unsigned char;
+    [[nodiscard]] auto get_next_character() -> unsigned char;
 
     uint32_t m_match_pos{0};
     uint32_t m_start_pos{0};

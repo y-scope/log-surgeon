@@ -40,7 +40,7 @@ public:
      */
     [[nodiscard]] auto serialize() const -> std::optional<std::string>;
 
-    auto get_root() const -> TypedDfaState const* { return m_states.at(0).get(); }
+    [[nodiscard]] auto get_root() const -> TypedDfaState const* { return m_states.at(0).get(); }
 
     /**
      * Compares this dfa with `dfa_in` to determine the set of schema types in this dfa that are
@@ -90,8 +90,10 @@ private:
      * @return The register mapping if a bijection is possible.
      * @return std::nullopt otherwise.
      */
-    static auto try_get_mapping(ConfigurationSet const& lhs, ConfigurationSet const& rhs)
-            -> std::optional<std::unordered_map<reg_id_t, reg_id_t>>;
+    [[nodiscard]] static auto try_get_mapping(
+            ConfigurationSet const& lhs,
+            ConfigurationSet const& rhs
+    ) -> std::optional<std::unordered_map<reg_id_t, reg_id_t>>;
 
     /**
      * Creates a DFA state based on the given config set if the config does not already exist and
@@ -127,7 +129,7 @@ private:
      * @return Mapping of input to transition. Each transition contains a vector of register
      * operations and a destination configuration set.
      */
-    auto get_transitions(
+    [[nodiscard]] auto get_transitions(
             size_t num_tags,
             ConfigurationSet const& config_set,
             std::map<tag_id_t, reg_id_t>& tag_id_with_op_to_reg_id
@@ -171,7 +173,7 @@ private:
      * @param tag_id_to_final_reg_id Mapping from tags to final reg
      * @return A pointer to the new DFA state.
      */
-    auto new_state(
+    [[nodiscard]] auto new_state(
             ConfigurationSet const& config_set,
             std::map<tag_id_t, reg_id_t> const& tag_id_to_final_reg_id
     ) -> TypedDfaState*;
