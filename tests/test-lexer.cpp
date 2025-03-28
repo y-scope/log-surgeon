@@ -95,7 +95,8 @@ auto test_regex_ast(string_view const var_schema, u32string const& expected_seri
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
-    auto const* capture_rule_ast = dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars.at(0).get());
+    auto const* capture_rule_ast
+            = dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars.at(0).get());
     REQUIRE(capture_rule_ast != nullptr);
 
     auto const actual_string = u32string_to_string(capture_rule_ast->m_regex_ptr->serialize());
