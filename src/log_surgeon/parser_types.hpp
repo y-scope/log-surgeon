@@ -35,6 +35,16 @@ public:
     SemanticRule m_semantic_rule;
 };
 
+/**
+ * Represents a non-terminal symbol in the parser, which corresponds to a production rule. A
+ * `NonTerminal` is associated with a specific `Production` and maintains references to its children
+ * in the parse tree. These children are stored as `MatchedSymbols` and can be cast to either
+ * `Token` or `NonTerminal` types for semantic processing.
+ *
+ * The `NonTerminal` also maintains a reference to its corresponding AST node, which represents the
+ * syntactic structure derived from this production. The AST is constructed based on the semantic
+ * rules associated with the production.
+ */
 class NonTerminal {
 public:
     NonTerminal() : m_children_start(0), m_production(nullptr), m_ast(nullptr) {}
