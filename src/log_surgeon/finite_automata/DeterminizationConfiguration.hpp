@@ -71,7 +71,7 @@ public:
      */
     auto spontaneous_closure() const -> std::set<DeterminizationConfiguration>;
 
-    auto set_reg_id(tag_id_t const tag_id, reg_id_t const reg_id) {
+    auto set_reg_id(tag_id_t const tag_id, reg_id_t const reg_id) -> void {
         m_tag_id_to_reg_ids[tag_id] = reg_id;
     }
 
