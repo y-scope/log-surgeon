@@ -1,6 +1,5 @@
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/parser_types.hpp>
-#include <log_surgeon/types.hpp>
 
 namespace log_surgeon {
 MatchedSymbol NonTerminal::m_all_children[cSizeOfAllChildren];

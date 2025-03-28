@@ -3,17 +3,28 @@
 
 #include <cassert>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <set>
 #include <tuple>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include <log_surgeon/ParserAst.hpp>
 #include <log_surgeon/Token.hpp>
-#include <log_surgeon/types.hpp>
 
 namespace log_surgeon {
+class ItemSet;
+class NonTerminal;
+class ParserAST;
+class Production;
+class Token;
+
+using MatchedSymbol = std::variant<Token, NonTerminal>;
+using SemanticRule = std::function<std::unique_ptr<ParserAST>(NonTerminal*)>;
+using Action = std::variant<bool, ItemSet*, Production*>;
+
 /**
  * Structure representing a production of the form "m_head -> {m_body}". The code fragment to
  * execute upon reducing "{m_body} -> m_head" is m_semantic_rule, which is purely a function of the
