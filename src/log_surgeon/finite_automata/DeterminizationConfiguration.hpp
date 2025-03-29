@@ -13,6 +13,16 @@
 #include <log_surgeon/types.hpp>
 
 namespace log_surgeon::finite_automata {
+/**
+ * Encapsulates the configuration of a state during the determinization process of an NFA.
+ *
+ * This class stores the NFA state, the mapping of tag IDs to register IDs, the history of tag
+ * operations, and the lookahead of upcoming tag operations.
+ *
+ * The configuration also supports exploring reachable configurations via spontaneous transitions.
+ *
+ * @tparam TypedNfaState The type of the NFA state.
+ */
 template <typename TypedNfaState>
 class DeterminizationConfiguration {
 public:
@@ -59,13 +69,6 @@ public:
     }
 
     /**
-     * @param unexplored_stack Returns the stack of configurations updated to contain configurations
-     * reachable from this configuration via a single spontaneous transition.
-     */
-    auto update_reachable_configs(std::stack<DeterminizationConfiguration>& unexplored_stack
-    ) const -> void;
-
-    /**
      * @return The set of all configurations reachable from the current configuration via any number
      * of spontaneous transitions.
      */
@@ -103,6 +106,13 @@ public:
     }
 
 private:
+    /**
+     * @param unexplored_stack Returns the stack of configurations updated to contain configurations
+     * reachable from this configuration via a single spontaneous transition.
+     */
+    auto update_reachable_configs(std::stack<DeterminizationConfiguration>& unexplored_stack
+    ) const -> void;
+
     TypedNfaState const* m_nfa_state;
     std::map<tag_id_t, reg_id_t> m_tag_id_to_reg_ids;
     std::vector<TagOperation> m_history;
