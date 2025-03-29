@@ -23,6 +23,16 @@
 #include <log_surgeon/types.hpp>
 
 namespace log_surgeon {
+/**
+ * Represents a lexer that processes input buffers using a DFA-based approach.
+ *
+ * The Lexer class tokenizes input data based on lexical rules defined using regular expressions.
+ * It supports adding delimiters, scanning for tokens, and handling captures for tagged expressions.
+ * The lexer can also be used to lexer search queries containing wildcards.
+ *
+ * @tparam TypedNfaState The type representing NFA states used in rule definitions.
+ * @tparam TypedDfaState The type representing DFA states used for token scanning.
+ */
 template <typename TypedNfaState, typename TypedDfaState>
 class Lexer {
 public:
