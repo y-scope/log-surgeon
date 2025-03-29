@@ -10,6 +10,7 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/LogParserOutputBuffer.hpp>
 #include <log_surgeon/Parser.hpp>
+#include <log_surgeon/ParserAst.hpp>
 #include <log_surgeon/ParserInputBuffer.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
