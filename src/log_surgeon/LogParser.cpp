@@ -7,6 +7,7 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/FileReader.hpp>
+#include <log_surgeon/ParserAst.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
 using std::make_unique;

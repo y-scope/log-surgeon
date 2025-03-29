@@ -28,8 +28,6 @@ class DfaState;
 template <StateType state_type>
 class DfaTransition {
 public:
-    DfaTransition() = default;
-
     DfaTransition(std::vector<RegisterOperation> reg_ops, DfaState<state_type> const* dest_state)
             : m_reg_ops{std::move(reg_ops)},
               m_dest_state{dest_state} {}

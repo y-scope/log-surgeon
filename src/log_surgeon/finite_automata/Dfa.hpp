@@ -27,10 +27,19 @@
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 
 namespace log_surgeon::finite_automata {
+/**
+ * Represents a Deterministic Finite Automaton (DFA).
+ *
+ * The DFA is constructed from an NFA using the superset determinization algorithm. The DFA consists
+ * of states, transitions, and registers for tracking tagged captures.
+ *
+ * @tparam TypedDfaState The type representing a DFA state.
+ * @tparam TypedNfaState The type representing an NFA state.
+ */
 template <typename TypedDfaState, typename TypedNfaState>
 class Dfa {
 public:
-    using ConfigurationSet = std::set<DetermizationConfiguration<TypedNfaState>>;
+    using ConfigurationSet = std::set<DeterminizationConfiguration<TypedNfaState>>;
 
     explicit Dfa(Nfa<TypedNfaState> const& nfa);
 
@@ -46,18 +55,19 @@ public:
 
     /**
      * @return A string representation of the DFA.
+     * @return Forwards `DfaState::serialize`'s return value (std::nullopt) on failure.
      */
-    [[nodiscard]] auto serialize() const -> std::string;
+    [[nodiscard]] auto serialize() const -> std::optional<std::string>;
 
-    auto get_root() const -> TypedDfaState const* { return m_states.at(0).get(); }
+    [[nodiscard]] auto get_root() const -> TypedDfaState const* { return m_states.at(0).get(); }
 
     /**
-     * Compares this dfa with `dfa_in` to determine the set of schema types in this dfa that are
+     * Compares this DFA with `dfa_in` to determine the set of schema types in this DFA that are
      * reachable by any type in `dfa_in`. A type is considered reachable if there is at least one
-     * string for which: (1) this dfa returns a set of types containing the type, and (2) `dfa_in`
+     * string for which: (1) this DFA returns a set of types containing the type, and (2) `dfa_in`
      * returns any non-empty set of types.
      *
-     * @param dfa_in The dfa with which to take the intersect.
+     * @param dfa_in The DFA with which to compute the intersection.
      * @return The set of schema types reachable by `dfa_in`.
      */
     [[nodiscard]] auto get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t>;
@@ -70,7 +80,7 @@ private:
     /**
      * Generates the DFA states from the given NFA using the superset determinization algorithm.
      *
-     * @oaram nfa The NFA used to generate the DFA.
+     * @param nfa The NFA used to generate the DFA.
      */
     auto generate(Nfa<TypedNfaState> const& nfa) -> void;
 
@@ -94,13 +104,15 @@ private:
      * config in `rhs`. A config is considered mapped if both contain the same start, history, and
      * registers.
      *
-     * @param lhs
-     * @param rhs
+     * @param lhs The first set of configurations.
+     * @param rhs The second set of configurations.
      * @return The register mapping if a bijection is possible.
      * @return std::nullopt otherwise.
      */
-    static auto try_get_mapping(ConfigurationSet const& lhs, ConfigurationSet const& rhs)
-            -> std::optional<std::unordered_map<reg_id_t, reg_id_t>>;
+    [[nodiscard]] static auto try_get_mapping(
+            ConfigurationSet const& lhs,
+            ConfigurationSet const& rhs
+    ) -> std::optional<std::unordered_map<reg_id_t, reg_id_t>>;
 
     /**
      * Creates a DFA state based on the given config set if the config does not already exist and
@@ -110,13 +122,14 @@ private:
      * @param config_set The configuration set for which to create or get the DFA state.
      * @param dfa_states Returns an updated map of configuration sets to DFA states.
      * @param unexplored_sets Returns a queue of unexplored states.
-     * @return If `new_config_set` is already in `dfa_states`, a pair:
+     * @return If `new_config_set` is already in `dfa_states`, a pair containing:
      * - The existing DFA state.
      * - std::nullopt.
-     * @return If `new_config_set` can be mapped to an existing config in `dfa_states`, a pair:
+     * @return If `new_config_set` can be mapped to an existing config in `dfa_states`, a pair
+     * containing:
      * - The existing DFA state.
      * - The register mapping.
-     * @return Otherwise, a pair:
+     * @return Otherwise, a pair containing:
      * - The newly created DFA state.
      * - std::nullopt.
      */
@@ -133,10 +146,10 @@ private:
      * @param config_set The configuration set.
      * @param tag_id_with_op_to_reg_id Returns an updated mapping from operation tag id to
      * register id.
-     * @return Mapping of input to transition. Each transition contains a vector of register
+     * @return A map of input symbols to transitions. Each transition contains a vector of register
      * operations and a destination configuration set.
      */
-    auto get_transitions(
+    [[nodiscard]] auto get_transitions(
             size_t num_tags,
             ConfigurationSet const& config_set,
             std::map<tag_id_t, reg_id_t>& tag_id_with_op_to_reg_id
@@ -148,7 +161,7 @@ private:
      * - Determine the operations to perform on the new registers.
      *
      * @param num_tags Number of tags in the NFA.
-     * @param closure Returns the set of dfa configurations with updated `tag_to_reg_ids`.
+     * @param closure Returns the set of DFA configurations with updated `tag_to_reg_ids`.
      * @param tag_id_with_op_to_reg_id Returns the updated map of tags with operations to
      * registers.
      * @returns The operations to perform on the new registers.
@@ -177,10 +190,10 @@ private:
      * Creates a new DFA state based on a set of NFA configurations and adds it to `m_states`.
      *
      * @param config_set The set of configurations represented by this DFA state.
-     * @param tag_id_to_final_reg_id Mapping from tags to final reg
+     * @param tag_id_to_final_reg_id Mapping from tag IDs to final register IDs.
      * @return A pointer to the new DFA state.
      */
-    auto new_state(
+    [[nodiscard]] auto new_state(
             ConfigurationSet const& config_set,
             std::map<tag_id_t, reg_id_t> const& tag_id_to_final_reg_id
     ) -> TypedDfaState*;
@@ -224,7 +237,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) 
             initial_tag_id_to_reg_id,
             m_tag_id_to_final_reg_id
     );
-    DetermizationConfiguration<TypedNfaState>
+    DeterminizationConfiguration<TypedNfaState>
             initial_config{nfa.get_root(), initial_tag_id_to_reg_id, {}, {}};
 
     std::map<ConfigurationSet, TypedDfaState*> dfa_states;
@@ -340,7 +353,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_transitions(
         auto const* nfa_state{configuration.get_state()};
         for (uint32_t i{0}; i < cSizeOfByte; ++i) {
             for (auto const* next_nfa_state : nfa_state->get_byte_transitions(i)) {
-                DetermizationConfiguration<TypedNfaState> next_configuration{
+                DeterminizationConfiguration<TypedNfaState> next_configuration{
                         next_nfa_state,
                         configuration.get_tag_id_to_reg_ids(),
                         configuration.get_lookahead(),
@@ -370,7 +383,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::assign_transition_reg_ops(
         std::map<tag_id_t, reg_id_t>& tag_id_with_op_to_reg_id
 ) -> std::vector<RegisterOperation> {
     std::vector<RegisterOperation> reg_ops;
-    std::set<DetermizationConfiguration<TypedNfaState>> new_closure;
+    std::set<DeterminizationConfiguration<TypedNfaState>> new_closure;
     for (auto config : closure) {
         for (tag_id_t tag_id{0}; tag_id < num_tags; tag_id++) {
             auto const optional_tag_op{config.get_tag_history(tag_id)};
@@ -506,8 +519,9 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_bfs_traversal_order(
         state_queue.pop();
         // TODO: Handle the utf8 case
         for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
-            auto const dest_state{current_state->get_dest_state(idx)};
-            if (nullptr != dest_state) {
+            auto const& transition{current_state->get_transition(idx)};
+            if (transition.has_value()) {
+                auto const* dest_state{transition->get_dest_state()};
                 try_add_to_queue_and_visited(dest_state);
             }
         }
@@ -516,7 +530,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_bfs_traversal_order(
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
-auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::string {
+auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::optional<std::string> {
     auto const traversal_order = get_bfs_traversal_order();
 
     std::unordered_map<TypedDfaState const*, uint32_t> state_ids;
@@ -527,7 +541,11 @@ auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::string {
 
     std::vector<std::string> serialized_states;
     for (auto const* state : traversal_order) {
-        serialized_states.emplace_back(state->serialize(state_ids));
+        auto const optional_serialized_state{state->serialize(state_ids)};
+        if (false == optional_serialized_state.has_value()) {
+            return std::nullopt;
+        }
+        serialized_states.emplace_back(optional_serialized_state.value());
     }
     return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
 }

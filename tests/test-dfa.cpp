@@ -25,6 +25,40 @@ using ByteDfa = log_surgeon::finite_automata::Dfa<ByteDfaState, ByteNfaState>;
 using ByteLexicalRule = log_surgeon::LexicalRule<ByteNfaState>;
 using ByteNfa = log_surgeon::finite_automata::Nfa<ByteNfaState>;
 
+namespace {
+/**
+ * Helper function to compare the actual and expected DFA serialized strings, and compare them line
+ * by line to ensure the serialized DFA output is correct.
+ *
+ * @param actual_dfa The actual DFA serialized string to be compared.
+ * @param expected_serialized_dfa The expected DFA serialized string for comparison.
+ */
+auto compare_serialized_dfa(ByteDfa const& actual_dfa, std::string const& expected_serialized_dfa)
+        -> void;
+
+auto compare_serialized_dfa(ByteDfa const& actual_dfa, std::string const& expected_serialized_dfa)
+        -> void {
+    auto const optional_actual_serialized_dfa = actual_dfa.serialize();
+    REQUIRE(optional_actual_serialized_dfa.has_value());
+    auto const& actual_serialized_dfa = optional_actual_serialized_dfa.value();
+
+    stringstream ss_actual{actual_serialized_dfa};
+    stringstream ss_expected{expected_serialized_dfa};
+    string actual_line;
+    string expected_line;
+
+    CAPTURE(actual_serialized_dfa);
+    CAPTURE(expected_serialized_dfa);
+    while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
+        REQUIRE(actual_line == expected_line);
+    }
+    getline(ss_actual, actual_line);
+    REQUIRE(actual_line.empty());
+    getline(ss_expected, expected_line);
+    REQUIRE(expected_line.empty());
+}
+}  // namespace
+
 TEST_CASE("Test Simple Untagged DFA", "[DFA]") {
     Schema schema;
     string const var_name{"capture"};
@@ -32,7 +66,7 @@ TEST_CASE("Test Simple Untagged DFA", "[DFA]") {
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(0));
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
     ByteNfa const nfa{rules};
@@ -52,22 +86,7 @@ TEST_CASE("Test Simple Untagged DFA", "[DFA]") {
             "10:accepting_tags={0},accepting_operations={},byte_transitions={}\n"
     };
 
-    // Compare expected and actual line-by-line
-    auto const actual_serialized_dfa{dfa.serialize()};
-    stringstream ss_actual{actual_serialized_dfa};
-    stringstream ss_expected{expected_serialized_dfa};
-    string actual_line;
-    string expected_line;
-
-    CAPTURE(actual_serialized_dfa);
-    CAPTURE(expected_serialized_dfa);
-    while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
-        REQUIRE(actual_line == expected_line);
-    }
-    getline(ss_actual, actual_line);
-    REQUIRE(actual_line.empty());
-    getline(ss_expected, expected_line);
-    REQUIRE(expected_line.empty());
+    compare_serialized_dfa(dfa, expected_serialized_dfa);
 }
 
 TEST_CASE("Test Complex Untagged DFA", "[DFA]") {
@@ -77,7 +96,7 @@ TEST_CASE("Test Complex Untagged DFA", "[DFA]") {
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(0));
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
     ByteNfa const nfa{rules};
@@ -94,22 +113,7 @@ TEST_CASE("Test Complex Untagged DFA", "[DFA]") {
             "8-()->5,9-()->5,C-()->2}\n"
     };
 
-    // Compare expected and actual line-by-line
-    auto const actual_serialized_dfa{dfa.serialize()};
-    stringstream ss_actual{actual_serialized_dfa};
-    stringstream ss_expected{expected_serialized_dfa};
-    string actual_line;
-    string expected_line;
-
-    CAPTURE(actual_serialized_dfa);
-    CAPTURE(expected_serialized_dfa);
-    while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
-        REQUIRE(actual_line == expected_line);
-    }
-    getline(ss_actual, actual_line);
-    REQUIRE(actual_line.empty());
-    getline(ss_expected, expected_line);
-    REQUIRE(expected_line.empty());
+    compare_serialized_dfa(dfa, expected_serialized_dfa);
 }
 
 TEST_CASE("Test Simple Tagged DFA", "[DFA]") {
@@ -120,7 +124,7 @@ TEST_CASE("Test Simple Tagged DFA", "[DFA]") {
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(0));
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
     ByteNfa const nfa{rules};
@@ -140,22 +144,7 @@ TEST_CASE("Test Simple Tagged DFA", "[DFA]") {
             "10:accepting_tags={0},accepting_operations={2c4,3p},byte_transitions={}\n"
     };
 
-    // Compare expected and actual line-by-line
-    auto const actual_serialized_dfa{dfa.serialize()};
-    stringstream ss_actual{actual_serialized_dfa};
-    stringstream ss_expected{expected_serialized_dfa};
-    string actual_line;
-    string expected_line;
-
-    CAPTURE(actual_serialized_dfa);
-    CAPTURE(expected_serialized_dfa);
-    while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
-        REQUIRE(actual_line == expected_line);
-    }
-    getline(ss_actual, actual_line);
-    REQUIRE(actual_line.empty());
-    getline(ss_expected, expected_line);
-    REQUIRE(expected_line.empty());
+    compare_serialized_dfa(dfa, expected_serialized_dfa);
 }
 
 TEST_CASE("Test Complex Tagged DFA", "[DFA]") {
@@ -169,7 +158,7 @@ TEST_CASE("Test Complex Tagged DFA", "[DFA]") {
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
+    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(0));
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
     ByteNfa const nfa{rules};
@@ -190,20 +179,5 @@ TEST_CASE("Test Complex Tagged DFA", "[DFA]") {
             "15c28},byte_transitions={}\n"
     };
 
-    // Compare expected and actual line-by-line
-    auto const actual_serialized_dfa{dfa.serialize()};
-    stringstream ss_actual{actual_serialized_dfa};
-    stringstream ss_expected{expected_serialized_dfa};
-    string actual_line;
-    string expected_line;
-
-    CAPTURE(actual_serialized_dfa);
-    CAPTURE(expected_serialized_dfa);
-    while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
-        REQUIRE(actual_line == expected_line);
-    }
-    getline(ss_actual, actual_line);
-    REQUIRE(actual_line.empty());
-    getline(ss_expected, expected_line);
-    REQUIRE(expected_line.empty());
+    compare_serialized_dfa(dfa, expected_serialized_dfa);
 }

@@ -17,9 +17,12 @@ set(
         ../src/log_surgeon/finite_automata/RegisterOperation.hpp
         ../src/log_surgeon/finite_automata/StateType.hpp
         ../src/log_surgeon/finite_automata/TagOperation.hpp
-        ../src/log_surgeon/Lalr1Parser.cpp
         ../src/log_surgeon/Lalr1Parser.hpp
         ../src/log_surgeon/Lalr1Parser.tpp
+        ../src/log_surgeon/ParserAst.cpp
+        ../src/log_surgeon/ParserAst.hpp
+        ../src/log_surgeon/parser_types.cpp
+        ../src/log_surgeon/parser_types.hpp
         ../src/log_surgeon/ParserInputBuffer.hpp
         ../src/log_surgeon/ParserInputBuffer.cpp
         ../src/log_surgeon/Schema.hpp
