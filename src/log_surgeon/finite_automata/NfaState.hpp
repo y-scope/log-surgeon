@@ -32,6 +32,17 @@ using Utf8NfaState = NfaState<StateType::Utf8>;
 
 using state_id_t = uint32_t;
 
+/**
+ * Represents a state in a Non-Deterministic Finite Automaton (NFA).
+ *
+ * Each NFA state has a unique identifier and may contain transitions based on input symbols
+ * (bytes or Unicode intervals) or spontaneous transitions (optionally associated with tag
+ * operations). States can be accepting, meaning they signify a successful match for a particular
+ * pattern.
+ *
+ * @tparam state_type Determines the type of transitions (byte or Unicode) the state supports.
+ */
+
 template <StateType state_type>
 class NfaState {
 public:
@@ -76,10 +87,9 @@ public:
     }
 
     /**
-     * Add `dest_state` to `m_bytes_transitions` if all values in interval are a byte, otherwise add
-     * `dest_state` to `m_tree_transitions`.
-     * @param interval
-     * @param dest_state
+     * Adds an interval-based transition to the appropriate transition set.
+     * @param interval The interval representing the transition condition.
+     * @param dest_state The destination state for this transition.
      */
     auto add_interval(Interval interval, NfaState* dest_state) -> void;
 
@@ -117,9 +127,8 @@ private:
     uint32_t m_matching_variable_id{0};
     std::vector<NfaSpontaneousTransition<NfaState>> m_spontaneous_transitions;
     std::array<std::vector<NfaState*>, cSizeOfByte> m_bytes_transitions;
-    // NOTE: We don't need m_tree_transitions for the `stateType ==
-    // StateType::Byte` case, so we use an empty class (`std::tuple<>`)
-    // in that case.
+    // NOTE: We don't need `m_tree_transitions` for the `stateType == StateType::Byte`, so we us an
+    // empty class (`std::tuple<>`) in that case.
     std::conditional_t<state_type == StateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
 
