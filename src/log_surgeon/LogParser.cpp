@@ -94,51 +94,6 @@ auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
         // check if regex contains a delimiter
         std::array<bool, cSizeOfUnicode> is_possible_input{};
         rule->m_regex_ptr->set_possible_inputs_to_true(is_possible_input);
-        bool contains_delimiter = false;
-        uint32_t delimiter_name = 0;
-        for (uint32_t delimiter : delimiters) {
-            if (is_possible_input[delimiter]) {
-                contains_delimiter = true;
-                delimiter_name = delimiter;
-                break;
-            }
-        }
-
-        // Error out if non-timestamp pattern contains a delimiter
-        if (contains_delimiter) {
-            FileReader schema_reader;
-            ErrorCode error_code = schema_reader.try_open(schema_ast->m_file_path);
-            if (ErrorCode::Success != error_code) {
-                throw std::runtime_error(
-                        schema_ast->m_file_path + ":" + to_string(rule->m_line_num + 1)
-                        + ": error: '" + rule->m_name
-                        + "' has regex pattern which contains delimiter '" + char(delimiter_name)
-                        + "'.\n"
-                );
-            }
-            // more detailed debugging based on looking at the file
-            string line;
-            for (uint32_t i = 0; i <= rule->m_line_num; i++) {
-                schema_reader.try_read_to_delimiter('\n', false, false, line);
-            }
-            uint32_t colon_pos = 0;
-            for (char i : line) {
-                colon_pos++;
-                if (i == ':') {
-                    break;
-                }
-            }
-            string indent(10, ' ');
-            string spaces(colon_pos, ' ');
-            string arrows(line.size() - colon_pos, '^');
-
-            throw std::runtime_error(
-                    schema_ast->m_file_path + ":" + to_string(rule->m_line_num + 1) + ": error: '"
-                    + rule->m_name + "' has regex pattern which contains delimiter '"
-                    + char(delimiter_name) + "'.\n" + indent + line + "\n" + indent + spaces
-                    + arrows + "\n"
-            );
-        }
 
         // For log-specific lexing: modify variable regex to contain a delimiter at the start.
         unique_ptr<RegexASTGroup<ByteNfaState>> delimiter_group

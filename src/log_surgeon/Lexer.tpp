@@ -98,6 +98,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer
             if (m_has_delimiters && false == m_match) {
                 auto const* dest_state{m_dfa->get_root()->get_transition(next_char)->get_dest_state(
                 )};
+                m_dfa->reset();
                 m_dfa->process_char(next_char, prev_byte_buf_pos);
                 m_match = true;
                 m_type_ids = &(dest_state->get_matching_variable_ids());
