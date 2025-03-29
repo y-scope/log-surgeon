@@ -164,7 +164,6 @@ auto test_scanning_input(ByteLexer& lexer, std::string_view input, std::string_v
     input_buffer.set_storage(token_string.data(), token_string.size(), 0, true);
     lexer.prepend_start_of_file_char(input_buffer);
 
-<<<<<<< HEAD
     auto [err1, optional_token1]{lexer.scan(input_buffer)};
     REQUIRE(log_surgeon::ErrorCode::Success == err1);
     REQUIRE(optional_token1.has_value());
