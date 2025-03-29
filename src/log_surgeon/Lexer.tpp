@@ -150,7 +150,8 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer, 
             // TODO: remove timestamp from m_is_fist_char so that m_is_delimiter
             // check not needed
             while (input_buffer.log_fully_consumed() == false
-                   && (m_is_first_char_of_a_variable[next_char] == false || m_is_delimiter[next_char] == false))
+                   && (m_is_first_char_of_a_variable[next_char] == false
+                       || m_is_delimiter[next_char] == false))
             {
                 prev_byte_buf_pos = input_buffer.storage().pos();
                 if (ErrorCode err = input_buffer.get_next_character(next_char);
