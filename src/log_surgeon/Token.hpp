@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_TOKEN_HPP
 #define LOG_SURGEON_TOKEN_HPP
 
+#include <cstdint>
 #include <set>
 #include <string>
 #include <string_view>
