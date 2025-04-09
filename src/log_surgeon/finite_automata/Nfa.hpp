@@ -53,17 +53,20 @@ public:
     /**
      * @param captures A vector containing the captures of all alternate paths.
      * @param dest_state The destination state to arrive at after negating the captures.
+     * @param multi_valued If the tag needs to store multiple positions to track the capture.
      * @return A pointer to the newly created NFA state with a spontaneous transition to
      * `dest_state`negating all the tags associated with `captures`.
      */
     [[nodiscard]] auto new_state_from_negative_captures(
             std::vector<Capture const*> const& captures,
-            TypedNfaState const* dest_state
+            TypedNfaState const* dest_state,
+            bool multi_valued
     ) -> TypedNfaState*;
 
     /**
      * @param capture The positive capture to be tracked.
      * @param dest_state The destination state to arrive at after tracking the capture.
+     * @param multi_valued If the tag needs to store multiple positions to track the capture.
      * @return A pair of pointers to the two newly created NFA states:
      * - A state arrived at from a spontaneous transition out of `m_root` that sets a tag to track
      * the capture's start position.
@@ -72,7 +75,8 @@ public:
      */
     [[nodiscard]] auto new_start_and_end_states_from_positive_capture(
             Capture const* capture,
-            TypedNfaState const* dest_state
+            TypedNfaState const* dest_state,
+            bool multi_valued
     ) -> std::pair<TypedNfaState*, TypedNfaState*>;
 
     /**
@@ -160,7 +164,8 @@ auto Nfa<TypedNfaState>::new_accepting_state(uint32_t const matching_variable_id
 template <typename TypedNfaState>
 auto Nfa<TypedNfaState>::new_state_from_negative_captures(
         std::vector<Capture const*> const& captures,
-        TypedNfaState const* dest_state
+        TypedNfaState const* dest_state,
+        bool const multi_valued
 ) -> TypedNfaState* {
     std::vector<tag_id_t> tags;
     for (auto const* capture : captures) {
@@ -173,7 +178,8 @@ auto Nfa<TypedNfaState>::new_state_from_negative_captures(
             m_state_id_generator.generate_id(),
             TagOperationType::Negate,
             std::move(tags),
-            dest_state
+            dest_state,
+            multi_valued
     ));
     return m_states.back().get();
 }
@@ -181,16 +187,23 @@ auto Nfa<TypedNfaState>::new_state_from_negative_captures(
 template <typename TypedNfaState>
 auto Nfa<TypedNfaState>::new_start_and_end_states_from_positive_capture(
         Capture const* capture,
-        TypedNfaState const* dest_state
+        TypedNfaState const* dest_state,
+        bool const multi_valued
 ) -> std::pair<TypedNfaState*, TypedNfaState*> {
     auto const [start_tag, end_tag]{get_or_create_capture_tag_pair(capture)};
     auto* start_state{new_state()};
-    m_root->add_spontaneous_transition(TagOperationType::Set, {start_tag}, start_state);
+    m_root->add_spontaneous_transition(
+            TagOperationType::Set,
+            {start_tag},
+            start_state,
+            multi_valued
+    );
     m_states.emplace_back(std::make_unique<TypedNfaState>(
             m_state_id_generator.generate_id(),
             TagOperationType::Set,
             std::vector{end_tag},
-            dest_state
+            dest_state,
+            multi_valued
     ));
     auto* end_state{m_states.back().get()};
     return {start_state, end_state};
