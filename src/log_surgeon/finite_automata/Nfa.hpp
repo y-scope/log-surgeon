@@ -181,7 +181,7 @@ auto Nfa<TypedNfaState>::new_state_from_negative_captures(
 template <typename TypedNfaState>
 auto Nfa<TypedNfaState>::new_start_and_end_states_from_positive_capture(
         Capture const* capture,
-        TypedNfaState const* dest_stateq
+        TypedNfaState const* dest_state
 ) -> std::pair<TypedNfaState*, TypedNfaState*> {
     auto const [start_tag, end_tag]{get_or_create_capture_tag_pair(capture)};
     auto* start_state{new_state()};
