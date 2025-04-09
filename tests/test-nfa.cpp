@@ -113,7 +113,24 @@ TEST_CASE("Test Complex NFA", "[NFA]") {
     test_nfa(var_schema, expected_serialized_nfa);
 }
 
-TEST_CASE("Test Repetition NFA", "[NFA]") {
+TEST_CASE("Test simple repetition NFA", "[NFA]") {
+    string const var_schema{"capture:a*(?<one>1)+"};
+
+    // Compare against expected output
+    string const expected_serialized_nfa{
+            "0:byte_transitions={a-->1},spontaneous_transition={1[]}\n"
+            "1:byte_transitions={a-->1},spontaneous_transition={2[0p+]}\n"
+            "2:byte_transitions={1-->3},spontaneous_transition={}\n"
+            "3:byte_transitions={},spontaneous_transition={4[1p+]}\n"
+            "4:accepting_tag=0,byte_transitions={},spontaneous_transition={5[0p+]}\n"
+            "5:byte_transitions={1-->6},spontaneous_transition={}\n"
+            "6:byte_transitions={},spontaneous_transition={4[1p+]}\n"
+    };
+
+    test_nfa(var_schema, expected_serialized_nfa);
+}
+
+TEST_CASE("Test complex repetition NFA", "[NFA]") {
     string const var_schema{"capture:(a*(?<one>1))+"};
 
     // Compare against expected output
