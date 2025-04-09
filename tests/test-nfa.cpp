@@ -21,10 +21,18 @@ using std::vector;
 using ByteLexicalRule = log_surgeon::LexicalRule<ByteNfaState>;
 using ByteNfa = log_surgeon::finite_automata::Nfa<ByteNfaState>;
 
-TEST_CASE("Test simple NFA", "[NFA]") {
+namespace {
+/**
+ * Generates an NFA for the given `var_schema` string, then serializes the NFA and compares it with
+ * `expected_serialized_nfa`.
+ *
+ * @param var_schema Variable schema from which to construct the NFA.
+ * @param expected_serialized_nfa Expected serialized string representation of the NFA.
+ */
+auto test_nfa(string const& var_schema, string const& expected_serialized_nfa) -> void;
+
+auto test_nfa(string const& var_schema, string const& expected_serialized_nfa) -> void {
     Schema schema;
-    string const var_name{"capture"};
-    string const var_schema{var_name + ":" + "userID=(?<uid>123)"};
     schema.add_variable(var_schema, -1);
 
     auto const schema_ast = schema.release_schema_ast_ptr();
@@ -32,22 +40,6 @@ TEST_CASE("Test simple NFA", "[NFA]") {
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
     ByteNfa const nfa{rules};
-
-    // Compare against expected output
-    // capture order(tags in brackets): letter1(0,1), letter2(2,3), letter(4,5), containerID(6,7)
-    string expected_serialized_nfa{"0:byte_transitions={u-->1},spontaneous_transition={}\n"};
-    expected_serialized_nfa += "1:byte_transitions={s-->2},spontaneous_transition={}\n";
-    expected_serialized_nfa += "2:byte_transitions={e-->3},spontaneous_transition={}\n";
-    expected_serialized_nfa += "3:byte_transitions={r-->4},spontaneous_transition={}\n";
-    expected_serialized_nfa += "4:byte_transitions={I-->5},spontaneous_transition={}\n";
-    expected_serialized_nfa += "5:byte_transitions={D-->6},spontaneous_transition={}\n";
-    expected_serialized_nfa += "6:byte_transitions={=-->7},spontaneous_transition={}\n";
-    expected_serialized_nfa += "7:byte_transitions={},spontaneous_transition={8[0p]}\n";
-    expected_serialized_nfa += "8:byte_transitions={1-->9},spontaneous_transition={}\n";
-    expected_serialized_nfa += "9:byte_transitions={2-->10},spontaneous_transition={}\n";
-    expected_serialized_nfa += "10:byte_transitions={3-->11},spontaneous_transition={}\n";
-    expected_serialized_nfa += "11:byte_transitions={},spontaneous_transition={12[1p]}\n";
-    expected_serialized_nfa += "12:accepting_tag=0,byte_transitions={},spontaneous_transition={}\n";
 
     // Compare expected and actual line-by-line
     auto const optional_actual_serialized_nfa = nfa.serialize();
@@ -67,22 +59,32 @@ TEST_CASE("Test simple NFA", "[NFA]") {
     getline(ss_expected, expected_line);
     REQUIRE(expected_line.empty());
 }
+}  // namespace
+
+TEST_CASE("Test simple NFA", "[NFA]") {
+    string const var_schema{"capture:userID=(?<uid>123)"};
+
+    // Compare against expected output
+    string expected_serialized_nfa{"0:byte_transitions={u-->1},spontaneous_transition={}\n"};
+    expected_serialized_nfa += "1:byte_transitions={s-->2},spontaneous_transition={}\n";
+    expected_serialized_nfa += "2:byte_transitions={e-->3},spontaneous_transition={}\n";
+    expected_serialized_nfa += "3:byte_transitions={r-->4},spontaneous_transition={}\n";
+    expected_serialized_nfa += "4:byte_transitions={I-->5},spontaneous_transition={}\n";
+    expected_serialized_nfa += "5:byte_transitions={D-->6},spontaneous_transition={}\n";
+    expected_serialized_nfa += "6:byte_transitions={=-->7},spontaneous_transition={}\n";
+    expected_serialized_nfa += "7:byte_transitions={},spontaneous_transition={8[0p]}\n";
+    expected_serialized_nfa += "8:byte_transitions={1-->9},spontaneous_transition={}\n";
+    expected_serialized_nfa += "9:byte_transitions={2-->10},spontaneous_transition={}\n";
+    expected_serialized_nfa += "10:byte_transitions={3-->11},spontaneous_transition={}\n";
+    expected_serialized_nfa += "11:byte_transitions={},spontaneous_transition={12[1p]}\n";
+    expected_serialized_nfa += "12:accepting_tag=0,byte_transitions={},spontaneous_transition={}\n";
+
+    test_nfa(var_schema, expected_serialized_nfa);
+}
 
 TEST_CASE("Test Complex NFA", "[NFA]") {
-    Schema schema;
-    string const var_name{"capture"};
-    string const var_schema{
-            var_name + ":"
-            + "Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?"
-              "<containerID>\\d+)C)"
-    };
-    schema.add_variable(var_schema, -1);
-
-    auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
-    vector<ByteLexicalRule> rules;
-    rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
-    ByteNfa const nfa{rules};
+    string const var_schema{"capture:Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?"
+                            "<containerID>\\d+)C)"};
 
     // Compare against expected output
     // capture order(tags in brackets): letter1(0,1), letter2(2,3), letter(4,5), containerID(6,7)
@@ -108,21 +110,23 @@ TEST_CASE("Test Complex NFA", "[NFA]") {
             "16:byte_transitions={C-->4},spontaneous_transition={}\n"
     };
 
-    // Compare expected and actual line-by-line
-    auto const optional_actual_serialized_nfa{nfa.serialize()};
-    REQUIRE(optional_actual_serialized_nfa.has_value());
-    stringstream ss_actual{optional_actual_serialized_nfa.value()};
-    stringstream ss_expected{expected_serialized_nfa};
-    string actual_line;
-    string expected_line;
+    test_nfa(var_schema, expected_serialized_nfa);
+}
 
-    CAPTURE(optional_actual_serialized_nfa.value());
-    CAPTURE(expected_serialized_nfa);
-    while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
-        REQUIRE(actual_line == expected_line);
-    }
-    getline(ss_actual, actual_line);
-    REQUIRE(actual_line.empty());
-    getline(ss_expected, expected_line);
-    REQUIRE(expected_line.empty());
+TEST_CASE("Test Repetition NFA", "[NFA]") {
+    string const var_schema{"capture:(a*(?<one>1))+"};
+
+    // Compare against expected output
+    string const expected_serialized_nfa{
+            "0:byte_transitions={a-->1},spontaneous_transition={1[]}\n"
+            "1:byte_transitions={a-->1},spontaneous_transition={2[0p+]}\n"
+            "2:byte_transitions={1-->3},spontaneous_transition={}\n"
+            "3:byte_transitions={},spontaneous_transition={4[1p+]}\n"
+            "4:accepting_tag=0,byte_transitions={a-->5},spontaneous_transition={5[]}\n"
+            "5:byte_transitions={a-->5},spontaneous_transition={6[0p+]}\n"
+            "6:byte_transitions={1-->7},spontaneous_transition={}\n"
+            "7:byte_transitions={},spontaneous_transition={4[1p+]}\n"
+    };
+
+    test_nfa(var_schema, expected_serialized_nfa);
 }

@@ -178,7 +178,8 @@ auto Nfa<TypedNfaState>::new_state_from_negative_captures(
             m_state_id_generator.generate_id(),
             TagOperationType::Negate,
             std::move(tags),
-            dest_state
+            dest_state,
+            multi_valued
     ));
     return m_states.back().get();
 }
@@ -191,12 +192,18 @@ auto Nfa<TypedNfaState>::new_start_and_end_states_from_positive_capture(
 ) -> std::pair<TypedNfaState*, TypedNfaState*> {
     auto const [start_tag, end_tag]{get_or_create_capture_tag_pair(capture)};
     auto* start_state{new_state()};
-    m_root->add_spontaneous_transition(TagOperationType::Set, {start_tag}, start_state);
+    m_root->add_spontaneous_transition(
+            TagOperationType::Set,
+            {start_tag},
+            start_state,
+            multi_valued
+    );
     m_states.emplace_back(std::make_unique<TypedNfaState>(
             m_state_id_generator.generate_id(),
             TagOperationType::Set,
             std::vector{end_tag},
-            dest_state
+            dest_state,
+            multi_valued
     ));
     auto* end_state{m_states.back().get()};
     return {start_state, end_state};
