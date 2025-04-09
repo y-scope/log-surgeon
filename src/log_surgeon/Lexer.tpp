@@ -356,7 +356,7 @@ void Lexer<TypedNfaState, TypedDfaState>::prepend_start_of_file_char(ParserInput
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-void Lexer<TypedNfaState, TypedDfaState>::add_delimiters(std::vector<uint32_t> const& delimiters) {
+void Lexer<TypedNfaState, TypedDfaState>::set_delimiters(std::vector<uint32_t> const& delimiters) {
     assert(!delimiters.empty());
     m_has_delimiters = true;
     for (auto& i : m_is_delimiter) {

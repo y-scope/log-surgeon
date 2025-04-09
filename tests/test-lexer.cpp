@@ -113,7 +113,7 @@ auto create_lexer(std::unique_ptr<SchemaAST> schema_ast) -> ByteLexer {
     vector<uint32_t> const delimiters{' ', '\n'};
 
     ByteLexer lexer;
-    lexer.add_delimiters(delimiters);
+    lexer.set_delimiters(delimiters);
 
     vector<uint32_t> lexer_delimiters;
     for (uint32_t i{0}; i < log_surgeon::cSizeOfByte; ++i) {

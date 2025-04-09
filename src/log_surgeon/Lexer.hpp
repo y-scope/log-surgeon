@@ -41,10 +41,12 @@ public:
             = {(uint32_t)SymbolId::TokenUncaughtString};
 
     /**
-     * Adds a list of delimiter types to the lexer.
-     * @param delimiters A vector containing the delimiter types to be added.
+     * Sets a list of delimiter types to the lexer, invalidating any delimiters that were previously
+     * set.
+     *
+     * @param delimiters A non-empty vector containing the delimiter types to be added.
      */
-    auto add_delimiters(std::vector<uint32_t> const& delimiters) -> void;
+    auto set_delimiters(std::vector<uint32_t> const& delimiters) -> void;
 
     /**
      * Adds a lexical rule to the lexer.
