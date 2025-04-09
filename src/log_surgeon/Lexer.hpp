@@ -217,8 +217,6 @@ private:
     bool m_match{false};
     std::vector<uint32_t> const* m_type_ids{nullptr};
     std::set<uint32_t> m_type_ids_set;
-    // TODO: determine if we can switch to safely accessing `m_is_delimiter` and
-    // `m_is_first_char_of_a_variable` with `at()` without impacting performance.
     std::array<bool, cSizeOfByte> m_is_delimiter{false};
     std::array<bool, cSizeOfByte> m_is_first_char_of_a_variable{false};
     std::vector<LexicalRule<TypedNfaState>> m_rules;
