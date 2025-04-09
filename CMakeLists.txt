@@ -83,6 +83,7 @@ set(SOURCE_FILES
     src/log_surgeon/finite_automata/RegisterOperation.hpp
     src/log_surgeon/finite_automata/StateType.hpp
     src/log_surgeon/finite_automata/TagOperation.hpp
+    src/log_surgeon/finite_automata/TaggedTransition.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.tpp
     src/log_surgeon/Lalr1Parser.hpp
