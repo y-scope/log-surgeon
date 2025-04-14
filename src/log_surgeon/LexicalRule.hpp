@@ -44,7 +44,7 @@ private:
 template <typename TypedNfaState>
 void LexicalRule<TypedNfaState>::add_to_nfa(finite_automata::Nfa<TypedNfaState>* nfa) const {
     auto* end_state = nfa->new_accepting_state(m_variable_id);
-    m_regex->add_to_nfa_with_negative_captures(nfa, end_state);
+    m_regex->add_to_nfa_with_negative_captures(nfa, end_state, false);
 }
 }  // namespace log_surgeon
 

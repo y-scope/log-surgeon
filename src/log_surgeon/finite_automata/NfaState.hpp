@@ -50,10 +50,11 @@ public:
             state_id_t const id,
             TagOperationType const op_type,
             std::vector<tag_id_t> const& tag_ids,
-            NfaState const* dest_state
+            NfaState const* dest_state,
+            bool const multi_valued
     )
             : m_id{id} {
-        add_spontaneous_transition(op_type, tag_ids, dest_state);
+        add_spontaneous_transition(op_type, tag_ids, dest_state, multi_valued);
     }
 
     auto add_spontaneous_transition(NfaState const* dest_state) -> void {
@@ -63,12 +64,13 @@ public:
     auto add_spontaneous_transition(
             TagOperationType const op_type,
             std::vector<tag_id_t> const& tag_ids,
-            NfaState const* dest_state
+            NfaState const* dest_state,
+            bool const multi_valued
     ) -> void {
         std::vector<TagOperation> tag_ops;
         tag_ops.reserve(tag_ids.size());
         for (auto const tag_id : tag_ids) {
-            tag_ops.emplace_back(tag_id, op_type);
+            tag_ops.emplace_back(tag_id, op_type, multi_valued);
         }
         m_spontaneous_transitions.emplace_back(std::move(tag_ops), dest_state);
     }
