@@ -26,9 +26,16 @@ namespace log_surgeon {
 /**
  * Represents a lexer that processes input buffers using a DFA-based approach.
  *
- * The Lexer class tokenizes input data based on lexical rules defined using regular expressions.
+ * The `Lexer` class tokenizes input data based on lexical rules defined using regular expressions.
  * It supports adding delimiters, scanning for tokens, and handling captures for tagged expressions.
  * The lexer can also be used to lex search queries by considering `?` and `*` wildcards.
+ *
+ * Lexical rules are associated with rule names, which can be non-unique. When multiple rules share
+ * the same rule ID, the lexer uses the union (i.e., logical OR) of these rules for tokenization.
+ *
+ * Lexical rules that include context introduce captures, tags, and registers. Each capture maps
+ * to a start and end tag, identifying the capture's position in the token. Each tag maps to several
+ * registers to track potential locations during DFA traversal.
  *
  * @tparam TypedNfaState The type representing NFA states used in rule definitions.
  * @tparam TypedDfaState The type representing DFA states used for token scanning.
@@ -50,7 +57,7 @@ public:
 
     /**
      * Adds a lexical rule to the lexer. If a `rule_id` is repeated, the lexer will use the union
-     * of all the corresponding `rule`s.
+     * (i.e., logical OR) of all the corresponding `rule`s.
      *
      * @param rule_id The identifier for the rule.
      * @param rule A unique pointer to a `RegexAST` representing the rule.
