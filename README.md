@@ -127,7 +127,7 @@ cmake --build ./build --target test
 ```
 
 When generating targets, the CMake variable `BUILD_TESTING` is followed (unless overruled by setting
-`log-surgeon_BUILD_TESTING` to false). By default, if built as a top-level project, `BUILD_TESTING`
+`log_surgeon_BUILD_TESTING` to false). By default, if built as a top-level project, `BUILD_TESTING`
 is set to true and unit tests are built.
 
 ## Linting
