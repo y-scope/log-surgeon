@@ -176,8 +176,8 @@ public:
      */
     [[nodiscard]] auto get_reg_id_from_tag_id(tag_id_t const tag_id
     ) const -> std::optional<reg_id_t> {
-        if (m_tag_to_final_reg_id.contains(tag_id)) {
-            return m_tag_to_final_reg_id.at(tag_id);
+        if (m_tag_id_to_final_reg_id.contains(tag_id)) {
+            return m_tag_id_to_final_reg_id.at(tag_id);
         }
         return std::nullopt;
     }
