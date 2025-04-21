@@ -69,7 +69,7 @@ public:
     }
 
     /**
-     * @return The set of all configurations reachable from the current configuration via any number
+     * @return The set of all configurations reachable from this configuration via any number
      * of spontaneous transitions.
      */
     [[nodiscard]] auto spontaneous_closure() const -> std::set<DeterminizationConfiguration>;
