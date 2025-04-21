@@ -2,7 +2,11 @@ include(CMakeFindDependencyMacro)
 
 @PACKAGE_INIT@
 
-if (@Microsoft.GSL_FOUND@)
+if(@fmt_FOUND@)
+    find_dependency(fmt)
+endif()
+
+if(@Microsoft.GSL_FOUND@)
     find_dependency(Microsoft.GSL)
 endif()
 
