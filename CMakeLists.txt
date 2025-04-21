@@ -64,7 +64,7 @@ else()
 endif()
 
 if(log_surgeon_ENABLE_TESTS)
-    find_package(Catch2 3.8.0 REQUIRED)
+    find_package(Catch2 3 REQUIRED)
     if(Catch2_FOUND)
         message(STATUS "Found Catch2 ${Catch2_VERSION}.")
     endif()
