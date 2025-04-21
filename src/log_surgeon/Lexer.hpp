@@ -49,7 +49,9 @@ public:
     auto set_delimiters(std::vector<uint32_t> const& delimiters) -> void;
 
     /**
-     * Adds a lexical rule to the lexer.
+     * Adds a lexical rule to the lexer. If a `rule_id` is repeated, the lexer will use the union
+     * of all the corresponding `rule`s.
+     *
      * @param rule_id The identifier for the rule.
      * @param rule A unique pointer to a `RegexAST` representing the rule.
      */
