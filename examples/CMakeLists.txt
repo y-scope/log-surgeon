@@ -7,7 +7,12 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
-add_subdirectory(.. log-surgeon-build EXCLUDE_FROM_ALL)
+find_package(log_surgeon QUIET)
+if(log_surgeon_FOUND)
+    message(STATUS "Found log_surgeon ${log_surgeon_VERSION}.")
+else()
+    add_subdirectory(.. log-surgeon-build EXCLUDE_FROM_ALL)
+endif()
 
 function(add_to_target target libraries)
     target_link_libraries(${target} ${libraries})
