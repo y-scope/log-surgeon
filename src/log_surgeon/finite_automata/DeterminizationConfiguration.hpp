@@ -28,12 +28,12 @@ class DeterminizationConfiguration {
 public:
     DeterminizationConfiguration(
             TypedNfaState const* nfa_state,
-            std::map<tag_id_t, reg_id_t> tag_to_reg_ids,
+            std::map<tag_id_t, reg_id_t> tag_id_to_reg_ids,
             std::vector<TagOperation> tag_history,
             std::vector<TagOperation> tag_lookahead
     )
             : m_nfa_state{nfa_state},
-              m_tag_id_to_reg_ids{std::move(tag_to_reg_ids)},
+              m_tag_id_to_reg_ids{std::move(tag_id_to_reg_ids)},
               m_history{std::move(tag_history)},
               m_lookahead{std::move(tag_lookahead)} {
         if (nullptr == m_nfa_state) {
