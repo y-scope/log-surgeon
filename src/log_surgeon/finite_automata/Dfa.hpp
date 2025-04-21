@@ -79,14 +79,14 @@ private:
      *
      * @param num_tags Number of tags in the NFA.
      * @param register_handler Returns the handler with the added registers.
-     * @param initial_tag_id_to_reg_id Returns mapping of tag id to initial register id.
-     * @param final_tag_id_to_reg_id Returns mapping of tag id to final register id.
+     * @param tag_id_to_initial_reg_id Returns mapping of tag id to initial register id.
+     * @param tag_id_to_final_reg_id Returns mapping of tag id to final register id.
      */
     static auto initialize_registers(
             size_t num_tags,
             RegisterHandler& register_handler,
-            std::map<tag_id_t, reg_id_t>& initial_tag_id_to_reg_id,
-            std::map<tag_id_t, reg_id_t>& final_tag_id_to_reg_id
+            std::map<tag_id_t, reg_id_t>& tag_id_to_initial_reg_id,
+            std::map<tag_id_t, reg_id_t>& tag_id_to_final_reg_id
     ) -> void;
 
     /**
@@ -207,15 +207,15 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
 // TODO: handle utf8 case in DFA generation.
 template <typename TypedDfaState, typename TypedNfaState>
 auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) -> void {
-    std::map<tag_id_t, reg_id_t> initial_tag_id_to_reg_id;
+    std::map<tag_id_t, reg_id_t> tag_id_to_initial_reg_id;
     initialize_registers(
             nfa.get_num_tags(),
             m_reg_handler,
-            initial_tag_id_to_reg_id,
+            tag_id_to_initial_reg_id,
             m_tag_id_to_final_reg_id
     );
     DeterminizationConfiguration<TypedNfaState>
-            initial_config{nfa.get_root(), initial_tag_id_to_reg_id, {}, {}};
+            initial_config{nfa.get_root(), tag_id_to_initial_reg_id, {}, {}};
 
     std::map<ConfigurationSet, TypedDfaState*> dfa_states;
     std::queue<ConfigurationSet> unexplored_sets;
@@ -244,13 +244,13 @@ template <typename TypedDfaState, typename TypedNfaState>
 auto Dfa<TypedDfaState, TypedNfaState>::initialize_registers(
         size_t const num_tags,
         RegisterHandler& register_handler,
-        std::map<tag_id_t, reg_id_t>& initial_tag_id_to_reg_id,
-        std::map<tag_id_t, reg_id_t>& final_tag_id_to_reg_id
+        std::map<tag_id_t, reg_id_t>& tag_id_to_initial_reg_id,
+        std::map<tag_id_t, reg_id_t>& tag_id_to_final_reg_id
 ) -> void {
     register_handler.add_registers(2 * num_tags);
     for (uint32_t i{0}; i < num_tags; i++) {
-        initial_tag_id_to_reg_id.insert({i, i});
-        final_tag_id_to_reg_id.insert({i, num_tags + i});
+        tag_id_to_initial_reg_id.insert({i, i});
+        tag_id_to_final_reg_id.insert({i, num_tags + i});
     }
 }
 
