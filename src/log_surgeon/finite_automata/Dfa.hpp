@@ -153,7 +153,7 @@ private:
      * - Determine the operations to perform on the new registers.
      *
      * @param num_tags Number of tags in the NFA.
-     * @param closure Returns the set of DFA configurations with updated `tag_to_reg_ids`.
+     * @param closure Returns the set of DFA configurations with updated `tag_id_to_reg_ids`.
      * @param tag_id_with_op_to_reg_id Returns the updated map of tags with operations to
      * registers.
      * @returns The operations to perform on the new registers.
