@@ -75,12 +75,14 @@ private:
     auto generate(Nfa<TypedNfaState> const& nfa) -> void;
 
     /**
-     * Adds a register for tracking the initial and final value of each tag.
+     * Adds two registers for each tag:
+     * - One to track the initial possibility of the tag's position.
+     * - One to track the final selection of the tag's position.
      *
      * @param num_tags Number of tags in the NFA.
      * @param register_handler Returns the handler with the added registers.
-     * @param tag_id_to_initial_reg_id Returns mapping of tag id to initial register id.
-     * @param tag_id_to_final_reg_id Returns mapping of tag id to final register id.
+     * @param tag_id_to_initial_reg_id Returns a mapping from tag ID to its initial register ID.
+     * @param tag_id_to_final_reg_id Returns a mapping from tag ID to its final register ID.
      */
     static auto initialize_registers(
             size_t num_tags,
