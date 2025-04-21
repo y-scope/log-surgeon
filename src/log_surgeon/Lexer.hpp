@@ -236,7 +236,7 @@ private:
     TypedDfaState const* m_prev_state{nullptr};
     std::unordered_map<rule_id_t, std::vector<capture_id_t>> m_rule_id_to_capture_ids;
     std::unordered_map<capture_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_id_pair;
-    std::map<tag_id_t, reg_id_t> m_tag_to_final_reg_id;
+    std::map<tag_id_t, reg_id_t> m_tag_id_to_final_reg_id;
 };
 
 namespace lexers {
