@@ -21,12 +21,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS
     ON
     CACHE BOOL
     "Enable/Disable output of compile commands during generation."
+    FORCE
 )
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
     message(STATUS "No build type specified. Setting to '${default_build_type}'.")
-    set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build.")
+    set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
 if(log_surgeon_IS_TOP_LEVEL)
@@ -37,6 +38,8 @@ endif()
 if(BUILD_TESTING AND log_surgeon_BUILD_TESTING)
     set(log_surgeon_ENABLE_TESTS ON)
 endif()
+
+list(APPEND DEPS_TO_FETCH "")
 
 # Use <fmt/*.h> as <format> is unsupported in gcc-10.
 find_package(fmt 8.0.1 QUIET)
@@ -50,6 +53,7 @@ else()
     )
     # Force fmt to generate install rules
     set(FMT_INSTALL ON CACHE BOOL "Enable installation for fmt." FORCE)
+    list(APPEND DEPS_TO_FETCH fmt)
 endif()
 
 find_package(Microsoft.GSL QUIET)
@@ -61,6 +65,7 @@ else()
                          GIT_TAG "v4.0.0"
                          GIT_SHALLOW ON
     )
+    list(APPEND DEPS_TO_FETCH GSL)
 endif()
 
 if(log_surgeon_ENABLE_TESTS)
@@ -72,7 +77,7 @@ if(log_surgeon_ENABLE_TESTS)
 endif()
 
 # Declare the details of all fetched content before making them available.
-FetchContent_MakeAvailable()
+FetchContent_MakeAvailable("${DEPS_TO_FETCH}")
 
 set(SOURCE_FILES
     src/log_surgeon/Buffer.hpp
