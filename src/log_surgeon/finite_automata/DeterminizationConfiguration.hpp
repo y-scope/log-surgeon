@@ -52,6 +52,22 @@ public:
         }
     }
 
+    /**
+     * Compares this configuration with another to establish a strict weak ordering.
+     *
+     * This operator is used to insert configurations into ordered containers such as `std::set`
+     * or `std::map`. The comparison considers:
+     * 1. The NFA state ID.
+     * 2. The mapping of tag IDs to register IDs.
+     * 3. The history of tag operations.
+     * 4. The lookahead for upcoming tag operations.
+     *
+     * The ordering ensures that configurations with the same NFA state but different tag histories
+     * or register mappings are treated as distinct.
+     *
+     * @param rhs The configuration to compare against.
+     * @return `true` if this configuration is considered less than `rhs`, `false` otherwise.
+     */
     auto operator<(DeterminizationConfiguration const& rhs) const -> bool {
         if (m_nfa_state->get_id() != rhs.m_nfa_state->get_id()) {
             return m_nfa_state->get_id() < rhs.m_nfa_state->get_id();
@@ -65,6 +81,16 @@ public:
         return m_lookahead < rhs.m_lookahead;
     }
 
+    /**
+     * Creates a new configuration from the current configuration by replacing the NFA state and
+     * appending a future tag operation.
+     *
+     * This is used during determinization to create configurations during the closure.
+     *
+     * @param new_nfa_state The NFA state to use in the new configuration.
+     * @param tag_op The tag operation to append to the lookahead.
+     * @return A new `DeterminizationConfiguration` with the updated state and lookahead.
+     */
     [[nodiscard]] auto child_configuration_with_new_state_and_tag(
             TypedNfaState const* new_nfa_state,
             TagOperation const& tag_op
