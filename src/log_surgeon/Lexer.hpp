@@ -70,7 +70,8 @@ public:
      * @param rule_id The ID of the rule to retrieve.
      * @return A pointer to the corresponding `RegexAST` object.
      */
-    [[nodiscard]] auto get_highest_priority_rule(uint32_t rule_id) -> finite_automata::RegexAST<TypedNfaState>*;
+    [[nodiscard]] auto get_highest_priority_rule(uint32_t rule_id
+    ) -> finite_automata::RegexAST<TypedNfaState>*;
 
     /**
      * Generates the DFA for the lexer.
@@ -176,8 +177,9 @@ public:
      */
     [[nodiscard]] auto get_reg_id_from_tag_id(tag_id_t const tag_id
     ) const -> std::optional<reg_id_t> {
-        if (m_tag_id_to_final_reg_id.contains(tag_id)) {
-            return m_tag_id_to_final_reg_id.at(tag_id);
+        auto const& tag_id_to_final_reg_id{m_dfa->get_tag_id_to_final_reg_id()};
+        if (tag_id_to_final_reg_id.contains(tag_id)) {
+            return tag_id_to_final_reg_id.at(tag_id);
         }
         return std::nullopt;
     }
@@ -236,7 +238,6 @@ private:
     TypedDfaState const* m_prev_state{nullptr};
     std::unordered_map<rule_id_t, std::vector<capture_id_t>> m_rule_id_to_capture_ids;
     std::unordered_map<capture_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_id_pair;
-    std::map<tag_id_t, reg_id_t> m_tag_id_to_final_reg_id;
 };
 
 namespace lexers {
