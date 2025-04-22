@@ -14,10 +14,21 @@
 
 namespace log_surgeon::finite_automata {
 /**
- * Encapsulates the configuration of a state during the determinization process of an NFA.
+ * Represents a single configuration used during the tagged determinization from NFA to DFA.
  *
- * This class stores the NFA state, the mapping of tag IDs to register IDs, the history of tag
- * operations, and the lookahead of upcoming tag operations.
+ * A configuration captures a snapshot of the NFA's execution, including:
+ * - the current NFA state,
+ * - a mapping from tag IDs to register IDs,
+ * - the history of tag operations,
+ * - and the lookahead for upcoming tag operations.
+ *
+ * During determinization, sets of configurations are grouped to form DFA states—similar to how
+ * sets of NFA states form DFA states in classical (untagged) subset construction. However, unlike
+ * untagged determinization, configurations preserve tag histories, allowing the tagged determinizer
+ * to distinguish between paths that share the same NFA state but differ in how tags are applied.
+ *
+ * This distinction is essential for building a tagged DFA (TDFA) from a tagged NFA (TNFA), as it
+ * preserves paths in the NFA that match the same untagged regex but have unique tag positions.
  *
  * The configuration also supports exploring reachable configurations via spontaneous transitions.
  *
