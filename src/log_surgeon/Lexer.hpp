@@ -70,7 +70,7 @@ public:
      * @param rule_id The ID of the rule to retrieve.
      * @return A pointer to the corresponding `RegexAST` object.
      */
-    [[nodiscard]] auto get_rule(uint32_t rule_id) -> finite_automata::RegexAST<TypedNfaState>*;
+    [[nodiscard]] auto get_highest_priority_rule(uint32_t rule_id) -> finite_automata::RegexAST<TypedNfaState>*;
 
     /**
      * Generates the DFA for the lexer.

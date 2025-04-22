@@ -377,7 +377,7 @@ void Lexer<TypedNfaState, TypedDfaState>::add_rule(
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lexer<TypedNfaState, TypedDfaState>::get_rule(rule_id_t const rule_id
+auto Lexer<TypedNfaState, TypedDfaState>::get_highest_priority_rule(rule_id_t const rule_id
 ) -> finite_automata::RegexAST<TypedNfaState>* {
     for (auto const& rule : m_rules) {
         if (rule.get_variable_id() == rule_id) {
