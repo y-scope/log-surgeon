@@ -30,8 +30,38 @@ namespace log_surgeon::finite_automata {
 /**
  * Represents a Deterministic Finite Automaton (DFA).
  *
- * The DFA is constructed from an NFA using the superset determinization algorithm. The DFA consists
- * of states, transitions, and registers for tracking tagged captures.
+ * The DFA is constructed from a tagged NFA (TNFA) using an extension of classical subset
+ * construction. This algorithm preserves tag information—used to capture substrings—while
+ * converting nondeterministic behavior into deterministic transitions.
+ *
+ * Tags are annotations embedded in regex-like rules to mark positions of interest, such as the
+ * start or end of a captured variable. Registers track these positions during input traversal.
+ * Each tag is associated with intermediate registers that collect possible positions during lexing.
+ * Upon match finalization, the selected register is copied into a final register mapped to the tag.
+ *
+ * ## How to Use the DFA
+ * This DFA can be used in two primary scenarios: log lexing and search query lexing.
+ *
+ * ### 1. Log Lexing
+ * - **Construction**: Create a tagged DFA from a tagged NFA.
+ * - **Lexing Procedure**:
+ * a. Call `get_root()` to get the initial DFA state, and track it as the current state.
+ * b. Use the state's `get_transition()` method to transition:
+ * - If it returns `std::nullopt`, terminate lexing.
+ * - If it returns a new state, update the current state.
+ * c. If the current state is accepting, record its match as a candidate for the longest match.
+ * d. Repeat steps (b) and (c) until no more input remains or a transition fails.
+ * - **Result**: Return the longest match found. This match may contain several possibly variable
+ * types. If the variable type of interest contains captures, use the mapping `capture → {start_tag,
+ * end_tag} → {final_start_reg_id, final_end_reg_id}` to extract the substring. This can be done
+ * using `get_tag_id_to_final_reg_id`.
+ *
+ * ### 2. Search Query Lexing
+ * - Follows the same procedure as log lexing.
+ * - Additionally:
+ * a. Interpret `?` as a `.` regex and `*` as `.*` when processing wildcards.
+ * b. For CLP, build the set of logtypes the search query can match by applying `get_intersect()` to
+ * substrings of the query to determine compatible variable types.
  *
  * @tparam TypedDfaState The type representing a DFA state.
  * @tparam TypedNfaState The type representing an NFA state.
@@ -85,18 +115,20 @@ private:
     auto generate(Nfa<TypedNfaState> const& nfa) -> void;
 
     /**
-     * Adds a register for tracking the initial and final value of each tag.
+     * Adds two registers for each tag:
+     * - One to track the initial possibility of the tag's position.
+     * - One to track the final selection of the tag's position.
      *
      * @param num_tags Number of tags in the NFA.
      * @param register_handler Returns the handler with the added registers.
-     * @param initial_tag_id_to_reg_id Returns mapping of tag id to initial register id.
-     * @param final_tag_id_to_reg_id Returns mapping of tag id to final register id.
+     * @param tag_id_to_initial_reg_id Returns a mapping from tag ID to its initial register ID.
+     * @param tag_id_to_final_reg_id Returns a mapping from tag ID to its final register ID.
      */
     static auto initialize_registers(
             size_t num_tags,
             RegisterHandler& register_handler,
-            std::map<tag_id_t, reg_id_t>& initial_tag_id_to_reg_id,
-            std::map<tag_id_t, reg_id_t>& final_tag_id_to_reg_id
+            std::map<tag_id_t, reg_id_t>& tag_id_to_initial_reg_id,
+            std::map<tag_id_t, reg_id_t>& tag_id_to_final_reg_id
     ) -> void;
 
     /**
@@ -161,7 +193,7 @@ private:
      * - Determine the operations to perform on the new registers.
      *
      * @param num_tags Number of tags in the NFA.
-     * @param closure Returns the set of DFA configurations with updated `tag_to_reg_ids`.
+     * @param closure Returns the set of DFA configurations with updated `tag_id_to_reg_ids`.
      * @param tag_id_with_op_to_reg_id Returns the updated map of tags with operations to
      * registers.
      * @returns The operations to perform on the new registers.
@@ -230,15 +262,15 @@ auto Dfa<TypedDfaState, TypedNfaState>::process_char(char next_char) -> bool {
 // TODO: handle utf8 case in DFA generation.
 template <typename TypedDfaState, typename TypedNfaState>
 auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) -> void {
-    std::map<tag_id_t, reg_id_t> initial_tag_id_to_reg_id;
+    std::map<tag_id_t, reg_id_t> tag_id_to_initial_reg_id;
     initialize_registers(
             nfa.get_num_tags(),
             m_reg_handler,
-            initial_tag_id_to_reg_id,
+            tag_id_to_initial_reg_id,
             m_tag_id_to_final_reg_id
     );
     DeterminizationConfiguration<TypedNfaState>
-            initial_config{nfa.get_root(), initial_tag_id_to_reg_id, {}, {}};
+            initial_config{nfa.get_root(), tag_id_to_initial_reg_id, {}, {}};
 
     std::map<ConfigurationSet, TypedDfaState*> dfa_states;
     std::queue<ConfigurationSet> unexplored_sets;
@@ -267,13 +299,13 @@ template <typename TypedDfaState, typename TypedNfaState>
 auto Dfa<TypedDfaState, TypedNfaState>::initialize_registers(
         size_t const num_tags,
         RegisterHandler& register_handler,
-        std::map<tag_id_t, reg_id_t>& initial_tag_id_to_reg_id,
-        std::map<tag_id_t, reg_id_t>& final_tag_id_to_reg_id
+        std::map<tag_id_t, reg_id_t>& tag_id_to_initial_reg_id,
+        std::map<tag_id_t, reg_id_t>& tag_id_to_final_reg_id
 ) -> void {
     register_handler.add_registers(2 * num_tags);
     for (uint32_t i{0}; i < num_tags; i++) {
-        initial_tag_id_to_reg_id.insert({i, i});
-        final_tag_id_to_reg_id.insert({i, num_tags + i});
+        tag_id_to_initial_reg_id.insert({i, i});
+        tag_id_to_final_reg_id.insert({i, num_tags + i});
     }
 }
 
@@ -550,5 +582,4 @@ auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::optional<std::
     return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
 }
 }  // namespace log_surgeon::finite_automata
-
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_DFA_HPP

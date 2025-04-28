@@ -37,16 +37,16 @@ LogParser::LogParser(std::unique_ptr<SchemaAST> schema_ast) {
     m_log_event_view = make_unique<LogEventView>(*this);
 }
 
-auto LogParser::add_delimiters(unique_ptr<ParserAST> const& delimiters) -> void {
+auto LogParser::set_delimiters(unique_ptr<ParserAST> const& delimiters) -> void {
     auto* delimiters_ptr = dynamic_cast<DelimiterStringAST*>(delimiters.get());
     if (delimiters_ptr != nullptr) {
-        m_lexer.add_delimiters(delimiters_ptr->m_delimiters);
+        m_lexer.set_delimiters(delimiters_ptr->m_delimiters);
     }
 }
 
 auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
     for (auto const& delimiters : schema_ast->m_delimiters) {
-        add_delimiters(delimiters);
+        set_delimiters(delimiters);
     }
     vector<uint32_t> delimiters;
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
