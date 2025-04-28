@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5.1)
+cmake_minimum_required(VERSION 3.22.1)
 
 project(log_surgeon
     VERSION 0.0.1
@@ -11,47 +11,18 @@ if (POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
 endif()
 
-if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
-    find_package(Catch2 3 REQUIRED)
-    include(Catch)
-    include(CTest)
-endif()
-
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 include(FetchContent)
 
-find_package(Microsoft.GSL QUIET CONFIG)
-if (NOT Microsoft.GSL_FOUND)
-    FetchContent_Declare(GSL
-                         GIT_REPOSITORY "https://github.com/microsoft/GSL"
-                         GIT_TAG "v4.0.0"
-                         GIT_SHALLOW ON
-    )
-endif()
-
-# Use <fmt/*.h> as <format> is unsupported in gcc-10.
-find_package(fmt 8.0.1 QUIET)
-if (NOT fmt_FOUND)
-    FetchContent_Declare(fmt
-                         GIT_REPOSITORY https://github.com/fmtlib/fmt
-                         GIT_TAG "8.0.1"
-                         GIT_SHALLOW ON
-    )
-endif()
-
-# Declare the details of all fetched content before making them available.
-if (NOT Microsoft.GSL_FOUND)
-    FetchContent_MakeAvailable(GSL)
-endif()
-
-if (NOT fmt_FOUND)
-    # Force fmt to generate install rules
-    set(FMT_INSTALL ON CACHE BOOL "Enable installation for fmt." FORCE)
-    FetchContent_MakeAvailable(fmt)
-endif()
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
+option(log_surgeon_BUILD_TESTING "Build the testing tree." ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS
+    ON
+    CACHE BOOL
+    "Enable/Disable output of compile commands during generation."
+    FORCE
+)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
@@ -59,7 +30,54 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
-option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
+if(log_surgeon_IS_TOP_LEVEL)
+    # If previously undefined, `BUILD_TESTING` will be set to ON.
+    include(CTest)
+endif()
+
+if(BUILD_TESTING AND log_surgeon_BUILD_TESTING)
+    set(log_surgeon_ENABLE_TESTS ON)
+endif()
+
+list(APPEND DEPS_TO_FETCH "")
+
+# Use <fmt/*.h> as <format> is unsupported in gcc-10.
+find_package(fmt 8.0.1 QUIET)
+if(fmt_FOUND)
+    message(STATUS "Found fmt ${fmt_VERSION}.")
+else()
+    FetchContent_Declare(fmt
+                         GIT_REPOSITORY https://github.com/fmtlib/fmt
+                         GIT_TAG "8.0.1"
+                         GIT_SHALLOW ON
+    )
+    # Force fmt to generate install rules
+    set(FMT_INSTALL ON CACHE BOOL "Enable installation for fmt." FORCE)
+    list(APPEND DEPS_TO_FETCH fmt)
+endif()
+
+find_package(Microsoft.GSL QUIET)
+if(Microsoft.GSL_FOUND)
+    message(STATUS "Found Microsoft.GSL ${Microsoft.GSL_VERSION}.")
+else()
+    FetchContent_Declare(GSL
+                         GIT_REPOSITORY "https://github.com/microsoft/GSL"
+                         GIT_TAG "v4.0.0"
+                         GIT_SHALLOW ON
+    )
+    list(APPEND DEPS_TO_FETCH GSL)
+endif()
+
+if(log_surgeon_ENABLE_TESTS)
+    find_package(Catch2 3 REQUIRED)
+    if(Catch2_FOUND)
+        message(STATUS "Found Catch2 ${Catch2_VERSION}.")
+    endif()
+    include(Catch)
+endif()
+
+# Declare the details of all fetched content before making them available.
+FetchContent_MakeAvailable("${DEPS_TO_FETCH}")
 
 set(SOURCE_FILES
     src/log_surgeon/Buffer.hpp
@@ -118,10 +136,10 @@ set(SOURCE_FILES
     src/log_surgeon/UniqueIdGenerator.hpp
     )
 
-set(LCHIP_INSTALL_CONFIG_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/log_surgeon)
-set(LCHIP_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+set(LOG_SURGEON_INSTALL_CONFIG_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/log_surgeon)
+set(LOG_SURGEON_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 # Directory for installing third-party includes that the user doesn't have installed.
-set(LCHIP_THIRD_PARTY_INCLUDE_DIR "${LCHIP_INSTALL_INCLUDE_DIR}/log_surgeon/third_party_include")
+set(LOG_SURGEON_THIRD_PARTY_INCLUDE_DIR "${LOG_SURGEON_INSTALL_INCLUDE_DIR}/log_surgeon/third_party_include")
 
 add_library(log_surgeon ${SOURCE_FILES})
 add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
@@ -140,7 +158,7 @@ else()
     target_include_directories(log_surgeon
             PUBLIC
             $<BUILD_INTERFACE:${GSL_SOURCE_DIR}/include>
-            $<INSTALL_INTERFACE:${LCHIP_THIRD_PARTY_INCLUDE_DIR}>
+            $<INSTALL_INTERFACE:${LOG_SURGEON_THIRD_PARTY_INCLUDE_DIR}>
             )
 endif()
 
@@ -182,14 +200,14 @@ install(
     NAMESPACE
     log_surgeon::
     DESTINATION
-    ${LCHIP_INSTALL_CONFIG_DIR}
+    ${LOG_SURGEON_INSTALL_CONFIG_DIR}
     )
 
 install(
     DIRECTORY
     "${PROJECT_SOURCE_DIR}/src/log_surgeon"
     DESTINATION
-    "${LCHIP_INSTALL_INCLUDE_DIR}"
+    "${LOG_SURGEON_INSTALL_INCLUDE_DIR}"
     FILES_MATCHING
     PATTERN "*.h"
     PATTERN "*.hpp"
@@ -202,7 +220,7 @@ if (NOT Microsoft.GSL_FOUND)
         # its contents.
         "${GSL_SOURCE_DIR}/include/gsl"
         DESTINATION
-        "${LCHIP_THIRD_PARTY_INCLUDE_DIR}"
+        "${LOG_SURGEON_THIRD_PARTY_INCLUDE_DIR}"
         )
 endif ()
 
@@ -210,9 +228,9 @@ configure_package_config_file(
     ${CMAKE_CURRENT_LIST_DIR}/cmake/log_surgeon-config.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/log_surgeon-config.cmake
     INSTALL_DESTINATION
-    ${LCHIP_INSTALL_CONFIG_DIR}
+    ${LOG_SURGEON_INSTALL_CONFIG_DIR}
     PATH_VARS
-    LCHIP_INSTALL_INCLUDE_DIR
+    LOG_SURGEON_INSTALL_INCLUDE_DIR
     )
 
 write_basic_package_version_file(
@@ -226,9 +244,9 @@ install(
     ${CMAKE_CURRENT_BINARY_DIR}/log_surgeon-config.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/log_surgeon-config-version.cmake
     DESTINATION
-    ${LCHIP_INSTALL_CONFIG_DIR}
+    ${LOG_SURGEON_INSTALL_CONFIG_DIR}
     )
 
-if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+if (log_surgeon_ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
