@@ -7,12 +7,12 @@ tasks:
   check:
     cmds:
       - task: "cpp-check"
-      - task: "yml-check"
+      - task: "yaml-check"
 
   fix:
     cmds:
       - task: "cpp-fix"
-      - task: "yml-fix"
+      - task: "yaml-fix"
 
   cpp-check:
     sources: &cpp_source_files
@@ -42,22 +42,22 @@ tasks:
         vars:
           FLAGS: "-i"
 
-  yml:
+  yaml:
     aliases:
-      - "yml-check"
-      - "yml-fix"
+      - "yaml-check"
+      - "yaml-fix"
     deps: ["venv"]
     cmds:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
         yamllint \
-          --config-file "{{.ROOT_DIR}}/tools/yscope-dev-utils/lint-configs/.yamllint.yml" \
+          --config-file "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml" \
           --strict \
           .coderabbit.yaml \
           .github \
           .clang-format \
-          lint-tasks.yml \
-          Taskfile.yml
+          taskfile.yaml \
+          {{.TASKFILE}}
 
   cpp:
     internal: true
@@ -80,24 +80,25 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
     sources:
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
-      - "lint-requirements.txt"
+      - "{{.ROOT_DIR}}/lint-requirements.txt"
     generates: ["{{.CHECKSUM_FILE}}"]
+    run: "once"
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
-      - task: ":utils:create-venv"
+      - task: ":utils:misc:create-venv"
         vars:
           LABEL: "lint"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          REQUIREMENTS_FILE: "lint-requirements.txt"
+          REQUIREMENTS_FILE: "{{.ROOT_DIR}}/lint-requirements.txt"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]

@@ -163,14 +163,6 @@ target_compile_options(log_surgeon PRIVATE
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
     )
 
-# Macro providing the length of the absolute source directory path so we can
-# create a relative (rather than absolute) __FILE__ macro
-string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
-target_compile_definitions(log_surgeon
-    PUBLIC
-    SOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}
-    )
-
 # Make off_t 64-bit
 target_compile_definitions(log_surgeon
     PRIVATE
