@@ -6,8 +6,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <set>
-#include <stack>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -33,6 +31,17 @@ using ByteNfaState = NfaState<StateType::Byte>;
 using Utf8NfaState = NfaState<StateType::Utf8>;
 
 using state_id_t = uint32_t;
+
+/**
+ * Represents a state in a Non-Deterministic Finite Automaton (NFA).
+ *
+ * Each NFA state has a unique identifier and may contain transitions based on input symbols
+ * (bytes or Unicode intervals) or spontaneous transitions (optionally associated with tag
+ * operations). States can be accepting, meaning they signify a successful match for a particular
+ * pattern.
+ *
+ * @tparam state_type Determines the type of transitions (byte or Unicode) the state supports.
+ */
 
 template <StateType state_type>
 class NfaState {
@@ -74,21 +83,15 @@ public:
     }
 
     auto add_byte_transition(uint8_t byte, NfaState* dest_state) -> void {
-        m_bytes_transitions[byte].push_back(dest_state);
+        m_bytes_transitions.at(byte).push_back(dest_state);
     }
 
     /**
-     * Add `dest_state` to `m_bytes_transitions` if all values in interval are a byte, otherwise add
-     * `dest_state` to `m_tree_transitions`.
-     * @param interval
-     * @param dest_state
+     * Adds an interval-based transition to the appropriate transition set.
+     * @param interval The interval representing the transition condition.
+     * @param dest_state The destination state for this transition.
      */
     auto add_interval(Interval interval, NfaState* dest_state) -> void;
-
-    /**
-     * @return The set of all states reachable from the current state via epsilon transitions.
-     */
-    auto epsilon_closure() -> std::set<NfaState const*>;
 
     /**
      * @param state_ids A map of states to their unique identifiers.
@@ -113,7 +116,7 @@ public:
     }
 
     [[nodiscard]] auto get_byte_transitions(uint8_t byte) const -> std::vector<NfaState*> const& {
-        return m_bytes_transitions[byte];
+        return m_bytes_transitions.at(byte);
     }
 
     [[nodiscard]] auto get_tree_transitions() -> Tree const& { return m_tree_transitions; }
@@ -124,9 +127,8 @@ private:
     uint32_t m_matching_variable_id{0};
     std::vector<NfaSpontaneousTransition<NfaState>> m_spontaneous_transitions;
     std::array<std::vector<NfaState*>, cSizeOfByte> m_bytes_transitions;
-    // NOTE: We don't need m_tree_transitions for the `stateType ==
-    // StateType::Byte` case, so we use an empty class (`std::tuple<>`)
-    // in that case.
+    // NOTE: We don't need `m_tree_transitions` for the `stateType == StateType::Byte`, so we us an
+    // empty class (`std::tuple<>`) in that case.
     std::conditional_t<state_type == StateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
 
@@ -178,24 +180,6 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
 }
 
 template <StateType state_type>
-auto NfaState<state_type>::epsilon_closure() -> std::set<NfaState const*> {
-    std::set<NfaState const*> closure_set;
-    std::stack<NfaState const*> stack;
-    stack.push(this);
-    while (false == stack.empty()) {
-        auto const* current_state = stack.top();
-        stack.pop();
-        if (false == closure_set.insert(current_state).second) {
-            continue;
-        }
-        for (auto const& spontaneous_transition : current_state->get_spontaneous_transitions()) {
-            stack.push(spontaneous_transition.get_dest_state());
-        }
-    }
-    return closure_set;
-}
-
-template <StateType state_type>
 auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     auto const accepting_tag_string{
@@ -204,7 +188,7 @@ auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_
 
     std::vector<std::string> byte_transitions;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
-        for (auto const* dest_state : m_bytes_transitions[idx]) {
+        for (auto const* dest_state : m_bytes_transitions.at(idx)) {
             byte_transitions.emplace_back(
                     fmt::format("{}-->{}", static_cast<char>(idx), state_ids.at(dest_state))
             );

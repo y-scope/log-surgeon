@@ -150,7 +150,8 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer, 
             // TODO: remove timestamp from m_is_fist_char so that m_is_delimiter
             // check not needed
             while (input_buffer.log_fully_consumed() == false
-                   && (m_is_first_char[next_char] == false || m_is_delimiter[next_char] == false))
+                   && (m_is_first_char_of_a_variable[next_char] == false
+                       || m_is_delimiter[next_char] == false))
             {
                 prev_byte_buf_pos = input_buffer.storage().pos();
                 if (ErrorCode err = input_buffer.get_next_character(next_char);
@@ -355,7 +356,7 @@ void Lexer<TypedNfaState, TypedDfaState>::prepend_start_of_file_char(ParserInput
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-void Lexer<TypedNfaState, TypedDfaState>::add_delimiters(std::vector<uint32_t> const& delimiters) {
+void Lexer<TypedNfaState, TypedDfaState>::set_delimiters(std::vector<uint32_t> const& delimiters) {
     assert(!delimiters.empty());
     m_has_delimiters = true;
     for (auto& i : m_is_delimiter) {
@@ -376,7 +377,7 @@ void Lexer<TypedNfaState, TypedDfaState>::add_rule(
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lexer<TypedNfaState, TypedDfaState>::get_rule(rule_id_t const rule_id
+auto Lexer<TypedNfaState, TypedDfaState>::get_highest_priority_rule(rule_id_t const rule_id
 ) -> finite_automata::RegexAST<TypedNfaState>* {
     for (auto const& rule : m_rules) {
         if (rule.get_variable_id() == rule_id) {
@@ -414,9 +415,10 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
 
     // TODO: DFA ignores captures. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState, TypedNfaState>>(nfa);
+
     auto const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
-        m_is_first_char[i] = state->get_transition(i).has_value();
+        m_is_first_char_of_a_variable[i] = state->get_transition(i).has_value();
     }
 }
 }  // namespace log_surgeon

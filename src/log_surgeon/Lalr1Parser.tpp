@@ -597,7 +597,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::report_error() -> std::string {
                 error_type += "'";
                 if (auto* regex_ast_literal
                     = dynamic_cast<finite_automata::RegexASTLiteral<TypedNfaState>*>(
-                            m_lexer.get_rule(i)
+                            m_lexer.get_highest_priority_rule(i)
                     ))
                 {
                     error_type += unescape(char(regex_ast_literal->get_character()));
