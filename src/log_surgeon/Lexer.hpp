@@ -103,7 +103,6 @@ public:
      * If the next token is an uncaught string, the next variable token is already prepped to be
      * returned on the next call.
      * @param input_buffer The input buffer to scan.
-     * @param token The token object to be populated with the next token.
      * @return If lexing is completed, a pair containing:
      * - `ErrorCode::Success`.
      * - The lexed token.
