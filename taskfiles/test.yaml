@@ -1,0 +1,15 @@
+version: "3"
+
+set: ["u", "pipefail"]
+shopt: ["globstar"]
+
+tasks:
+  debug:
+    deps:
+      - ":build:debug"
+    cmd: "{{.G_BUILD_DIR}}/debug/tests/unit-test"
+
+  release:
+    deps:
+      - ":build:release"
+    cmd: "{{.G_BUILD_DIR}}/release/tests/unit-test"

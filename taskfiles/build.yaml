@@ -1,0 +1,45 @@
+version: "3"
+
+set: ["u", "pipefail"]
+shopt: ["globstar"]
+
+tasks:
+  debug:
+    deps:
+      - ":deps:all"
+    cmds:
+      - task: ":utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.G_BUILD_DIR}}/debug"
+          EXTRA_ARGS:
+            - "-DCMAKE_BUILD_TYPE=debug"
+          SOURCE_DIR: "{{.ROOT_DIR}}"
+      - task: ":utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.G_BUILD_DIR}}/debug"
+
+  release:
+    deps:
+      - ":deps:all"
+    cmds:
+      - task: ":utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.G_BUILD_DIR}}/release"
+          EXTRA_ARGS:
+            - "-DCMAKE_BUILD_TYPE=release"
+          SOURCE_DIR: "{{.ROOT_DIR}}"
+      - task: ":utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.G_BUILD_DIR}}/release"
+
+  clean-debug:
+    deps:
+      - task: ":utils:cmake:clean"
+        vars:
+          BUILD_DIR: "{{.G_BUILD_DIR}}/debug"
+
+  clean-release:
+    deps:
+      - task: ":utils:cmake:clean"
+        vars:
+          BUILD_DIR: "{{.G_BUILD_DIR}}/release"

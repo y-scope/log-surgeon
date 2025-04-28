@@ -1,0 +1,60 @@
+version: "3"
+
+set: ["u", "pipefail"]
+shopt: ["globstar"]
+
+vars:
+  G_DEPS_DIR: "{{.G_BUILD_DIR}}/deps"
+  # These should be kept in-sync with its usage in CMakeLists.txt
+  G_DEPS_CMAKE_SETTINGS_DIR: "{{.G_DEPS_DIR}}/cmake-settings"
+
+tasks:
+  all:
+    cmds:
+      - task: ":utils:cmake:install-deps-and-generate-settings"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
+          DEP_TASK: "deps:install-all"
+
+  install-all:
+    internal: true
+    deps:
+      - "install-Catch2"
+      - "install-fmt"
+      - "install-Microsoft.GSL"
+
+  install-Catch2:
+    internal: true
+    run: "once"
+    cmds:
+      - task: ":utils:cmake:install-remote-tar"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
+          NAME: "Catch2"
+          WORK_DIR: "{{.G_DEPS_DIR}}/Catch2"
+          FILE_SHA256: "1ab2de20460d4641553addfdfe6acd4109d871d5531f8f519a52ea4926303087"
+          URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v3.8.0.tar.gz"
+
+  install-fmt:
+    internal: true
+    run: "once"
+    cmds:
+      - task: ":utils:cmake:install-remote-tar"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
+          NAME: "fmt"
+          WORK_DIR: "{{.G_DEPS_DIR}}/fmt"
+          FILE_SHA256: "b06ca3130158c625848f3fb7418f235155a4d389b2abc3a6245fb01cb0eb1e01"
+          URL: "https://github.com/fmtlib/fmt/archive/refs/tags/8.0.1.tar.gz"
+
+  install-Microsoft.GSL:
+    internal: true
+    run: "once"
+    cmds:
+      - task: ":utils:cmake:install-remote-tar"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
+          NAME: "Microsoft.GSL"
+          WORK_DIR: "{{.G_DEPS_DIR}}/Microsoft.GSL"
+          FILE_SHA256: "b06ca3130158c625848f3fb7418f235155a4d389b2abc3a6245fb01cb0eb1e01"
+          URL: "https://github.com/microsoft/GSL/archive/refs/tags/v4.0.0.tar.gz"
