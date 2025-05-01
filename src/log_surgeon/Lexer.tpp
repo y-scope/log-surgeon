@@ -370,7 +370,7 @@ void Lexer<TypedNfaState, TypedDfaState>::prepend_start_of_file_char(ParserInput
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-void Lexer<TypedNfaState, TypedDfaState>::add_delimiters(std::vector<uint32_t> const& delimiters) {
+void Lexer<TypedNfaState, TypedDfaState>::set_delimiters(std::vector<uint32_t> const& delimiters) {
     assert(!delimiters.empty());
     m_has_delimiters = true;
     for (auto& i : m_is_delimiter) {
@@ -391,7 +391,7 @@ void Lexer<TypedNfaState, TypedDfaState>::add_rule(
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lexer<TypedNfaState, TypedDfaState>::get_rule(rule_id_t const rule_id
+auto Lexer<TypedNfaState, TypedDfaState>::get_highest_priority_rule(rule_id_t const rule_id
 ) -> finite_automata::RegexAST<TypedNfaState>* {
     for (auto const& rule : m_rules) {
         if (rule.get_variable_id() == rule_id) {
@@ -429,7 +429,6 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
 
     // TODO: DFA ignores captures. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState, TypedNfaState>>(nfa);
-    m_tag_to_final_reg_id = m_dfa->get_tag_id_to_final_reg_id();
 
     auto const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {

@@ -143,10 +143,10 @@ private:
     auto get_next_symbol() -> std::pair<ErrorCode, std::optional<Token>>;
 
     /**
-     * Adds delimiters (originally from the schema AST) to the log parser.
+     * Sets delimiters (originally from the schema AST) to the log parser.
      * @param delimiters The AST object containing the delimiters to add.
      */
-    auto add_delimiters(std::unique_ptr<ParserAST> const& delimiters) -> void;
+    auto set_delimiters(std::unique_ptr<ParserAST> const& delimiters) -> void;
 
     /**
      * Adds log parsing and lexing rules from the schema AST.

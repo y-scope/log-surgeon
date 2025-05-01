@@ -26,9 +26,16 @@ namespace log_surgeon {
 /**
  * Represents a lexer that processes input buffers using a DFA-based approach.
  *
- * The Lexer class tokenizes input data based on lexical rules defined using regular expressions.
+ * The `Lexer` class tokenizes input data based on lexical rules defined using regular expressions.
  * It supports adding delimiters, scanning for tokens, and handling captures for tagged expressions.
- * The lexer can also be used to lexer search queries containing wildcards.
+ * The lexer can also be used to lex search queries by considering `?` and `*` wildcards.
+ *
+ * Lexical rules are associated with rule names, which can be non-unique. When multiple rules share
+ * the same rule ID, the lexer uses the union (i.e., logical OR) of these rules for tokenization.
+ *
+ * Lexical rules that include context introduce captures, tags, and registers. Each capture maps
+ * to a start and end tag, identifying the capture's position in the token. Each tag maps to several
+ * registers to track potential locations during DFA traversal.
  *
  * @tparam TypedNfaState The type representing NFA states used in rule definitions.
  * @tparam TypedDfaState The type representing DFA states used for token scanning.
@@ -41,13 +48,17 @@ public:
             = {(uint32_t)SymbolId::TokenUncaughtString};
 
     /**
-     * Adds a list of delimiter types to the lexer.
-     * @param delimiters A vector containing the delimiter types to be added.
+     * Sets a list of delimiter types to the lexer, invalidating any delimiters that were previously
+     * set.
+     *
+     * @param delimiters A non-empty vector containing the delimiter types to be added.
      */
-    auto add_delimiters(std::vector<uint32_t> const& delimiters) -> void;
+    auto set_delimiters(std::vector<uint32_t> const& delimiters) -> void;
 
     /**
-     * Adds a lexical rule to the lexer.
+     * Adds a lexical rule to the lexer. If a `rule_id` is repeated, the lexer will use the union
+     * (i.e., logical OR) of all the corresponding `rule`s.
+     *
      * @param rule_id The identifier for the rule.
      * @param rule A unique pointer to a `RegexAST` representing the rule.
      */
@@ -59,7 +70,8 @@ public:
      * @param rule_id The ID of the rule to retrieve.
      * @return A pointer to the corresponding `RegexAST` object.
      */
-    [[nodiscard]] auto get_rule(uint32_t rule_id) -> finite_automata::RegexAST<TypedNfaState>*;
+    [[nodiscard]] auto get_highest_priority_rule(uint32_t rule_id
+    ) -> finite_automata::RegexAST<TypedNfaState>*;
 
     /**
      * Generates the DFA for the lexer.
@@ -91,7 +103,6 @@ public:
      * If the next token is an uncaught string, the next variable token is already prepped to be
      * returned on the next call.
      * @param input_buffer The input buffer to scan.
-     * @param token The token object to be populated with the next token.
      * @return If lexing is completed, a pair containing:
      * - `ErrorCode::Success`.
      * - The lexed token.
@@ -168,8 +179,9 @@ public:
      */
     [[nodiscard]] auto get_reg_id_from_tag_id(tag_id_t const tag_id
     ) const -> std::optional<reg_id_t> {
-        if (m_tag_to_final_reg_id.contains(tag_id)) {
-            return m_tag_to_final_reg_id.at(tag_id);
+        auto const& tag_id_to_final_reg_id{m_dfa->get_tag_id_to_final_reg_id()};
+        if (tag_id_to_final_reg_id.contains(tag_id)) {
+            return tag_id_to_final_reg_id.at(tag_id);
         }
         return std::nullopt;
     }
@@ -218,8 +230,6 @@ private:
     bool m_match{false};
     std::vector<uint32_t> const* m_type_ids{nullptr};
     std::set<uint32_t> m_type_ids_set;
-    // TODO: determine if we can switch to safely accessing `m_is_delimiter` and
-    // `m_is_first_char_of_a_variable` with `at()` without impacting performance.
     std::array<bool, cSizeOfByte> m_is_delimiter{false};
     std::array<bool, cSizeOfByte> m_is_first_char_of_a_variable{false};
     std::vector<LexicalRule<TypedNfaState>> m_rules;
@@ -230,7 +240,6 @@ private:
     TypedDfaState const* m_prev_state{nullptr};
     std::unordered_map<rule_id_t, std::vector<capture_id_t>> m_rule_id_to_capture_ids;
     std::unordered_map<capture_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_id_pair;
-    std::map<tag_id_t, reg_id_t> m_tag_to_final_reg_id;
 };
 
 namespace lexers {

@@ -1,8 +1,8 @@
 version: "3"
 
 includes:
-  lint: "lint-tasks.yml"
-  utils: "tools/yscope-dev-utils/taskfiles/utils.yml"
+  lint: "taskfiles/lint.yaml"
+  utils: "tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
