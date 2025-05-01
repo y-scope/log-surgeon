@@ -2,11 +2,15 @@ include(CMakeFindDependencyMacro)
 
 @PACKAGE_INIT@
 
-if (@Microsoft.GSL_FOUND@)
+if(@fmt_FOUND@)
+    find_dependency(fmt)
+endif()
+
+if(@Microsoft.GSL_FOUND@)
     find_dependency(Microsoft.GSL)
 endif()
 
-set_and_check(log_surgeon_INCLUDE_DIR "@PACKAGE_LCHIP_INSTALL_INCLUDE_DIR@")
+set_and_check(log_surgeon_INCLUDE_DIR "@PACKAGE_LOG_SURGEON_INSTALL_INCLUDE_DIR@")
 
 check_required_components(log_surgeon)
 
