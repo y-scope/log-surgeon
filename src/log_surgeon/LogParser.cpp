@@ -174,9 +174,11 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
         if (m_has_start_of_log) {
             next_token = m_start_of_log_message;
         } else {
-            if (ErrorCode err = get_next_symbol(next_token); ErrorCode::Success != err) {
+            auto [err, optional_next_token] = get_next_symbol();
+            if (ErrorCode::Success != err) {
                 return err;
             }
+            next_token = optional_next_token.value();
             if (false == output_buffer->has_timestamp()
                 && next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenNewlineTimestamp)
             {
@@ -224,10 +226,11 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
     }
 
     while (true) {
-        Token next_token;
-        if (ErrorCode err = get_next_symbol(next_token); ErrorCode::Success != err) {
+        auto [err, optional_next_token] = get_next_symbol();
+        if (ErrorCode::Success != err) {
             return err;
         }
+        Token next_token{optional_next_token.value()};
         output_buffer->set_curr_token(next_token);
         auto token_type = next_token.m_type_ids_ptr->at(0);
         bool found_start_of_next_message
@@ -283,8 +286,8 @@ auto LogParser::get_symbol_id(std::string const& symbol) const -> std::optional<
     return std::nullopt;
 }
 
-auto LogParser::get_next_symbol(Token& token) -> ErrorCode {
-    return m_lexer.scan(m_input_buffer, token);
+auto LogParser::get_next_symbol() -> std::pair<ErrorCode, std::optional<Token>> {
+    return m_lexer.scan(m_input_buffer);
 }
 
 auto LogParser::generate_log_event_view_metadata() -> void {
