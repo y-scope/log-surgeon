@@ -1,29 +1,30 @@
 # Schema specification
 
-A schema file specifies the delimiters and variables patterns (regular
-expressions) necessary for `log-surgeon` to parse log events. `log-surgeon` uses
-the delimiters to find tokens<sup>†</sup> (as in, strings of non-delimiters) in
-the input, and categorizes any token that matches a variable pattern as a
-variable. Any tokens that are not categorized as variables are treated as static
-text. In essence, this allows the user to parse variables out of their
-unstructured log events.
-
-`log-surgeon` also assigns types to each variable based on the variable
-pattern's name in the schema file. 
-
-<sup>†</sup> Internally, `log-surgeon`'s lexer also treats a string of
-delimiters as a token, just not one that matches a variable pattern.
+A schema file defines the **delimiters** and **variable patterns** (regular
+expressions) that `log-surgeon` uses to parse log events. Delimiters
+conceptually divide the input into *tokens*, where each token is either a
+variable (matched by a pattern) or **static text**. Variable tokens may include
+delimiters and are treated as a single token. Static-text always begins and ends
+with a delimiter. This structure enables `log-surgeon` to extract variables from
+otherwise unstructured log events.
 
 ## Schema syntax
 
-A schema file essentially contains a list of *rules*, each of which has a *name*
-and a *pattern* (regular expression).
+A schema file consists of a list of *rules*, each defined by a *name* and
+*pattern* (regular expression). These rules dictate how `log-surgeon` identifies
+and categorizes parts of a log event.
 
 There are three types of rules in a schema file:
 
-* [Variables](#variables)
-* [Delimiters](#delimiters)
-* [Timestamps](#timestamps)
+* [Variables](#variables): Defines patterns for capturing specific pieces of the
+  log.
+* [Delimiters](#delimiters): Specifies the characters that separate tokens in
+  the log.
+* [Timestamps](#timestamps): Identifies the boundary between log events.
+  Timestamps are also treated as variables.
+
+For documentation, the schema allows for user comments by ignoring any text
+preceded by `//`.
 
 ### Variables
 
@@ -35,8 +36,7 @@ There are three types of rules in a schema file:
 * `variable-name` may contain any alphanumeric characters, but may not be
   the reserved names `delimiters` or `timestamp`.
 * `variable-pattern` is a regular expression using the supported
-  [syntax](#regular-expression-syntax), but it **cannot** contain characters
-  defined as [delimiters](#delimiters).
+  [syntax](#regular-expression-syntax).
 
 Note that:
 * A schema file may contain zero or more variable rules.
@@ -53,11 +53,12 @@ Note that:
 ```
 delimiters:<characters>
 ```
-* `delimiters` is a reserved name for this rule
-* `characters` is a set of characters that should be treated as delimiters
+* `delimiters` is a reserved name for this rule.
+* `characters` is a set of characters that should be treated as delimiters.
+  These characters define the boundaries between tokens in the log.
 
 Note that:
-* A schema file must contain a single `delimiters` rule. If multiple
+* A schema file must contain at least one `delimiters` rule. If multiple
   `delimiters` rules are specified, only the last one will be used.
 
 ### Timestamps
@@ -67,24 +68,16 @@ Note that:
 ```
 timestamp:<timestamp-pattern>
 ```
-* `timestamp` is a reserved name for this rule
+* `timestamp` is a reserved name for this rule.
 * `timestamp-pattern` is a regular expression using the supported
-  [syntax](#regular-expression-syntax)
+  [syntax](#regular-expression-syntax).
 
 Note that:
-* Unlike [variable](#variables) patterns, timestamp patterns can contain
-  delimiters.
 * The parser uses a timestamp to denote the start of a new log event if:
-  * ... it appears as the first token in the input, or
-  * ... it appears after a newline character.
+  * It appears as the first token in the input, or
+  * It appears after a newline character.
 * Until a timestamp is found, the parser will use a newline character to denote
   the start of a new log event.
-* The timestamp pattern is not used to match text inside a log event; since the
-  pattern can contain delimiters, no token can match it. 
-
-### Comments
-
-**Syntax:** Comments are any text preceded by `//`.
 
 ## Example schema file
 
@@ -101,16 +94,17 @@ float:\-{0,1}[0-9]+\.[0-9]+
 // Custom variables
 hex:[a-fA-F]+
 hasNumber:.*\d.*
-equals:.*=.*[a-zA-Z0-9].*
+equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
 ```
 * `delimiters: \t\r\n:,!;%` indicates that ` `, `\t`, `\r`, `\n`, `:`, `,`,
-  `!`, `;`, `%`, and `'` are delimiters. In a log file, consecutive delimiters,
-  e.g., N consecutive spaces, will be tokenized as static text.
+  `!`, `;`, `%`, and `'` are delimiters.
 * `timestamp` matches two different patterns:
     * 2023-04-19 12:32:08.064
     * [20230419-12:32:08]
-* `int`, `float`, `hex`, `hasNumber`, and `equals` all match different user
-  defined variables.
+* `int`, `float`, `hex`, `hasNumber`, and `equalsCapture` all match different
+  user defined variables.
+* `equalsCapture` also contains the named capture group `equals`. This allows
+  the user to extract the substring following the equals sign if desired.
 
 ## Regular Expression Syntax
 
@@ -128,8 +122,9 @@ a*           Match 'a' 0 or more times
 a+           Match 'a' 1 or more times
 a{N}         Match 'a' exactly N times
 a{N,M}       Match 'a' between N and M times
-(abc)        Subexpression (concatenates abc)
 \d           Match any digit 0-9
 \s           Match any whitespace character (' ', '\r', '\t', '\v', or '\f')
 .            Match any *non-delimiter* character
+(abc)        Subexpression (concatenates abc)
+(?<name>abc) Named capture group (matches 'abc' and saves it as 'name')
 ```
