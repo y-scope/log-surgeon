@@ -41,7 +41,7 @@ preceded by `//`.
 Note that:
 * A schema file may contain zero or more variable rules.
 * Repeating the same variable name in another rule will `OR` the regular
-  expressions (preform an alternation).
+  expressions (perform an alternation).
 * If a token matches multiple patterns from multiple rules, the token will be
   assigned the name of each rule, in the same order that they appear in the
   schema file.
@@ -96,7 +96,7 @@ hex:[a-fA-F]+
 hasNumber:.*\d.*
 equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
 ```
-* `delimiters: \t\r\n:,!;%` indicates that ` `, `\t`, `\r`, `\n`, `:`, `,`,
+* `delimiters: \t\r\n:,!;%'` indicates that ` `, `\t`, `\r`, `\n`, `:`, `,`,
   `!`, `;`, `%`, and `'` are delimiters.
 * `timestamp` matches two different patterns:
     * 2023-04-19 12:32:08.064
