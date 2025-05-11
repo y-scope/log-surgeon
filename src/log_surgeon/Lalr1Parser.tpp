@@ -658,11 +658,11 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::reset() -> void {
 template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_next_symbol() -> Token {
     if (m_next_token == std::nullopt) {
-        Token token;
-        if (auto error = m_lexer.scan(m_input_buffer, token); ErrorCode::Success != error) {
+        auto [err, optional_token] = m_lexer.scan(m_input_buffer);
+        if (ErrorCode::Success != err) {
             throw std::runtime_error("Error scanning in lexer.");
         }
-        return token;
+        return optional_token.value();
     }
     auto s = m_next_token.value();
     m_next_token = std::nullopt;
