@@ -45,36 +45,40 @@ tasks:
           BUILD_DIR: "{{.G_LS_BUILD_DIR}}/release"
 
   examples-debug:
+    vars:
+      LS_INSTALL_PREFIX: "{{.G_EG_BUILD_DIR}}/deps/log_surgeon/debug"
     deps:
       - "debug"
     cmds:
       - task: ":install:debug"
         vars:
-          PREFIX: "{{.G_EG_BUILD_DIR}}/log_surgeon/debug"
+          PREFIX: "{{.LS_INSTALL_PREFIX}}"
       - task: ":utils:cmake:generate"
         vars:
           BUILD_DIR: "{{.G_EG_BUILD_DIR}}/debug"
           EXTRA_ARGS:
             - "-DCMAKE_BUILD_TYPE=debug"
-            - "-Dlog_surgeon_ROOT={{.G_EG_BUILD_DIR}}/log_surgeon"
+            - "-Dlog_surgeon_ROOT={{.LS_INSTALL_PREFIX}}"
           SOURCE_DIR: "{{.ROOT_DIR}}/examples"
       - task: ":utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_EG_BUILD_DIR}}/debug"
 
   examples-release:
+    vars:
+      LS_INSTALL_PREFIX: "{{.G_EG_BUILD_DIR}}/deps/log_surgeon/release"
     deps:
       - "release"
     cmds:
       - task: ":install:release"
         vars:
-          PREFIX: "{{.G_EG_BUILD_DIR}}/log_surgeon/release"
+          PREFIX: "{{.LS_INSTALL_PREFIX}}"
       - task: ":utils:cmake:generate"
         vars:
           BUILD_DIR: "{{.G_EG_BUILD_DIR}}/release"
           EXTRA_ARGS:
             - "-DCMAKE_BUILD_TYPE=release"
-            - "-Dlog_surgeon_ROOT={{.G_EG_BUILD_DIR}}/log_surgeon"
+            - "-Dlog_surgeon_ROOT={{.LS_INSTALL_PREFIX}}"
           SOURCE_DIR: "{{.ROOT_DIR}}/examples"
       - task: ":utils:cmake:build"
         vars:
