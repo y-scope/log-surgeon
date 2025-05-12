@@ -7,9 +7,19 @@ tasks:
   debug:
     deps:
       - ":build:debug"
-    cmd: "{{.G_BUILD_DIR}}/debug/tests/unit-test"
+    cmd: "{{.G_LS_BUILD_DIR}}/debug/tests/unit-test"
 
   release:
     deps:
       - ":build:release"
-    cmd: "{{.G_BUILD_DIR}}/release/tests/unit-test"
+    cmd: "{{.G_LS_BUILD_DIR}}/release/tests/unit-test"
+
+  examples-debug:
+    deps:
+      - ":build:examples-debug"
+    cmd: "{{.G_EG_BUILD_DIR}}/debug/intersect-test"
+
+  examples-release:
+    deps:
+      - ":build:examples-release"
+    cmd: "{{.G_EG_BUILD_DIR}}/release/intersect-test"

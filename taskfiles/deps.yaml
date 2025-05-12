@@ -5,11 +5,13 @@ shopt: ["globstar"]
 
 vars:
   G_DEPS_DIR: "{{.G_BUILD_DIR}}/deps"
-  # These should be kept in-sync with its usage in CMakeLists.txt
+  # This path must be kept in-sync with its usage in CMakeLists.txt and examples/CMakeLists.txt.
   G_DEPS_CMAKE_SETTINGS_DIR: "{{.G_DEPS_DIR}}/cmake-settings"
+
 
 tasks:
   all:
+    run: "once"
     cmds:
       - task: ":utils:cmake:install-deps-and-generate-settings"
         vars:
@@ -18,6 +20,7 @@ tasks:
 
   install-all:
     internal: true
+    run: "once"
     deps:
       - "install-Catch2"
       - "install-fmt"

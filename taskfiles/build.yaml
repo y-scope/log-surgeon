@@ -10,13 +10,13 @@ tasks:
     cmds:
       - task: ":utils:cmake:generate"
         vars:
-          BUILD_DIR: "{{.G_BUILD_DIR}}/debug"
+          BUILD_DIR: "{{.G_LS_BUILD_DIR}}/debug"
           EXTRA_ARGS:
             - "-DCMAKE_BUILD_TYPE=debug"
           SOURCE_DIR: "{{.ROOT_DIR}}"
       - task: ":utils:cmake:build"
         vars:
-          BUILD_DIR: "{{.G_BUILD_DIR}}/debug"
+          BUILD_DIR: "{{.G_LS_BUILD_DIR}}/debug"
 
   release:
     deps:
@@ -24,22 +24,70 @@ tasks:
     cmds:
       - task: ":utils:cmake:generate"
         vars:
-          BUILD_DIR: "{{.G_BUILD_DIR}}/release"
+          BUILD_DIR: "{{.G_LS_BUILD_DIR}}/release"
           EXTRA_ARGS:
             - "-DCMAKE_BUILD_TYPE=release"
           SOURCE_DIR: "{{.ROOT_DIR}}"
       - task: ":utils:cmake:build"
         vars:
-          BUILD_DIR: "{{.G_BUILD_DIR}}/release"
+          BUILD_DIR: "{{.G_LS_BUILD_DIR}}/release"
 
   clean-debug:
     deps:
       - task: ":utils:cmake:clean"
         vars:
-          BUILD_DIR: "{{.G_BUILD_DIR}}/debug"
+          BUILD_DIR: "{{.G_LS_BUILD_DIR}}/debug"
 
   clean-release:
     deps:
       - task: ":utils:cmake:clean"
         vars:
-          BUILD_DIR: "{{.G_BUILD_DIR}}/release"
+          BUILD_DIR: "{{.G_LS_BUILD_DIR}}/release"
+
+  examples-debug:
+    deps:
+      - "debug"
+    cmds:
+      - task: ":install:debug"
+        vars:
+          PREFIX: "{{.G_EG_BUILD_DIR}}/log_surgeon/debug"
+      - task: ":utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.G_EG_BUILD_DIR}}/debug"
+          EXTRA_ARGS:
+            - "-DCMAKE_BUILD_TYPE=debug"
+            - "-Dlog_surgeon_ROOT={{.G_EG_BUILD_DIR}}/log_surgeon"
+          SOURCE_DIR: "{{.ROOT_DIR}}/examples"
+      - task: ":utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.G_EG_BUILD_DIR}}/debug"
+
+  examples-release:
+    deps:
+      - "release"
+    cmds:
+      - task: ":install:release"
+        vars:
+          PREFIX: "{{.G_EG_BUILD_DIR}}/log_surgeon/release"
+      - task: ":utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.G_EG_BUILD_DIR}}/release"
+          EXTRA_ARGS:
+            - "-DCMAKE_BUILD_TYPE=release"
+            - "-Dlog_surgeon_ROOT={{.G_EG_BUILD_DIR}}/log_surgeon"
+          SOURCE_DIR: "{{.ROOT_DIR}}/examples"
+      - task: ":utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.G_EG_BUILD_DIR}}/release"
+
+  examples-clean-debug:
+    deps:
+      - task: ":utils:cmake:clean"
+        vars:
+          BUILD_DIR: "{{.G_EG_BUILD_DIR}}/debug"
+
+  examples-clean-release:
+    deps:
+      - task: ":utils:cmake:clean"
+        vars:
+          BUILD_DIR: "{{.G_EG_BUILD_DIR}}/release"

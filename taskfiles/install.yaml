@@ -5,27 +5,25 @@ shopt: ["globstar"]
 
 tasks:
   debug:
-    vars:
-      PREFIX: >-
-        {{default (printf "%s/install" .G_BUILD_DIR) .PREFIX}}
+    requires:
+      vars: ["PREFIX"]
     deps:
       - ":build:debug"
     cmds:
       - task: ":utils:cmake:install"
         vars:
-          BUILD_DIR: "{{.G_BUILD_DIR}}/debug"
+          BUILD_DIR: "{{.G_LS_BUILD_DIR}}/debug"
           INSTALL_PREFIX: "{{.PREFIX}}"
           NAME: "log-surgeon"
 
   release:
-    vars:
-      PREFIX: >-
-        {{default (printf "%s/install" .G_BUILD_DIR) .PREFIX}}
+    requires:
+      vars: ["PREFIX"]
     deps:
       - ":build:release"
     cmds:
       - task: ":utils:cmake:install"
         vars:
-          BUILD_DIR: "{{.G_BUILD_DIR}}/release"
+          BUILD_DIR: "{{.G_LS_BUILD_DIR}}/release"
           INSTALL_PREFIX: "{{.PREFIX}}"
           NAME: "log-surgeon"
