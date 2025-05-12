@@ -48,20 +48,14 @@ list(APPEND DEPS_TO_FETCH "")
 
 # Use <fmt/*.h> as <format> is unsupported in gcc-10.
 find_package(fmt 8.0.1 REQUIRED)
-if(fmt_FOUND)
-    message(STATUS "Found fmt ${fmt_VERSION}.")
-endif()
+message(STATUS "Found fmt ${fmt_VERSION}.")
 
 find_package(Microsoft.GSL 4 REQUIRED)
-if(Microsoft.GSL_FOUND)
-    message(STATUS "Found Microsoft.GSL ${Microsoft.GSL_VERSION}.")
-endif()
+message(STATUS "Found Microsoft.GSL ${Microsoft.GSL_VERSION}.")
 
 if(log_surgeon_ENABLE_TESTS)
     find_package(Catch2 3 REQUIRED)
-    if(Catch2_FOUND)
-        message(STATUS "Found Catch2 ${Catch2_VERSION}.")
-    endif()
+    message(STATUS "Found Catch2 ${Catch2_VERSION}.")
     include(Catch)
 endif()
 
@@ -130,25 +124,11 @@ set(LOG_SURGEON_THIRD_PARTY_INCLUDE_DIR "${LOG_SURGEON_INSTALL_INCLUDE_DIR}/log_
 add_library(log_surgeon ${SOURCE_FILES})
 add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
 
-if (Microsoft.GSL_FOUND)
-    target_link_libraries(log_surgeon
-            PUBLIC
-            Microsoft.GSL::GSL
-            )
-else()
-    # Since the user doesn't have GSL installed, use the GSL headers directly.
-    # NOTE:
-    # - We can't link against the `Microsoft.GSL::GSL` target since that would require adding `GSL`
-    #   to the `install` command and force the user to have GSL installed when using log-surgeon.
-    # - At install time, we'll copy GSL into log-surgeon's third-party includes directory.
-    target_include_directories(log_surgeon
-            PUBLIC
-            $<BUILD_INTERFACE:${GSL_SOURCE_DIR}/include>
-            $<INSTALL_INTERFACE:${LOG_SURGEON_THIRD_PARTY_INCLUDE_DIR}>
-            )
-endif()
-
-target_link_libraries(log_surgeon PUBLIC fmt::fmt)
+target_link_libraries(log_surgeon
+    PUBLIC
+    fmt::fmt
+    Microsoft.GSL::GSL
+    )
 
 target_include_directories(log_surgeon
         PUBLIC
