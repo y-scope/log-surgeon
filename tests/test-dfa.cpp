@@ -27,27 +27,39 @@ using ByteNfa = log_surgeon::finite_automata::Nfa<ByteNfaState>;
 
 namespace {
 /**
- * Helper function to compare the actual and expected DFA serialized strings, and compare them line
- * by line to ensure the serialized DFA output is correct.
+ * Generates a DFA for the given variable schemas, then serializes the DFA and compares it with
+ * `expected_serialized_dfa`.
  *
- * @param actual_dfa The actual DFA serialized string to be compared.
- * @param expected_serialized_dfa The expected DFA serialized string for comparison.
+ * @param var_schemas Vector of variable schemas from which to construct the DFA.
+ * @param expected_serialized_dfa Expected serialized string representation of the DFA.
  */
-auto compare_serialized_dfa(ByteDfa const& actual_dfa, std::string const& expected_serialized_dfa)
+auto test_dfa(std::vector<string> const& var_schemas, string const& expected_serialized_dfa)
         -> void;
 
-auto compare_serialized_dfa(ByteDfa const& actual_dfa, std::string const& expected_serialized_dfa)
+auto test_dfa(std::vector<string> const& var_schemas, string const& expected_serialized_dfa)
         -> void {
-    auto const optional_actual_serialized_dfa = actual_dfa.serialize();
-    REQUIRE(optional_actual_serialized_dfa.has_value());
-    auto const& actual_serialized_dfa = optional_actual_serialized_dfa.value();
+    Schema schema;
+    for (auto const& var_schema : var_schemas) {
+        schema.add_variable(var_schema, -1);
+    }
+    auto const schema_ast = schema.release_schema_ast_ptr();
+    vector<ByteLexicalRule> rules;
+    for (size_t i{0}; i < var_schemas.size(); i++) {
+        auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[i]);
+        rules.emplace_back(i, std::move(capture_rule_ast.m_regex_ptr));
+    }
+    ByteNfa const nfa{rules};
+    ByteDfa const dfa{nfa};
 
-    stringstream ss_actual{actual_serialized_dfa};
+    // Compare expected and actual line-by-line
+    auto const optional_actual_serialized_dfa = dfa.serialize();
+    REQUIRE(optional_actual_serialized_dfa.has_value());
+    stringstream ss_actual{optional_actual_serialized_dfa.value()};
     stringstream ss_expected{expected_serialized_dfa};
     string actual_line;
     string expected_line;
 
-    CAPTURE(actual_serialized_dfa);
+    CAPTURE(optional_actual_serialized_dfa.value());
     CAPTURE(expected_serialized_dfa);
     while (getline(ss_actual, actual_line) && getline(ss_expected, expected_line)) {
         REQUIRE(actual_line == expected_line);
@@ -60,18 +72,7 @@ auto compare_serialized_dfa(ByteDfa const& actual_dfa, std::string const& expect
 }  // namespace
 
 TEST_CASE("Test Simple Untagged DFA", "[DFA]") {
-    Schema schema;
-    string const var_name{"capture"};
-    string const var_schema{var_name + ":" + "userID=123"};
-    schema.add_variable(var_schema, -1);
-
-    auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(0));
-    vector<ByteLexicalRule> rules;
-    rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
-    ByteNfa const nfa{rules};
-    ByteDfa const dfa{nfa};
-
+    string const var_schema{"capture:userID=123"};
     string const expected_serialized_dfa{
             "0:byte_transitions={u-()->1}\n"
             "1:byte_transitions={s-()->2}\n"
@@ -85,23 +86,11 @@ TEST_CASE("Test Simple Untagged DFA", "[DFA]") {
             "9:byte_transitions={3-()->10}\n"
             "10:accepting_tags={0},accepting_operations={},byte_transitions={}\n"
     };
-
-    compare_serialized_dfa(dfa, expected_serialized_dfa);
+    test_dfa({var_schema}, expected_serialized_dfa);
 }
 
 TEST_CASE("Test Complex Untagged DFA", "[DFA]") {
-    Schema schema;
-    string const var_name{"capture"};
-    string const var_schema{var_name + ":" + "Z|(A[abcd]B\\d+C)"};
-    schema.add_variable(var_schema, -1);
-
-    auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(0));
-    vector<ByteLexicalRule> rules;
-    rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
-    ByteNfa const nfa{rules};
-    ByteDfa const dfa{nfa};
-
+    string const var_schema{"capture:Z|(A[abcd]B\\d+C)"};
     string const expected_serialized_dfa{
             "0:byte_transitions={A-()->1,Z-()->2}\n"
             "1:byte_transitions={a-()->3,b-()->3,c-()->3,d-()->3}\n"
@@ -112,24 +101,11 @@ TEST_CASE("Test Complex Untagged DFA", "[DFA]") {
             "5:byte_transitions={0-()->5,1-()->5,2-()->5,3-()->5,4-()->5,5-()->5,6-()->5,7-()->5,"
             "8-()->5,9-()->5,C-()->2}\n"
     };
-
-    compare_serialized_dfa(dfa, expected_serialized_dfa);
+    test_dfa({var_schema}, expected_serialized_dfa);
 }
 
 TEST_CASE("Test Simple Tagged DFA", "[DFA]") {
-    Schema schema;
-    string const var_name{"capture"};
-    string const var_schema{var_name + ":" + "userID=(?<uID>123)"};
-
-    schema.add_variable(var_schema, -1);
-
-    auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(0));
-    vector<ByteLexicalRule> rules;
-    rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
-    ByteNfa const nfa{rules};
-    ByteDfa const dfa{nfa};
-
+    string const var_schema{"capture:userID=(?<uID>123)"};
     string const expected_serialized_dfa{
             "0:byte_transitions={u-()->1}\n"
             "1:byte_transitions={s-()->2}\n"
@@ -143,27 +119,12 @@ TEST_CASE("Test Simple Tagged DFA", "[DFA]") {
             "9:byte_transitions={3-()->10}\n"
             "10:accepting_tags={0},accepting_operations={2c4,3p},byte_transitions={}\n"
     };
-
-    compare_serialized_dfa(dfa, expected_serialized_dfa);
+    test_dfa({var_schema}, expected_serialized_dfa);
 }
 
 TEST_CASE("Test Complex Tagged DFA", "[DFA]") {
-    Schema schema;
-    string const var_name{"capture"};
-    string const var_schema{
-            var_name + ":"
-            + "Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?"
-              "<containerID>\\d+)C)"
-    };
-    schema.add_variable(var_schema, -1);
-
-    auto const schema_ast = schema.release_schema_ast_ptr();
-    auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(0));
-    vector<ByteLexicalRule> rules;
-    rules.emplace_back(0, std::move(capture_rule_ast.m_regex_ptr));
-    ByteNfa const nfa{rules};
-    ByteDfa const dfa{nfa};
-
+    string const var_schema{"capture:Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?<"
+                            "containerID>\\d+)C)"};
     string const expected_serialized_dfa{
             "0:byte_transitions={A-()->1,Z-()->2}\n"
             "1:byte_transitions={a-(16p,17p)->3,b-(16p,17p)->3,c-(18p,17p)->4,d-(18p,17p)->4}\n"
@@ -178,6 +139,33 @@ TEST_CASE("Test Complex Tagged DFA", "[DFA]") {
             "7:accepting_tags={0},accepting_operations={8c16,9c19,10c20,11c21,12c17,13c22,14c27,"
             "15c28},byte_transitions={}\n"
     };
+    test_dfa({var_schema}, expected_serialized_dfa);
+}
 
-    compare_serialized_dfa(dfa, expected_serialized_dfa);
+TEST_CASE("Test Repetition Tagged DFA", "[DFA]") {
+    string const var_schema{"capture:([a]+=(?<val>1+),)+"};
+    string const expected_serialized_dfa{
+            "0:byte_transitions={a-()->1}\n"
+            "1:byte_transitions={=-()->2,a-()->1}\n"
+            "2:byte_transitions={1-(4p)->3}\n"
+            "3:byte_transitions={,-(5p)->4,1-()->3}\n"
+            "4:accepting_tags={0},accepting_operations={2c4,3c5},byte_transitions={a-()->5}\n"
+            "5:byte_transitions={=-()->6,a-()->5}\n"
+            "6:byte_transitions={1-(6p)->7}\n"
+            "7:byte_transitions={,-(5p,4c6)->4,1-()->7}\n"
+    };
+    test_dfa({var_schema}, expected_serialized_dfa);
+}
+
+TEST_CASE("Test integer DFA", "[DFA]") {
+    string const var_schema{"int:\\-{0,1}\\d+"};
+    string const expected_serialized_dfa{
+            "0:byte_transitions={--()->1,0-()->2,1-()->2,2-()->2,3-()->2,4-()->2,5-()->2,6-()->2,7-"
+            "()->2,8-()->2,9-()->2}\n"
+            "1:byte_transitions={0-()->2,1-()->2,2-()->2,3-()->2,4-()->2,5-()->2,6-()->2,7-()->2,8-"
+            "()->2,9-()->2}\n"
+            "2:accepting_tags={0},accepting_operations={},byte_transitions={0-()->2,1-()->2,2-()->"
+            "2,3-()->2,4-()->2,5-()->2,6-()->2,7-()->2,8-()->2,9-()->2}\n"
+    };
+    test_dfa({var_schema}, expected_serialized_dfa);
 }
