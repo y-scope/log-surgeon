@@ -14,6 +14,7 @@
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/LogParser.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 #include <log_surgeon/types.hpp>
@@ -21,6 +22,7 @@
 using log_surgeon::capture_id_t;
 using log_surgeon::finite_automata::PrefixTree;
 using log_surgeon::lexers::ByteLexer;
+using log_surgeon::LogParser;
 using log_surgeon::Schema;
 using log_surgeon::SchemaAST;
 using log_surgeon::SymbolId;
@@ -66,24 +68,16 @@ auto test_regex_ast(string_view var_schema, u32string const& expected_serialized
 [[nodiscard]] auto u32string_to_string(u32string const& u32_str) -> string;
 
 /**
- * Creates a lexer with a constant set of delimiters (space and newline) and the given schema.
- * The delimiters are used to separate tokens in the input.
- * @param schema_ast The schema variables are used to set the lexer's symbol mappings.
- * @return The lexer.
- */
-[[nodiscard]] auto create_lexer(std::unique_ptr<SchemaAST> schema_ast) -> ByteLexer;
-
-/**
  * Lexes the given input and verifies the output is a token for the given rule name, folowed by the
  * end of input token.
  *
- * @param lexer The lexer to scan the input with.
+ * @param log_parser The log parser to scan the input with.
  * @param input The input to lex.
  * @param rule_name The expected symbol to match.
  * @param expected_capture_map The expected start and end position of each capture.
  */
 auto test_scanning_input(
-        ByteLexer& lexer,
+        LogParser& log_parser,
         std::string_view input,
         std::string_view rule_name,
         std::map<
@@ -118,50 +112,8 @@ auto u32string_to_string(u32string const& u32_str) -> string {
     return converter.to_bytes(u32_str.data(), u32_str.data() + u32_str.size());
 }
 
-auto create_lexer(std::unique_ptr<SchemaAST> schema_ast) -> ByteLexer {
-    vector<uint32_t> const delimiters{' ', '\n', '\r'};
-
-    ByteLexer lexer;
-    lexer.set_delimiters(delimiters);
-
-    vector<uint32_t> lexer_delimiters;
-    for (uint32_t i{0}; i < log_surgeon::cSizeOfByte; ++i) {
-        if (lexer.is_delimiter(i)) {
-            lexer_delimiters.push_back(i);
-        }
-    }
-
-    lexer.m_symbol_id.emplace(log_surgeon::cTokenEnd, static_cast<uint32_t>(SymbolId::TokenEnd));
-    lexer.m_symbol_id.emplace(
-            log_surgeon::cTokenUncaughtString,
-            static_cast<uint32_t>(SymbolId::TokenUncaughtString)
-    );
-    lexer.m_id_symbol.emplace(static_cast<uint32_t>(SymbolId::TokenEnd), log_surgeon::cTokenEnd);
-    lexer.m_id_symbol.emplace(
-            static_cast<uint32_t>(SymbolId::TokenUncaughtString),
-            log_surgeon::cTokenUncaughtString
-    );
-
-    for (auto const& m_schema_var : schema_ast->m_schema_vars) {
-        // For log-specific lexing: modify variable regex to contain a delimiter at the start.
-        auto delimiter_group{make_unique<RegexASTGroupByte>(RegexASTGroupByte(lexer_delimiters))};
-        auto* rule{dynamic_cast<SchemaVarAST*>(m_schema_var.get())};
-        rule->m_regex_ptr = make_unique<RegexASTCatByte>(
-                std::move(delimiter_group),
-                std::move(rule->m_regex_ptr)
-        );
-        if (false == lexer.m_symbol_id.contains(rule->m_name)) {
-            lexer.m_symbol_id.emplace(rule->m_name, lexer.m_symbol_id.size());
-            lexer.m_id_symbol.emplace(lexer.m_symbol_id.at(rule->m_name), rule->m_name);
-        }
-        lexer.add_rule(lexer.m_symbol_id.at(rule->m_name), std::move(rule->m_regex_ptr));
-    }
-    lexer.generate();
-    return lexer;
-}
-
 auto test_scanning_input(
-        ByteLexer& lexer,
+        LogParser& log_parser,
         std::string_view input,
         std::string_view rule_name,
         std::map<
@@ -170,10 +122,11 @@ auto test_scanning_input(
                         std::vector<PrefixTree::position_t>,
                         std::vector<PrefixTree::position_t>>> const& expected_capture_map
 ) -> void {
+    ByteLexer& lexer{log_parser.m_lexer};
+    lexer.reset();
+
     CAPTURE(input);
     CAPTURE(rule_name);
-
-    lexer.reset();
     CAPTURE(serialize_id_symbol_map(lexer.m_id_symbol));
 
     log_surgeon::ParserInputBuffer input_buffer;
@@ -385,6 +338,7 @@ TEST_CASE("Test the Schema class", "[Schema]") {
 }
 
 TEST_CASE("Test Lexer without capture groups", "[Lexer]") {
+    constexpr string_view cDelimitersSchema{"delimiters: \\n\\r"};
     constexpr string_view cVarName{"myVar"};
     constexpr string_view cVarSchema{"myVar:userID=123"};
     constexpr string_view cTokenString1{"userID=123"};
@@ -392,17 +346,17 @@ TEST_CASE("Test Lexer without capture groups", "[Lexer]") {
     constexpr string_view cTokenString3{"123"};
 
     Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
     schema.add_variable(cVarSchema, -1);
 
-    ByteLexer lexer{create_lexer(std::move(schema.release_schema_ast_ptr()))};
-
-    CAPTURE(cVarSchema);
-    test_scanning_input(lexer, cTokenString1, cVarName, {});
-    test_scanning_input(lexer, cTokenString2, log_surgeon::cTokenUncaughtString, {});
-    test_scanning_input(lexer, cTokenString3, log_surgeon::cTokenUncaughtString, {});
+    LogParser log_parser{std::move(schema.release_schema_ast_ptr())};
+    test_scanning_input(log_parser, cTokenString1, cVarName, {});
+    test_scanning_input(log_parser, cTokenString2, log_surgeon::cTokenUncaughtString, {});
+    test_scanning_input(log_parser, cTokenString3, log_surgeon::cTokenUncaughtString, {});
 }
 
 TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
+    constexpr string_view cDelimitersSchema{"delimiters: \\n\\r"};
     constexpr string_view cVarName{"myVar"};
     constexpr string_view cCaptureName{"uid"};
     constexpr string_view cVarSchema{"myVar:userID=(?<uid>123)"};
@@ -413,9 +367,11 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
             capture_positions{{7}, {10}};
 
     Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
     schema.add_variable(cVarSchema, -1);
+    LogParser log_parser{std::move(schema.release_schema_ast_ptr())};
 
-    ByteLexer lexer{create_lexer(std::move(schema.release_schema_ast_ptr()))};
+    ByteLexer& lexer{log_parser.m_lexer};
 
     string const var_name{cVarName};
     REQUIRE(lexer.m_symbol_id.contains(var_name));
@@ -442,18 +398,19 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
 
     CAPTURE(cVarSchema);
     test_scanning_input(
-            lexer,
+            log_parser,
             cTokenString1,
             cVarName,
             {{lexer.m_symbol_id.at(capture_name), capture_positions}}
     );
-    test_scanning_input(lexer, cTokenString2, log_surgeon::cTokenUncaughtString, {});
-    test_scanning_input(lexer, cTokenString3, log_surgeon::cTokenUncaughtString, {});
+    test_scanning_input(log_parser, cTokenString2, log_surgeon::cTokenUncaughtString, {});
+    test_scanning_input(log_parser, cTokenString3, log_surgeon::cTokenUncaughtString, {});
 }
 
 TEST_CASE("Test CLP default schema", "[Lexer]") {
+    constexpr string_view cDelimitersSchema{"delimiters: \\n\\r"};
     string const capture_name{"val"};
-    constexpr string_view cVarName1{"timestamp"};
+    constexpr string_view cVarName1{"firstTimestamp"};
     constexpr string_view cVarSchema1{
             R"(timestamp:[0-9]{4}\-[0-9]{2}\-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}[,\.][0-9]{0,3})"
     };
@@ -478,28 +435,30 @@ TEST_CASE("Test CLP default schema", "[Lexer]") {
             capture_positions{{7}, {10}};
 
     Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
     schema.add_variable(cVarSchema1, -1);
     schema.add_variable(cVarSchema2, -1);
     schema.add_variable(cVarSchema3, -1);
     schema.add_variable(cVarSchema4, -1);
     schema.add_variable(cVarSchema5, -1);
     schema.add_variable(cVarSchema6, -1);
-    ByteLexer lexer{create_lexer(std::move(schema.release_schema_ast_ptr()))};
+    LogParser log_parser{std::move(schema.release_schema_ast_ptr())};
 
-    test_scanning_input(lexer, cTokenString1, cVarName1, {});
-    test_scanning_input(lexer, cTokenString2, cVarName2, {});
-    test_scanning_input(lexer, cTokenString3, cVarName3, {});
-    test_scanning_input(lexer, cTokenString4, cVarName4, {});
+    test_scanning_input(log_parser, cTokenString1, cVarName1, {});
+    test_scanning_input(log_parser, cTokenString2, cVarName2, {});
+    test_scanning_input(log_parser, cTokenString3, cVarName3, {});
+    test_scanning_input(log_parser, cTokenString4, cVarName4, {});
     test_scanning_input(
-            lexer,
+            log_parser,
             cTokenString5,
             cVarName5,
-            {{lexer.m_symbol_id.at(capture_name), capture_positions}}
+            {{log_parser.m_lexer.m_symbol_id.at(capture_name), capture_positions}}
     );
-    test_scanning_input(lexer, cTokenString6, cVarName6, {});
+    test_scanning_input(log_parser, cTokenString6, cVarName6, {});
 }
 
 TEST_CASE("Test capture group repetition and backtracking", "[Lexer]") {
+    constexpr string_view cDelimitersSchema{"delimiters: \\n\\r"};
     string const capture_name{"val"};
     constexpr string_view cVarName{"myVar"};
     constexpr string_view cVarSchema{"myVar:([A-Za-z]+=(?<val>[a-zA-Z0-9]+),){4}"};
@@ -508,15 +467,16 @@ TEST_CASE("Test capture group repetition and backtracking", "[Lexer]") {
             capture_positions{{35, 25, 15, 7}, {37, 27, 17, 10}};
 
     Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
     schema.add_variable(cVarSchema, -1);
-    ByteLexer lexer{create_lexer(std::move(schema.release_schema_ast_ptr()))};
+    LogParser log_parser{std::move(schema.release_schema_ast_ptr())};
 
     CAPTURE(cVarSchema);
     test_scanning_input(
-            lexer,
+            log_parser,
             cTokenString,
             cVarName,
-            {{lexer.m_symbol_id.at(capture_name), capture_positions}}
+            {{log_parser.m_lexer.m_symbol_id.at(capture_name), capture_positions}}
     );
     // TODO: add backtracking case
 }
