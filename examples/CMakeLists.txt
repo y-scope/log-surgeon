@@ -18,9 +18,7 @@ if(log-surgeon-examples_IS_TOP_LEVEL)
 endif()
 
 find_package(log_surgeon REQUIRED)
-if(log_surgeon_FOUND)
-    message(STATUS "Found log_surgeon ${log_surgeon_VERSION}.")
-endif()
+message(STATUS "Found log_surgeon ${log_surgeon_VERSION}.")
 
 function(add_to_target target libraries)
     target_link_libraries(${target} ${libraries})
