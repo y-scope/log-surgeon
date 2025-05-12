@@ -35,8 +35,8 @@ tasks:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
           NAME: "Catch2"
           WORK_DIR: "{{.G_DEPS_DIR}}/Catch2"
-          FILE_SHA256: "1ab2de20460d4641553addfdfe6acd4109d871d5531f8f519a52ea4926303087"
-          URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v3.8.0.tar.gz"
+          FILE_SHA256: "18b3f70ac80fccc340d8c6ff0f339b2ae64944782f8d2fca2bd705cf47cadb79"
+          URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v3.8.1.tar.gz"
 
   install-fmt:
     internal: true
