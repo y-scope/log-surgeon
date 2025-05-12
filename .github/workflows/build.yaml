@@ -7,16 +7,18 @@ on:
       - "CMakeLists.txt"
       - "examples/**/*"
       - "src/**/*"
+      - "taskfile.yaml"
+      - "taskfiles/*"
       - "tests/**/*"
-      - "tools/deps-install/ubuntu/**/*"
   push:
     paths:
       - ".github/workflows/build.yaml"
       - "CMakeLists.txt"
       - "examples/**/*"
       - "src/**/*"
+      - "taskfile.yaml"
+      - "taskfiles/*"
       - "tests/**/*"
-      - "tools/deps-install/ubuntu/**/*"
   workflow_call:
 
 concurrency:
