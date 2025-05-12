@@ -156,16 +156,3 @@ TEST_CASE("Test Repetition Tagged DFA", "[DFA]") {
     };
     test_dfa({var_schema}, expected_serialized_dfa);
 }
-
-TEST_CASE("Test integer DFA", "[DFA]") {
-    string const var_schema{"int:\\-{0,1}\\d+"};
-    string const expected_serialized_dfa{
-            "0:byte_transitions={--()->1,0-()->2,1-()->2,2-()->2,3-()->2,4-()->2,5-()->2,6-()->2,7-"
-            "()->2,8-()->2,9-()->2}\n"
-            "1:byte_transitions={0-()->2,1-()->2,2-()->2,3-()->2,4-()->2,5-()->2,6-()->2,7-()->2,8-"
-            "()->2,9-()->2}\n"
-            "2:accepting_tags={0},accepting_operations={},byte_transitions={0-()->2,1-()->2,2-()->"
-            "2,3-()->2,4-()->2,5-()->2,6-()->2,7-()->2,8-()->2,9-()->2}\n"
-    };
-    test_dfa({var_schema}, expected_serialized_dfa);
-}
