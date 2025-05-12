@@ -27,7 +27,7 @@ using ByteNfa = log_surgeon::finite_automata::Nfa<ByteNfaState>;
 
 namespace {
 /**
- * Generates a DFA for the given `var_schema` string, then serializes the DFA and compares it with
+ * Generates a DFA for the given variable schemas, then serializes the DFA and compares it with
  * `expected_serialized_dfa`.
  *
  * @param var_schemas Vector of variable schemas from which to construct the DFA.
