@@ -1,7 +1,13 @@
 version: "3"
 
+set: ["u", "pipefail"]
+shopt: ["globstar"]
+
 includes:
+  build: "taskfiles/build.yaml"
+  deps: "taskfiles/deps.yaml"
   lint: "taskfiles/lint.yaml"
+  test: "taskfiles/test.yaml"
   utils: "tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:

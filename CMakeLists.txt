@@ -13,10 +13,10 @@ endif()
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
-include(FetchContent)
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 option(log_surgeon_BUILD_TESTING "Build the testing tree." ON)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS
     ON
     CACHE BOOL
@@ -31,6 +31,11 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 if(log_surgeon_IS_TOP_LEVEL)
+    # Include dependency settings if the project isn't being included as a subproject.
+    # NOTE: We mark the file optional because if the user happens to have the dependencies
+    # installed, this file is not necessary.
+    include("build/deps/cmake-settings/all.cmake" OPTIONAL)
+
     # If previously undefined, `BUILD_TESTING` will be set to ON.
     include(CTest)
 endif()
@@ -42,30 +47,14 @@ endif()
 list(APPEND DEPS_TO_FETCH "")
 
 # Use <fmt/*.h> as <format> is unsupported in gcc-10.
-find_package(fmt 8.0.1 QUIET)
+find_package(fmt 8.0.1 REQUIRED)
 if(fmt_FOUND)
     message(STATUS "Found fmt ${fmt_VERSION}.")
-else()
-    FetchContent_Declare(fmt
-                         GIT_REPOSITORY https://github.com/fmtlib/fmt
-                         GIT_TAG "8.0.1"
-                         GIT_SHALLOW ON
-    )
-    # Force fmt to generate install rules
-    set(FMT_INSTALL ON CACHE BOOL "Enable installation for fmt." FORCE)
-    list(APPEND DEPS_TO_FETCH fmt)
 endif()
 
-find_package(Microsoft.GSL QUIET)
+find_package(Microsoft.GSL 4 REQUIRED)
 if(Microsoft.GSL_FOUND)
     message(STATUS "Found Microsoft.GSL ${Microsoft.GSL_VERSION}.")
-else()
-    FetchContent_Declare(GSL
-                         GIT_REPOSITORY "https://github.com/microsoft/GSL"
-                         GIT_TAG "v4.0.0"
-                         GIT_SHALLOW ON
-    )
-    list(APPEND DEPS_TO_FETCH GSL)
 endif()
 
 if(log_surgeon_ENABLE_TESTS)
@@ -75,9 +64,6 @@ if(log_surgeon_ENABLE_TESTS)
     endif()
     include(Catch)
 endif()
-
-# Declare the details of all fetched content before making them available.
-FetchContent_MakeAvailable("${DEPS_TO_FETCH}")
 
 set(SOURCE_FILES
     src/log_surgeon/Buffer.hpp

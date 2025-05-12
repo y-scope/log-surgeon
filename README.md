@@ -81,35 +81,23 @@ For advanced uses, `log-surgeon` also has a
 
 Requirements:
 
-* CMake
+* CMake >= 3.22.1
 * GCC >= 10 or Clang >= 7
 * [Catch2] >= 3
-  * On Ubuntu <= 20.04, you can install it using:
-    ```shell
-    sudo tools/deps-install/ubuntu/install-catch2.sh 3.6.0
-    ```
-  * On Ubuntu >= 22.04, you can install it using:
-    ```shell
-    sudo apt-get update
-    sudo apt-get install catch2
-    ```
-  * On macOS, you can install it using:
-    ```shell
-    brew install catch2
-    ```
+* [fmt] >= 8.01
+* [GSL] >= 4
+* [Task] >= 3.38
 
 From the repo's root, run:
 ```shell
-# Generate the CMake project
-cmake -S . -B build -DBUILD_TESTING=OFF
 # Build the project
-cmake --build ./build -j
+task build:release
 # Install the project to ~/.local
-cmake --install ./build --prefix ~/.local
+cmake --install ./build/release --prefix ~/.local
 ```
 
-To build the debug version and tests replace the first command with:
-`cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON`
+To build the debug version:
+`task build:debug`
 
 ## Documentation and examples
 
@@ -121,9 +109,9 @@ To build the debug version and tests replace the first command with:
 
 ## Testing
 
-To run unit tests, run:
+To build and run all unit tests:
 ```shell
-cmake --build ./build --target test
+task test:debug
 ```
 
 When generating targets, the CMake variable `BUILD_TESTING` is followed (unless overruled by setting
@@ -200,5 +188,7 @@ The following are issues we're aware of and working on:
 [Catch2]: https://github.com/catchorg/Catch2/tree/devel
 [clang-tidy]: https://clang.llvm.org/extra/clang-tidy/
 [feature-req]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[fmt]: https://github.com/fmtlib/fmt
 [lint]: https://github.com/y-scope/log-surgeon/blob/main/.github/workflows/lint.yml
+[GSL]: https://github.com/microsoft/GSL
 [Task]: https://taskfile.dev/
