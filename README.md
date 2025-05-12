@@ -90,10 +90,10 @@ Requirements:
 
 From the repo's root, run:
 ```shell
-# Build the project
+# Build and install the project to ~/.local
+task install:release PREFIX="~/.local"
+# Only build the project
 task build:release
-# Install the project to ~/.local
-cmake --install ./build/release --prefix ~/.local
 ```
 
 To build the debug version:

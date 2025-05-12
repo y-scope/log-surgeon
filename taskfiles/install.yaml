@@ -1,0 +1,31 @@
+version: "3"
+
+set: ["u", "pipefail"]
+shopt: ["globstar"]
+
+tasks:
+  debug:
+    vars:
+      PREFIX: >-
+        {{default (printf "%s/install" .G_BUILD_DIR) .PREFIX}}
+    deps:
+      - ":build:debug"
+    cmds:
+      - task: ":utils:cmake:install"
+        vars:
+          BUILD_DIR: "{{.G_BUILD_DIR}}/debug"
+          INSTALL_PREFIX: "{{.PREFIX}}"
+          NAME: "log-surgeon"
+
+  release:
+    vars:
+      PREFIX: >-
+        {{default (printf "%s/install" .G_BUILD_DIR) .PREFIX}}
+    deps:
+      - ":build:release"
+    cmds:
+      - task: ":utils:cmake:install"
+        vars:
+          BUILD_DIR: "{{.G_BUILD_DIR}}/release"
+          INSTALL_PREFIX: "{{.PREFIX}}"
+          NAME: "log-surgeon"
