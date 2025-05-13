@@ -331,7 +331,7 @@ TEST_CASE("Test log parser with CLP default schema", "[LogParser]") {
     parse_and_validate_sequence(log_parser, cTokenString6, {{cTokenString6, cVarName6, {}}});
 }
 
-TEST_CASE("Test delimited variables", "[Lexer]") {
+TEST_CASE("Test log parser with delimited variables", "[LogParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     string const capture_name{"val"};
     constexpr string_view cVarName1{"function"};
