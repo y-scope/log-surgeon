@@ -44,6 +44,7 @@ set(
         test-prefix-tree.cpp
         test-regex-ast.cpp
         test-register-handler.cpp
+        test-schema.cpp
 )
 
 add_executable(unit-test ${SOURCES_LOG_SURGEON} ${SOURCES_TESTS})

@@ -3,8 +3,6 @@
 #include <locale>
 #include <string>
 #include <string_view>
-#include <unordered_map>
-#include <vector>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -13,15 +11,12 @@
 #include <log_surgeon/SchemaParser.hpp>
 
 using log_surgeon::Schema;
+using log_surgeon::SchemaVarAST;
 using std::codecvt_utf8;
 using std::string;
 using std::string_view;
 using std::u32string;
-using std::unordered_map;
-using std::vector;
 using std::wstring_convert;
-
-using log_surgeon::SchemaVarAST;
 
 namespace {
 /**
