@@ -521,9 +521,6 @@ TEST_CASE(
     );
 }
 
-/** @ingroup LexerNewlineTests
- * Testing
- */
 TEST_CASE("Test capture group repetition and backtracking", "[Lexer]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     string const capture_name{"val"};
