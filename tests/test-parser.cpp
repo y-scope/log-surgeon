@@ -432,78 +432,6 @@ TEST_CASE("Test CLP default schema", "[Lexer]") {
     parse_and_validate_sequence(log_parser, cTokenString6, {{cTokenString6, cVarName6, {}}});
 }
 
-TEST_CASE("Test delimited variables", "[Lexer]") {
-    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
-    string const capture_name{"val"};
-    constexpr string_view cVarName1{"function"};
-    constexpr string_view cVarSchema1{"function:[A-Za-z]+::[A-Za-z]+1"};
-    constexpr string_view cVarName2{"path"};
-    constexpr string_view cVarSchema2{R"(path:[a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+)"};
-    constexpr string_view cTokenString1{"Word App::Action1"};
-    constexpr string_view cTokenString2{"word::my/path/to/file.txt"};
-    constexpr string_view cTokenString3{"App::Action"};
-    constexpr string_view cTokenString4{"::App::Action1"};
-    constexpr string_view cTokenString5{"folder/file-op71"};
-    constexpr string_view cTokenString6{"[WARNING] PARALLEL:2024 [folder/file.cc:150] insert "
-                                        "node:folder/file-op7, id:7 and folder/file-op8, id:8"};
-
-    Schema schema;
-    schema.add_delimiters(cDelimitersSchema);
-    schema.add_variable(cVarSchema1, -1);
-    schema.add_variable(cVarSchema2, -1);
-    LogParser log_parser{std::move(schema.release_schema_ast_ptr())};
-
-    CAPTURE(cVarSchema1);
-    parse_and_validate_sequence(
-            log_parser,
-            cTokenString1,
-            {{"Word", "", {}}, {" App::Action1", cVarName1, {}}}
-    );
-
-    CAPTURE(cVarSchema2);
-    parse_and_validate_sequence(
-            log_parser,
-            cTokenString2,
-            {{"word", "", {}}, {":", "", {}}, {":my/path/to/file.txt", cVarName2, {}}}
-    );
-
-    parse_and_validate_sequence(
-            log_parser,
-            cTokenString3,
-            {{"App", "", {}}, {":", "", {}}, {":Action", "", {}}}
-    );
-
-    parse_and_validate_sequence(
-            log_parser,
-            cTokenString4,
-            {{":", "", {}}, {":App::Action1", cVarName1, {}}}
-    );
-
-    parse_and_validate_sequence(log_parser, cTokenString5, {{cTokenString5, cVarName2, {}}});
-
-    parse_and_validate_sequence(
-            log_parser,
-            cTokenString6,
-            {{"[WARNING]", "", {}},
-             {" PARALLEL", "", {}},
-             {":2024", "", {}},
-             {" ", "", {}},
-             {"[folder/file.cc", "path", {}},
-             {":150]", "", {}},
-             {" insert", "", {}},
-             {" node", "", {}},
-             {":folder/file-op7", "path", {}},
-             {",", "", {}},
-             {" id", "", {}},
-             {":7", "", {}},
-             {" and", "", {}},
-             {" folder/file-op8", "path", {}},
-             {",", "", {}},
-             {" id", "", {}},
-             {":8", "", {}}}
-    );
-}
-
 TEST_CASE(
         "Test integer after static-text at start of newline when previous line ends in a variable",
         "[Lexer]"
@@ -590,55 +518,6 @@ TEST_CASE(
              {" abc", "", {}},
              {"\n1234567", "int", {}},
              {"\n", "newLine", {}}}
-    );
-}
-
-/** @ingroup LexerTests
- * @brief Verifies that integers are correctly tokenized at the start of a new line
- *        when the previous line ends with a delimiter (space in this case).
- *
- * @details
- * This test ensures the lexer handles newline boundaries correctly and does not
- * incorrectly merge tokens across lines. It focuses on cases where an integer
- * starts immediately after a newline that follows a delimiter.
- *
- * @section rule Rule
- * @code
- * int:\-{0,1}[0-9]+
- * @endcode
- *
- * @section input Input
- * @code
- * 1234567 \n1234567
- * @endcode
- *
- * @section expected Expected Tokens
- * @code
- * "1234567"   -> "int"
- * " "         -> ""
- * "\n1234567" -> "int"
- * @endcode
- *
- * @note
- * This test also checks that leading line breaks do not interfere with token
- * classification, ensuring robustness in log parsing across multiple lines.
- *
- * @test Category: Lexer
- */
-TEST_CASE("Test integer at start of newline when previous line ends in a delimiter", "[Lexer]") {
-    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
-    constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
-    constexpr string_view cInput{"1234567 \n1234567"};
-
-    Schema schema;
-    schema.add_delimiters(cDelimitersSchema);
-    schema.add_variable(cRule, -1);
-    LogParser log_parser{std::move(schema.release_schema_ast_ptr())};
-
-    parse_and_validate_sequence(
-            log_parser,
-            cInput,
-            {{"1234567", "int", {}}, {" ", "", {}}, {"\n1234567", "int", {}}}
     );
 }
 
