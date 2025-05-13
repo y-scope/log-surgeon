@@ -424,7 +424,9 @@ TEST_CASE("Test CLP default schema", "[Lexer]") {
     parse_and_validate_sequence(
             log_parser,
             cTokenString5,
-            {{cTokenString5, cVarName5, {{log_parser.m_lexer.m_symbol_id.at(capture_name), capture_positions}}}}
+            {{cTokenString5,
+              cVarName5,
+              {{log_parser.m_lexer.m_symbol_id.at(capture_name), capture_positions}}}}
     );
     parse_and_validate_sequence(log_parser, cTokenString6, {{cTokenString6, cVarName6, {}}});
 }
@@ -590,6 +592,58 @@ TEST_CASE(
     );
 }
 
+/** @ingroup LexerTests
+ * @brief Verifies that integers are correctly tokenized at the start of a new line
+ *        when the previous line ends with a delimiter (space in this case).
+ *
+ * @details
+ * This test ensures the lexer handles newline boundaries correctly and does not
+ * incorrectly merge tokens across lines. It focuses on cases where an integer
+ * starts immediately after a newline that follows a delimiter.
+ *
+ * @section rule Rule
+ * @code
+ * int:\-{0,1}[0-9]+
+ * @endcode
+ *
+ * @section input Input
+ * @code
+ * 1234567 \n1234567
+ * @endcode
+ *
+ * @section expected Expected Tokens
+ * @code
+ * "1234567"   -> "int"
+ * " "         -> ""
+ * "\n1234567" -> "int"
+ * @endcode
+ *
+ * @note
+ * This test also checks that leading line breaks do not interfere with token
+ * classification, ensuring robustness in log parsing across multiple lines.
+ *
+ * @test Category: Lexer
+ */
+TEST_CASE("Test integer at start of newline when previous line ends in a delimiter", "[Lexer]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cInput{"1234567 \n1234567"};
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cRule, -1);
+    LogParser log_parser{std::move(schema.release_schema_ast_ptr())};
+
+    parse_and_validate_sequence(
+            log_parser,
+            cInput,
+            {{"1234567", "int", {}}, {" ", "", {}}, {"\n1234567", "int", {}}}
+    );
+}
+
+/** @ingroup LexerNewlineTests
+ * Testing
+ */
 TEST_CASE("Test capture group repetition and backtracking", "[Lexer]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     string const capture_name{"val"};
@@ -608,15 +662,9 @@ TEST_CASE("Test capture group repetition and backtracking", "[Lexer]") {
     parse_and_validate_sequence(
             log_parser,
             cTokenString,
-            {
-                {
-                    cTokenString, cVarName, {
-                        {
-                            log_parser.m_lexer.m_symbol_id.at(capture_name), capture_positions
-                        }
-                    }
-                }
-            }
+            {{cTokenString,
+              cVarName,
+              {{log_parser.m_lexer.m_symbol_id.at(capture_name), capture_positions}}}}
     );
     // TODO: add backtracking case
 }

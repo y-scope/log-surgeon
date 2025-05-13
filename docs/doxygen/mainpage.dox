@@ -1,0 +1,14 @@
+/** @mainpage
+ * # Log Processing System Documentation
+ *
+ * This documentation covers:
+ * - Lexer and TDFA unit tests
+ * - Schema rules and simulation
+ * - Integration flow of test cases
+ *
+ * ## Test Groups
+ * See:
+ * - @ref LexerTests
+ * - @ref TDFA_Simulation
+ * - @ref SchemaTests
+ */
