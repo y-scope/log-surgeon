@@ -42,6 +42,7 @@ set(
         test-lexer.cpp
         test-nfa.cpp
         test-prefix-tree.cpp
+        test-regex-ast.cpp
         test-register-handler.cpp
 )
 
