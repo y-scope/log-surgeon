@@ -52,7 +52,7 @@ find_package(Microsoft.GSL 4 REQUIRED)
 message(STATUS "Found Microsoft.GSL ${Microsoft.GSL_VERSION}.")
 
 if(log_surgeon_ENABLE_TESTS)
-    find_package(Catch2 3 REQUIRED)
+    find_package(Catch2 3.8.1 REQUIRED)
     message(STATUS "Found Catch2 ${Catch2_VERSION}.")
     include(Catch)
 endif()
