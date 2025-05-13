@@ -12,9 +12,6 @@ if(log-surgeon-examples_IS_TOP_LEVEL)
     # NOTE: We mark the file optional because if the user happens to have the dependencies
     # installed, this file is not necessary.
     include("../build/deps/cmake-settings/all.cmake" OPTIONAL)
-
-    # If previously undefined, `BUILD_TESTING` will be set to ON.
-    include(CTest)
 endif()
 
 find_package(log_surgeon REQUIRED)
