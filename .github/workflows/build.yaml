@@ -46,12 +46,12 @@ jobs:
         shell: "bash"
         run: "npm install -g @go-task/cli"
 
-      - name: "Build and run examples"
-        run: "task test:examples-${{matrix.build_type}}"
-
       - name: "Build and run unit tests"
         run: "task test:${{matrix.build_type}}"
 
       - name: "Print test log on failure"
         if: "failure()"
         run: "cat ./build/log-surgeon/Testing/Temporary/LastTest.log"
+
+      - name: "Build and run examples"
+        run: "task test:examples-${{matrix.build_type}}"
