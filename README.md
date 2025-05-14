@@ -189,6 +189,6 @@ The following are issues we're aware of and working on:
 [clang-tidy]: https://clang.llvm.org/extra/clang-tidy/
 [feature-req]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [fmt]: https://github.com/fmtlib/fmt
-[lint]: https://github.com/y-scope/log-surgeon/blob/main/.github/workflows/lint.yml
 [GSL]: https://github.com/microsoft/GSL
+[lint]: https://github.com/y-scope/log-surgeon/blob/main/.github/workflows/lint.yml
 [Task]: https://taskfile.dev/

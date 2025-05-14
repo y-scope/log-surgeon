@@ -34,7 +34,7 @@ if(log_surgeon_IS_TOP_LEVEL)
     # Include dependency settings if the project isn't being included as a subproject.
     # NOTE: We mark the file optional because if the user happens to have the dependencies
     # installed, this file is not necessary.
-    include("build/deps/cmake-settings/all.cmake" OPTIONAL)
+    include("${CMAKE_SOURCE_DIR}/build/deps/cmake-settings/all.cmake" OPTIONAL)
 
     # If previously undefined, `BUILD_TESTING` will be set to ON.
     include(CTest)
@@ -48,7 +48,7 @@ endif()
 find_package(fmt 8.0.1 REQUIRED)
 message(STATUS "Found fmt ${fmt_VERSION}.")
 
-find_package(Microsoft.GSL 4 REQUIRED)
+find_package(Microsoft.GSL 4.0.0 REQUIRED)
 message(STATUS "Found Microsoft.GSL ${Microsoft.GSL_VERSION}.")
 
 if(log_surgeon_ENABLE_TESTS)
