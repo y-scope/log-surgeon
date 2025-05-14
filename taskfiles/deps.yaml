@@ -16,17 +16,17 @@ tasks:
       - task: ":utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
-          DEP_TASK: "deps:install-all"
+          DEP_TASK: "deps:all-parallel"
 
-  install-all:
+  all-parallel:
     internal: true
     run: "once"
     deps:
-      - "install-Catch2"
-      - "install-fmt"
-      - "install-Microsoft.GSL"
+      - "Catch2"
+      - "fmt"
+      - "Microsoft.GSL"
 
-  install-Catch2:
+  Catch2:
     internal: true
     run: "once"
     cmds:
@@ -41,7 +41,7 @@ tasks:
             - "-DBUILD_TESTING=OFF"
             - "-DCMAKE_CXX_STANDARD=20"
 
-  install-fmt:
+  fmt:
     internal: true
     run: "once"
     cmds:
@@ -53,7 +53,7 @@ tasks:
           FILE_SHA256: "b06ca3130158c625848f3fb7418f235155a4d389b2abc3a6245fb01cb0eb1e01"
           URL: "https://github.com/fmtlib/fmt/archive/refs/tags/8.0.1.tar.gz"
 
-  install-Microsoft.GSL:
+  Microsoft.GSL:
     internal: true
     run: "once"
     cmds:
