@@ -6,10 +6,8 @@ shopt: ["globstar"]
 includes:
   build: "taskfiles/build.yaml"
   deps: "taskfiles/deps.yaml"
-  install: "taskfiles/install.yaml"
   lint: "taskfiles/lint.yaml"
   test: "taskfiles/test.yaml"
-  utils: "tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"

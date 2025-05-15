@@ -1,22 +1,25 @@
 version: "3"
 
+includes:
+  build: "taskfiles/build.yaml"
+
 tasks:
   debug:
     deps:
-      - ":build:debug"
+      - "build:debug"
     cmd: "{{.G_LOG_SURGEON_BUILD_DIR}}/debug/tests/unit-test"
 
   release:
     deps:
-      - ":build:release"
+      - "build:release"
     cmd: "{{.G_LOG_SURGEON_BUILD_DIR}}/release/tests/unit-test"
 
   examples-debug:
     deps:
-      - ":build:examples-debug"
+      - "build:examples-debug"
     cmd: "{{.G_EXAMPLES_BUILD_DIR}}/debug/intersect-test"
 
   examples-release:
     deps:
-      - ":build:examples-release"
+      - "build:examples-release"
     cmd: "{{.G_EXAMPLES_BUILD_DIR}}/release/intersect-test"

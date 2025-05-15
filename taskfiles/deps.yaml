@@ -1,5 +1,8 @@
 version: "3"
 
+includes:
+  utils: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
 vars:
   G_DEPS_DIR: "{{.G_BUILD_DIR}}/deps"
 
@@ -14,10 +17,10 @@ tasks:
   all:
     run: "once"
     cmds:
-      - task: ":utils:cmake:install-deps-and-generate-settings"
+      - task: "utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
-          DEP_TASK: "deps:all-parallel"
+          DEP_TASK: "all-parallel"
 
   all-parallel:
     internal: true
@@ -31,7 +34,7 @@ tasks:
     internal: true
     run: "once"
     cmds:
-      - task: ":utils:cmake:install-remote-tar"
+      - task: "utils:cmake:install-remote-tar"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
           FILE_SHA256: "18b3f70ac80fccc340d8c6ff0f339b2ae64944782f8d2fca2bd705cf47cadb79"
@@ -45,7 +48,7 @@ tasks:
     internal: true
     run: "once"
     cmds:
-      - task: ":utils:cmake:install-remote-tar"
+      - task: "utils:cmake:install-remote-tar"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
           FILE_SHA256: "b06ca3130158c625848f3fb7418f235155a4d389b2abc3a6245fb01cb0eb1e01"
@@ -62,7 +65,7 @@ tasks:
     internal: true
     run: "once"
     cmds:
-      - task: ":utils:cmake:install-remote-tar"
+      - task: "utils:cmake:install-remote-tar"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
           FILE_SHA256: "f0e32cb10654fea91ad56bde89170d78cfbf4363ee0b01d8f097de2ba49f6ce9"

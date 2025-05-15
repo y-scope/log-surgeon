@@ -1,43 +1,47 @@
 version: "3"
 
+includes:
+  deps: "taskfiles/deps.yaml"
+  utils: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
 tasks:
   debug:
     deps:
-      - ":deps:all"
+      - "deps:all"
     cmds:
-      - task: ":utils:cmake:generate"
+      - task: "utils:cmake:generate"
         vars:
           BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/debug"
           EXTRA_ARGS:
             - "-DCMAKE_BUILD_TYPE=debug"
           SOURCE_DIR: "{{.ROOT_DIR}}"
-      - task: ":utils:cmake:build"
+      - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/debug"
 
   release:
     deps:
-      - ":deps:all"
+      - "deps:all"
     cmds:
-      - task: ":utils:cmake:generate"
+      - task: "utils:cmake:generate"
         vars:
           BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/release"
           EXTRA_ARGS:
             - "-DCMAKE_BUILD_TYPE=release"
           SOURCE_DIR: "{{.ROOT_DIR}}"
-      - task: ":utils:cmake:build"
+      - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/release"
 
   clean-debug:
     deps:
-      - task: ":utils:cmake:clean"
+      - task: "utils:cmake:clean"
         vars:
           BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/debug"
 
   clean-release:
     deps:
-      - task: ":utils:cmake:clean"
+      - task: "utils:cmake:clean"
         vars:
           BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/release"
 
@@ -47,17 +51,17 @@ tasks:
     deps:
       - "debug"
     cmds:
-      - task: ":install:debug"
+      - task: "install-debug"
         vars:
-          PREFIX: "{{.INSTALL_PREFIX}}"
-      - task: ":utils:cmake:generate"
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+      - task: "utils:cmake:generate"
         vars:
           BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/debug"
           EXTRA_ARGS:
             - "-DCMAKE_BUILD_TYPE=debug"
             - "-Dlog_surgeon_ROOT={{.INSTALL_PREFIX}}"
           SOURCE_DIR: "{{.ROOT_DIR}}/examples"
-      - task: ":utils:cmake:build"
+      - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/debug"
 
@@ -67,28 +71,52 @@ tasks:
     deps:
       - "release"
     cmds:
-      - task: ":install:release"
+      - task: "install-release"
         vars:
-          PREFIX: "{{.INSTALL_PREFIX}}"
-      - task: ":utils:cmake:generate"
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+      - task: "utils:cmake:generate"
         vars:
           BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/release"
           EXTRA_ARGS:
             - "-DCMAKE_BUILD_TYPE=release"
             - "-Dlog_surgeon_ROOT={{.INSTALL_PREFIX}}"
           SOURCE_DIR: "{{.ROOT_DIR}}/examples"
-      - task: ":utils:cmake:build"
+      - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/release"
 
   examples-clean-debug:
     deps:
-      - task: ":utils:cmake:clean"
+      - task: "utils:cmake:clean"
         vars:
           BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/debug"
 
   examples-clean-release:
     deps:
-      - task: ":utils:cmake:clean"
+      - task: "utils:cmake:clean"
         vars:
           BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/release"
+
+  install-debug:
+    requires:
+      vars: ["INSTALL_PREFIX"]
+    deps:
+      - "debug"
+    cmds:
+      - task: "utils:cmake:install"
+        vars:
+          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/debug"
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+          NAME: "log-surgeon"
+
+  install-release:
+    requires:
+      vars: ["INSTALL_PREFIX"]
+    deps:
+      - "release"
+    cmds:
+      - task: "utils:cmake:install"
+        vars:
+          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/release"
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+          NAME: "log-surgeon"
