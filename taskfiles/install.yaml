@@ -1,8 +1,5 @@
 version: "3"
 
-set: ["u", "pipefail"]
-shopt: ["globstar"]
-
 tasks:
   debug:
     requires:
@@ -12,7 +9,7 @@ tasks:
     cmds:
       - task: ":utils:cmake:install"
         vars:
-          BUILD_DIR: "{{.G_LS_BUILD_DIR}}/debug"
+          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/debug"
           INSTALL_PREFIX: "{{.PREFIX}}"
           NAME: "log-surgeon"
 
@@ -24,6 +21,6 @@ tasks:
     cmds:
       - task: ":utils:cmake:install"
         vars:
-          BUILD_DIR: "{{.G_LS_BUILD_DIR}}/release"
+          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/release"
           INSTALL_PREFIX: "{{.PREFIX}}"
           NAME: "log-surgeon"

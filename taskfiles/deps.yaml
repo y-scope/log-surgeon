@@ -1,8 +1,5 @@
 version: "3"
 
-set: ["u", "pipefail"]
-shopt: ["globstar"]
-
 vars:
   G_DEPS_DIR: "{{.G_BUILD_DIR}}/deps"
 
@@ -20,7 +17,7 @@ tasks:
       - task: ":utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
-          DEP_TASK: "deps:all-parallel"
+          DEP_TASK: "all-parallel"
 
   all-parallel:
     internal: true
@@ -37,13 +34,12 @@ tasks:
       - task: ":utils:cmake:install-remote-tar"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
-          NAME: "Catch2"
-          WORK_DIR: "{{.G_DEPS_DIR}}/Catch2"
           FILE_SHA256: "18b3f70ac80fccc340d8c6ff0f339b2ae64944782f8d2fca2bd705cf47cadb79"
-          URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v3.8.1.tar.gz"
           GEN_ARGS:
-            - "-DBUILD_TESTING=OFF"
             - "-DCMAKE_CXX_STANDARD=20"
+          NAME: "Catch2"
+          URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v3.8.1.tar.gz"
+          WORK_DIR: "{{.G_DEPS_DIR}}/Catch2"
 
   fmt:
     internal: true
@@ -52,10 +48,15 @@ tasks:
       - task: ":utils:cmake:install-remote-tar"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
-          NAME: "fmt"
-          WORK_DIR: "{{.G_DEPS_DIR}}/fmt"
           FILE_SHA256: "b06ca3130158c625848f3fb7418f235155a4d389b2abc3a6245fb01cb0eb1e01"
+          GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DFMT_DOC=OFF"
+            - "-DFMT_TEST=OFF"
+          NAME: "fmt"
           URL: "https://github.com/fmtlib/fmt/archive/refs/tags/8.0.1.tar.gz"
+          WORK_DIR: "{{.G_DEPS_DIR}}/fmt"
 
   Microsoft.GSL:
     internal: true
@@ -64,10 +65,10 @@ tasks:
       - task: ":utils:cmake:install-remote-tar"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
+          FILE_SHA256: "f0e32cb10654fea91ad56bde89170d78cfbf4363ee0b01d8f097de2ba49f6ce9"
           GEN_ARGS:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DGSL_TEST=OFF"
           NAME: "Microsoft.GSL"
-          WORK_DIR: "{{.G_DEPS_DIR}}/Microsoft.GSL"
-          FILE_SHA256: "f0e32cb10654fea91ad56bde89170d78cfbf4363ee0b01d8f097de2ba49f6ce9"
           URL: "https://github.com/microsoft/GSL/archive/refs/tags/v4.0.0.tar.gz"
+          WORK_DIR: "{{.G_DEPS_DIR}}/Microsoft.GSL"

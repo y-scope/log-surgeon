@@ -13,8 +13,8 @@ includes:
 
 vars:
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
-  G_EG_BUILD_DIR: "{{.G_BUILD_DIR}}/examples"
-  G_LS_BUILD_DIR: "{{.G_BUILD_DIR}}/log-surgeon"
+  G_EXAMPLES_BUILD_DIR: "{{.G_BUILD_DIR}}/examples"
+  G_LOG_SURGEON_BUILD_DIR: "{{.G_BUILD_DIR}}/log-surgeon"
 
 tasks:
   clean: "rm -rf '{{.G_BUILD_DIR}}'"
