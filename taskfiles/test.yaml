@@ -1,7 +1,7 @@
 version: "3"
 
 includes:
-  build: "taskfiles/build.yaml"
+  build: "build.yaml"
 
 tasks:
   debug:

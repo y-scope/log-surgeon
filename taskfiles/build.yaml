@@ -1,7 +1,7 @@
 version: "3"
 
 includes:
-  deps: "taskfiles/deps.yaml"
+  deps: "deps.yaml"
   utils: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 tasks:
