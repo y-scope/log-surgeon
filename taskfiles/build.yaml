@@ -21,23 +21,6 @@ tasks:
         vars:
           BUILD_TYPE: "release"
 
-  build:
-    internal: true
-    requires:
-      vars: ["BUILD_TYPE"]
-    deps:
-      - "deps:all"
-    cmds:
-      - task: "utils:cmake:generate"
-        vars:
-          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
-          EXTRA_ARGS:
-            - "-DCMAKE_BUILD_TYPE={{.BUILD_TYPE}}"
-          SOURCE_DIR: "{{.ROOT_DIR}}"
-      - task: "utils:cmake:build"
-        vars:
-          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
-
   clean-debug:
     deps:
       - task: "utils:cmake:clean"
@@ -61,29 +44,6 @@ tasks:
       - task: "examples"
         vars:
           BUILD_TYPE: "release"
-
-  examples:
-    internal: true
-    requires:
-      vars: ["BUILD_TYPE"]
-    vars:
-      INSTALL_PREFIX: "{{.G_EXAMPLES_BUILD_DIR}}/deps/log_surgeon/{{.BUILD_TYPE}}"
-    deps:
-      - "{{.BUILD_TYPE}}"
-    cmds:
-      - task: "install-{{.BUILD_TYPE}}"
-        vars:
-          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
-      - task: "utils:cmake:generate"
-        vars:
-          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/{{.BUILD_TYPE}}"
-          EXTRA_ARGS:
-            - "-DCMAKE_BUILD_TYPE={{.BUILD_TYPE}}"
-            - "-Dlog_surgeon_ROOT={{.INSTALL_PREFIX}}"
-          SOURCE_DIR: "{{.ROOT_DIR}}/examples"
-      - task: "utils:cmake:build"
-        vars:
-          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/{{.BUILD_TYPE}}"
 
   examples-clean-debug:
     deps:
@@ -114,6 +74,46 @@ tasks:
         vars:
           BUILD_TYPE: "release"
           INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+
+  build:
+    internal: true
+    requires:
+      vars: ["BUILD_TYPE"]
+    deps:
+      - "deps:all"
+    cmds:
+      - task: "utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
+          EXTRA_ARGS:
+            - "-DCMAKE_BUILD_TYPE={{.BUILD_TYPE}}"
+          SOURCE_DIR: "{{.ROOT_DIR}}"
+      - task: "utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
+
+  examples:
+    internal: true
+    requires:
+      vars: ["BUILD_TYPE"]
+    vars:
+      INSTALL_PREFIX: "{{.G_EXAMPLES_BUILD_DIR}}/deps/log_surgeon/{{.BUILD_TYPE}}"
+    deps:
+      - "{{.BUILD_TYPE}}"
+    cmds:
+      - task: "install-{{.BUILD_TYPE}}"
+        vars:
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+      - task: "utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/{{.BUILD_TYPE}}"
+          EXTRA_ARGS:
+            - "-DCMAKE_BUILD_TYPE={{.BUILD_TYPE}}"
+            - "-Dlog_surgeon_ROOT={{.INSTALL_PREFIX}}"
+          SOURCE_DIR: "{{.ROOT_DIR}}/examples"
+      - task: "utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/{{.BUILD_TYPE}}"
 
   install:
     internal: true
