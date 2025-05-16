@@ -56,4 +56,4 @@ jobs:
       - name: "Build and run examples"
         run: |-
           task build:examples-${{matrix.build_type}}
-          ./build/examples/debug/intersect-test
+          ./build/examples/${{matrix.build_type}}/intersect-test
