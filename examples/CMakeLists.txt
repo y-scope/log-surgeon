@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22.1)
 project(log-surgeon-examples)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -7,12 +7,15 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
-find_package(log_surgeon QUIET)
-if(log_surgeon_FOUND)
-    message(STATUS "Found log_surgeon ${log_surgeon_VERSION}.")
-else()
-    add_subdirectory(.. log-surgeon-build EXCLUDE_FROM_ALL)
+if(log-surgeon-examples_IS_TOP_LEVEL)
+    # Include dependency settings if the project isn't being included as a subproject.
+    # NOTE: We mark the file optional because if the user happens to have the dependencies
+    # installed, this file is not necessary.
+    include("${CMAKE_SOURCE_DIR}/../build/deps/cmake-settings/all.cmake" OPTIONAL)
 endif()
+
+find_package(log_surgeon REQUIRED)
+message(STATUS "Found log_surgeon ${log_surgeon_VERSION}.")
 
 function(add_to_target target libraries)
     target_link_libraries(${target} ${libraries})

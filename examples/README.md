@@ -11,13 +11,10 @@ the intersection between a schema DFA and a search query DFA.
 ## Building
 
 First, ensure you've built and installed the library by following
-[these steps][2]. Then run the following commands (from the repo's root):
+[these steps][2]. Then run the following command:
 
 ```shell
-# Generate the CMake project
-cmake -S examples -B examples/build
-# Build the project
-cmake --build examples/build -j
+task build:examples-debug
 ```
 
 ## Running
@@ -25,9 +22,9 @@ cmake --build examples/build -j
 The example programs can be run as follows:
 
 ```shell
-./examples/build/buffer-parser ./examples/schema.txt log.txt
-./examples/build/reader-parser ./examples/schema.txt log.txt
-./examples/build/intersect-test
+./build/examples/debug/buffer-parser ./examples/schema.txt log.txt
+./build/examples/debug/reader-parser ./examples/schema.txt log.txt
+./build/examples/debug/intersect-test
 ```
 
 where:

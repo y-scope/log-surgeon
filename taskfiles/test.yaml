@@ -1,0 +1,25 @@
+version: "3"
+
+includes:
+  build:
+    internal: true
+    taskfile: "build.yaml"
+
+tasks:
+  debug:
+    cmds:
+      - task: "unit-test"
+        vars:
+          BUILD_TYPE: "debug"
+
+  release:
+    cmds:
+      - task: "unit-test"
+        vars:
+          BUILD_TYPE: "release"
+
+  unit-test:
+    internal: true
+    deps:
+      - "build:{{.BUILD_TYPE}}"
+    cmd: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}/tests/unit-test"
