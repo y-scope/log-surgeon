@@ -19,12 +19,7 @@ task build:examples-debug
 
 ## Running
 
-The example programs can be run with task:
-```shell
-task test:examples
-```
-
-or directly as follows:
+The example programs can be run as follows:
 
 ```shell
 ./build/examples/debug/buffer-parser ./examples/schema.txt log.txt

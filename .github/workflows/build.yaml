@@ -54,4 +54,6 @@ jobs:
         run: "cat ./build/log-surgeon/Testing/Temporary/LastTest.log"
 
       - name: "Build and run examples"
-        run: "task test:examples-${{matrix.build_type}}"
+        run: |-
+          task build:examples-${{matrix.build_type}}
+          ./build/examples/debug/intersect-test

@@ -1,7 +1,9 @@
 version: "3"
 
 includes:
-  utils: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+  utils:
+    internal: true
+    taskfile: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"

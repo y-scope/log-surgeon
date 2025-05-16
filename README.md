@@ -21,6 +21,7 @@ constraints](docs/parsing-constraints.md) on how log events can be parsed.
 ## Motivating example
 
 Let's say we want to parse and inspect multi-line log events like this:
+
 ```
 2023-02-23T18:10:14-0500 DEBUG task_123 crashed. Dumping stacktrace:
 #0  0x000000000040110e in bar () at example.cpp:6
@@ -29,6 +30,7 @@ Let's say we want to parse and inspect multi-line log events like this:
 ```
 
 Using the [example schema file](examples/schema.txt) which includes these rules:
+
 ```
 timestamp:\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\-\d{4}
 ...
@@ -36,6 +38,7 @@ loglevel:INFO|DEBUG|WARN|ERROR
 ```
 
 We can parse and inspect the events as follows:
+
 ```cpp
 // Define a reader to read from your data source
 Reader reader{/* <Omitted> */};
@@ -85,19 +88,27 @@ Requirements:
 * GCC >= 10 or Clang >= 7
 * [Catch2] >= 3.8.1
 * [fmt] >= 8.0.1
-* [GSL] >= 4
+* [GSL] >= 4.0.0
 * [Task] >= 3.38
 
 From the repo's root, run:
+To build and install the project to `~/.local`:
+
 ```shell
-# Build and install the project to ~/.local
-task install:release PREFIX="~/.local"
-# Only build the project
+task install:release INSTALL_PREFIX="~/.local"
+```
+
+Or to only build the project:
+
+```shell
 task build:release
 ```
 
 To build the debug version:
-`task build:debug`
+
+```shell
+task build:debug
+```
 
 ## Documentation and examples
 
@@ -110,6 +121,7 @@ To build the debug version:
 ## Testing
 
 To build and run all unit tests:
+
 ```shell
 task test:debug
 ```
@@ -146,6 +158,7 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 ### Running the linters
 
 Currently, `clang-tidy` has to be run manually:
+
 ```shell
 find src tests \
     -type f \
