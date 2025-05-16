@@ -91,7 +91,6 @@ Requirements:
 * [GSL] >= 4.0.0
 * [Task] >= 3.38
 
-From the repo's root, run:
 To build and install the project to `~/.local`:
 
 ```shell
