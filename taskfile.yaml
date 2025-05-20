@@ -1,11 +1,18 @@
 version: "3"
 
+set: ["u", "pipefail"]
+shopt: ["globstar"]
+
 includes:
+  build: "taskfiles/build.yaml"
+  deps: "taskfiles/deps.yaml"
   lint: "taskfiles/lint.yaml"
-  utils: "tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+  test: "taskfiles/test.yaml"
 
 vars:
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
+  G_EXAMPLES_BUILD_DIR: "{{.G_BUILD_DIR}}/examples"
+  G_LOG_SURGEON_BUILD_DIR: "{{.G_BUILD_DIR}}/log-surgeon"
 
 tasks:
   clean: "rm -rf '{{.G_BUILD_DIR}}'"
