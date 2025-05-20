@@ -126,4 +126,3 @@ tasks:
         vars:
           BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
           INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
-          NAME: "log-surgeon"
