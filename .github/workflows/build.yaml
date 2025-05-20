@@ -56,6 +56,6 @@ jobs:
       - name: "Build and run examples"
         run: |-
           task build:examples-${{matrix.build_type}}
-          ./build/examples/${{matrix.build_type}}/reader-parser ./examples/schema.txt README.md
           ./build/examples/${{matrix.build_type}}/buffer-parser ./examples/schema.txt README.md
+          ./build/examples/${{matrix.build_type}}/reader-parser ./examples/schema.txt README.md
           ./build/examples/${{matrix.build_type}}/intersect-test
