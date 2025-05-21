@@ -618,15 +618,19 @@ TEST_CASE("Test log parser with delimited variables", "[LogParser]") {
  * @endcode
  *
  * @section input Input Example
+ * @code
  * "1234567\nWord 1234567"
+ * @endcode
  *
  * @section expected Expected Output
+ * @code
  * {
  *   {"1234567", "int", {}},
  *   {"\n", "newLine", {}},
  *   {"Word", "", {}},
  *   {" 1234567", "int", {}}
  * }
+ * @endcode
  */
 TEST_CASE(
         "Test integer after static-text at start of newline when previous line ends in a variable",
@@ -669,9 +673,12 @@ TEST_CASE(
  * @endcode
  *
  * @section input Input Example
+ * @code
  * "1234567 abc\nWord 1234567"
+ * @endcode
  *
  * @section expected Expected Output
+ * @code
  * {
  *   {"1234567", "int", {}},
  *   {" abc", "", {}},
@@ -679,6 +686,7 @@ TEST_CASE(
  *   {"Word", "", {}},
  *   {" 1234567", "int", {}}
  * }
+ * @endcode
  */
 TEST_CASE(
         "Test integer after static-text at start of newline when previous line ends in static-text",
@@ -721,14 +729,18 @@ TEST_CASE(
  * @endcode
  *
  * @section input Input Example
+ * @code
  * "1234567 abc\n1234567"
+ * @endcode
  *
  * @section expected Expected Output
+ * @code
  * {
  *   {"1234567", "int", {}},
  *   {" abc", "", {}},
  *   {"\n1234567", "int", {}}
  * }
+ * @endcode
  */
 TEST_CASE(
         "Test integer at start of newline when previous line ends in static-text",
@@ -767,14 +779,18 @@ TEST_CASE(
  * @endcode
  *
  * @section input Input Example
+ * @code
  * "1234567 abc\n1234567\n"
+ * @endcode
  *
  * @section expected Expected Output
+ * @code
  * {
  *   {"1234567", "int", {}},
  *   {" abc", "", {}},
  *   {"\n1234567", "int", {}},
  *   {"\n", "newLine", {}}
+ * @endcode
  * }
  */
 TEST_CASE(
@@ -816,14 +832,18 @@ TEST_CASE(
  * @endcode
  *
  * @section input Input Example
+ * @code
  * "1234567 \n1234567"
+ * @endcode
  *
  * @section expected Expected Output
+ * @code
  * {
  *   {"1234567", "int", {}},
  *   {" ", "", {}},
  *   {"\n1234567", "int", {}}
  * }
+ * @endcode
  */
 TEST_CASE(
         "Test integer at start of newline when previous line ends in a delimiter",
@@ -862,11 +882,15 @@ TEST_CASE(
  * @endcode
  *
  * @section input Input Example
+ * @code
  * "userID=123,age=30,height=70,weight=100,"
+ * @endcode
  *
  * @section expected Expected Output
+ * @code
  * The entire input string recognized as "myVar" with capture group "val" capturing values at
  * positions: {35, 25, 15, 7} (start positions) and {37, 27, 17, 10} (end positions).
+ * @endcode
  */
 TEST_CASE("Test capture group repetition and backtracking", "[LogParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
