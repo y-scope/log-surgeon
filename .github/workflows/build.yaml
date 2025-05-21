@@ -1,4 +1,4 @@
-name: "Build"
+name: "build"
 
 on:
   pull_request:
@@ -7,16 +7,18 @@ on:
       - "CMakeLists.txt"
       - "examples/**/*"
       - "src/**/*"
+      - "taskfile.yaml"
+      - "taskfiles/**/*"
       - "tests/**/*"
-      - "tools/deps-install/ubuntu/**/*"
   push:
     paths:
       - ".github/workflows/build.yaml"
       - "CMakeLists.txt"
       - "examples/**/*"
       - "src/**/*"
+      - "taskfile.yaml"
+      - "taskfiles/**/*"
       - "tests/**/*"
-      - "tools/deps-install/ubuntu/**/*"
   workflow_call:
 
 concurrency:
@@ -28,31 +30,32 @@ jobs:
   build:
     strategy:
       matrix:
-        os: ["macos-latest", "ubuntu-22.04"]
-        build_type: ["Debug", "Release"]
+        os:
+          - "macos-15"
+          - "ubuntu-22.04"
+        build_type:
+          - "debug"
+          - "release"
     runs-on: "${{matrix.os}}"
     steps:
       - uses: "actions/checkout@v4"
+        with:
+          submodules: "recursive"
 
-      - name: "Install Catch2 on macOS"
-        if: "matrix.os == 'macos-latest'"
-        run: "brew install catch2"
+      - name: "Install task"
+        shell: "bash"
+        run: "npm install -g @go-task/cli"
 
-      - name: "Install Catch2 on Ubuntu"
-        if: "matrix.os == 'ubuntu-22.04'"
-        run: "./tools/deps-install/ubuntu/install-catch2.sh 3.6.0"
-
-      - name: "Build Executables"
-        run: |-
-          cmake -B ./build -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
-          cmake --build ./build --config ${{matrix.build_type}}
-          cmake --install ./build --prefix ./install
-          cmake -S examples -B ./examples/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
-          cmake --build ./examples/build --config ${{matrix.build_type}}
-
-      - name: "Run Unit Tests"
-        run: "ctest --test-dir ./build"
+      - name: "Build and run unit tests"
+        run: "task test:${{matrix.build_type}}"
 
       - name: "Print test log on failure"
         if: "failure()"
-        run: "cat ./build/Testing/Temporary/LastTest.log"
+        run: "cat ./build/log-surgeon/Testing/Temporary/LastTest.log"
+
+      - name: "Build and run examples"
+        run: |-
+          task build:examples-${{matrix.build_type}}
+          ./build/examples/${{matrix.build_type}}/buffer-parser ./examples/schema.txt README.md
+          ./build/examples/${{matrix.build_type}}/reader-parser ./examples/schema.txt README.md
+          ./build/examples/${{matrix.build_type}}/intersect-test
