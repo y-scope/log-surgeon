@@ -1,11 +1,11 @@
 /** @mainpage
- * # High-level use case examples of schema rules and parsing results:
+ * # Use case examples of schema rules and parsing results:
  * - @ref test_log_parser_no_capture "Use basic log parser"
  * - @ref test_log_parser_capture "Use captures"
  * - @ref test_log_parser_default_schema "Default CLP schema"
  * - @ref test_log_parser_delimited_variables "Backtracking on delimited variables"
- * # Unit-tests:
  * - @ref test_log_parser_newline_vars "Identifying variables at the start of a line"
+ * # Unit-tests:
  * - @ref test-schema.cpp "Schema creation tests"
  * - @ref test-dfa.cpp "DFA tests"
  * - @ref test-nfa.cpp "NFA tests"
