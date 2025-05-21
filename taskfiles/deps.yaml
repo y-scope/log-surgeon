@@ -1,0 +1,82 @@
+version: "3"
+
+includes:
+  utils:
+    internal: true
+    taskfile: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
+vars:
+  G_DEPS_DIR: "{{.G_BUILD_DIR}}/deps"
+
+  # This path must be kept in-sync with its usage in CMakeLists.txt and examples/CMakeLists.txt.
+  G_DEPS_CMAKE_SETTINGS_DIR: "{{.G_DEPS_DIR}}/cmake-settings"
+
+tasks:
+  default:
+    deps:
+      - "all"
+
+  all:
+    run: "once"
+    cmds:
+      - task: "utils:cmake:install-deps-and-generate-settings"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
+          DEP_TASK: "all-parallel"
+
+  all-parallel:
+    internal: true
+    run: "once"
+    deps:
+      - "Catch2"
+      - "fmt"
+      - "Microsoft.GSL"
+
+  Catch2:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:cmake:install-remote-tar"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_CXX_STANDARD=20"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          CMAKE_PACKAGE_NAME: "Catch2"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
+          TAR_SHA256: "18b3f70ac80fccc340d8c6ff0f339b2ae64944782f8d2fca2bd705cf47cadb79"
+          TAR_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v3.8.1.tar.gz"
+          WORK_DIR: "{{.G_DEPS_DIR}}"
+
+  fmt:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:cmake:install-remote-tar"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DFMT_DOC=OFF"
+            - "-DFMT_TEST=OFF"
+          CMAKE_PACKAGE_NAME: "fmt"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
+          TAR_SHA256: "b06ca3130158c625848f3fb7418f235155a4d389b2abc3a6245fb01cb0eb1e01"
+          TAR_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/8.0.1.tar.gz"
+          WORK_DIR: "{{.G_DEPS_DIR}}"
+
+  Microsoft.GSL:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:cmake:install-remote-tar"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DGSL_TEST=OFF"
+          CMAKE_PACKAGE_NAME: "Microsoft.GSL"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
+          TAR_SHA256: "f0e32cb10654fea91ad56bde89170d78cfbf4363ee0b01d8f097de2ba49f6ce9"
+          TAR_URL: "https://github.com/microsoft/GSL/archive/refs/tags/v4.0.0.tar.gz"
+          WORK_DIR: "{{.G_DEPS_DIR}}"
