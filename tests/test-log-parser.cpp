@@ -197,6 +197,46 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
 }
 }  // namespace
 
+/**
+ * @ingroup test_log_parser_no_capture
+ * @anchor test_log_parser_no_capture_groups
+ *
+ * @brief Tests the log parser behavior when parsing variables without capture groups.
+ *
+ * @details
+ * This test verifies that the log parser correctly matches exact variable patterns when
+ * no capture groups are involved. It confirms the parser:
+ * - Recognizes a variable exactly matching the defined schema ("myVar:userID=123").
+ * - Treats close but non-matching strings as uncaught tokens.
+ * - Correctly classifies tokens that don't match any variable schema as uncaught strings.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * myVar:userID=123
+ * @endcode
+ *
+ * @section input Test Inputs
+ * @code
+ * "userID=123"
+ * "userID=234"
+ * "123"
+ * @endcode
+ *
+ * @section expected Expected Tokenization
+ * @code
+ * "userID=123" -> "myVar"
+ * "userID=234" -> uncaught string
+ * "123"        -> uncaught string
+ * @endcode
+ *
+ * @note
+ * This test case ensures that without capture groups, only exact matches to the variable
+ * schema are classified accordingly, while other inputs fall back to the default token type.
+ *
+ * @test Category: LogParser
+ */
+
 TEST_CASE("Test log parser without capture groups", "[LogParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarName{"myVar"};
@@ -223,6 +263,47 @@ TEST_CASE("Test log parser without capture groups", "[LogParser]") {
     );
 }
 
+/**
+ * @ingroup test_log_parser_capture
+ * @anchor test_log_parser_with_capture_groups
+ * @brief Tests log parser behavior when using capture groups in variable schemas.
+ *
+ * @details
+ * This test verifies the log parser’s ability to:
+ * - Recognize a variable definition containing a named capture group.
+ * - Identify and register both the variable name and the capture group name as valid symbols.
+ * - Link the capture group to its associated tag IDs and registers.
+ * - Extract matched positions correctly when parsing a token.
+ * - Fail to match tokens that don't align exactly with the specified capture pattern.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * myVar:userID=(?<uid>123)
+ * @endcode
+ *
+ * @section input Test Inputs
+ * @code
+ * "userID=123"
+ * "userID=234"
+ * "123"
+ * @endcode
+ *
+ * @section expected Expected Tokenization
+ * @code
+ * "userID=123" -> "myVar" with capture "uid" = "123" at positions 7–10
+ * "userID=234" -> uncaught string
+ * "123"        -> uncaught string
+ * @endcode
+ *
+ * @note
+ * This test confirms that capture groups are:
+ * - Properly registered in the parser.
+ * - Bound to correct tag and register IDs.
+ * - Accurately producing positional data during tokenization.
+ *
+ * @test Category: LogParser
+ */
 TEST_CASE("Test log parser with capture groups", "[LogParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarName{"myVar"};
@@ -282,6 +363,65 @@ TEST_CASE("Test log parser with capture groups", "[LogParser]") {
     );
 }
 
+/**
+ * @ingroup test_log_parser_default_schema
+ *
+ * @brief Validates tokenization behavior using the default schema commonly used in CLP (Compressed
+ * Log Processing).
+ *
+ * @details
+ * This group tests the `LogParser`'s ability to correctly tokenize inputs according to a schema
+ * defining:
+ * - Timestamps
+ * - Integers and floating-point numbers
+ * - Hex strings (alphabetic-only)
+ * - Key-value pairs with named capture groups
+ * - Generic patterns containing numbers
+ *
+ * It ensures:
+ * - All schema variables are registered and recognized correctly.
+ * - Inputs are matched and classified according to their variable type.
+ * - Capture groups are properly detected and positionally tracked.
+ *
+ * This group demonstrates how to define and integrate regex-based schemas, including named capture
+ * groups, for structured log tokenization.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * firstTimestamp: [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}[,\.][0-9]{0,3}
+ * int: -{0,1}[0-9]+
+ * float: -{0,1}[0-9]+\.[0-9]+
+ * hex: [a-fA-F]+
+ * equals: [^ \r\n=]+=(?<val>[^ \r\n]*[A-Za-z0-9][^ \r\n]*)
+ * hasNumber: ={0,1}[^ \r\n=]*\d[^ \r\n=]*={0,1}
+ * @endcode
+ *
+ * @section input Example Inputs
+ * @code
+ * "2012-12-12 12:12:12.123"  // timestamp
+ * "123"                      // integer
+ * "123.123"                  // float
+ * "abc"                      // hex (alphabetic-only)
+ * "userID=123"               // key-value with capture group "val"
+ * "user123"                  // generic token containing a number
+ * @endcode
+ *
+ * @section expected Example Output
+ * @code
+ * "2012-12-12 12:12:12.123" -> "firstTimestamp"
+ * "123"                     -> "int"
+ * "123.123"                 -> "float"
+ * "abc"                     -> "hex"
+ * "userID=123"              -> "equals", capture: "val" = "123"
+ * "user123"                 -> "hasNumber"
+ * @endcode
+ *
+ * @note This group serves as a reference for constructing regex schemas with named capture groups
+ *       and validating their behavior in log parsing.
+ *
+ * @test Category: Schema Matching
+ */
 TEST_CASE("Test log parser with CLP default schema", "[LogParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     string const capture_name{"val"};
@@ -333,6 +473,62 @@ TEST_CASE("Test log parser with CLP default schema", "[LogParser]") {
     parse_and_validate_sequence(log_parser, cTokenString6, {{cTokenString6, cVarName6, {}}});
 }
 
+/**
+ * @ingroup test_log_parser_delimited_variables
+ *
+ * @brief Tests LogParser with delimited variables using a custom schema.
+ *
+ * @details
+ * This test verifies that the `LogParser` correctly handles variables separated by
+ * custom delimiters specified in the schema. The schema defines:
+ * - Delimiters as newline, carriage return, backslash, colon, comma, and parenthesis (`\n\r\[:,)`)
+ * - Variable `function` with regex `function:[A-Za-z]+::[A-Za-z]+1`
+ * - Variable `path` with regex `path:[a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+`
+ *
+ * The test inputs validate tokenization of strings containing these variables,
+ * ensuring variables are correctly identified and delimited tokens are separated.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * function: [A-Za-z]+::[A-Za-z]+1
+ * path: [a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+
+ * @endcode
+ *
+ * @section input Example Inputs
+ * @code
+ * "Word App::Action1"
+ * "word::my/path/to/file.txt"
+ * "App::Action"
+ * "::App::Action1"
+ * "folder/file-op71"
+ * "[WARNING] PARALLEL:2024 [folder/file.cc:150] insert node:folder/file-op7, id:7 and
+ * folder/file-op8, id:8"
+ * @endcode
+ *
+ * @section expected Example Output
+ * @code
+ * "Word"                 -> uncaught string
+ * " App::Action1"        -> "function"
+ *
+ * "word"                 -> uncaught string
+ * ":"                    -> uncaught string
+ * ":my/path/to/file.txt" -> "path"
+ *
+ * "App"                  -> uncaught string
+ * ":"                    -> uncaught string
+ * ":Action"              -> uncaught string
+ *
+ * ":"                    -> uncaught string
+ * ":App::Action1"        -> "function"
+ *
+ * "folder/file-op71"     -> "path"
+ *
+ * "[folder/file.cc"      -> "path"
+ * ":folder/file-op7"     -> "path"
+ * ":folder/file-op8"     -> "path"
+ * @endcode
+ */
 TEST_CASE("Test log parser with delimited variables", "[LogParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     string const capture_name{"val"};
@@ -405,6 +601,33 @@ TEST_CASE("Test log parser with delimited variables", "[LogParser]") {
     );
 }
 
+/**
+ * @ingroup test_log_parser_newline_vars
+ *
+ * @brief Test integer after static-text at start of newline when previous line ends in a variable.
+ *
+ * @details
+ * This test ensures that when a line ends with a variable token and the next line starts with
+ * static text followed by an integer variable, the LogParser correctly recognizes the newline as a
+ * delimiter and parses the tokens appropriately.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * int: \-{0,1}[0-9]+
+ * @endcode
+ *
+ * @section input Input Example
+ * "1234567\nWord 1234567"
+ *
+ * @section expected Expected Output
+ * {
+ *   {"1234567", "int", {}},
+ *   {"\n", "newLine", {}},
+ *   {"Word", "", {}},
+ *   {" 1234567", "int", {}}
+ * }
+ */
 TEST_CASE(
         "Test integer after static-text at start of newline when previous line ends in a variable",
         "[LogParser]"
@@ -429,6 +652,34 @@ TEST_CASE(
     );
 }
 
+/**
+ * @ingroup test_log_parser_newline_vars
+ *
+ * @brief Test integer after static-text at start of newline when previous line ends in static-text.
+ *
+ * @details
+ * This test checks that when a line ends with static text and the next line starts with static text
+ * followed by an integer variable, the LogParser identifies the newline properly and tokenizes the
+ * input correctly.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * int: \-{0,1}[0-9]+
+ * @endcode
+ *
+ * @section input Input Example
+ * "1234567 abc\nWord 1234567"
+ *
+ * @section expected Expected Output
+ * {
+ *   {"1234567", "int", {}},
+ *   {" abc", "", {}},
+ *   {"\n", "newLine", {}},
+ *   {"Word", "", {}},
+ *   {" 1234567", "int", {}}
+ * }
+ */
 TEST_CASE(
         "Test integer after static-text at start of newline when previous line ends in static-text",
         "[LogParser]"
@@ -454,6 +705,31 @@ TEST_CASE(
     );
 }
 
+/**
+ * @ingroup test_log_parser_newline_vars
+ *
+ * @brief Test integer at start of newline when previous line ends in static-text.
+ *
+ * @details
+ * This test verifies that when a line ends with static text and the next line starts directly with
+ * an integer variable, the LogParser treats the newline and variable token correctly.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * int: \-{0,1}[0-9]+
+ * @endcode
+ *
+ * @section input Input Example
+ * "1234567 abc\n1234567"
+ *
+ * @section expected Expected Output
+ * {
+ *   {"1234567", "int", {}},
+ *   {" abc", "", {}},
+ *   {"\n1234567", "int", {}}
+ * }
+ */
 TEST_CASE(
         "Test integer at start of newline when previous line ends in static-text",
         "[LogParser]"
@@ -474,6 +750,33 @@ TEST_CASE(
     );
 }
 
+/**
+ * @ingroup test_log_parser_newline_vars
+ *
+ * @brief Test integer plus newline at start of newline when previous line ends in static-text.
+ *
+ * @details
+ * This test confirms that when a line ends with static text, and the next line contains an integer
+ * variable followed by a newline, the parser correctly separates the tokens, recognizing the
+ * newline delimiter.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * int: \-{0,1}[0-9]+
+ * @endcode
+ *
+ * @section input Input Example
+ * "1234567 abc\n1234567\n"
+ *
+ * @section expected Expected Output
+ * {
+ *   {"1234567", "int", {}},
+ *   {" abc", "", {}},
+ *   {"\n1234567", "int", {}},
+ *   {"\n", "newLine", {}}
+ * }
+ */
 TEST_CASE(
         "Test integer + newline at start of newline when previous line ends in static-text",
         "[LogParser]"
@@ -497,37 +800,30 @@ TEST_CASE(
     );
 }
 
-/** @ingroup LogParserTests
- * @brief Verifies that integers are correctly tokenized at the start of a new line when the
- * previous line ends with a delimiter (space in this case).
+/**
+ * @ingroup test_log_parser_newline_vars
+ *
+ * @brief Test integer at start of newline when previous line ends in a delimiter.
  *
  * @details
- * This test ensures the log parser handles newline boundaries correctly and does not incorrectly
- * merge tokens across lines. It focuses on cases where an integer starts immediately after a
- * newline that follows a delimiter.
+ * This test ensures that if a line ends with a delimiter (e.g., space) and the next line starts
+ * with an integer variable, the parser correctly identifies the tokens including the newline.
  *
- * @section rule Rule
+ * @section schema Schema Definition
  * @code
- * int:\-{0,1}[0-9]+
+ * delimiters: \n\r\[:,)
+ * int: \-{0,1}[0-9]+
  * @endcode
  *
- * @section input Input
- * @code
- * 1234567 \n1234567
- * @endcode
+ * @section input Input Example
+ * "1234567 \n1234567"
  *
- * @section expected Expected Tokens
- * @code
- * "1234567"   -> "int"
- * " "         -> ""
- * "\n1234567" -> "int"
- * @endcode
- *
- * @note
- * This test also checks that leading line breaks do not interfere with token
- * classification, ensuring robustness in log parsing across multiple lines.
- *
- * @test Category: LogParser
+ * @section expected Expected Output
+ * {
+ *   {"1234567", "int", {}},
+ *   {" ", "", {}},
+ *   {"\n1234567", "int", {}}
+ * }
  */
 TEST_CASE(
         "Test integer at start of newline when previous line ends in a delimiter",
@@ -549,8 +845,28 @@ TEST_CASE(
     );
 }
 
-/** @ingroup LogParserNewlineTests
- * Testing
+/**
+ * @ingroup test_log_parser_newline_vars
+ *
+ * @brief Test capture group repetition and backtracking.
+ *
+ * @details
+ * This test checks LogParser's handling of a variable with a regex containing capture groups
+ * repeated multiple times. It verifies the positions of captured subgroups within the parsed token
+ * and ensures correct tokenization of the repeated pattern.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * myVar: ([A-Za-z]+=(?<val>[a-zA-Z0-9]+),){4}
+ * @endcode
+ *
+ * @section input Input Example
+ * "userID=123,age=30,height=70,weight=100,"
+ *
+ * @section expected Expected Output
+ * The entire input string recognized as "myVar" with capture group "val" capturing values at
+ * positions: {35, 25, 15, 7} (start positions) and {37, 27, 17, 10} (end positions).
  */
 TEST_CASE("Test capture group repetition and backtracking", "[LogParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
