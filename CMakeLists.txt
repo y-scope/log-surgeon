@@ -13,10 +13,10 @@ endif()
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
-include(FetchContent)
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 option(log_surgeon_BUILD_TESTING "Build the testing tree." ON)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS
     ON
     CACHE BOOL
@@ -31,6 +31,11 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 if(log_surgeon_IS_TOP_LEVEL)
+    # Include dependency settings if the project isn't being included as a subproject.
+    # NOTE: We mark the file optional because if the user happens to have the dependencies
+    # installed, this file is not necessary.
+    include("${CMAKE_SOURCE_DIR}/build/deps/cmake-settings/all.cmake" OPTIONAL)
+
     # If previously undefined, `BUILD_TESTING` will be set to ON.
     include(CTest)
 endif()
@@ -39,45 +44,18 @@ if(BUILD_TESTING AND log_surgeon_BUILD_TESTING)
     set(log_surgeon_ENABLE_TESTS ON)
 endif()
 
-list(APPEND DEPS_TO_FETCH "")
-
 # Use <fmt/*.h> as <format> is unsupported in gcc-10.
-find_package(fmt 8.0.1 QUIET)
-if(fmt_FOUND)
-    message(STATUS "Found fmt ${fmt_VERSION}.")
-else()
-    FetchContent_Declare(fmt
-                         GIT_REPOSITORY https://github.com/fmtlib/fmt
-                         GIT_TAG "8.0.1"
-                         GIT_SHALLOW ON
-    )
-    # Force fmt to generate install rules
-    set(FMT_INSTALL ON CACHE BOOL "Enable installation for fmt." FORCE)
-    list(APPEND DEPS_TO_FETCH fmt)
-endif()
+find_package(fmt 8.0.1 REQUIRED)
+message(STATUS "Found fmt ${fmt_VERSION}.")
 
-find_package(Microsoft.GSL QUIET)
-if(Microsoft.GSL_FOUND)
-    message(STATUS "Found Microsoft.GSL ${Microsoft.GSL_VERSION}.")
-else()
-    FetchContent_Declare(GSL
-                         GIT_REPOSITORY "https://github.com/microsoft/GSL"
-                         GIT_TAG "v4.0.0"
-                         GIT_SHALLOW ON
-    )
-    list(APPEND DEPS_TO_FETCH GSL)
-endif()
+find_package(Microsoft.GSL 4.0.0 REQUIRED)
+message(STATUS "Found Microsoft.GSL ${Microsoft.GSL_VERSION}.")
 
 if(log_surgeon_ENABLE_TESTS)
-    find_package(Catch2 3 REQUIRED)
-    if(Catch2_FOUND)
-        message(STATUS "Found Catch2 ${Catch2_VERSION}.")
-    endif()
+    find_package(Catch2 3.8.1 REQUIRED)
+    message(STATUS "Found Catch2 ${Catch2_VERSION}.")
     include(Catch)
 endif()
-
-# Declare the details of all fetched content before making them available.
-FetchContent_MakeAvailable("${DEPS_TO_FETCH}")
 
 set(SOURCE_FILES
     src/log_surgeon/Buffer.hpp
@@ -138,31 +116,15 @@ set(SOURCE_FILES
 
 set(LOG_SURGEON_INSTALL_CONFIG_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/log_surgeon)
 set(LOG_SURGEON_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
-# Directory for installing third-party includes that the user doesn't have installed.
-set(LOG_SURGEON_THIRD_PARTY_INCLUDE_DIR "${LOG_SURGEON_INSTALL_INCLUDE_DIR}/log_surgeon/third_party_include")
 
 add_library(log_surgeon ${SOURCE_FILES})
 add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
 
-if (Microsoft.GSL_FOUND)
-    target_link_libraries(log_surgeon
-            PUBLIC
-            Microsoft.GSL::GSL
-            )
-else()
-    # Since the user doesn't have GSL installed, use the GSL headers directly.
-    # NOTE:
-    # - We can't link against the `Microsoft.GSL::GSL` target since that would require adding `GSL`
-    #   to the `install` command and force the user to have GSL installed when using log-surgeon.
-    # - At install time, we'll copy GSL into log-surgeon's third-party includes directory.
-    target_include_directories(log_surgeon
-            PUBLIC
-            $<BUILD_INTERFACE:${GSL_SOURCE_DIR}/include>
-            $<INSTALL_INTERFACE:${LOG_SURGEON_THIRD_PARTY_INCLUDE_DIR}>
-            )
-endif()
-
-target_link_libraries(log_surgeon PUBLIC fmt::fmt)
+target_link_libraries(log_surgeon
+    PUBLIC
+    fmt::fmt
+    Microsoft.GSL::GSL
+    )
 
 target_include_directories(log_surgeon
         PUBLIC
@@ -213,16 +175,6 @@ install(
     PATTERN "*.hpp"
     PATTERN "*.tpp"
     )
-if (NOT Microsoft.GSL_FOUND)
-    install(
-        DIRECTORY
-        # NOTE: We don't include a trailing slash so that the gsl directory is copied rather than
-        # its contents.
-        "${GSL_SOURCE_DIR}/include/gsl"
-        DESTINATION
-        "${LOG_SURGEON_THIRD_PARTY_INCLUDE_DIR}"
-        )
-endif ()
 
 configure_package_config_file(
     ${CMAKE_CURRENT_LIST_DIR}/cmake/log_surgeon-config.cmake.in
