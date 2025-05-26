@@ -170,7 +170,7 @@ TEST_CASE("Test integer NFA", "[NFA]") {
 }
 
 TEST_CASE("Test equal NFA", "[NFA]") {
-    string const var_schema{R"(equals:[A]+=(?<val>[=AB]*A[=AB]*))"};
+    string const var_schema{R"(fieldValuePair:[A]+=(?<val>[=AB]*A[=AB]*))"};
     string const expected_serialized_nfa{
             "0:byte_transitions={A-->1},spontaneous_transition={}\n"
             "1:byte_transitions={=-->2,A-->1},spontaneous_transition={}\n"
