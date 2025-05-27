@@ -81,6 +81,16 @@ public:
         return m_lookahead < rhs.m_lookahead;
     }
 
+    auto child_configuration_with_new_state(TypedNfaState const* new_nfa_state
+    ) const -> DeterminizationConfiguration {
+        return DeterminizationConfiguration(
+                new_nfa_state,
+                m_tag_id_to_reg_ids,
+                m_history,
+                m_lookahead
+        );
+    }
+
     /**
      * Creates a new configuration from the current configuration by replacing the NFA state and
      * appending a future tag operation.
@@ -161,15 +171,16 @@ auto DeterminizationConfiguration<TypedNfaState>::update_reachable_configs(
         std::stack<DeterminizationConfiguration>& unexplored_stack
 ) const -> void {
     for (auto const& nfa_spontaneous_transition : m_nfa_state->get_spontaneous_transitions()) {
-        auto parent_config{*this};
+        auto child_config{this->child_configuration_with_new_state(
+                nfa_spontaneous_transition.get_dest_state()
+        )};
         for (auto const tag_op : nfa_spontaneous_transition.get_tag_ops()) {
-            auto child_config{parent_config.child_configuration_with_new_state_and_tag(
+            child_config = child_config.child_configuration_with_new_state_and_tag(
                     nfa_spontaneous_transition.get_dest_state(),
                     tag_op
-            )};
-            parent_config = child_config;
+            );
         }
-        unexplored_stack.push(parent_config);
+        unexplored_stack.push(child_config);
     }
 }
 
