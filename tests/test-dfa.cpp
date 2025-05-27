@@ -142,7 +142,7 @@ TEST_CASE("Test Complex Tagged DFA", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Test repeated tagged DFA", "[DFA]") {
+TEST_CASE("Test multi-valued tag in tagged DFA", "[DFA]") {
     string const var_schema{"capture:([a]+=(?<val>1+),)+"};
     string const expected_serialized_dfa{
             "0:byte_transitions={a-()->1}\n"
