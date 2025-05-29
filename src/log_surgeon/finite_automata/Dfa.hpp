@@ -9,6 +9,7 @@
 #include <optional>
 #include <queue>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -25,6 +26,7 @@
 #include <log_surgeon/finite_automata/RegisterHandler.hpp>
 #include <log_surgeon/finite_automata/RegisterOperation.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
+#include <log_surgeon/Token.hpp>
 
 namespace log_surgeon::finite_automata {
 /**
@@ -73,6 +75,39 @@ public:
 
     explicit Dfa(Nfa<TypedNfaState> const& nfa);
 
+    auto reset() -> void { m_curr_state = get_root(); }
+
+    /**
+     * Determine the out-going transition  based on the input character. Update the current state
+     * and register values based on the transition.
+     * @param next_char The character to transition on.
+     * @param curr_pos The current position in the lexing.
+     * @return The destination state.
+     *
+     *
+     * This is what it should return, but for backward compatability its doing the above atm.
+     * @return The destination state when it is accepting
+     * @return `std::nullopt` when the state is not accepting.
+     * @return `nullptr` when the input leads to a non-matching sequence.
+     *
+     *
+     * @throws `std::logic_error` if copy operation has no source register.
+     * @throws `std::logic_error` if register operation has unhandlded type.
+     */
+    auto process_char(uint32_t next_char, uint32_t curr_pos) -> TypedDfaState const*;
+
+    /**
+     * Applies the register operations for the accepting state.
+     * @param dfa_state An accepting DFA state.
+     * @param curr_pos The current position in the lexing.
+     */
+    auto process_state(TypedDfaState const* dfa_state, uint32_t curr_pos) -> void;
+
+    auto set(TypedDfaState const* prev_state) -> TypedDfaState const* {
+        m_curr_state = prev_state;
+        return m_curr_state;
+    }
+
     /**
      * @return A string representation of the DFA.
      * @return Forwards `DfaState::serialize`'s return value (std::nullopt) on failure.
@@ -94,6 +129,12 @@ public:
 
     [[nodiscard]] auto get_tag_id_to_final_reg_id() const -> std::map<tag_id_t, reg_id_t> {
         return m_tag_id_to_final_reg_id;
+    }
+
+    auto release_reg_handler(Token& token) -> void {
+        token.set_reg_handler(std::move(m_reg_handler));
+        m_reg_handler = RegisterHandler();
+        m_reg_handler.add_registers(m_num_regs);
     }
 
 private:
@@ -229,11 +270,84 @@ private:
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
     std::map<tag_id_t, reg_id_t> m_tag_id_to_final_reg_id;
     RegisterHandler m_reg_handler;
+    TypedDfaState const* m_curr_state;
+    size_t m_num_regs{0};
 };
 
 template <typename TypedDfaState, typename TypedNfaState>
-Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
+Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) : m_curr_state{nullptr} {
     generate(nfa);
+}
+
+template <typename TypedDfaState, typename TypedNfaState>
+auto Dfa<TypedDfaState, TypedNfaState>::process_char(
+        uint32_t const next_char,
+        uint32_t const curr_pos
+) -> TypedDfaState const* {
+    auto const optional_transition{m_curr_state->get_transition(next_char)};
+    if (false == optional_transition.has_value()) {
+        return nullptr;
+    }
+    m_curr_state = optional_transition.value().get_dest_state();
+
+    auto const reg_ops{optional_transition.value().get_reg_ops()};
+    for (auto const& reg_op : reg_ops) {
+        switch (reg_op.get_type()) {
+            case RegisterOperation::Type::Set: {
+                m_reg_handler.append_position(reg_op.get_reg_id(), curr_pos);
+                break;
+            }
+            case RegisterOperation::Type::Negate: {
+                m_reg_handler.append_position(reg_op.get_reg_id(), -1);
+                break;
+            }
+            case RegisterOperation::Type::Copy: {
+                auto copy_reg_id_optional{reg_op.get_copy_reg_id()};
+                if (copy_reg_id_optional.has_value()) {
+                    m_reg_handler.copy_register(reg_op.get_reg_id(), copy_reg_id_optional.value());
+                } else {
+                    throw std::logic_error("Copy operation does not specify register to copy.");
+                }
+                break;
+            }
+            default: {
+                throw std::logic_error("Unhandled register operation type when simulating DFA.");
+            }
+        }
+    }
+    return m_curr_state;
+}
+
+template <typename TypedDfaState, typename TypedNfaState>
+auto Dfa<TypedDfaState, TypedNfaState>::process_state(
+        TypedDfaState const* dfa_state,
+        uint32_t const curr_pos
+) -> void {
+    auto const reg_ops{dfa_state->get_accepting_reg_ops()};
+    for (auto const& reg_op : reg_ops) {
+        switch (reg_op.get_type()) {
+            case RegisterOperation::Type::Set: {
+                m_reg_handler.append_position(reg_op.get_reg_id(), curr_pos);
+                break;
+            }
+            case RegisterOperation::Type::Negate: {
+                m_reg_handler.append_position(reg_op.get_reg_id(), -1);
+                break;
+            }
+            case RegisterOperation::Type::Copy: {
+                auto copy_reg_id_optional{reg_op.get_copy_reg_id()};
+                if (copy_reg_id_optional.has_value()) {
+                    m_reg_handler.copy_register(reg_op.get_reg_id(), copy_reg_id_optional.value());
+                } else {
+                    throw std::logic_error("Copy operation does not specify register to copy.");
+                }
+                break;
+            }
+            default: {
+                throw std::logic_error("Unhandled register operation type when simulating DFA.");
+            }
+        }
+    }
 }
 
 // TODO: handle utf8 case in DFA generation.
@@ -270,6 +384,7 @@ auto Dfa<TypedDfaState, TypedNfaState>::generate(Nfa<TypedNfaState> const& nfa) 
             dfa_state->add_byte_transition(ascii_value, {reg_ops, dest_state});
         }
     }
+    m_num_regs = m_reg_handler.get_num_regs();
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
@@ -315,7 +430,9 @@ auto Dfa<TypedDfaState, TypedNfaState>::try_get_mapping(
                 {
                     reg_map_lhs_to_rhs.insert({lhs_reg_id, rhs_reg_id});
                     reg_map_rhs_to_lhs.insert({rhs_reg_id, lhs_reg_id});
-                } else if (reg_map_lhs_to_rhs.at(lhs_reg_id) != rhs_reg_id
+                } else if (false == reg_map_lhs_to_rhs.contains(lhs_reg_id)
+                           || false == reg_map_rhs_to_lhs.contains(rhs_reg_id)
+                           || reg_map_lhs_to_rhs.at(lhs_reg_id) != rhs_reg_id
                            || reg_map_rhs_to_lhs.at(rhs_reg_id) != lhs_reg_id)
                 {
                     return std::nullopt;
@@ -373,8 +490,14 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_transitions(
                         assign_transition_reg_ops(num_tags, closure, tag_id_with_op_to_reg_id)
                 };
                 if (ascii_transitions_map.contains(i)) {
-                    auto& byte_reg_ops{ascii_transitions_map.at(i).first};
-                    byte_reg_ops.insert(byte_reg_ops.end(), new_reg_ops.begin(), new_reg_ops.end());
+                    for (auto const& new_reg_op : new_reg_ops) {
+                        auto& byte_reg_ops{ascii_transitions_map.at(i).first};
+                        if (byte_reg_ops.end()
+                            == std::find(byte_reg_ops.begin(), byte_reg_ops.end(), new_reg_op))
+                        {
+                            byte_reg_ops.push_back(new_reg_op);
+                        }
+                    }
                     ascii_transitions_map.at(i).second.insert(closure.begin(), closure.end());
                 } else {
                     ascii_transitions_map.emplace(i, std::make_pair(new_reg_ops, closure));
