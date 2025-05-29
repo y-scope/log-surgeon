@@ -51,8 +51,8 @@ auto LogEventView::reset() -> void {
 auto LogEventView::get_logtype() const -> std::string {
     // TODO: reserve logtype size as the raw log event?
     std::string logtype;
-    for (uint32_t i = 1; i < m_log_output_buffer->pos(); ++i) {
-        auto& token = m_log_output_buffer->get_mutable_token(i);
+    for (uint32_t i{1}; i < m_log_output_buffer->pos(); ++i) {
+        auto& token{m_log_output_buffer->get_mutable_token(i)};
         auto const rule_id{token.m_type_ids_ptr->at(0)};
         if (static_cast<uint32_t>(SymbolId::TokenUncaughtString) == rule_id) {
             logtype += token.to_string_view();
@@ -82,9 +82,7 @@ auto LogEventView::get_logtype() const -> std::string {
                 };
                 token.add_context_to_logtype(register_pairs, capture_ids, tag_formatter, logtype);
             } else {
-                logtype += "<";
-                logtype += m_log_parser.get_id_symbol(rule_id);
-                logtype += ">";
+                logtype += "<" + m_log_parser.get_id_symbol(rule_id) + ">";
             }
         }
     }
