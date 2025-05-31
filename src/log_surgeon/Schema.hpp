@@ -19,14 +19,6 @@ public:
     explicit Schema(std::string const& schema_file_path);
 
     /**
-     * Parses `delimiters_schema` as if it were its own entire schema file. Then extracts the
-     * `DelimiterStringAST` from the resulting `SchemaAST` and adds it to `m_delimiters` in
-     * `m_schema_ast`.
-     * @param delimiters_schema String of delimiters.
-     */
-    auto add_delimiters(std::string_view delimiters_schema) const -> void;
-
-    /**
      * Parses `var_schema` as if it were its own entire schema file. Then extracts the
      * `SchemaVarAST` from the resulting `SchemaAST` and adds it to `m_schema_vars` in
      * `m_schema_ast`. Position in `m_schema_vars` is determined by the `priority` (`priority` == -1
