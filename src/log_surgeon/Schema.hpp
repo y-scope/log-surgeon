@@ -23,8 +23,8 @@ public:
      * `SchemaVarAST` from the resulting `SchemaAST` and adds it to `m_schema_vars` in
      * `m_schema_ast`. Position in `m_schema_vars` is determined by the `priority` (`priority` == -1
      * to set to lowest).
-     * @param var_schema String containing variable name + ":" + variable regex.
-     * @param priority Variable priority.
+     * @param var_schema
+     * @param priority
      */
     auto add_variable(std::string_view var_schema, int priority) const -> void;
 
