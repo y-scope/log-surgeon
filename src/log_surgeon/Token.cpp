@@ -75,7 +75,7 @@ void Token::add_context_to_logtype(
             logtype.append(m_buffer + prev, m_buffer + m_buffer_size);
             logtype.append(m_buffer, m_buffer + variable_position.m_start_pos);
         }
-        // TODO: a bit hacky, is there a nicer way to do this?
+        // Skip adding tags for zero-length captures
         if (variable_position.m_start_pos != variable_position.m_end_pos) {
             logtype += tag_formatter(variable_position.m_capture_id);
         }
