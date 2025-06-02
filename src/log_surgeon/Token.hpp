@@ -58,7 +58,7 @@ public:
      */
     [[nodiscard]] auto get_length() const -> uint32_t;
 
-    [[nodiscard]] auto get_reg_positions(reg_id_t const reg_id
+    [[nodiscard]] auto get_reversed_reg_positions (reg_id_t const reg_id
     ) const -> std::vector<finite_automata::PrefixTree::position_t> {
         return m_reg_handler.get_reversed_positions(reg_id);
     }

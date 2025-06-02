@@ -136,8 +136,9 @@ auto parse_and_validate(
                         return;
                     }
                     auto const [start_reg_id, end_reg_id]{optional_reg_ids.value()};
-                    auto const actual_start_positions{token.get_reg_positions(start_reg_id)};
-                    auto const actual_end_positions{token.get_reg_positions(end_reg_id)};
+                    auto const actual_start_positions{token.get_reversed_reg_positions(start_reg_id)
+                    };
+                    auto const actual_end_positions{token.get_reversed_reg_positions(end_reg_id)};
                     auto const [expected_start_positions, expected_end_positions]{
                             expected_captures.at(capture_name)
                     };
