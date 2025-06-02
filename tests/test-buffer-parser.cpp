@@ -185,6 +185,71 @@ TEST_CASE("Test log parser without capture groups", "[LogParser]") {
     parse_and_validate(buffer_parser, cInput, {expected_event});
 }
 
+TEST_CASE("Test log parser with capture groups", "[LogParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cVarSchema{"myVar:userID=(?<uid>123)"};
+    constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
+
+    ExpectedEvent const expected_event{
+            .m_logtype{R"(userID=<uid> userID=234  userID=<uid> 123  userID=<uid>)"},
+            .m_timestamp_raw{""},
+            .m_tokens{
+                    {{"userID=123", "myVar", {{{"uid", {{7}, {10}}}}}},
+                     {" userID=234", "", {}},
+                     {" userID=123", "myVar", {{{"uid", {{29}, {32}}}}}},
+                     {" 123", "", {}},
+                     {" userID=123", "myVar", {{{"uid", {{44}, {47}}}}}}}
+            }
+    };
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cVarSchema, -1);
+    BufferParser buffer_parser(std::move(schema.release_schema_ast_ptr()));
+
+    parse_and_validate(buffer_parser, cInput, {expected_event});
+}
+
+TEST_CASE("Test log parser with CLP default schema", "[LogParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cVarSchema1{
+            R"(timestamp:[0-9]{4}\-[0-9]{2}\-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}[,\.][0-9]{0,3})"
+    };
+    constexpr string_view cVarSchema2{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cVarSchema3{R"(float:\-{0,1}[0-9]+\.[0-9]+)"};
+    constexpr string_view cVarSchema4{R"(hex:[a-fA-F]+)"};
+    constexpr string_view cVarSchema5{
+            R"(keyValuePair:[^ \r\n=]+=(?<val>[^ \r\n]*[A-Za-z0-9][^ \r\n]*))"
+    };
+    constexpr string_view cVarSchema6{R"(hasNumber:={0,1}[^ \r\n=]*\d[^ \r\n=]*={0,1})"};
+    constexpr string_view cInput{"2012-12-12 12:12:12.123 123 123.123 abc userID=123 text user123"};
+    ExpectedEvent const expected_event{
+            .m_logtype{R"( <int> <float> <hex>  userID=<val> text <hasNumber>)"},
+            .m_timestamp_raw{"2012-12-12 12:12:12.123"},
+            .m_tokens{
+                    {{"2012-12-12 12:12:12.123", "firstTimestamp", {}},
+                     {" 123", "int", {}},
+                     {" 123.123", "float", {}},
+                     {" abc", "hex", {}},
+                     {" userID=123", "keyValuePair", {{{"val", {{47}, {50}}}}}},
+                     {" text", "", {}},
+                     {" user123", "hasNumber", {}}}
+            }
+    };
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cVarSchema1, -1);
+    schema.add_variable(cVarSchema2, -1);
+    schema.add_variable(cVarSchema3, -1);
+    schema.add_variable(cVarSchema4, -1);
+    schema.add_variable(cVarSchema5, -1);
+    schema.add_variable(cVarSchema6, -1);
+    BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
+
+    parse_and_validate(buffer_parser, cInput, {expected_event});
+}
+
 TEST_CASE(
         "Test integer after static-text at start of newline when previous line ends in a variable",
         "[LogParser]"
@@ -289,3 +354,29 @@ TEST_CASE(
 
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2, expected_event3});
 }
+
+// TODO: fix this case:
+/*
+TEST_CASE("Test capture group repetition and backtracking", "[LogParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cVarSchema{"keyValuePair:([A-Za-z]+=(?<val>[a-zA-Z0-9]+),){4}"};
+    constexpr string_view cInput{"userID=123,age=30,height=70,weight=100,"};
+    ExpectedEvent const expected_event{
+            .m_logtype{R"(userID=<val>,age=<val>,height=<val>,weight=<val>,)"},
+            .m_timestamp_raw{""},
+            .m_tokens{
+                    {{"userID=123,age=30,height=70,weight=100,",
+                      "keyValuePair",
+                      {{{"val", {{35, 25, 15, 7}, {37, 27, 17, 10}}}}}}}
+            }
+    };
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cVarSchema, -1);
+    BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
+
+    parse_and_validate(buffer_parser, cInput, {expected_event});
+    // TODO: add backtracking case
+}
+*/

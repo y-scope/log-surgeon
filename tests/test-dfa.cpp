@@ -169,3 +169,48 @@ TEST_CASE("Test integer DFA", "[DFA]") {
     };
     test_dfa({var_schema}, expected_serialized_dfa);
 }
+
+TEST_CASE("Test key-value pair DFA", "[DFA]") {
+    string const var_schema{R"(keyValuePair:[A]+=(?<val>[=AB]*A[=AB]*))"};
+    // TODO: while correct, this is really weird looking, and probably will lead to inefficiencies
+    // i.e., setting the same register multiple times in a single transition.
+    string const expected_serialized_dfa{
+            "0:byte_transitions={A-()->1}\n"
+            "1:byte_transitions={=-()->2,A-()->1}\n"
+            "2:byte_transitions={=-(4p)->3,A-(4p)->4,B-(4p)->3}\n"
+            "3:byte_transitions={=-()->3,A-()->4,B-()->3}\n"
+            "4:accepting_tags={0},accepting_operations={2c4,3p},byte_transitions={=-()->5,A-()->4,"
+            "B-()->5}\n"
+            "5:accepting_tags={0},accepting_operations={2c4,3p},byte_transitions={=-()->5,A-()->4,"
+            "B-()->5}\n"
+    };
+    test_dfa({var_schema}, expected_serialized_dfa);
+}
+
+TEST_CASE("Test key-value pair DFA with hasA", "[DFA]") {
+    string const var_schema1{R"(keyValuePair:[A]+=(?<val>[=AB]*A[=AB]*))"};
+    string const var_schema2{R"(hasA:[AB]*[A][=AB]*)"};
+    // TODO: Track all tags, not just an arbitrary paths tags (in this case some paths miss
+    // keyValuePair tags).
+    string const expected_serialized_dfa{
+            "0:byte_transitions={A-()->1,B-()->2}\n"
+            "1:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->3,A-()->1,"
+            "B-()->4}\n"
+            "2:byte_transitions={A-()->5,B-()->2}\n"
+            "3:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-(4p)->6,"
+            "A-(4p)->7,B-(4p)->6}\n"
+            "4:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->8,A-()->5,"
+            "B-()->4}\n"
+            "5:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->8,A-()->5,"
+            "B-()->4}\n"
+            "6:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->6,A-()->7,"
+            "B-()->6}\n"
+            "7:accepting_tags={0,1},accepting_operations={2c4,3p,2c0,3c1},"
+            "byte_transitions={=-()->9,A-()->7,B-()->9}\n"
+            "8:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->8,A-()->8,"
+            "B-()->8}\n"
+            "9:accepting_tags={0,1},accepting_operations={2c4,3p,2c0,3c1},"
+            "byte_transitions={=-()->9,A-()->7,B-()->9}\n"
+    };
+    test_dfa({var_schema1, var_schema2}, expected_serialized_dfa);
+}

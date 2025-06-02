@@ -64,11 +64,15 @@ public:
     ) const -> std::optional<std::string>;
 
     /**
-     * @param character The character to transition on.
+     * @param character The character (byte or utf8) to transition on.
      * @return The transition, which contains the register operations and destination state.
      */
     [[nodiscard]] auto get_transition(uint8_t character
     ) const -> std::optional<DfaTransition<state_type>> const&;
+
+    [[nodiscard]] auto get_accepting_reg_ops() const -> std::vector<RegisterOperation> const& {
+        return m_accepting_ops;
+    }
 
 private:
     std::vector<uint32_t> m_matching_variable_ids;
