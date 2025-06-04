@@ -23,6 +23,7 @@ public:
      * `DelimiterStringAST` from the resulting `SchemaAST` and adds it to `m_delimiters` in
      * `m_schema_ast`.
      * @param delimiters_schema String of delimiters.
+     * @throw std::invalid_argument if the delimiters string provided is invalid.
      */
     auto add_delimiters(std::string_view delimiters_schema) const -> void;
 
@@ -32,9 +33,11 @@ public:
      * `m_schema_ast`. Position in `m_schema_vars` is determined by the `priority` (`priority` == -1
      * to set to lowest).
      * @param var_schema String containing variable name + ":" + variable regex.
-     * @param priority Variable priority.
+     * @param inverse_priority Variable priority where 0 is highest.
+     * @throw std::invalid_argument if the variable string provided is invalid.
+     * @throw std::invalid_argument if the priority provided is out of bounds.
      */
-    auto add_variable(std::string_view var_schema, int priority) const -> void;
+    auto add_variable(std::string_view var_schema, int inverse_priority) const -> void;
 
     /* Work in progress API to modify a schema object
 

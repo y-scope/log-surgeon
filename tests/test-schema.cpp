@@ -94,6 +94,7 @@ TEST_CASE("Test schema throws correctly if given invalid delimiter string", "[Sc
     constexpr string_view cInvalidDelimiterString2{"Delimiter:userID=123"};
     constexpr string_view cInvalidDelimiterString3{"de_limiters:userID=123"};
     constexpr string_view cInvalidDelimiterString4{""};
+
     Schema schema;
     REQUIRE_THROWS_AS(schema.add_delimiters(cInvalidDelimiterString1), std::invalid_argument);
     REQUIRE_THROWS_AS(schema.add_delimiters(cInvalidDelimiterString2), std::invalid_argument);
@@ -106,9 +107,22 @@ TEST_CASE("Test schema throws correctly if given invalid variable string", "[Sch
     constexpr string_view cInvalidVarString2{"myVar:[userID=123"};
     constexpr string_view cInvalidVarString3{R"(delimiters: \t\r\n)"};
     constexpr string_view cInvalidVarString4{""};
+
     Schema schema;
     REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString1, -1), std::runtime_error);
     REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString2, -1), std::runtime_error);
     REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString3, -1), std::invalid_argument);
     REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString4, -1), std::runtime_error);
+}
+
+TEST_CASE("Test schema throws correctly if given invalid variable position", "[Schema]") {
+    constexpr string_view cVarString1{"uId:userID=123"};
+    constexpr string_view cVarString2{R"(int:\-{0,1}\d+)"};
+    constexpr string_view cVarString3{R"(float:\-{0,1}\d+\.\d+)"};
+
+    Schema schema;
+    schema.add_variable(cVarString1, 0);
+    schema.add_variable(cVarString2, 1);
+    REQUIRE_THROWS_AS(schema.add_variable(cVarString3, 3), std::invalid_argument);
+    REQUIRE_THROWS_AS(schema.add_variable(cVarString3, -2), std::invalid_argument);
 }
