@@ -29,7 +29,7 @@ public:
 
     /**
      * @param reg_id_pairs The registers id pairs indicating all capture locations in the token.
-     * @param capture_ids The id symbol for each capture corresponding to `reg_id_pairs`.
+     * @param capture_ids The ID for each capture corresponding to `reg_id_pairs`.
      * @param tag_formatter A formatting function for inserting the captured variables into the
      * logtype.
      * @param logtype Returns the updated logtype now containing the contextualized token.
