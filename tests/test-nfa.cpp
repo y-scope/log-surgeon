@@ -84,7 +84,7 @@ TEST_CASE("Test simple NFA", "[NFA]") {
 TEST_CASE("Test Complex NFA", "[NFA]") {
     string const var_schema{"capture:Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?"
                             "<containerID>\\d+)C)"};
-    // Capture order(tags in brackets): letter1(0,1), letter2(2,3), letter(4,5), containerID(6,7)
+    // tags: letter1(0,1), letter2(2,3), letter(4,5), containerID(6,7)
     string const expected_serialized_nfa{
             "0:byte_transitions={A-->1,Z-->2},spontaneous_transition={}\n"
             "1:byte_transitions={},spontaneous_transition={3[4p]}\n"
@@ -169,8 +169,8 @@ TEST_CASE("Test integer NFA", "[NFA]") {
     test_nfa(var_schema, expected_serialized_nfa);
 }
 
-TEST_CASE("Test equal NFA", "[NFA]") {
-    string const var_schema{R"(equals:[A]+=(?<val>[=AB]*A[=AB]*))"};
+TEST_CASE("Test key-value pair, value capture NFA", "[NFA]") {
+    string const var_schema{R"(keyValuePair:[A]+=(?<val>[=AB]*A[=AB]*))"};
     string const expected_serialized_nfa{
             "0:byte_transitions={A-->1},spontaneous_transition={}\n"
             "1:byte_transitions={=-->2,A-->1},spontaneous_transition={}\n"

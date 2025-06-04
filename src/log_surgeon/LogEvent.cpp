@@ -49,18 +49,41 @@ auto LogEventView::reset() -> void {
 }
 
 auto LogEventView::get_logtype() const -> std::string {
+    // TODO: reserve logtype size as the raw log event?
     std::string logtype;
-    for (uint32_t i = 1; i < m_log_output_buffer->pos(); i++) {
-        auto& token = m_log_output_buffer->get_mutable_token(i);
-        if (token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenUncaughtString) {
+    for (uint32_t i{1}; i < m_log_output_buffer->pos(); ++i) {
+        auto& token{m_log_output_buffer->get_mutable_token(i)};
+        auto const rule_id{token.m_type_ids_ptr->at(0)};
+        if (static_cast<uint32_t>(SymbolId::TokenUncaughtString) == rule_id) {
             logtype += token.to_string_view();
         } else {
-            if ((uint32_t)SymbolId::TokenNewline != token.m_type_ids_ptr->at(0)) {
+            bool const is_first_token{false == m_log_output_buffer->has_timestamp() && 1 == i};
+            if (static_cast<uint32_t>(SymbolId::TokenNewline) != rule_id && false == is_first_token)
+            {
                 logtype += token.get_delimiter();
             }
-            logtype += "<";
-            logtype += m_log_parser.get_id_symbol(token.m_type_ids_ptr->at(0));
-            logtype += ">";
+            if (auto const& optional_capture_ids{
+                        m_log_parser.m_lexer.get_capture_ids_from_rule_id(rule_id)
+                };
+                optional_capture_ids.has_value())
+            {
+                auto const& capture_ids{optional_capture_ids.value()};
+                std::vector<std::pair<reg_id_t, reg_id_t>> register_pairs;
+                for (auto const capture_id : capture_ids) {
+                    auto const& optional_reg_id_pair{
+                            m_log_parser.m_lexer.get_reg_ids_from_capture_id(capture_id)
+                    };
+                    if (optional_reg_id_pair.has_value()) {
+                        register_pairs.push_back(optional_reg_id_pair.value());
+                    }
+                }
+                auto const tag_formatter = [&](capture_id_t id) {
+                    return "<" + m_log_parser.get_id_symbol(id) + ">";
+                };
+                token.add_context_to_logtype(register_pairs, capture_ids, tag_formatter, logtype);
+            } else {
+                logtype += "<" + m_log_parser.get_id_symbol(rule_id) + ">";
+            }
         }
     }
     return logtype;
