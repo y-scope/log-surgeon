@@ -355,6 +355,71 @@ TEST_CASE(
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2, expected_event3});
 }
 
+TEST_CASE("Test log parser with delimited variables", "[LogParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cVarSchema1{"function:[A-Za-z]+::[A-Za-z]+1"};
+    constexpr string_view cVarSchema2{R"(path:[a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+)"};
+    constexpr string_view cInput{
+            "[WARNING] A:2 [folder/file.cc:150] insert node:folder/file-op7, id:7 and "
+            "folder/file-op8, id:8\n"
+            "Perform App::Action App::Action1 ::App::Action::Action1 on word::my/path/to/file.txt"
+    };
+    ExpectedEvent const expected_event1{
+            .m_logtype{
+                    "[WARNING] A:2 [<path>:150] insert node:<path>, id:7 and <path>, id:8<newLine>"
+            },
+            .m_timestamp_raw{""},
+            .m_tokens{
+                    {{"[WARNING]", "", {}},
+                     {" A", "", {}},
+                     {":2", "", {}},
+                     {" ", "", {}},
+                     {"[folder/file.cc", "path", {}},
+                     {":150]", "", {}},
+                     {" insert", "", {}},
+                     {" node", "", {}},
+                     {":folder/file-op7", "path", {}},
+                     {",", "", {}},
+                     {" id", "", {}},
+                     {":7", "", {}},
+                     {" and", "", {}},
+                     {" folder/file-op8", "path", {}},
+                     {",", "", {}},
+                     {" id", "", {}},
+                     {":8", "", {}},
+                     {"\n", "newLine", {}}}
+            }
+    };
+    ExpectedEvent const expected_event2{
+            .m_logtype{"Perform App::Action <function> ::App::<function> on word::<path>"},
+            .m_timestamp_raw{""},
+            .m_tokens{
+                    {{"Perform", "", {}},
+                     {" App", "", {}},
+                     {":", "", {}},
+                     {":Action", "", {}},
+                     {" App::Action1", "function", {}},
+                     {" ", "", {}},
+                     {":", "", {}},
+                     {":App", "", {}},
+                     {":", "", {}},
+                     {":Action::Action1", "function", {}},
+                     {" on", "", {}},
+                     {" word", "", {}},
+                     {":", "", {}},
+                     {":my/path/to/file.txt", "path", {}}}
+            }
+    };
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cVarSchema1, -1);
+    schema.add_variable(cVarSchema2, -1);
+    BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
+
+    parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
+}
+
 // TODO: fix this case:
 /*
 TEST_CASE("Test capture group repetition and backtracking", "[LogParser]") {
