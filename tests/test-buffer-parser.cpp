@@ -622,17 +622,49 @@ TEST_CASE("Test buffer parser first token after newline #4", "[BufferParser]") {
 }
 
 // TODO: fix this case:
+/**
+ * @ingroup test_buffer_parser_newline_vars
+ *
+ * @brief Test capture group repetition and backtracking.
+ *
+ * @details
+ * This test checks `BufferParser`'s handling of a variable with a regex containing capture groups
+ * repeated multiple times. It verifies the positions of captured subgroups within the parsed token
+ * and ensures correct tokenization of the repeated pattern.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * myVar: ([A-Za-z]+=(?<val>[a-zA-Z0-9]+),){4}
+ * @endcode
+ *
+ * @section input Test Input
+ * @code
+ * "userID=123,age=30,height=70,weight=100,"
+ * @endcode
+ *
+* @section expected Expected Logtype
+ * @code
+ * "userID=<val>,age=<val>,height=<val>,weight=<val>,"
+ * @endcode
+ *
+ * @section expected Expected Tokenization
+ * @code
+ * "userID=123,age=30,height=70,weight=100," -> "keyValuePairs" with:
+ *   "123" -> "val", "30 -> "val", "70" -> "val", "100" -> "val"
+ * @endcode
+ */
 /*
-TEST_CASE("Test capture group repetition and backtracking", "[LogParser]") {
+TEST_CASE("Test buffer parser with capture group repetition and backtracking", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
-    constexpr string_view cVarSchema{"keyValuePair:([A-Za-z]+=(?<val>[a-zA-Z0-9]+),){4}"};
+    constexpr string_view cVarSchema{"keyValuePairs:([A-Za-z]+=(?<val>[a-zA-Z0-9]+),){4}"};
     constexpr string_view cInput{"userID=123,age=30,height=70,weight=100,"};
     ExpectedEvent const expected_event{
             .m_logtype{R"(userID=<val>,age=<val>,height=<val>,weight=<val>,)"},
             .m_timestamp_raw{""},
             .m_tokens{
                     {{"userID=123,age=30,height=70,weight=100,",
-                      "keyValuePair",
+                      "keyValuePairs",
                       {{{"val", {{35, 25, 15, 7}, {37, 27, 17, 10}}}}}}}
             }
     };
