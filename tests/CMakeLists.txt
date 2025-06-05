@@ -1,6 +1,7 @@
 add_executable(unit-test)
 target_sources(unit-test
     PRIVATE
+    test-buffer-parser.cpp
     test-capture.cpp
     test-dfa.cpp
     test-lexer.cpp
