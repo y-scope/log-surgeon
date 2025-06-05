@@ -29,12 +29,12 @@ public:
 
     /**
      * @param reg_id_pairs The registers id pairs indicating all capture locations in the token.
-     * @param capture_ids The id symbol for each capture corresponding to `reg_id_pairs`.
+     * @param capture_ids The ID for each capture corresponding to `reg_id_pairs`.
      * @param tag_formatter A formatting function for inserting the captured variables into the
      * logtype.
      * @param logtype Returns the updated logtype now containing the contextualized token.
      */
-    auto add_context_to_logtype(
+    auto append_context_to_logtype(
             std::vector<std::pair<reg_id_t, reg_id_t>> const& reg_id_pairs,
             std::vector<capture_id_t> const& capture_ids,
             std::function<std::string(capture_id_t)> const& tag_formatter,
