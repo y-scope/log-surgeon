@@ -27,7 +27,7 @@ auto Token::to_string_view() -> std::string_view {
     return {m_wrap_around_string};
 }
 
-void Token::add_context_to_logtype(
+void Token::append_context_to_logtype(
         std::vector<std::pair<reg_id_t, reg_id_t>> const& reg_id_pairs,
         std::vector<capture_id_t> const& capture_ids,
         std::function<std::string(capture_id_t)> const& tag_formatter,

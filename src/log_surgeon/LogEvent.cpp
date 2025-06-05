@@ -80,7 +80,7 @@ auto LogEventView::get_logtype() const -> std::string {
                 auto const tag_formatter = [&](capture_id_t id) {
                     return "<" + m_log_parser.get_id_symbol(id) + ">";
                 };
-                token.add_context_to_logtype(register_pairs, capture_ids, tag_formatter, logtype);
+                token.append_context_to_logtype(register_pairs, capture_ids, tag_formatter, logtype);
             } else {
                 logtype += "<" + m_log_parser.get_id_symbol(rule_id) + ">";
             }
