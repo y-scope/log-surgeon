@@ -63,7 +63,8 @@ auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
     for (unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* rule = dynamic_cast<SchemaVarAST*>(parser_ast.get());
         if (rule->m_name == "timestamp") {
-            unique_ptr<RegexAST<ByteNfaState>> first_timestamp_regex_ast(rule->m_regex_ptr->clone()
+            unique_ptr<RegexAST<ByteNfaState>> first_timestamp_regex_ast(
+                    rule->m_regex_ptr->clone()
             );
             unique_ptr<RegexASTLiteral<ByteNfaState>> r1
                     = make_unique<RegexASTLiteral<ByteNfaState>>(utf8::cCharStartOfFile);
@@ -74,8 +75,9 @@ auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
                             std::move(first_timestamp_regex_ast)
                     )
             );
-            unique_ptr<RegexAST<ByteNfaState>> newline_timestamp_regex_ast(rule->m_regex_ptr->clone(
-            ));
+            unique_ptr<RegexAST<ByteNfaState>> newline_timestamp_regex_ast(
+                    rule->m_regex_ptr->clone()
+            );
             unique_ptr<RegexASTLiteral<ByteNfaState>> r2
                     = make_unique<RegexASTLiteral<ByteNfaState>>('\n');
             add_rule(

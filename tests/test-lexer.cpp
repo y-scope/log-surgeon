@@ -8,9 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <catch2/catch_test_macros.hpp>
-#include <fmt/core.h>
-
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/Lexer.hpp>
@@ -19,6 +16,9 @@
 #include <log_surgeon/SchemaParser.hpp>
 #include <log_surgeon/Token.hpp>
 #include <log_surgeon/types.hpp>
+
+#include <catch2/catch_test_macros.hpp>
+#include <fmt/core.h>
 
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::Schema;
@@ -260,9 +260,9 @@ TEST_CASE("Test the Schema class", "[Schema]") {
         REQUIRE(0 == regex_ast_multiplication_ast->get_max());
         REQUIRE(regex_ast_multiplication_ast->is_infinite());
 
-        auto const* regex_ast_group_ast
-                = dynamic_cast<RegexASTGroupByte*>(regex_ast_multiplication_ast->get_operand().get()
-                );
+        auto const* regex_ast_group_ast = dynamic_cast<RegexASTGroupByte*>(
+                regex_ast_multiplication_ast->get_operand().get()
+        );
         REQUIRE(false == regex_ast_group_ast->is_wildcard());
         REQUIRE(1 == regex_ast_group_ast->get_ranges().size());
         REQUIRE('0' == regex_ast_group_ast->get_ranges().at(0).first);
@@ -380,8 +380,9 @@ TEST_CASE("Test Lexer with capture groups", "[Lexer]") {
     string const capture_name{cCaptureName};
     REQUIRE(lexer.m_symbol_id.contains(capture_name));
 
-    auto const optional_capture_ids{lexer.get_capture_ids_from_rule_id(lexer.m_symbol_id.at(var_name
-    ))};
+    auto const optional_capture_ids{
+            lexer.get_capture_ids_from_rule_id(lexer.m_symbol_id.at(var_name))
+    };
     REQUIRE(optional_capture_ids.has_value());
     REQUIRE(1 == optional_capture_ids.value().size());
     REQUIRE(lexer.m_symbol_id.at(capture_name) == optional_capture_ids.value().at(0));

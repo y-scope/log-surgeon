@@ -5,7 +5,6 @@
 #include <set>
 
 namespace log_surgeon::finite_automata {
-
 template <class T>
 auto UnicodeIntervalTree<T>::insert(Interval interval, T value) -> void {
     m_root = Node::insert(std::move(m_root), interval, value);
@@ -29,9 +28,7 @@ auto UnicodeIntervalTree<T>::Node::insert(std::unique_ptr<Node> node, Interval i
     node->update();
     return Node::balance(std::move(node));
 
-}
-
-template <typename T>
+} template <typename T>
 auto UnicodeIntervalTree<T>::all() const -> std::vector<typename UnicodeIntervalTree<T>::Data> {
     std::vector<Data> results;
     if (m_root != nullptr) {
@@ -52,8 +49,8 @@ auto UnicodeIntervalTree<T>::Node::all(std::vector<Data>* results) -> void {
 }
 
 template <typename T>
-auto UnicodeIntervalTree<T>::find(Interval interval
-) -> std::unique_ptr<std::vector<typename UnicodeIntervalTree<T>::Data>> {
+auto UnicodeIntervalTree<T>::find(Interval interval)
+        -> std::unique_ptr<std::vector<typename UnicodeIntervalTree<T>::Data>> {
     std::unique_ptr<std::vector<Data>> results(new std::vector<Data>);
     m_root->find(interval, results.get());
     return results;
@@ -76,8 +73,8 @@ auto UnicodeIntervalTree<T>::Node::find(Interval interval, std::vector<Data>* re
 }
 
 template <class T>
-auto UnicodeIntervalTree<T>::pop(Interval interval
-) -> std::unique_ptr<std::vector<typename UnicodeIntervalTree<T>::Data>> {
+auto UnicodeIntervalTree<T>::pop(Interval interval)
+        -> std::unique_ptr<std::vector<typename UnicodeIntervalTree<T>::Data>> {
     std::unique_ptr<std::vector<Data>> results(new std::vector<Data>);
     while (true) {
         std::unique_ptr<Node> n;
@@ -168,8 +165,8 @@ auto UnicodeIntervalTree<T>::Node::balance_factor() -> int {
 }
 
 template <class T>
-auto UnicodeIntervalTree<T>::Node::balance(std::unique_ptr<Node> node
-) -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
+auto UnicodeIntervalTree<T>::Node::balance(std::unique_ptr<Node> node)
+        -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
     auto const factor = node->balance_factor();
     if (factor * factor <= 1) {
         return node;
@@ -200,8 +197,8 @@ auto UnicodeIntervalTree<T>::Node::rotate(std::unique_ptr<Node> node, int factor
 }
 
 template <class T>
-auto UnicodeIntervalTree<T>::Node::rotate_cw(std::unique_ptr<Node> node
-) -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
+auto UnicodeIntervalTree<T>::Node::rotate_cw(std::unique_ptr<Node> node)
+        -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
     std::unique_ptr<Node> n(std::move(node->m_left));
     node->m_left.reset(n->m_right.release());
     n->m_right.reset(node.release());
@@ -211,8 +208,8 @@ auto UnicodeIntervalTree<T>::Node::rotate_cw(std::unique_ptr<Node> node
 }
 
 template <class T>
-auto UnicodeIntervalTree<T>::Node::rotate_ccw(std::unique_ptr<Node> node
-) -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
+auto UnicodeIntervalTree<T>::Node::rotate_ccw(std::unique_ptr<Node> node)
+        -> std::unique_ptr<typename UnicodeIntervalTree<T>::Node> {
     std::unique_ptr<Node> n(std::move(node->m_right));
     node->m_right.reset(n->m_left.release());
     n->m_left.reset(node.release());
