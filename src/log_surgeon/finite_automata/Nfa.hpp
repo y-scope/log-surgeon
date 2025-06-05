@@ -12,9 +12,6 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/core.h>
-#include <fmt/format.h>
-
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
@@ -22,6 +19,9 @@
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/types.hpp>
 #include <log_surgeon/UniqueIdGenerator.hpp>
+
+#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace log_surgeon::finite_automata {
 /**
@@ -101,8 +101,8 @@ public:
 
     [[nodiscard]] auto get_num_tags() const -> uint32_t { return m_tag_id_generator.get_num_ids(); }
 
-    [[nodiscard]] auto get_capture_to_tag_id_pair(
-    ) const -> std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> const& {
+    [[nodiscard]] auto get_capture_to_tag_id_pair() const
+            -> std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> const& {
         return m_capture_to_tag_id_pair;
     }
 
@@ -114,8 +114,8 @@ private:
      * - The start tag for the `capture`.
      * - The end tag for the `capture`.
      */
-    [[nodiscard]] auto get_or_create_capture_tag_pair(Capture const* capture
-    ) -> std::pair<tag_id_t, tag_id_t>;
+    [[nodiscard]] auto get_or_create_capture_tag_pair(Capture const* capture)
+            -> std::pair<tag_id_t, tag_id_t>;
 
     std::vector<std::unique_ptr<TypedNfaState>> m_states;
     // TODO: Lexer currently enforces unique naming across capture groups. However, this limits use
@@ -135,8 +135,8 @@ Nfa<TypedNfaState>::Nfa(std::vector<LexicalRule<TypedNfaState>> const& rules) {
 }
 
 template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::get_or_create_capture_tag_pair(Capture const* capture
-) -> std::pair<tag_id_t, tag_id_t> {
+auto Nfa<TypedNfaState>::get_or_create_capture_tag_pair(Capture const* capture)
+        -> std::pair<tag_id_t, tag_id_t> {
     if (false == m_capture_to_tag_id_pair.contains(capture)) {
         auto const start_tag{m_tag_id_generator.generate_id()};
         auto const end_tag{m_tag_id_generator.generate_id()};
@@ -152,12 +152,14 @@ auto Nfa<TypedNfaState>::new_state() -> TypedNfaState* {
 }
 
 template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::new_accepting_state(uint32_t const matching_variable_id
-) -> TypedNfaState* {
-    m_states.emplace_back(std::make_unique<TypedNfaState>(
-            m_state_id_generator.generate_id(),
-            matching_variable_id
-    ));
+auto Nfa<TypedNfaState>::new_accepting_state(uint32_t const matching_variable_id)
+        -> TypedNfaState* {
+    m_states.emplace_back(
+            std::make_unique<TypedNfaState>(
+                    m_state_id_generator.generate_id(),
+                    matching_variable_id
+            )
+    );
     return m_states.back().get();
 }
 
@@ -174,13 +176,15 @@ auto Nfa<TypedNfaState>::new_state_from_negative_captures(
         tags.push_back(end_tag);
     }
 
-    m_states.emplace_back(std::make_unique<TypedNfaState>(
-            m_state_id_generator.generate_id(),
-            TagOperationType::Negate,
-            std::move(tags),
-            dest_state,
-            multi_valued
-    ));
+    m_states.emplace_back(
+            std::make_unique<TypedNfaState>(
+                    m_state_id_generator.generate_id(),
+                    TagOperationType::Negate,
+                    std::move(tags),
+                    dest_state,
+                    multi_valued
+            )
+    );
     return m_states.back().get();
 }
 
@@ -198,13 +202,15 @@ auto Nfa<TypedNfaState>::new_start_and_end_states_from_positive_capture(
             start_state,
             multi_valued
     );
-    m_states.emplace_back(std::make_unique<TypedNfaState>(
-            m_state_id_generator.generate_id(),
-            TagOperationType::Set,
-            std::vector{end_tag},
-            dest_state,
-            multi_valued
-    ));
+    m_states.emplace_back(
+            std::make_unique<TypedNfaState>(
+                    m_state_id_generator.generate_id(),
+                    TagOperationType::Set,
+                    std::vector{end_tag},
+                    dest_state,
+                    multi_valued
+            )
+    );
     auto* end_state{m_states.back().get()};
     return {start_state, end_state};
 }

@@ -24,7 +24,7 @@ class DfaStatePair {
 public:
     DfaStatePair(TypedDfaState const* state1, TypedDfaState const* state2)
             : m_state1(state1),
-              m_state2(state2) {};
+              m_state2(state2) {}
 
     /**
      * @param rhs

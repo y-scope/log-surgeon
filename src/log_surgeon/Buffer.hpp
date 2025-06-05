@@ -78,8 +78,8 @@ public:
     }
 
     template <class T>
-    auto
-    read(T& reader, uint32_t read_offset, uint32_t bytes_to_read, size_t& bytes_read) -> ErrorCode {
+    auto read(T& reader, uint32_t read_offset, uint32_t bytes_to_read, size_t& bytes_read)
+            -> ErrorCode {
         static_assert(std::is_same_v<T, Reader>, "T should be a Reader");
         return reader.read(m_active_storage + read_offset, bytes_to_read, bytes_read);
     }

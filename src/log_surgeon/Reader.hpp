@@ -25,7 +25,6 @@ public:
      */
     std::function<ErrorCode(char*, size_t, size_t&)> read{};
 };
-
 }  // namespace log_surgeon
 
 #endif  // LOG_SURGEON_LIBRARY_READER_HPP

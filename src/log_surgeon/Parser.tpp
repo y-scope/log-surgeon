@@ -6,7 +6,6 @@
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 
 namespace log_surgeon {
-
 template <typename TypedNfaState, typename TypedDfaState>
 Parser<TypedNfaState, TypedDfaState>::Parser() {
     // TODO move clp-reserved symbols out of the parser

@@ -75,8 +75,8 @@ private:
          * @param value
          * @return std::unique_ptr<Node>
          */
-        static auto
-        insert(std::unique_ptr<Node> node, Interval interval, T value) -> std::unique_ptr<Node>;
+        static auto insert(std::unique_ptr<Node> node, Interval interval, T value)
+                -> std::unique_ptr<Node>;
 
         /**
          * Remove a node
@@ -94,8 +94,8 @@ private:
          * @param ret
          * @return std::unique_ptr<Node>
          */
-        static auto
-        pop_min(std::unique_ptr<Node> node, std::unique_ptr<Node>* ret) -> std::unique_ptr<Node>;
+        static auto pop_min(std::unique_ptr<Node> node, std::unique_ptr<Node>* ret)
+                -> std::unique_ptr<Node>;
 
         /**
          * Rotate a node by a factor

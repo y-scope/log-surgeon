@@ -2,9 +2,9 @@
 #include <stdexcept>
 #include <vector>
 
-#include <catch2/catch_test_macros.hpp>
-
 #include <log_surgeon/finite_automata/PrefixTree.hpp>
+
+#include <catch2/catch_test_macros.hpp>
 
 using log_surgeon::finite_automata::PrefixTree;
 using id_t = PrefixTree::id_t;

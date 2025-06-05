@@ -13,15 +13,15 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/core.h>
-#include <fmt/format.h>
-
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/NfaSpontaneousTransition.hpp>
 #include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 #include <log_surgeon/types.hpp>
+
+#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace log_surgeon::finite_automata {
 template <StateType state_type>
@@ -101,7 +101,8 @@ public:
      * @return Forwards `NfaSpontaneousTransition::serialize`'s return value (std::nullopt) on
      * failure.
      */
-    [[nodiscard]] auto serialize(std::unordered_map<NfaState const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(
+            std::unordered_map<NfaState const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
     [[nodiscard]] auto is_accepting() const -> bool const& { return m_accepting; }
@@ -112,8 +113,8 @@ public:
         return m_matching_variable_id;
     }
 
-    [[nodiscard]] auto get_spontaneous_transitions(
-    ) const -> std::vector<NfaSpontaneousTransition<NfaState>> const& {
+    [[nodiscard]] auto get_spontaneous_transitions() const
+            -> std::vector<NfaSpontaneousTransition<NfaState>> const& {
         return m_spontaneous_transitions;
     }
 
@@ -182,7 +183,8 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
 }
 
 template <StateType state_type>
-auto NfaState<state_type>::serialize(std::unordered_map<NfaState const*, uint32_t> const& state_ids
+auto NfaState<state_type>::serialize(
+        std::unordered_map<NfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     auto const accepting_tag_string{
             m_accepting ? fmt::format("accepting_tag={},", m_matching_variable_id) : ""

@@ -9,9 +9,9 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/format.h>
-
 #include <log_surgeon/finite_automata/TagOperation.hpp>
+
+#include <fmt/format.h>
 
 namespace log_surgeon::finite_automata {
 /**
@@ -36,7 +36,8 @@ public:
      * @return A string representation of the spontaneous transition on success.
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
-    [[nodiscard]] auto serialize(std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(
+            std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
 private:

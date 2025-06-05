@@ -1,3 +1,2 @@
-# Lock to v18.x until we can upgrade our code to meet v19's formatting standards.
-clang-format~=18.1
+clang-format>=20.1
 yamllint>=1.35.1

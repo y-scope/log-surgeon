@@ -70,8 +70,8 @@ public:
      * @param rule_id The ID of the rule to retrieve.
      * @return A pointer to the corresponding `RegexAST` object.
      */
-    [[nodiscard]] auto get_highest_priority_rule(uint32_t rule_id
-    ) -> finite_automata::RegexAST<TypedNfaState>*;
+    [[nodiscard]] auto get_highest_priority_rule(uint32_t rule_id)
+            -> finite_automata::RegexAST<TypedNfaState>*;
 
     /**
      * Generates the DFA for the lexer.
@@ -122,8 +122,8 @@ public:
      * @return ErrorCode::Success if a token is successfully scanned.
      * @throw runtime_error if the input buffer is about to overflow.
      */
-    auto
-    scan_with_wildcard(ParserInputBuffer& input_buffer, char wildcard, Token& token) -> ErrorCode;
+    auto scan_with_wildcard(ParserInputBuffer& input_buffer, char wildcard, Token& token)
+            -> ErrorCode;
 
     /**
      * Increases the capacity of the input buffer if it is not large enough to store an entire
@@ -138,8 +138,8 @@ public:
         return m_is_delimiter[byte];
     }
 
-    [[nodiscard]] auto get_dfa(
-    ) const -> std::unique_ptr<finite_automata::Dfa<TypedDfaState, TypedNfaState>> const& {
+    [[nodiscard]] auto get_dfa() const
+            -> std::unique_ptr<finite_automata::Dfa<TypedDfaState, TypedNfaState>> const& {
         return m_dfa;
     }
 
@@ -150,8 +150,8 @@ public:
      * @return A vector of capture IDs if the rule contains captures;
      * @return std::nullopt if no captures are found for the rule.
      */
-    [[nodiscard]] auto get_capture_ids_from_rule_id(rule_id_t const rule_id
-    ) const -> std::optional<std::vector<capture_id_t>> {
+    [[nodiscard]] auto get_capture_ids_from_rule_id(rule_id_t const rule_id) const
+            -> std::optional<std::vector<capture_id_t>> {
         if (m_rule_id_to_capture_ids.contains(rule_id)) {
             return m_rule_id_to_capture_ids.at(rule_id);
         }
@@ -163,8 +163,8 @@ public:
      * @return The start and end tag of the capture on success.
      * @return std::nullopt if no capture is associated with the given capture ID.
      */
-    [[nodiscard]] auto get_tag_id_pair_from_capture_id(capture_id_t const capture_id
-    ) const -> std::optional<std::pair<tag_id_t, tag_id_t>> {
+    [[nodiscard]] auto get_tag_id_pair_from_capture_id(capture_id_t const capture_id) const
+            -> std::optional<std::pair<tag_id_t, tag_id_t>> {
         if (m_capture_id_to_tag_id_pair.contains(capture_id)) {
             return m_capture_id_to_tag_id_pair.at(capture_id);
         }
@@ -177,8 +177,8 @@ public:
      * success.
      * @return std::nullopt if no tag is associated with the given tag ID.
      */
-    [[nodiscard]] auto get_reg_id_from_tag_id(tag_id_t const tag_id
-    ) const -> std::optional<reg_id_t> {
+    [[nodiscard]] auto get_reg_id_from_tag_id(tag_id_t const tag_id) const
+            -> std::optional<reg_id_t> {
         auto const& tag_id_to_final_reg_id{m_dfa->get_tag_id_to_final_reg_id()};
         if (tag_id_to_final_reg_id.contains(tag_id)) {
             return tag_id_to_final_reg_id.at(tag_id);
@@ -192,8 +192,8 @@ public:
      * @return A pair of register IDs corresponding to the start and end tags of the capture.
      * @return std::nullopt if no such capture is found.
      */
-    [[nodiscard]] auto get_reg_ids_from_capture_id(capture_id_t const capture_id
-    ) const -> std::optional<std::pair<reg_id_t, reg_id_t>> {
+    [[nodiscard]] auto get_reg_ids_from_capture_id(capture_id_t const capture_id) const
+            -> std::optional<std::pair<reg_id_t, reg_id_t>> {
         auto const optional_tag_id_pair{get_tag_id_pair_from_capture_id(capture_id)};
         if (false == optional_tag_id_pair.has_value()) {
             return std::nullopt;

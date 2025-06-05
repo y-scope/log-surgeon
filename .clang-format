@@ -27,9 +27,8 @@ AllowShortFunctionsOnASingleLine: "Inline"
 AllowShortIfStatementsOnASingleLine: "Never"
 AllowShortLambdasOnASingleLine: "All"
 AllowShortLoopsOnASingleLine: false
-AlwaysBreakAfterReturnType: "None"
+AllowShortNamespacesOnASingleLine: false
 AlwaysBreakBeforeMultilineStrings: false
-AlwaysBreakTemplateDeclarations: "Yes"
 BinPackArguments: false
 BinPackParameters: false
 BitFieldColonSpacing: "Both"
@@ -52,14 +51,18 @@ BraceWrapping:
   SplitEmptyNamespace: false
   SplitEmptyRecord: false
 BreakAfterAttributes: "Never"
+BreakAfterReturnType: "Automatic"
 BreakBeforeBinaryOperators: "All"
 BreakBeforeBraces: "Custom"
 BreakBeforeConceptDeclarations: "Always"
 BreakBeforeInlineASMColon: "OnlyMultiline"
 BreakBeforeTernaryOperators: true
+BreakBinaryOperations: "Never"
 BreakConstructorInitializers: "BeforeColon"
+BreakFunctionDefinitionParameters: false
 BreakInheritanceList: "BeforeColon"
 BreakStringLiterals: true
+BreakTemplateDeclarations: "Yes"
 CompactNamespaces: true
 ConstructorInitializerIndentWidth: 8
 ContinuationIndentWidth: 8
@@ -70,23 +73,10 @@ EmptyLineAfterAccessModifier: "Never"
 EmptyLineBeforeAccessModifier: "LogicalBlock"
 FixNamespaceComments: true
 IncludeBlocks: "Regroup"
-IncludeCategories:
-  # NOTE: A header is grouped by first matching regex
-  # Library headers. Update when adding new libraries.
-  - Regex: "<(Catch2|fmt)"
-    Priority: 3
-  # Project headers
-  - Regex: "^<log_surgeon"
-    Priority: 4
-  # C system headers
-  - Regex: "^<.+\\.h>"
-    Priority: 1
-  # C++ standard libraries
-  - Regex: "^<.+>"
-    Priority: 2
 IndentAccessModifiers: false
 IndentCaseBlocks: false
 IndentCaseLabels: true
+IndentExportBlock: true
 IndentExternBlock: "Indent"
 IndentGotoLabels: false
 IndentPPDirectives: "BeforeHash"
@@ -101,9 +91,14 @@ IntegerLiteralSeparator:
   DecimalMinDigits: 5
   Hex: 4
   HexMinDigits: 4
-KeepEmptyLinesAtTheStartOfBlocks: false
+KeepEmptyLines:
+  AtEndOfFile: true
+  AtStartOfBlock: false
+  AtStartOfFile: false
+KeepFormFeed: false
 LambdaBodyIndentation: "Signature"
 LineEnding: "LF"
+MainIncludeChar: "Quote"
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: "None"
 PPIndentWidth: -1
@@ -123,8 +118,9 @@ QualifierOrder:
   - "const"
   - "volatile"
 ReferenceAlignment: "Pointer"
-ReflowComments: true
+ReflowComments: "Always"
 RemoveBracesLLVM: false
+RemoveEmptyLinesInUnwrappedLines: true
 RemoveSemicolon: true
 RequiresClausePosition: "OwnLine"
 RequiresExpressionIndentation: "OuterScope"
@@ -153,6 +149,7 @@ SpacesInLineCommentPrefix:
   Maximum: -1
 SpacesInParens: "Custom"
 SpacesInParensOptions:
+  ExceptDoubleParentheses: false
   InConditionalStatements: false
   InCStyleCasts: false
   InEmptyParentheses: false
@@ -161,3 +158,4 @@ SpacesInSquareBrackets: false
 Standard: "Latest"
 TabWidth: 4
 UseTab: "Never"
+WrapNamespaceBodyWithEmptyLines: "Never"

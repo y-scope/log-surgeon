@@ -18,12 +18,9 @@ auto BufferParser::reset() -> void {
     m_done = false;
 }
 
-auto BufferParser::parse_next_event(
-        char* buf,
-        size_t size,
-        size_t& offset,
-        bool finished_reading_input
-) -> ErrorCode {
+auto
+BufferParser::parse_next_event(char* buf, size_t size, size_t& offset, bool finished_reading_input)
+        -> ErrorCode {
     m_log_parser.reset_log_event_view();
     // TODO in order to allow logs/tokens to wrap user buffers this function
     // will need more parameters or the input buffer may need to be exposed to

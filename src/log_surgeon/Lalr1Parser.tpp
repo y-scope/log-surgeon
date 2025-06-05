@@ -23,9 +23,11 @@ namespace {
                         [&line_num](Token& token) { line_num = token.m_line; },
                         [&symbols](NonTerminal& m) {
                             for (size_t i = 0; i < m.m_production->m_body.size(); i++) {
-                                symbols.push(std::move(
-                                        NonTerminal::m_all_children[m.m_children_start + i]
-                                ));
+                                symbols.push(
+                                        std::move(
+                                                NonTerminal::m_all_children[m.m_children_start + i]
+                                        )
+                                );
                             }
                         }
                 },
@@ -211,8 +213,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::lr_closure_helper(
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr0_closure(ItemSet* item_set_ptr
-) -> void {
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr0_closure(ItemSet* item_set_ptr)
+        -> void {
     std::deque<Item> q(
             item_set_ptr->m_kernel.begin(),
             item_set_ptr->m_kernel.end()
@@ -377,8 +379,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_item_sets() -> void
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_closure(ItemSet* item_set_ptr
-) -> void {
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_closure(ItemSet* item_set_ptr)
+        -> void {
     std::deque<Item> queue(item_set_ptr->m_kernel.begin(), item_set_ptr->m_kernel.end());
     while (!queue.empty()) {
         auto item = queue.back();
@@ -536,9 +538,11 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_after_last_newline(
                         [&parse_stack_matches](NonTerminal& m) {
                             for (size_t i = 0; i < m.m_production->m_body.size(); i++) {
                                 assert(m.m_children_start + i < cSizeOfAllChildren);
-                                parse_stack_matches.push(std::move(
-                                        NonTerminal::m_all_children[m.m_children_start + i]
-                                ));
+                                parse_stack_matches.push(
+                                        std::move(
+                                                NonTerminal::m_all_children[m.m_children_start + i]
+                                        )
+                                );
                             }
                         }
                 },
@@ -550,8 +554,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_after_last_newline(
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_until_next_newline(Token* error_token
-) -> std::string {
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_until_next_newline(Token* error_token)
+        -> std::string {
     std::string rest_of_line;
     bool next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd);
     bool next_has_newline = (error_token->to_string().find('\n') != std::string::npos)

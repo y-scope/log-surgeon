@@ -81,8 +81,8 @@ public:
         return m_lookahead < rhs.m_lookahead;
     }
 
-    auto child_configuration_with_new_state(TypedNfaState const* new_nfa_state
-    ) const -> DeterminizationConfiguration {
+    auto child_configuration_with_new_state(TypedNfaState const* new_nfa_state) const
+            -> DeterminizationConfiguration {
         return DeterminizationConfiguration(
                 new_nfa_state,
                 m_tag_id_to_reg_ids,
@@ -142,8 +142,8 @@ public:
 
     [[nodiscard]] auto get_lookahead() const -> std::vector<TagOperation> { return m_lookahead; }
 
-    [[nodiscard]] auto get_tag_lookahead(tag_id_t const tag_id
-    ) const -> std::optional<TagOperation> {
+    [[nodiscard]] auto get_tag_lookahead(tag_id_t const tag_id) const
+            -> std::optional<TagOperation> {
         for (auto const tag_op : m_lookahead) {
             if (tag_op.get_tag_id() == tag_id) {
                 return std::make_optional<TagOperation>(tag_op);
@@ -157,8 +157,8 @@ private:
      * @param unexplored_stack Returns the stack of configurations updated to contain configurations
      * reachable from this configuration via a single spontaneous transition.
      */
-    auto update_reachable_configs(std::stack<DeterminizationConfiguration>& unexplored_stack
-    ) const -> void;
+    auto update_reachable_configs(std::stack<DeterminizationConfiguration>& unexplored_stack) const
+            -> void;
 
     TypedNfaState const* m_nfa_state;
     std::map<tag_id_t, reg_id_t> m_tag_id_to_reg_ids;
@@ -185,8 +185,8 @@ auto DeterminizationConfiguration<TypedNfaState>::update_reachable_configs(
 }
 
 template <typename TypedNfaState>
-auto DeterminizationConfiguration<TypedNfaState>::spontaneous_closure(
-) const -> std::set<DeterminizationConfiguration> {
+auto DeterminizationConfiguration<TypedNfaState>::spontaneous_closure() const
+        -> std::set<DeterminizationConfiguration> {
     std::set<DeterminizationConfiguration> reachable_set;
     std::stack<DeterminizationConfiguration> unexplored_stack;
     unexplored_stack.push(*this);
