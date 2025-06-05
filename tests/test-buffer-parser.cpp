@@ -241,7 +241,7 @@ TEST_CASE("Test buffer parser without capture groups", "[BufferParser]") {
  * myVar:userID=(?<uid>123)
  * @endcode
  *
- * @section input Test Inputs
+ * @section input Test Input
  * @code
  * "userID=123 userID=234 userID=123 123 userID=123"
  * @endcode
@@ -318,7 +318,7 @@ TEST_CASE("Test buffer parser with capture groups", "[BufferParser]") {
  * hasNumber: ={0,1}[^ \r\n=]*\d[^ \r\n=]*={0,1}
  * @endcode
  *
- * @section input Test Inputs
+ * @section input Test Input
  * @code
  * "2012-12-12 12:12:12.123 123 123.123 abc userID=123 text user123"
  * @endcode
