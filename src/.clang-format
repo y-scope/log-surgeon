@@ -18,4 +18,3 @@ IncludeCategories:
   # Project relative headers
   - Regex: "^\".+\""
     Priority: 5
-
