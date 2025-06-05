@@ -324,7 +324,6 @@ TEST_CASE("Test log parser with CLP default schema", "[LogParser]") {
  * @endcode
  */
 TEST_CASE("Test buffer parser first token after newline #1", "[BufferParser]") {
->>>>>>> simulation-buffer-tests
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567\nText 1234567"};
