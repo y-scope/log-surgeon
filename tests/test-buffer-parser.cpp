@@ -621,7 +621,7 @@ TEST_CASE("Test buffer parser first token after newline #4", "[BufferParser]") {
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2, expected_event3});
 }
 
-TEST_CASE("Test log parser with delimited variables", "[LogParser]") {
+TEST_CASE("Test buffer parser with delimited variables", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema1{"function:[A-Za-z]+::[A-Za-z]+1"};
     constexpr string_view cVarSchema2{R"(path:[a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+)"};
