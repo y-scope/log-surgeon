@@ -161,7 +161,51 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
 
 }  // namespace
 
-TEST_CASE("Test log parser without capture groups", "[LogParser]") {
+/**
+ * @ingroup test_buffer_parser_no_capture
+ * @anchor test_buffer_parser_no_capture_groups
+ *
+ * @brief Tests the buffer parser behavior when parsing variables without capture groups.
+ *
+ * @details
+ * This test verifies that the buffer parser correctly matches exact variable patterns when
+ * no capture groups are involved. It confirms the parser:
+ * - Recognizes a variable exactly matching the defined schema ("myVar:userID=123").
+ * - Treats close but non-matching strings as uncaught tokens.
+ * - Correctly classifies tokens that don't match any variable schema as uncaught strings.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * myVar:userID=123
+ * @endcode
+ *
+ * @section input Test Inputs
+ * @code
+ * "userID=123 userID=234 userID=123 123 userID=123"
+ * @endcode
+ *
+ * @section expected Expected Logtype
+ * @code
+ * "<myVar> userID=234 <myVar> 123 <myVar>"
+ * @endcode
+ *
+ * @section expected Expected Tokenization
+ * @code
+ * "userID=123" -> "myVar"
+ * " userID=234" -> uncaught string
+ * " userID=123" -> "myVar"
+ * " 123" -> uncaught string
+ * " userID=123" -> "myVar"
+ * @endcode
+ *
+ * @note
+ * This test case ensures that without capture groups, only exact matches to the variable
+ * schema are classified accordingly, while other inputs fall back to the default token type.
+ *
+ * @test Category: BufferParser
+ */
+TEST_CASE("Test buffer parser without capture groups", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=123"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
