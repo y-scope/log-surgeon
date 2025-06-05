@@ -3,7 +3,7 @@
  */
 
 /**
- * @defgroup test_log_parser_no_capture Basic Variable Matching (No Capture Groups)
+ * @defgroup test_buffer_parser_no_capture Basic Variable Matching (No Capture Groups)
  * @brief Tests covering variable matching without regex capture groups.
  */
 
@@ -19,7 +19,7 @@
  *
  * Useful for validating advanced schema features like `(?<name>...)` integration.
  *
- * @see test_log_parser_no_capture for simpler variable matching.
+ * @see test_buffer_parser_no_capture for simpler variable matching.
  */
 
 /**
