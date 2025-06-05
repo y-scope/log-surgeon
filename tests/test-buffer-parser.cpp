@@ -643,7 +643,7 @@ TEST_CASE("Test buffer parser first token after newline #4", "[BufferParser]") {
  * "userID=123,age=30,height=70,weight=100,"
  * @endcode
  *
-* @section expected Expected Logtype
+ * @section expected Expected Logtype
  * @code
  * "userID=<val>,age=<val>,height=<val>,weight=<val>,"
  * @endcode
