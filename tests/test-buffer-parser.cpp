@@ -163,7 +163,6 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
 
 /**
  * @ingroup test_buffer_parser_no_capture
- * @anchor test_buffer_parser_no_capture_groups
  *
  * @brief Tests the buffer parser behavior when parsing variables without capture groups.
  *
@@ -229,10 +228,43 @@ TEST_CASE("Test buffer parser without capture groups", "[BufferParser]") {
     parse_and_validate(buffer_parser, cInput, {expected_event});
 }
 
-TEST_CASE(
-        "Test integer after static-text at start of newline when previous line ends in a variable",
-        "[LogParser]"
-) {
+/**
+ * @ingroup test_buffer_parser_newline_vars
+ *
+ * @brief Test variable after static-text at the start of a newline when previous line ends in a
+ * variable.
+ *
+ * @details
+ * This test verifies that when a line ends with a variable token and the next line starts with
+ * static text followed by an integer variable, the `BufferParser` correctly recognizes the newline
+ * as a delimiter and parses the tokens appropriately.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * int: \-{0,1}[0-9]+
+ * @endcode
+ *
+ * @section input Input Example
+ * @code
+ * "1234567\nText 1234567"
+ * @endcode
+ *
+ * @section expected Expected Logtype
+ * @code
+ * "<int><newLine>"
+ * "Text <int>"
+ * @endcode
+ *
+ * @section expected Expected Tokenization
+ * @code
+ * "1234567" -> "int"
+ * "\n" -> "newLine"
+ * "Text" -> uncaught string
+ * " 1234567" -> "int"
+ * @endcode
+ */
+TEST_CASE("Test buffer parser first token after newline #1", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567\nText 1234567"};
@@ -255,10 +287,44 @@ TEST_CASE(
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
 }
 
-TEST_CASE(
-        "Test integer after static-text at start of newline when previous line ends in static-text",
-        "[LogParser]"
-) {
+/**
+ * @ingroup test_buffer_parser_newline_vars
+ *
+ * @brief Test variable after static-text at start of newline when previous line ends in
+ * static-text.
+ *
+ * @details
+ * This test verifies that when a line ends with static text and the next line starts with static
+ * text followed by an integer variable, the `BufferParser` identifies the newline properly and
+ * tokenizes the input correctly.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * int: \-{0,1}[0-9]+
+ * @endcode
+ *
+ * @section input Input Example
+ * @code
+ * "1234567 abc\nText 1234567"
+ * @endcode
+ *
+ * @section expected Expected Logtype
+ * @code
+ * "<int> abc<newLine>"
+ * "Text <int>"
+ * @endcode
+ *
+ * @section expected Expected Tokenization
+ * @code
+ * "1234567" -> "int"
+ * " abc" -> uncaught string
+ * "\n" -> "newLine"
+ * "Text" -> uncaught string
+ * " 1234567" -> "int"
+ * @endcode
+ */
+TEST_CASE("Test buffer parser first token after newline #2", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\nText 1234567"};
@@ -281,10 +347,41 @@ TEST_CASE(
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
 }
 
-TEST_CASE(
-        "Test integer at start of newline when previous line ends in static-text",
-        "[LogParser]"
-) {
+/**
+ * @ingroup test_buffer_parser_newline_vars
+ *
+ * @brief Test variable at start of newline when previous line ends in static-text.
+ *
+ * @details
+ * This test verifies that when a line ends with static text and the next line starts directly with
+ * an integer variable, the `BufferParser` treats the newline and variable token correctly.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * int: \-{0,1}[0-9]+
+ * @endcode
+ *
+ * @section input Input Example
+ * @code
+ * "1234567 abc\n1234567"
+ * @endcode
+ *
+ * @section expected Expected Logtype
+ * @code
+ * "<int> abc\n"
+ * "<int>"
+ * @endcode
+ *
+ * @section expected Expected Tokenization
+ * @code
+ * "1234567" -> "int"
+ * " abc" -> uncaught string
+ * "\n" -> uncaught string
+ * "1234567" -> "int"
+ * @endcode
+ */
+TEST_CASE("Test buffer parser first token after newline #3", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\n1234567"};
@@ -307,10 +404,44 @@ TEST_CASE(
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
 }
 
-TEST_CASE(
-        "Test integer + newline at start of newline when previous line ends in static-text",
-        "[LogParser]"
-) {
+/**
+ * @ingroup test_buffer_parser_newline_vars
+ *
+ * @brief Test variable followed by newline at start of newline when previous line ends in
+ * static-text.
+ *
+ * @details
+ * This test verifies that when a line ends with static text, and the next line contains an integer
+ * variable followed by a newline, the `BufferParser` correctly separates the tokens, recognizing
+ * the newline delimiter.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * int: \-{0,1}[0-9]+
+ * @endcode
+ *
+ * @section input Input Example
+ * @code
+ * "1234567 abc\n1234567\n"
+ * @endcode
+ *
+ * @section expected Expected Logtype
+ * @code
+ * "<int> abc\n"
+ * "<int><newLine>"
+ * @endcode
+ *
+ * @section expected Expected Tokenization
+ * @code
+ * "1234567" -> "int"
+ * " abc" -> uncaught string
+ * "\n" -> uncaught string
+ * "1234567" -> "int"
+ * "\n" -> "newLine"
+ * @endcode
+ */
+TEST_CASE("Test buffer parser first token after newline #4", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\n1234567\n"};
