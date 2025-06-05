@@ -179,7 +179,7 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
  * myVar:userID=123
  * @endcode
  *
- * @section input Test Inputs
+ * @section input Test Input
  * @code
  * "userID=123 userID=234 userID=123 123 userID=123"
  * @endcode
@@ -239,7 +239,7 @@ TEST_CASE("Test buffer parser without capture groups", "[BufferParser]") {
  * int: \-{0,1}[0-9]+
  * @endcode
  *
- * @section input Input Example
+ * @section input Test Input
  * @code
  * "1234567\nText 1234567"
  * @endcode
@@ -260,7 +260,7 @@ TEST_CASE("Test buffer parser without capture groups", "[BufferParser]") {
  */
 TEST_CASE("Test buffer parser first token after newline #1", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
-    constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567\nText 1234567"};
     ExpectedEvent const expected_event1{
             .m_logtype{R"(<int><newLine>)"},
@@ -275,7 +275,7 @@ TEST_CASE("Test buffer parser first token after newline #1", "[BufferParser]") {
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
-    schema.add_variable(cRule, -1);
+    schema.add_variable(cVarSchema, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
@@ -298,7 +298,7 @@ TEST_CASE("Test buffer parser first token after newline #1", "[BufferParser]") {
  * int: \-{0,1}[0-9]+
  * @endcode
  *
- * @section input Input Example
+ * @section input Test Input
  * @code
  * "1234567 abc\nText 1234567"
  * @endcode
@@ -320,7 +320,7 @@ TEST_CASE("Test buffer parser first token after newline #1", "[BufferParser]") {
  */
 TEST_CASE("Test buffer parser first token after newline #2", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
-    constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\nText 1234567"};
     ExpectedEvent const expected_event1{
             .m_logtype{R"(<int> abc<newLine>)"},
@@ -335,7 +335,7 @@ TEST_CASE("Test buffer parser first token after newline #2", "[BufferParser]") {
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
-    schema.add_variable(cRule, -1);
+    schema.add_variable(cVarSchema, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
@@ -356,7 +356,7 @@ TEST_CASE("Test buffer parser first token after newline #2", "[BufferParser]") {
  * int: \-{0,1}[0-9]+
  * @endcode
  *
- * @section input Input Example
+ * @section input Test Input
  * @code
  * "1234567 abc\n1234567"
  * @endcode
@@ -377,7 +377,7 @@ TEST_CASE("Test buffer parser first token after newline #2", "[BufferParser]") {
  */
 TEST_CASE("Test buffer parser first token after newline #3", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
-    constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\n1234567"};
     ExpectedEvent const expected_event1{
             .m_logtype{"<int> abc\n"},
@@ -392,7 +392,7 @@ TEST_CASE("Test buffer parser first token after newline #3", "[BufferParser]") {
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
-    schema.add_variable(cRule, -1);
+    schema.add_variable(cVarSchema, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
@@ -415,7 +415,7 @@ TEST_CASE("Test buffer parser first token after newline #3", "[BufferParser]") {
  * int: \-{0,1}[0-9]+
  * @endcode
  *
- * @section input Input Example
+ * @section input Test Input
  * @code
  * "1234567 abc\n1234567\n"
  * @endcode
@@ -437,7 +437,7 @@ TEST_CASE("Test buffer parser first token after newline #3", "[BufferParser]") {
  */
 TEST_CASE("Test buffer parser first token after newline #4", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
-    constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\n1234567\n"};
     ExpectedEvent const expected_event1{
             .m_logtype{"<int> abc\n"},
@@ -453,7 +453,7 @@ TEST_CASE("Test buffer parser first token after newline #4", "[BufferParser]") {
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
-    schema.add_variable(cRule, -1);
+    schema.add_variable(cVarSchema, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2, expected_event3});
