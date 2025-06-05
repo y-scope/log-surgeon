@@ -621,6 +621,76 @@ TEST_CASE("Test buffer parser first token after newline #4", "[BufferParser]") {
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2, expected_event3});
 }
 
+/**
+ * @ingroup test_buffer_parser_delimited_variables
+ *
+ * @brief Tests `BufferParser` with delimited variables using a custom schema.
+ *
+ * @details
+ * This test verifies that the `LogParser` correctly handles variables separated by
+ * custom delimiters specified in the schema. The schema defines:
+ * - Delimiters as newline, carriage return, backslash, colon, comma, and parenthesis (`\n\r\[:,)`)
+ * - Variable `function` with regex `function:[A-Za-z]+::[A-Za-z]+1`
+ * - Variable `path` with regex `path:[a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+`
+ *
+ * The test inputs validate tokenization of strings containing these variables,
+ * ensuring variables are correctly identified and delimited tokens are separated.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * function: [A-Za-z]+::[A-Za-z]+1
+ * path: [a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+
+ * @endcode
+ *
+ * @section input Test Inputs
+ * @code
+ * "[WARNING] A:2 [folder/file.cc:150] insert node:folder/file-op7, id:7 and folder/file-op8, id:8\n
+ * Perform App::Action App::Action1 ::App::Action::Action1 on word::my/path/to/file.txt"
+ * @endcode
+ *
+ * @section expected Expected Logtype
+ * @code
+ * "[WARNING] A:2 [<path>:150] insert node:<path>, id:7 and <path>, id:8<newLine>"
+ * "Perform App::Action <function> ::App::<function> on word::<path>"
+ * @endcode
+ *
+ * @section expected Expected Tokenization
+ * @code
+ * "[WARNING]" -> uncaught string
+ * " A" -> uncaught string
+ * ":2" -> uncaught string
+ * " " -> uncaught string
+ * "[folder/file.cc" -> "path"
+ * ":150]" -> uncaught string
+ * " insert" -> uncaught string
+ * " node" -> uncaught string
+ * :folder/file-op7 -> "path"
+ * "," -> uncaught string
+ * " id" -> uncaught string
+ * ":7" -> uncaught string
+ * " and" -> uncaught string
+ * " folder/file-op8" -> "path"
+ * "," -> uncaught string
+ * " id" -> uncaught string
+ * ":8" -> uncaught string
+ * "\n" -> "newLine"
+ * "Perform" -> uncaught string
+ * " App" -> uncaught string
+ * ":" -> uncaught string
+ * ":Action" -> uncaught string
+ * " App::Action1" -> "function"
+ * " " -> uncaught string
+ * ":" -> uncaught string
+ * ":App" -> uncaught string
+ * ":" -> uncaught string
+ * ":Action::Action1" -> "function"
+ * " on" -> uncaught string
+ * " word" -> uncaught string
+ * ":" -> uncaught string
+ * ":my/path/to/file.txt" -> "path"
+ * @endcode
+ */
 TEST_CASE("Test buffer parser with delimited variables", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema1{"function:[A-Za-z]+::[A-Za-z]+1"};
