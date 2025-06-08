@@ -6,7 +6,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <gsl/pointers>
 #include <memory>
 #include <ranges>
 #include <stdexcept>
@@ -23,6 +22,7 @@
 #include <fmt/core.h>
 #include <fmt/ranges.h>
 #include <fmt/xchar.h>
+#include <gsl/pointers>
 
 namespace log_surgeon::finite_automata {
 template <typename TypedNfaState>
