@@ -6,7 +6,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <gsl/pointers>
 #include <memory>
 #include <ranges>
 #include <stdexcept>
@@ -15,14 +14,15 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/core.h>
-#include <fmt/ranges.h>
-#include <fmt/xchar.h>
-
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
+
+#include <fmt/core.h>
+#include <fmt/ranges.h>
+#include <fmt/xchar.h>
+#include <gsl/pointers>
 
 namespace log_surgeon::finite_automata {
 template <typename TypedNfaState>
@@ -61,8 +61,9 @@ public:
      * lexer rule
      * @param is_possible_input
      */
-    virtual auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
-    ) const -> void = 0;
+    virtual auto
+    set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input) const -> void
+            = 0;
 
     /**
      * transform '.' from any-character into any non-delimiter in a lexer rule
@@ -87,7 +88,8 @@ public:
             Nfa<TypedNfaState>* nfa,
             TypedNfaState* end_state,
             bool descendent_of_repetition
-    ) const -> void = 0;
+    ) const -> void
+            = 0;
 
     /**
      * Serializes the AST with this node as the root.
@@ -99,13 +101,13 @@ public:
         return m_subtree_positive_captures;
     }
 
-    auto set_subtree_positive_captures(std::vector<Capture const*> subtree_positive_captures
-    ) -> void {
+    auto set_subtree_positive_captures(std::vector<Capture const*> subtree_positive_captures)
+            -> void {
         m_subtree_positive_captures = std::move(subtree_positive_captures);
     }
 
-    auto add_subtree_positive_captures(std::vector<Capture const*> const& subtree_positive_captures
-    ) -> void {
+    auto add_subtree_positive_captures(std::vector<Capture const*> const& subtree_positive_captures)
+            -> void {
         m_subtree_positive_captures.insert(
                 m_subtree_positive_captures.end(),
                 subtree_positive_captures.cbegin(),
@@ -202,8 +204,8 @@ public:
         // Do nothing as an empty node contains no utf8 characters.
     }
 
-    auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters
-    ) -> void override {
+    auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters)
+            -> void override {
         // Do nothing as an empty node contains no delimiters.
     }
 
@@ -236,8 +238,8 @@ public:
      * lexer rule containing RegexASTLiteral at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
-    ) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input) const
+            -> void override {
         is_possible_input[m_character] = true;
     }
 
@@ -246,8 +248,8 @@ public:
      * nothing as RegexASTLiteral is a leaf node that is not a RegexASTGroup
      * @param delimiters
      */
-    auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters
-    ) -> void override {
+    auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters)
+            -> void override {
         // Do nothing
     }
 
@@ -285,8 +287,8 @@ public:
      * lexer rule containing RegexASTInteger at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
-    ) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input) const
+            -> void override {
         for (uint32_t const i : m_digits) {
             is_possible_input.at('0' + i) = true;
         }
@@ -297,8 +299,8 @@ public:
      * nothing as RegexASTInteger is a leaf node that is not a RegexASTGroup
      * @param delimiters
      */
-    auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters
-    ) -> void override {
+    auto remove_delimiters_from_wildcard([[maybe_unused]] std::vector<uint32_t>& delimiters)
+            -> void override {
         // Do nothing
     }
 
@@ -355,8 +357,8 @@ public:
      * lexer rule containing RegexASTGroup at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
-    ) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input) const
+            -> void override {
         if (!m_negate) {
             for (auto const& [begin, end] : m_ranges) {
                 for (uint32_t i = begin; i <= end; i++) {
@@ -477,8 +479,8 @@ public:
      * lexer rule containing RegexASTOr at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
-    ) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input) const
+            -> void override {
         m_left->set_possible_inputs_to_true(is_possible_input);
         m_right->set_possible_inputs_to_true(is_possible_input);
     }
@@ -538,8 +540,8 @@ public:
      * lexer rule containing RegexASTCat at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
-    ) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input) const
+            -> void override {
         m_left->set_possible_inputs_to_true(is_possible_input);
         m_right->set_possible_inputs_to_true(is_possible_input);
     }
@@ -601,8 +603,8 @@ public:
      * lexer rule containing RegexASTMultiplication at a leaf node in its AST
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
-    ) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input) const
+            -> void override {
         m_operand->set_possible_inputs_to_true(is_possible_input);
     }
 
@@ -698,8 +700,8 @@ public:
      * lexer rule containing `RegexASTCapture` at a leaf node in its AST.
      * @param is_possible_input
      */
-    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input
-    ) const -> void override {
+    auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input) const
+            -> void override {
         m_capture_regex_ast->set_possible_inputs_to_true(is_possible_input);
     }
 
@@ -724,8 +726,8 @@ public:
         return m_capture->get_name();
     }
 
-    [[nodiscard]] auto get_capture_regex_ast(
-    ) const -> std::unique_ptr<RegexAST<TypedNfaState>> const& {
+    [[nodiscard]] auto get_capture_regex_ast() const
+            -> std::unique_ptr<RegexAST<TypedNfaState>> const& {
         return m_capture_regex_ast;
     }
 
@@ -802,7 +804,8 @@ RegexASTOr<TypedNfaState>::RegexASTOr(
     m_left->set_negative_captures(m_right->get_subtree_positive_captures());
     m_right->set_negative_captures(m_left->get_subtree_positive_captures());
     RegexAST<TypedNfaState>::set_subtree_positive_captures(m_left->get_subtree_positive_captures());
-    RegexAST<TypedNfaState>::add_subtree_positive_captures(m_right->get_subtree_positive_captures()
+    RegexAST<TypedNfaState>::add_subtree_positive_captures(
+            m_right->get_subtree_positive_captures()
     );
 }
 
@@ -834,7 +837,8 @@ RegexASTCat<TypedNfaState>::RegexASTCat(
         : m_left(std::move(left)),
           m_right(std::move(right)) {
     RegexAST<TypedNfaState>::set_subtree_positive_captures(m_left->get_subtree_positive_captures());
-    RegexAST<TypedNfaState>::add_subtree_positive_captures(m_right->get_subtree_positive_captures()
+    RegexAST<TypedNfaState>::add_subtree_positive_captures(
+            m_right->get_subtree_positive_captures()
     );
 }
 
@@ -871,8 +875,9 @@ RegexASTMultiplication<TypedNfaState>::RegexASTMultiplication(
         : m_operand(std::move(operand)),
           m_min(min),
           m_max(max) {
-    RegexAST<TypedNfaState>::set_subtree_positive_captures(m_operand->get_subtree_positive_captures(
-    ));
+    RegexAST<TypedNfaState>::set_subtree_positive_captures(
+            m_operand->get_subtree_positive_captures()
+    );
 }
 
 template <typename TypedNfaState>
@@ -996,9 +1001,11 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(
         RegexASTLiteral<TypedNfaState> const* right
 ) {
     if (right == nullptr) {
-        throw std::runtime_error("RegexASTGroup1: right == nullptr: A bracket expression in the "
-                                 "schema contains illegal characters, remember to escape special "
-                                 "characters. Refer to README-Schema.md for more details.");
+        throw std::runtime_error(
+                "RegexASTGroup1: right == nullptr: A bracket expression in the schema contains"
+                " illegal characters, remember to escape special characters. Refer to"
+                " README-Schema.md for more details."
+        );
     }
     m_negate = left->m_negate;
     m_ranges = left->m_ranges;
@@ -1016,9 +1023,11 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTGroup const* left, RegexASTG
 template <typename TypedNfaState>
 RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTLiteral<TypedNfaState> const* right) {
     if (right == nullptr) {
-        throw std::runtime_error("RegexASTGroup2: right == nullptr: A bracket expression in the "
-                                 "schema contains illegal characters, remember to escape special "
-                                 "characters. Refer to README-Schema.md for more details.");
+        throw std::runtime_error(
+                "RegexASTGroup2: right == nullptr: A bracket expression in the schema contains"
+                " illegal characters, remember to escape special characters. Refer to"
+                " README-Schema.md for more details."
+        );
     }
     m_negate = false;
     m_ranges.emplace_back(right->get_character(), right->get_character());
@@ -1083,8 +1092,8 @@ auto RegexASTGroup<TypedNfaState>::merge(std::vector<Range> const& ranges) -> st
 
 // ranges must be sorted and non-overlapping
 template <typename TypedNfaState>
-auto RegexASTGroup<TypedNfaState>::complement(std::vector<Range> const& ranges
-) -> std::vector<Range> {
+auto RegexASTGroup<TypedNfaState>::complement(std::vector<Range> const& ranges)
+        -> std::vector<Range> {
     std::vector<Range> complemented;
     uint32_t low = 0;
     for (auto const& [begin, end] : ranges) {
