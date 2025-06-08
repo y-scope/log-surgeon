@@ -1002,9 +1002,9 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(
 ) {
     if (right == nullptr) {
         throw std::runtime_error(
-                "RegexASTGroup1: right == nullptr: A bracket expression in the "
-                "schema contains illegal characters, remember to escape special "
-                "characters. Refer to README-Schema.md for more details."
+                "RegexASTGroup1: right == nullptr: A bracket expression in the schema contains"
+                " illegal characters, remember to escape special characters. Refer to"
+                " README-Schema.md for more details."
         );
     }
     m_negate = left->m_negate;
@@ -1024,9 +1024,9 @@ template <typename TypedNfaState>
 RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTLiteral<TypedNfaState> const* right) {
     if (right == nullptr) {
         throw std::runtime_error(
-                "RegexASTGroup2: right == nullptr: A bracket expression in the "
-                "schema contains illegal characters, remember to escape special "
-                "characters. Refer to README-Schema.md for more details."
+                "RegexASTGroup2: right == nullptr: A bracket expression in the schema contains"
+                " illegal characters, remember to escape special characters. Refer to"
+                " README-Schema.md for more details."
         );
     }
     m_negate = false;
