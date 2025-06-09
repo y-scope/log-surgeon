@@ -88,6 +88,7 @@ tasks:
           EXCLUDE_PATTERNS:
             - "{{.ROOT_DIR}}/src/log_surgeon/Buffer.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/BufferParser.cpp"
+            - "{{.ROOT_DIR}}/src/log_surgeon/BufferParser.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/Constants.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/FileReader.cpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/FileReader.hpp"
