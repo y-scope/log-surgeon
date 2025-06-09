@@ -16,7 +16,7 @@ tasks:
   check:
     cmds:
       - task: "check-cpp-full"
-      - task: "yaml-check"
+      - task: "check-yaml"
 
   check-cpp-diff:
     cmds:
@@ -129,10 +129,27 @@ tasks:
           ROOT_PATHS: ["{{.ROOT_DIR}}"]
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
+  check-yaml:
+    aliases:
+      - "fix-yaml"
+    deps:
+      - "venv"
+    cmds:
+      - |-
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
+        yamllint \
+          --config-file "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml" \
+          --strict \
+          .coderabbit.yaml \
+          .github \
+          .clang-format \
+          taskfile.yaml \
+          {{.TASKFILE}}
+
   fix:
     cmds:
       - task: "fix-cpp-full"
-      - task: "yaml-fix"
+      - task: "fix-yaml"
 
   fix-cpp-diff:
     cmds:
@@ -156,24 +173,6 @@ tasks:
           INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.tpp"]
           ROOT_PATHS: *cpp_source_files
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
-
-  yaml:
-    aliases:
-      - "yaml-check"
-      - "yaml-fix"
-    deps:
-      - "venv"
-    cmds:
-      - |-
-        . "{{.G_LINT_VENV_DIR}}/bin/activate"
-        yamllint \
-          --config-file "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml" \
-          --strict \
-          .coderabbit.yaml \
-          .github \
-          .clang-format \
-          taskfile.yaml \
-          {{.TASKFILE}}
 
   cpp-lint-configs:
     internal: true
