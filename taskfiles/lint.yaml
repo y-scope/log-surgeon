@@ -108,6 +108,7 @@ tasks:
             - "{{.ROOT_DIR}}/src/log_surgeon/ParserInputBuffer.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/Reader.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/ReaderParser.cpp"
+            - "{{.ROOT_DIR}}/src/log_surgeon/ReaderParser.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/SchemaParser.cpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/SchemaParser.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/Token.cpp"
