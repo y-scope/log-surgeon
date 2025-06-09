@@ -18,12 +18,6 @@ tasks:
       - task: "check-cpp-full"
       - task: "yaml-check"
 
-  check-cmake:
-    cmds:
-      - task: "gersemi"
-        vars:
-          FLAGS: "--check"
-
   check-cpp-diff:
     cmds:
       - task: "check-cpp-format"
