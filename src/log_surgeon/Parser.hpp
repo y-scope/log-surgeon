@@ -4,7 +4,6 @@
 #include <log_surgeon/Lexer.hpp>
 
 namespace log_surgeon {
-
 template <typename TypedNfaState, typename TypedDfaState>
 class Parser {
 public:

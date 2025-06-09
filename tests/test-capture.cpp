@@ -1,8 +1,8 @@
 #include <utility>
 
-#include <catch2/catch_test_macros.hpp>
-
 #include <log_surgeon/finite_automata/Capture.hpp>
+
+#include <catch2/catch_test_macros.hpp>
 
 using log_surgeon::finite_automata::Capture;
 
