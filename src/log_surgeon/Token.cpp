@@ -4,7 +4,6 @@
 #include <string_view>
 
 namespace log_surgeon {
-
 auto Token::to_string() -> std::string {
     if (m_start_pos <= m_end_pos) {
         return {m_buffer + m_start_pos, m_buffer + m_end_pos};

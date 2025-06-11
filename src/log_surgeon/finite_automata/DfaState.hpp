@@ -12,14 +12,14 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fmt/core.h>
-#include <fmt/format.h>
-
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/DfaTransition.hpp>
 #include <log_surgeon/finite_automata/RegisterOperation.hpp>
 #include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
+
+#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace log_surgeon::finite_automata {
 template <StateType state_type>
@@ -60,15 +60,16 @@ public:
      * @return A string representation of the DFA state.
      * @return Forwards `DfaTransition::serialize`'s return value (std::nullopt) on failure.
      */
-    [[nodiscard]] auto serialize(std::unordered_map<DfaState const*, uint32_t> const& state_ids
+    [[nodiscard]] auto serialize(
+            std::unordered_map<DfaState const*, uint32_t> const& state_ids
     ) const -> std::optional<std::string>;
 
     /**
      * @param character The character (byte or utf8) to transition on.
      * @return The transition, which contains the register operations and destination state.
      */
-    [[nodiscard]] auto get_transition(uint8_t character
-    ) const -> std::optional<DfaTransition<state_type>> const&;
+    [[nodiscard]] auto get_transition(uint8_t character) const
+            -> std::optional<DfaTransition<state_type>> const&;
 
     [[nodiscard]] auto get_accepting_reg_ops() const -> std::vector<RegisterOperation> const& {
         return m_accepting_ops;
@@ -85,13 +86,14 @@ private:
 
 // TODO: Handle UTF-8.
 template <>
-[[nodiscard]] inline auto DfaState<StateType::Byte>::get_transition(uint8_t const character
-) const -> std::optional<DfaTransition<StateType::Byte>> const& {
+[[nodiscard]] inline auto DfaState<StateType::Byte>::get_transition(uint8_t const character) const
+        -> std::optional<DfaTransition<StateType::Byte>> const& {
     return m_bytes_transition[character];
 }
 
 template <StateType state_type>
-auto DfaState<state_type>::serialize(std::unordered_map<DfaState const*, uint32_t> const& state_ids
+auto DfaState<state_type>::serialize(
+        std::unordered_map<DfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
     auto const accepting_tags_string{
             is_accepting()

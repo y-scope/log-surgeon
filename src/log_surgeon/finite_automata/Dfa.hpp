@@ -16,9 +16,6 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/core.h>
-#include <fmt/format.h>
-
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/DeterminizationConfiguration.hpp>
 #include <log_surgeon/finite_automata/DfaStatePair.hpp>
@@ -27,6 +24,9 @@
 #include <log_surgeon/finite_automata/RegisterOperation.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/Token.hpp>
+
+#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace log_surgeon::finite_automata {
 /**
@@ -172,10 +172,9 @@ private:
      * @return The register mapping if a bijection is possible.
      * @return std::nullopt otherwise.
      */
-    [[nodiscard]] static auto try_get_mapping(
-            ConfigurationSet const& lhs,
-            ConfigurationSet const& rhs
-    ) -> std::optional<std::unordered_map<reg_id_t, reg_id_t>>;
+    [[nodiscard]] static auto
+    try_get_mapping(ConfigurationSet const& lhs, ConfigurationSet const& rhs)
+            -> std::optional<std::unordered_map<reg_id_t, reg_id_t>>;
 
     /**
      * Creates a DFA state based on the given config set if the config does not already exist and
@@ -608,8 +607,8 @@ auto Dfa<TypedDfaState, TypedNfaState>::new_state(
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
-auto Dfa<TypedDfaState, TypedNfaState>::get_intersect(Dfa const* dfa_in
-) const -> std::set<uint32_t> {
+auto Dfa<TypedDfaState, TypedNfaState>::get_intersect(Dfa const* dfa_in) const
+        -> std::set<uint32_t> {
     std::set<uint32_t> schema_types;
     std::set<DfaStatePair<TypedDfaState>> unvisited_pairs;
     std::set<DfaStatePair<TypedDfaState>> visited_pairs;
@@ -629,8 +628,8 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_intersect(Dfa const* dfa_in
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
-auto Dfa<TypedDfaState, TypedNfaState>::get_bfs_traversal_order(
-) const -> std::vector<TypedDfaState const*> {
+auto Dfa<TypedDfaState, TypedNfaState>::get_bfs_traversal_order() const
+        -> std::vector<TypedDfaState const*> {
     std::queue<TypedDfaState const*> state_queue;
     std::unordered_set<TypedDfaState const*> visited_states;
     std::vector<TypedDfaState const*> visited_order;
