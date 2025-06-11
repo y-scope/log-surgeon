@@ -40,8 +40,8 @@ public:
         m_registers.at(reg_id) = m_prefix_tree.insert(node_id, position);
     }
 
-    [[nodiscard]] auto get_reversed_positions(reg_id_t const reg_id
-    ) const -> std::vector<PrefixTree::position_t> {
+    [[nodiscard]] auto get_reversed_positions(reg_id_t const reg_id) const
+            -> std::vector<PrefixTree::position_t> {
         return m_prefix_tree.get_reversed_positions(m_registers.at(reg_id));
     }
 

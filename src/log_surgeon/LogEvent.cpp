@@ -49,7 +49,6 @@ auto LogEventView::reset() -> void {
 }
 
 auto LogEventView::get_logtype() const -> std::string {
-    // TODO: reserve logtype size as the raw log event?
     std::string logtype;
     for (uint32_t i{1}; i < m_log_output_buffer->pos(); ++i) {
         auto& token{m_log_output_buffer->get_mutable_token(i)};
