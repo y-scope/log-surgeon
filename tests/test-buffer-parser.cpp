@@ -4,9 +4,6 @@
 #include <utility>
 #include <vector>
 
-#include <catch2/catch_test_macros.hpp>
-#include <fmt/core.h>
-
 #include <log_surgeon/BufferParser.hpp>
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/Lexer.hpp>
@@ -15,6 +12,9 @@
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 #include <log_surgeon/types.hpp>
+
+#include <catch2/catch_test_macros.hpp>
+#include <fmt/core.h>
 
 using log_surgeon::BufferParser;
 using log_surgeon::capture_id_t;
@@ -82,8 +82,9 @@ auto parse_and_validate(
     size_t buffer_offset{0};
     for (auto const& [expected_logtype, expected_timestamp_raw, expected_tokens] : expected_events)
     {
-        auto err{buffer_parser
-                         .parse_next_event(input_str.data(), input_str.size(), buffer_offset, true)
+        auto err{
+                buffer_parser
+                        .parse_next_event(input_str.data(), input_str.size(), buffer_offset, true)
         };
         REQUIRE(ErrorCode::Success == err);
         auto const& event{buffer_parser.get_log_parser().get_log_event_view()};
@@ -136,7 +137,8 @@ auto parse_and_validate(
                         return;
                     }
                     auto const [start_reg_id, end_reg_id]{optional_reg_ids.value()};
-                    auto const actual_start_positions{token.get_reversed_reg_positions(start_reg_id)
+                    auto const actual_start_positions{
+                            token.get_reversed_reg_positions(start_reg_id)
                     };
                     auto const actual_end_positions{token.get_reversed_reg_positions(end_reg_id)};
                     auto const [expected_start_positions, expected_end_positions]{
@@ -158,7 +160,6 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
     }
     return serialized_map;
 }
-
 }  // namespace
 
 /**
@@ -837,7 +838,7 @@ TEST_CASE("Test buffer parser with delimited variables", "[BufferParser]") {
  * "userID=123,age=30,height=70,weight=100,"
  * @endcode
  *
-* @section expected Expected Logtype
+ * @section expected Expected Logtype
  * @code
  * "userID=<val>,age=<val>,height=<val>,weight=<val>,"
  * @endcode

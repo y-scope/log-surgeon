@@ -110,7 +110,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer
             // The newline character itself needs to be treated as a match for non-timestamped logs.
             // TODO: This block is a mess and also wrong if variables contain a central newline.
             if (m_has_delimiters && false == m_match) {
-                state = {m_dfa->get_root()->get_transition(next_char)->get_dest_state()};
+                state = m_dfa->get_root()->get_transition(next_char)->get_dest_state();
                 m_dfa->reset();
                 m_dfa->process_char(next_char, prev_byte_buf_pos);
                 m_match = true;
@@ -277,8 +277,9 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
         if (next_char == '\n') {
             m_line++;
             if (m_has_delimiters && !m_match) {
-                auto const* dest_state{m_dfa->get_root()->get_transition(next_char)->get_dest_state(
-                )};
+                auto const* dest_state{
+                        m_dfa->get_root()->get_transition(next_char)->get_dest_state()
+                };
                 m_match = true;
                 m_type_ids = &(dest_state->get_matching_variable_ids());
                 m_start_pos = prev_byte_buf_pos;
@@ -370,8 +371,8 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lexer<TypedNfaState, TypedDfaState>::increase_buffer_capacity(ParserInputBuffer& input_buffer
-) -> void {
+auto Lexer<TypedNfaState, TypedDfaState>::increase_buffer_capacity(ParserInputBuffer& input_buffer)
+        -> void {
     uint32_t old_storage_size{0};
     bool flipped_static_buffer{false};
     input_buffer.increase_capacity(old_storage_size, flipped_static_buffer);
@@ -402,8 +403,8 @@ void Lexer<TypedNfaState, TypedDfaState>::reset() {
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-void Lexer<TypedNfaState, TypedDfaState>::prepend_start_of_file_char(ParserInputBuffer& input_buffer
-) {
+void
+Lexer<TypedNfaState, TypedDfaState>::prepend_start_of_file_char(ParserInputBuffer& input_buffer) {
     m_prev_state = m_dfa->get_root()->get_transition(utf8::cCharStartOfFile)->get_dest_state();
     m_asked_for_more_data = true;
     m_start_pos = input_buffer.storage().pos();
@@ -434,8 +435,8 @@ void Lexer<TypedNfaState, TypedDfaState>::add_rule(
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lexer<TypedNfaState, TypedDfaState>::get_highest_priority_rule(rule_id_t const rule_id
-) -> finite_automata::RegexAST<TypedNfaState>* {
+auto Lexer<TypedNfaState, TypedDfaState>::get_highest_priority_rule(rule_id_t const rule_id)
+        -> finite_automata::RegexAST<TypedNfaState>* {
     for (auto const& rule : m_rules) {
         if (rule.get_variable_id() == rule_id) {
             return rule.get_regex();
@@ -450,7 +451,8 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
         for (auto const* capture : rule.get_captures()) {
             std::string const capture_name{capture->get_name()};
             if (m_symbol_id.contains(capture_name)) {
-                throw std::invalid_argument("`m_rules` contains capture names that are not unique."
+                throw std::invalid_argument(
+                        "`m_rules` contains capture names that are not unique."
                 );
             }
             auto const capture_id{m_symbol_id.size()};

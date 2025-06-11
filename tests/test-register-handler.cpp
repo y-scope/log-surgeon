@@ -2,10 +2,10 @@
 #include <stdexcept>
 #include <vector>
 
-#include <catch2/catch_test_macros.hpp>
-
 #include <log_surgeon/finite_automata/PrefixTree.hpp>
 #include <log_surgeon/finite_automata/RegisterHandler.hpp>
+
+#include <catch2/catch_test_macros.hpp>
 
 using log_surgeon::finite_automata::RegisterHandler;
 using position_t = log_surgeon::finite_automata::PrefixTree::position_t;

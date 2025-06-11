@@ -8,11 +8,11 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/core.h>
-#include <fmt/format.h>
-
 #include <log_surgeon/finite_automata/RegisterOperation.hpp>
 #include <log_surgeon/finite_automata/StateType.hpp>
+
+#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace log_surgeon::finite_automata {
 template <StateType state_type>

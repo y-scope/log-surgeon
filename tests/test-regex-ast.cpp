@@ -4,11 +4,11 @@
 #include <string>
 #include <string_view>
 
-#include <catch2/catch_test_macros.hpp>
-
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
+
+#include <catch2/catch_test_macros.hpp>
 
 using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
