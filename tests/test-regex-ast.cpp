@@ -56,7 +56,7 @@ auto u32string_to_string(u32string const& u32_str) -> string {
 }
 }  // namespace
 
-TEST_CASE("Test regex with capture groups", "[Regex]") {
+TEST_CASE("Create an AST from a capture regex", "[Regex]") {
     test_regex_ast(
             // clang-format off
             "capture:"
@@ -80,7 +80,7 @@ TEST_CASE("Test regex with capture groups", "[Regex]") {
     );
 }
 
-TEST_CASE("Test regex with repetition", "[Regex]") {
+TEST_CASE("Create an AST from repetition regexes", "[Regex]") {
     // Repetition without capture groups untagged and tagged AST are the same
     test_regex_ast("capture:a{0,10}", U"()|((a){1,10})");
     test_regex_ast("capture:a{5,10}", U"(a){5,10}");
@@ -88,7 +88,7 @@ TEST_CASE("Test regex with repetition", "[Regex]") {
     test_regex_ast("capture:a+", U"(a){1,inf}");
 }
 
-TEST_CASE("Test regex with repetition and captures", "[Regex]") {
+TEST_CASE("Create an AST from simple repeated-capture regexes", "[Regex]") {
     // Repetition with capture groups untagged and tagged AST are different
     test_regex_ast("capture:(?<letter>a){0,10}", U"(<~letter>)|(((a)<letter>){1,10})");
     test_regex_ast("capture:(?<letter>a{0,10})", U"(()|((a){1,10}))<letter>");
@@ -98,7 +98,7 @@ TEST_CASE("Test regex with repetition and captures", "[Regex]") {
     test_regex_ast("capture:(?<letter>a)+", U"((a)<letter>){1,inf}");
 }
 
-TEST_CASE("Test complex regex with repetition and captures", "[Regex]") {
+TEST_CASE("Create an AST from a complex repeated-capture regex", "[Regex]") {
     test_regex_ast(
             // clang-format off
             "capture:"
@@ -114,16 +114,16 @@ TEST_CASE("Test complex regex with repetition and captures", "[Regex]") {
                     "){0,10}"
                 ")",
             U"("
-                U"(<~letterA><~letterB>)|(("
-                    U"((a)<letterA><~letterB>)|"
-                    U"((b)<letterB><~letterA>)"
-                U"){1,inf})"
-            U"<~letterC><~letterD>)|("
-                U"(<~letterC><~letterD>)|(("
-                    U"((c)<letterC><~letterD>)|"
-                    U"((d)<letterD><~letterC>)"
-                U"){1,10})"
-            U"<~letterA><~letterB>)"
+                "(<~letterA><~letterB>)|(("
+                    "((a)<letterA><~letterB>)|"
+                    "((b)<letterB><~letterA>)"
+                "){1,inf})"
+            "<~letterC><~letterD>)|("
+                "(<~letterC><~letterD>)|(("
+                    "((c)<letterC><~letterD>)|"
+                    "((d)<letterD><~letterC>)"
+                "){1,10})"
+            "<~letterA><~letterB>)"
             // clang-format on
     );
 }

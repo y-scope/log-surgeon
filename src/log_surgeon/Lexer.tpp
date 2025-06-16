@@ -42,8 +42,8 @@ auto Lexer<TypedNfaState, TypedDfaState>::flip_states(uint32_t old_storage_size)
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer
-) -> std::pair<ErrorCode, std::optional<Token>> {
+auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
+        -> std::pair<ErrorCode, std::optional<Token>> {
     auto const* state{m_dfa->get_root()};
     if (m_asked_for_more_data) {
         state = m_prev_state;
@@ -110,7 +110,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer
             // The newline character itself needs to be treated as a match for non-timestamped logs.
             if (m_has_delimiters && false == m_match) {
                 auto const* dest_state{
-                    m_dfa->get_root()->get_transition(next_char)->get_dest_state()
+                        m_dfa->get_root()->get_transition(next_char)->get_dest_state()
                 };
                 m_dfa->reset();
                 m_dfa->process_char(next_char, prev_byte_buf_pos);
