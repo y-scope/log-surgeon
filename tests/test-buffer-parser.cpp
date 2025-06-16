@@ -169,7 +169,7 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
  *
  * @details
  * This test verifies that the buffer parser correctly matches exact variable patterns when
- * no capture groups are involved. It confirms the `BUfferParser`:
+ * no capture groups are involved. It confirms the `BufferParser`:
  * - Recognizes a variable exactly matching the defined schema ("myVar:userID=123").
  * - Treats close but non-matching strings as uncaught tokens.
  * - Correctly classifies tokens that don't match any variable schema as uncaught strings.

@@ -114,16 +114,16 @@ TEST_CASE("Test complex regex with repetition and captures", "[Regex]") {
                     "){0,10}"
                 ")",
             U"("
-                U"(<~letterA><~letterB>)|(("
-                    U"((a)<letterA><~letterB>)|"
-                    U"((b)<letterB><~letterA>)"
-                U"){1,inf})"
-            U"<~letterC><~letterD>)|("
-                U"(<~letterC><~letterD>)|(("
-                    U"((c)<letterC><~letterD>)|"
-                    U"((d)<letterD><~letterC>)"
-                U"){1,10})"
-            U"<~letterA><~letterB>)"
+                "(<~letterA><~letterB>)|(("
+                    "((a)<letterA><~letterB>)|"
+                    "((b)<letterB><~letterA>)"
+                "){1,inf})"
+            "<~letterC><~letterD>)|("
+                "(<~letterC><~letterD>)|(("
+                    "((c)<letterC><~letterD>)|"
+                    "((d)<letterD><~letterC>)"
+                "){1,10})"
+            "<~letterA><~letterB>)"
             // clang-format on
     );
 }
