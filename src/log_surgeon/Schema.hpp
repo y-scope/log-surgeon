@@ -39,33 +39,6 @@ public:
      */
     auto add_variable(std::string_view var_schema, int inverse_priority) const -> void;
 
-    /* Work in progress API to modify a schema object
-
-    auto remove_variable (std::string var_name) -> void;
-
-    auto add_variables (std::map<std::string, std::string> variables) -> void;
-
-    auto remove_variables (std::map<std::string, std::string> variables) -> void;
-
-    auto remove_all_variables () -> void;
-
-    auto set_variables (std::map<std::string, std::string> variables) -> void;
-
-    auto add_delimiter (char delimiter) -> void;
-
-    auto remove_delimiter (char delimiter) -> void;
-
-    auto add_delimiters (std::vector<char> delimiter) -> void;
-
-    auto remove_delimiters (std::vector<char> delimiter) -> void;
-
-    auto remove_all_delimiters () -> void;
-
-    auto set_delimiters (std::vector<char> delimiters) -> void;
-
-    auto clear ();
-    */
-
     /**
      * Transfers ownership of the previously built schema_ast to the caller and
      * replaces it with an empty schema_ast to be used by this schema object in
