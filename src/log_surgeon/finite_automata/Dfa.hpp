@@ -279,10 +279,9 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) : m_curr_s
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
-auto Dfa<TypedDfaState, TypedNfaState>::process_char(
-        uint32_t const next_char,
-        uint32_t const curr_pos
-) -> TypedDfaState const* {
+auto
+Dfa<TypedDfaState, TypedNfaState>::process_char(uint32_t const next_char, uint32_t const curr_pos)
+        -> TypedDfaState const* {
     auto const optional_transition{m_curr_state->get_transition(next_char)};
     if (false == optional_transition.has_value()) {
         return nullptr;
