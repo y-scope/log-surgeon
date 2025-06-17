@@ -172,8 +172,6 @@ TEST_CASE("Test integer DFA", "[DFA]") {
 
 TEST_CASE("Test key-value pair DFA", "[DFA]") {
     string const var_schema{R"(keyValuePair:[A]+=(?<val>[=AB]*A[=AB]*))"};
-    // TODO: while correct, this is really weird looking, and probably will lead to inefficiencies
-    // i.e., setting the same register multiple times in a single transition.
     string const expected_serialized_dfa{
             "0:byte_transitions={A-()->1}\n"
             "1:byte_transitions={=-()->2,A-()->1}\n"
@@ -190,8 +188,6 @@ TEST_CASE("Test key-value pair DFA", "[DFA]") {
 TEST_CASE("Test key-value pair DFA with hasA", "[DFA]") {
     string const var_schema1{R"(keyValuePair:[A]+=(?<val>[=AB]*A[=AB]*))"};
     string const var_schema2{R"(hasA:[AB]*[A][=AB]*)"};
-    // TODO: Track all tags, not just an arbitrary paths tags (in this case some paths miss
-    // keyValuePair tags).
     string const expected_serialized_dfa{
             "0:byte_transitions={A-()->1,B-()->2}\n"
             "1:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->3,A-()->1,"
