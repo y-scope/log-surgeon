@@ -89,7 +89,7 @@ TEST_CASE("Add a capture variable to schema", "[Schema]") {
     REQUIRE('9' == regex_ast_group_ast->get_ranges().at(0).second);
 }
 
-TEST_CASE("Test schema throws correctly if given invalid delimiter string", "[Schema]") {
+TEST_CASE("Create a schema with different invalid delimiter strings", "[Schema]") {
     constexpr string_view cInvalidDelimiterString1{"myVar:userID=123"};
     constexpr string_view cInvalidDelimiterString2{"Delimiter:userID=123"};
     constexpr string_view cInvalidDelimiterString3{"de_limiters:userID=123"};
@@ -102,27 +102,31 @@ TEST_CASE("Test schema throws correctly if given invalid delimiter string", "[Sc
     REQUIRE_THROWS_AS(schema.add_delimiters(cInvalidDelimiterString4), std::runtime_error);
 }
 
-TEST_CASE("Test schema throws correctly if given invalid variable string", "[Schema]") {
+TEST_CASE("Create a schema with different invalid variable strings", "[Schema]") {
     constexpr string_view cInvalidVarString1{"my_var:userID=123"};
     constexpr string_view cInvalidVarString2{"myVar:[userID=123"};
-    constexpr string_view cInvalidVarString3{R"(delimiters: \t\r\n)"};
-    constexpr string_view cInvalidVarString4{""};
+    constexpr string_view cInvalidVarString3{"userID=123"};
+    constexpr string_view cInvalidVarString4{R"(delimiters: \t\r\n)"};
+    constexpr string_view cInvalidVarString5{""};
 
     Schema schema;
     REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString1, -1), std::runtime_error);
     REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString2, -1), std::runtime_error);
-    REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString3, -1), std::invalid_argument);
-    REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString4, -1), std::runtime_error);
+    REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString3, -1), std::runtime_error);
+    REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString4, -1), std::invalid_argument);
+    REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString5, -1), std::runtime_error);
 }
 
-TEST_CASE("Test schema throws correctly if given invalid variable position", "[Schema]") {
+TEST_CASE("Create a schema with different invalid variable priorities", "[Schema]") {
     constexpr string_view cVarString1{"uId:userID=123"};
     constexpr string_view cVarString2{R"(int:\-{0,1}\d+)"};
     constexpr string_view cVarString3{R"(float:\-{0,1}\d+\.\d+)"};
+    constexpr int32_t invalidPos1{3};
+    constexpr int32_t invalidPos2{-2};
 
     Schema schema;
     schema.add_variable(cVarString1, 0);
     schema.add_variable(cVarString2, 1);
-    REQUIRE_THROWS_AS(schema.add_variable(cVarString3, 3), std::invalid_argument);
-    REQUIRE_THROWS_AS(schema.add_variable(cVarString3, -2), std::invalid_argument);
+    REQUIRE_THROWS_AS(schema.add_variable(cVarString3, invalidPos1), std::invalid_argument);
+    REQUIRE_THROWS_AS(schema.add_variable(cVarString3, invalidPos2), std::invalid_argument);
 }
