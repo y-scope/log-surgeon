@@ -24,7 +24,7 @@ using RegexASTLiteralByte
 using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultiplication<
         log_surgeon::finite_automata::ByteNfaState>;
 
-TEST_CASE("Add a number variable to schema", "[Schema]") {
+TEST_CASE("Add a number variable to a schema", "[Schema]") {
     Schema schema;
     string const var_name = "myNumber";
     string const var_schema = var_name + string(":") + string("123");
