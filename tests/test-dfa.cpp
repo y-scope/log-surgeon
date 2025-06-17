@@ -71,7 +71,7 @@ auto test_dfa(std::vector<string> const& var_schemas, string const& expected_ser
 }
 }  // namespace
 
-TEST_CASE("Test Simple Untagged DFA", "[DFA]") {
+TEST_CASE("Generate a simple untagged DFA", "[DFA]") {
     string const var_schema{"capture:userID=123"};
     string const expected_serialized_dfa{
             "0:byte_transitions={u-()->1}\n"
@@ -89,7 +89,7 @@ TEST_CASE("Test Simple Untagged DFA", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Test Complex Untagged DFA", "[DFA]") {
+TEST_CASE("Generate a complex untagged DFA", "[DFA]") {
     string const var_schema{"capture:Z|(A[abcd]B\\d+C)"};
     string const expected_serialized_dfa{
             "0:byte_transitions={A-()->1,Z-()->2}\n"
@@ -104,7 +104,7 @@ TEST_CASE("Test Complex Untagged DFA", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Test Simple Tagged DFA", "[DFA]") {
+TEST_CASE("Generate a simple tagged DFA", "[DFA]") {
     string const var_schema{"capture:userID=(?<uID>123)"};
     string const expected_serialized_dfa{
             "0:byte_transitions={u-()->1}\n"
@@ -122,7 +122,7 @@ TEST_CASE("Test Simple Tagged DFA", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Test Complex Tagged DFA", "[DFA]") {
+TEST_CASE("Generate a complex tagged DFA", "[DFA]") {
     string const var_schema{"capture:Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?<"
                             "containerID>\\d+)C)"};
     string const expected_serialized_dfa{
@@ -142,7 +142,7 @@ TEST_CASE("Test Complex Tagged DFA", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Test multi-valued tag in tagged DFA", "[DFA]") {
+TEST_CASE("Generate a multi-valued tagged DFA", "[DFA]") {
     string const var_schema{"capture:([a]+=(?<val>1+),)+"};
     string const expected_serialized_dfa{
             "0:byte_transitions={a-()->1}\n"
@@ -157,7 +157,7 @@ TEST_CASE("Test multi-valued tag in tagged DFA", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Test integer DFA", "[DFA]") {
+TEST_CASE("Generate an integer DFA", "[DFA]") {
     string const var_schema{"int:\\-{0,1}\\d+"};
     string const expected_serialized_dfa{
             "0:byte_transitions={--()->1,0-()->2,1-()->2,2-()->2,3-()->2,4-()->2,5-()->2,6-()->2,7-"
@@ -170,10 +170,8 @@ TEST_CASE("Test integer DFA", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Test key-value pair DFA", "[DFA]") {
+TEST_CASE("Generate a key-value pair DFA", "[DFA]") {
     string const var_schema{R"(keyValuePair:[A]+=(?<val>[=AB]*A[=AB]*))"};
-    // TODO: while correct, this is really weird looking, and probably will lead to inefficiencies
-    // i.e., setting the same register multiple times in a single transition.
     string const expected_serialized_dfa{
             "0:byte_transitions={A-()->1}\n"
             "1:byte_transitions={=-()->2,A-()->1}\n"
@@ -187,11 +185,9 @@ TEST_CASE("Test key-value pair DFA", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Test key-value pair DFA with hasA", "[DFA]") {
+TEST_CASE("Generate a two variable DFA", "[DFA]") {
     string const var_schema1{R"(keyValuePair:[A]+=(?<val>[=AB]*A[=AB]*))"};
     string const var_schema2{R"(hasA:[AB]*[A][=AB]*)"};
-    // TODO: Track all tags, not just an arbitrary paths tags (in this case some paths miss
-    // keyValuePair tags).
     string const expected_serialized_dfa{
             "0:byte_transitions={A-()->1,B-()->2}\n"
             "1:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->3,A-()->1,"
