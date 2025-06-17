@@ -24,7 +24,7 @@ using RegexASTLiteralByte
 using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultiplication<
         log_surgeon::finite_automata::ByteNfaState>;
 
-TEST_CASE("Add a number variable to schema", "[Schema]") {
+TEST_CASE("Add a number variable to a schema", "[Schema]") {
     Schema schema;
     string const var_name = "myNumber";
     string const var_schema = var_name + string(":") + string("123");
@@ -42,7 +42,7 @@ TEST_CASE("Add a number variable to schema", "[Schema]") {
     REQUIRE_NOTHROW([&]() { (void)dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr); }());
 }
 
-TEST_CASE("Add a capture variable to schema", "[Schema]") {
+TEST_CASE("Add a capture variable to a schema", "[Schema]") {
     Schema schema;
     std::string const var_name = "capture";
     string const var_schema = var_name + string(":") + string("u(?<uID>[0-9]+)");
