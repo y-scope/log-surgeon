@@ -199,7 +199,7 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
  * " userID=123" -> "myVar"
  * @endcode
  */
-TEST_CASE("Test buffer parser without capture groups", "[BufferParser]") {
+TEST_CASE("Use a buffer parser without capture groups", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=123"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
@@ -259,7 +259,7 @@ TEST_CASE("Test buffer parser without capture groups", "[BufferParser]") {
  * " 1234567" -> "int"
  * @endcode
  */
-TEST_CASE("Test buffer parser first token after newline #1", "[BufferParser]") {
+TEST_CASE("Parse a multi-line input #1", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567\nText 1234567"};
@@ -319,7 +319,7 @@ TEST_CASE("Test buffer parser first token after newline #1", "[BufferParser]") {
  * " 1234567" -> "int"
  * @endcode
  */
-TEST_CASE("Test buffer parser first token after newline #2", "[BufferParser]") {
+TEST_CASE("Parse a multi-line input #2", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\nText 1234567"};
@@ -376,7 +376,7 @@ TEST_CASE("Test buffer parser first token after newline #2", "[BufferParser]") {
  * "1234567" -> "int"
  * @endcode
  */
-TEST_CASE("Test buffer parser first token after newline #3", "[BufferParser]") {
+TEST_CASE("Parse a multi-line input #3", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\n1234567"};
@@ -436,7 +436,7 @@ TEST_CASE("Test buffer parser first token after newline #3", "[BufferParser]") {
  * "\n" -> "newLine"
  * @endcode
  */
-TEST_CASE("Test buffer parser first token after newline #4", "[BufferParser]") {
+TEST_CASE("Parse a multi-line input #4", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\n1234567\n"};
