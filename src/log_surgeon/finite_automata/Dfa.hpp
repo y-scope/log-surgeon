@@ -82,19 +82,10 @@ public:
      * and register values based on the transition.
      * @param next_char The character to transition on.
      * @param curr_pos The current position in the lexing.
-     * @return The destination state.
-     *
-     *
-     * This is what it should return, but for backward compatability its doing the above atm.
-     * @return The destination state when it is accepting
-     * @return `std::nullopt` when the state is not accepting.
-     * @return `nullptr` when the input leads to a non-matching sequence.
-     *
-     *
      * @throws `std::logic_error` if copy operation has no source register.
      * @throws `std::logic_error` if register operation has unhandlded type.
      */
-    auto process_char(uint32_t next_char, uint32_t curr_pos) -> TypedDfaState const*;
+    auto process_char(uint32_t next_char, uint32_t curr_pos) -> void;
 
     /**
      * Applies the register operations for the accepting state.
@@ -281,10 +272,11 @@ Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) : m_curr_s
 template <typename TypedDfaState, typename TypedNfaState>
 auto
 Dfa<TypedDfaState, TypedNfaState>::process_char(uint32_t const next_char, uint32_t const curr_pos)
-        -> TypedDfaState const* {
+        -> void {
     auto const optional_transition{m_curr_state->get_transition(next_char)};
     if (false == optional_transition.has_value()) {
-        return nullptr;
+        m_curr_state = nullptr;
+        return;
     }
     m_curr_state = optional_transition.value().get_dest_state();
 
@@ -313,7 +305,6 @@ Dfa<TypedDfaState, TypedNfaState>::process_char(uint32_t const next_char, uint32
             }
         }
     }
-    return m_curr_state;
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
