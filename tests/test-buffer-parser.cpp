@@ -226,7 +226,7 @@ TEST_CASE("Use a buffer parser without capture groups", "[BufferParser]") {
 /**
  * @ingroup test_buffer_parser_capture
  *
- * @brief Tests the buffer parser behavior when using capture groups in variable schemas.
+ * @brief Validates tokenization behavior when using capture groups in variable schemas.
  *
  * @details
  * This test verifies the `BufferParser`'s ability to:
