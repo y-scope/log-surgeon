@@ -422,7 +422,6 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
         m_capture_id_to_tag_id_pair.emplace(capture_id, tag_id_pair);
     }
 
-    // TODO: DFA ignores captures. E.g., treats "capture:user=(?<user_id>\d+)" as "capture:user=\d+"
     m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState, TypedNfaState>>(nfa);
 
     auto const* state = m_dfa->get_root();
