@@ -226,7 +226,7 @@ TEST_CASE("Use a buffer parser without capture groups", "[BufferParser]") {
 /**
  * @ingroup test_buffer_parser_capture
  *
- * @brief Tests the buffer parser behavior when using capture groups in variable schemas.
+ * @brief Validates tokenization behavior when using capture groups in variable schemas.
  *
  * @details
  * This test verifies the `BufferParser`'s ability to:
@@ -261,7 +261,7 @@ TEST_CASE("Use a buffer parser without capture groups", "[BufferParser]") {
  * " userID=123" -> "myVar" with "123" -> "uid"
  * @endcode
  */
-TEST_CASE("Test buffer parser with capture groups", "[BufferParser]") {
+TEST_CASE("Use a buffer parser with capture groups", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=(?<uid>123)"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
@@ -345,7 +345,7 @@ TEST_CASE("Test buffer parser with capture groups", "[BufferParser]") {
  * " user123" -> "hasNumber"
  * @endcode
  */
-TEST_CASE("Test buffer parser with CLP default schema", "[BufferParser]") {
+TEST_CASE("Use a buffer parser with CLP's default schema", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema1{
             R"(timestamp:[0-9]{4}\-[0-9]{2}\-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}[,\.][0-9]{0,3})"

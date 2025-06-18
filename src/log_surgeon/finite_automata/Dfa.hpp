@@ -75,29 +75,14 @@ public:
 
     explicit Dfa(Nfa<TypedNfaState> const& nfa);
 
-    auto reset() -> void { m_curr_state = get_root(); }
-
     /**
-     * Determine the out-going transition  based on the input character. Update the current state
-     * and register values based on the transition.
-     * @param next_char The character to transition on.
+     * Updates the register handler using the register operations.
+     * @param reg_ops The vector of register operations to apply.
      * @param curr_pos The current position in the lexing.
      * @throws `std::logic_error` if copy operation has no source register.
      * @throws `std::logic_error` if register operation has unhandlded type.
      */
-    auto process_char(uint32_t next_char, uint32_t curr_pos) -> void;
-
-    /**
-     * Applies the register operations for the accepting state.
-     * @param dfa_state An accepting DFA state.
-     * @param curr_pos The current position in the lexing.
-     */
-    auto process_state(TypedDfaState const* dfa_state, uint32_t curr_pos) -> void;
-
-    auto set(TypedDfaState const* prev_state) -> TypedDfaState const* {
-        m_curr_state = prev_state;
-        return m_curr_state;
-    }
+    auto process_reg_ops(std::vector<RegisterOperation> const& reg_ops, uint32_t curr_pos) -> void;
 
     /**
      * @return A string representation of the DFA.
@@ -122,10 +107,11 @@ public:
         return m_tag_id_to_final_reg_id;
     }
 
-    auto release_reg_handler(Token& token) -> void {
-        token.set_reg_handler(std::move(m_reg_handler));
+    [[nodiscard]] auto release_reg_handler() -> RegisterHandler {
+        auto out{std::move(m_reg_handler)};
         m_reg_handler = RegisterHandler();
         m_reg_handler.add_registers(m_num_regs);
+        return out;
     }
 
 private:
@@ -260,59 +246,19 @@ private:
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
     std::map<tag_id_t, reg_id_t> m_tag_id_to_final_reg_id;
     RegisterHandler m_reg_handler;
-    TypedDfaState const* m_curr_state;
     size_t m_num_regs{0};
 };
 
 template <typename TypedDfaState, typename TypedNfaState>
-Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) : m_curr_state{nullptr} {
+Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
     generate(nfa);
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
-auto
-Dfa<TypedDfaState, TypedNfaState>::process_char(uint32_t const next_char, uint32_t const curr_pos)
-        -> void {
-    auto const optional_transition{m_curr_state->get_transition(next_char)};
-    if (false == optional_transition.has_value()) {
-        m_curr_state = nullptr;
-        return;
-    }
-    m_curr_state = optional_transition.value().get_dest_state();
-
-    auto const reg_ops{optional_transition.value().get_reg_ops()};
-    for (auto const& reg_op : reg_ops) {
-        switch (reg_op.get_type()) {
-            case RegisterOperation::Type::Set: {
-                m_reg_handler.append_position(reg_op.get_reg_id(), curr_pos);
-                break;
-            }
-            case RegisterOperation::Type::Negate: {
-                m_reg_handler.append_position(reg_op.get_reg_id(), -1);
-                break;
-            }
-            case RegisterOperation::Type::Copy: {
-                auto copy_reg_id_optional{reg_op.get_copy_reg_id()};
-                if (copy_reg_id_optional.has_value()) {
-                    m_reg_handler.copy_register(reg_op.get_reg_id(), copy_reg_id_optional.value());
-                } else {
-                    throw std::logic_error("Copy operation does not specify register to copy.");
-                }
-                break;
-            }
-            default: {
-                throw std::logic_error("Unhandled register operation type when simulating DFA.");
-            }
-        }
-    }
-}
-
-template <typename TypedDfaState, typename TypedNfaState>
-auto Dfa<TypedDfaState, TypedNfaState>::process_state(
-        TypedDfaState const* dfa_state,
+auto Dfa<TypedDfaState, TypedNfaState>::process_reg_ops(
+        std::vector<RegisterOperation> const& reg_ops,
         uint32_t const curr_pos
 ) -> void {
-    auto const reg_ops{dfa_state->get_accepting_reg_ops()};
     for (auto const& reg_op : reg_ops) {
         switch (reg_op.get_type()) {
             case RegisterOperation::Type::Set: {

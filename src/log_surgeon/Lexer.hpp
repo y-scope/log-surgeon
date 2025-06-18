@@ -99,6 +99,24 @@ public:
     auto flip_states(uint32_t old_storage_size) -> void;
 
     /**
+     * Determine the out-going transition based on the input character. Update the current state
+     * and register values based on the transition.
+     * @param next_char The character to transition on.
+     * @param curr_pos The current position in the lexing.
+     */
+    auto process_char(uint32_t const next_char, uint32_t const curr_pos) -> void {
+        auto const optional_transition{m_state->get_transition(next_char)};
+        if (false == optional_transition.has_value()) {
+            m_state = nullptr;
+            return;
+        }
+        m_state = optional_transition.value().get_dest_state();
+
+        auto const reg_ops{optional_transition.value().get_reg_ops()};
+        m_dfa->process_reg_ops(reg_ops, curr_pos);
+    }
+
+    /**
      * Scans the input buffer and retrieves the next token.
      * If the next token is an uncaught string, the next variable token is already prepped to be
      * returned on the next call.
@@ -239,6 +257,7 @@ private:
     std::optional<uint32_t> m_optional_first_delimiter_pos{std::nullopt};
     bool m_asked_for_more_data{false};
     TypedDfaState const* m_prev_state{nullptr};
+    TypedDfaState const* m_state{nullptr};
     std::unordered_map<rule_id_t, std::vector<capture_id_t>> m_rule_id_to_capture_ids;
     std::unordered_map<capture_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_id_pair;
 };
