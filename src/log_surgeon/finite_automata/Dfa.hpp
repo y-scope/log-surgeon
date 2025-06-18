@@ -78,7 +78,7 @@ public:
     auto reset() -> void { m_curr_state = get_root(); }
 
     /**
-     * Determine the out-going transition  based on the input character. Update the current state
+     * Determine the out-going transition based on the input character. Update the current state
      * and register values based on the transition.
      * @param next_char The character to transition on.
      * @param curr_pos The current position in the lexing.
