@@ -94,9 +94,8 @@ public:
      */
     auto process_state(TypedDfaState const* dfa_state, uint32_t curr_pos) -> void;
 
-    auto set_curr_state(TypedDfaState const* state) -> TypedDfaState const* {
+    auto set_curr_state(TypedDfaState const* state) -> void {
         m_curr_state = state;
-        return m_curr_state;
     }
 
     /**

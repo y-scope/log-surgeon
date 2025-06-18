@@ -47,7 +47,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
     auto const* state{m_dfa->get_root()};
     if (m_asked_for_more_data) {
         state = m_prev_state;
-        m_dfa->set(m_prev_state);
+        m_dfa->set_curr_state(m_prev_state);
         m_asked_for_more_data = false;
     } else {
         m_dfa->reset();
