@@ -99,9 +99,10 @@ public:
     auto flip_states(uint32_t old_storage_size) -> void;
 
     /**
-     * Processes the current chat to transition to the next state and updates the register values.
-     * @param next_char The next character in the input buffer.
-     * @param curr_pos The current position in the input buffer.
+     * Determine the out-going transition based on the input character. Update the current state
+     * and register values based on the transition.
+     * @param next_char The character to transition on.
+     * @param curr_pos The current position in the lexing.
      */
     auto process_char(uint32_t const next_char, uint32_t const curr_pos) -> void {
         auto const optional_transition{m_state->get_transition(next_char)};

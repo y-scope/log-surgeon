@@ -76,19 +76,11 @@ public:
     explicit Dfa(Nfa<TypedNfaState> const& nfa);
 
     /**
-     * Determine the out-going transition based on the input character. Update the current state
-     * and register values based on the transition.
-     * @param next_char The character to transition on.
-     * @param curr_pos The current position in the lexing.
-     * @throws `std::logic_error` if copy operation has no source register.
-     * @throws `std::logic_error` if register operation has unhandlded type.
-     */
-    auto process_char(uint32_t next_char, uint32_t curr_pos) -> void;
-
-    /**
      * Updates the register handler using the register operations.
      * @param reg_ops The vector of register operations to apply.
      * @param curr_pos The current position in the lexing.
+     * @throws `std::logic_error` if copy operation has no source register.
+     * @throws `std::logic_error` if register operation has unhandlded type.
      */
     auto process_reg_ops(std::vector<RegisterOperation> const& reg_ops, uint32_t curr_pos) -> void;
 
