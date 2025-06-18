@@ -13,10 +13,6 @@
 namespace log_surgeon {
 class Token {
 public:
-    auto set_reg_handler(finite_automata::RegisterHandler reg_handler) -> void {
-        m_reg_handler = std::move(reg_handler);
-    }
-
     /**
      * @return The token's value as a string
      */

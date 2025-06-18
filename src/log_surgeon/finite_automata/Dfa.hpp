@@ -119,10 +119,11 @@ public:
         return m_tag_id_to_final_reg_id;
     }
 
-    auto release_reg_handler(Token& token) -> void {
-        token.set_reg_handler(std::move(m_reg_handler));
+    [[nodiscard]] auto release_reg_handler() -> RegisterHandler {
+        auto out{std::move(m_reg_handler)};
         m_reg_handler = RegisterHandler();
         m_reg_handler.add_registers(m_num_regs);
+        return out;
     }
 
 private:
