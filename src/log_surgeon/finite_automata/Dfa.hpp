@@ -88,7 +88,7 @@ public:
     auto process_char(uint32_t next_char, uint32_t curr_pos) -> void;
 
     /**
-     * Applies the register operations for the accepting state.
+     * Updates the register handler using the register operations.
      * @param reg_ops The vector of register operations to apply.
      * @param curr_pos The current position in the lexing.
      */
