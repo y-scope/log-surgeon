@@ -71,7 +71,7 @@ auto test_dfa(std::vector<string> const& var_schemas, string const& expected_ser
 }
 }  // namespace
 
-TEST_CASE("Test Simple Untagged DFA", "[DFA]") {
+TEST_CASE("Create a DFA for matching a simple non-captured variable", "[DFA]") {
     string const var_schema{"capture:userID=123"};
     string const expected_serialized_dfa{
             "0:byte_transitions={u-()->1}\n"
@@ -89,7 +89,7 @@ TEST_CASE("Test Simple Untagged DFA", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Test Complex Untagged DFA", "[DFA]") {
+TEST_CASE("Create a DFA for matching a complex non-captured variable", "[DFA]") {
     string const var_schema{"capture:Z|(A[abcd]B\\d+C)"};
     string const expected_serialized_dfa{
             "0:byte_transitions={A-()->1,Z-()->2}\n"
@@ -104,7 +104,7 @@ TEST_CASE("Test Complex Untagged DFA", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Test Simple Tagged DFA", "[DFA]") {
+TEST_CASE("Create a DFA for matching a simple capture variable", "[DFA]") {
     string const var_schema{"capture:userID=(?<uID>123)"};
     string const expected_serialized_dfa{
             "0:byte_transitions={u-()->1}\n"
@@ -122,7 +122,7 @@ TEST_CASE("Test Simple Tagged DFA", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Test Complex Tagged DFA", "[DFA]") {
+TEST_CASE("Create a DFA for matching a complex capture variable", "[DFA]") {
     string const var_schema{"capture:Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?<"
                             "containerID>\\d+)C)"};
     string const expected_serialized_dfa{
@@ -142,7 +142,7 @@ TEST_CASE("Test Complex Tagged DFA", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Test multi-valued tag in tagged DFA", "[DFA]") {
+TEST_CASE("Create a DFA for matching a variable with a multi-valued capture", "[DFA]") {
     string const var_schema{"capture:([a]+=(?<val>1+),)+"};
     string const expected_serialized_dfa{
             "0:byte_transitions={a-()->1}\n"
@@ -157,7 +157,7 @@ TEST_CASE("Test multi-valued tag in tagged DFA", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Test integer DFA", "[DFA]") {
+TEST_CASE("Create a DFA for matching an integer", "[DFA]") {
     string const var_schema{"int:\\-{0,1}\\d+"};
     string const expected_serialized_dfa{
             "0:byte_transitions={--()->1,0-()->2,1-()->2,2-()->2,3-()->2,4-()->2,5-()->2,6-()->2,7-"
@@ -168,4 +168,45 @@ TEST_CASE("Test integer DFA", "[DFA]") {
             "2,3-()->2,4-()->2,5-()->2,6-()->2,7-()->2,8-()->2,9-()->2}\n"
     };
     test_dfa({var_schema}, expected_serialized_dfa);
+}
+
+TEST_CASE("Create a DFA for matching a key-value pair", "[DFA]") {
+    string const var_schema{R"(keyValuePair:[A]+=(?<val>[=AB]*A[=AB]*))"};
+    string const expected_serialized_dfa{
+            "0:byte_transitions={A-()->1}\n"
+            "1:byte_transitions={=-()->2,A-()->1}\n"
+            "2:byte_transitions={=-(4p)->3,A-(4p)->4,B-(4p)->3}\n"
+            "3:byte_transitions={=-()->3,A-()->4,B-()->3}\n"
+            "4:accepting_tags={0},accepting_operations={2c4,3p},byte_transitions={=-()->5,A-()->4,"
+            "B-()->5}\n"
+            "5:accepting_tags={0},accepting_operations={2c4,3p},byte_transitions={=-()->5,A-()->4,"
+            "B-()->5}\n"
+    };
+    test_dfa({var_schema}, expected_serialized_dfa);
+}
+
+TEST_CASE("Create a DFA for matching two variables", "[DFA]") {
+    string const var_schema1{R"(keyValuePair:[A]+=(?<val>[=AB]*A[=AB]*))"};
+    string const var_schema2{R"(hasA:[AB]*[A][=AB]*)"};
+    string const expected_serialized_dfa{
+            "0:byte_transitions={A-()->1,B-()->2}\n"
+            "1:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->3,A-()->1,"
+            "B-()->4}\n"
+            "2:byte_transitions={A-()->5,B-()->2}\n"
+            "3:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-(4p)->6,"
+            "A-(4p)->7,B-(4p)->6}\n"
+            "4:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->8,A-()->5,"
+            "B-()->4}\n"
+            "5:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->8,A-()->5,"
+            "B-()->4}\n"
+            "6:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->6,A-()->7,"
+            "B-()->6}\n"
+            "7:accepting_tags={0,1},accepting_operations={2c4,3p,2c0,3c1},"
+            "byte_transitions={=-()->9,A-()->7,B-()->9}\n"
+            "8:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->8,A-()->8,"
+            "B-()->8}\n"
+            "9:accepting_tags={0,1},accepting_operations={2c4,3p,2c0,3c1},"
+            "byte_transitions={=-()->9,A-()->7,B-()->9}\n"
+    };
+    test_dfa({var_schema1, var_schema2}, expected_serialized_dfa);
 }

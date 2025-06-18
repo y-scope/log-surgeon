@@ -224,6 +224,168 @@ TEST_CASE("Use a buffer parser without capture groups", "[BufferParser]") {
 }
 
 /**
+ * @ingroup test_buffer_parser_capture
+ *
+ * @brief Validates tokenization behavior when using capture groups in variable schemas.
+ *
+ * @details
+ * This test verifies the `BufferParser`'s ability to:
+ * - Recognize a variable definition containing a named capture group.
+ * - Identify and register both the variable name and the capture group name as valid symbols.
+ * - Link the capture group to its associated tag IDs and registers.
+ * - Extract matched positions correctly when parsing a token.
+ * - Fail to match tokens that don't align exactly with the specified capture pattern.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * myVar:userID=(?<uid>123)
+ * @endcode
+ *
+ * @section input Test Input
+ * @code
+ * "userID=123 userID=234 userID=123 123 userID=123"
+ * @endcode
+ *
+ * @section expected Expected Logtype
+ * @code
+ * "userID=<uid> userID=234  userID=<uid> 123  userID=<uid>"
+ * @endcode
+ *
+ * @section expected Expected Tokenization
+ * @code
+ * "userID=123" -> "myVar" with "123" -> "uid"
+ * " userID=234" -> uncaught string
+ * " userID=123" -> "myVar" with "123" -> "uid"
+ * " 123" -> uncaught string
+ * " userID=123" -> "myVar" with "123" -> "uid"
+ * @endcode
+ */
+TEST_CASE("Use a buffer parser with capture groups", "[BufferParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cVarSchema{"myVar:userID=(?<uid>123)"};
+    constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
+
+    ExpectedEvent const expected_event{
+            .m_logtype{R"(userID=<uid> userID=234  userID=<uid> 123  userID=<uid>)"},
+            .m_timestamp_raw{""},
+            .m_tokens{
+                    {{"userID=123", "myVar", {{{"uid", {{7}, {10}}}}}},
+                     {" userID=234", "", {}},
+                     {" userID=123", "myVar", {{{"uid", {{29}, {32}}}}}},
+                     {" 123", "", {}},
+                     {" userID=123", "myVar", {{{"uid", {{44}, {47}}}}}}}
+            }
+    };
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cVarSchema, -1);
+    BufferParser buffer_parser(std::move(schema.release_schema_ast_ptr()));
+
+    parse_and_validate(buffer_parser, cInput, {expected_event});
+}
+
+/**
+ * @ingroup test_buffer_parser_default_schema
+ *
+ * @brief Validates tokenization behavior using the default schema commonly used in CLP.
+ *
+ * @details
+ * This tests the `BufferParser`'s ability to correctly tokenize inputs according to a schema
+ * defining:
+ * - Timestamps
+ * - Integers and floating-point numbers
+ * - Hex strings (alphabetic-only)
+ * - Key-value pairs with named capture groups
+ * - Generic patterns containing numbers
+ *
+ * It ensures:
+ * - All schema variables are registered and recognized correctly.
+ * - Inputs are matched and classified according to their variable type.
+ * - Capture groups are properly detected and positionally tracked.
+ *
+ * This group demonstrates how to define and integrate regex-based schemas, including named capture
+ * groups, for structured log tokenization.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * firstTimestamp: [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}[,\.][0-9]{0,3}
+ * int: -{0,1}[0-9]+
+ * float: -{0,1}[0-9]+\.[0-9]+
+ * hex: [a-fA-F]+
+ * equals: [^ \r\n=]+=(?<val>[^ \r\n]*[A-Za-z0-9][^ \r\n]*)
+ * hasNumber: ={0,1}[^ \r\n=]*\d[^ \r\n=]*={0,1}
+ * @endcode
+ *
+ * @section input Test Input
+ * @code
+ * "2012-12-12 12:12:12.123 123 123.123 abc userID=123 text user123"
+ * @endcode
+ *
+ * @section expected Expected Logtype
+ * @code
+ * " <int> <float> <hex>  userID=<val> text <hasNumber>"
+ * @endcode
+ *
+ * @section expected Expected Timestamp
+ * @code
+ * "2012-12-12 12:12:12.123"
+ * @endcode
+ *
+ * @section expected Expected Tokenization
+ * @code
+ * "2012-12-12 12:12:12.123" -> "firstTimestamp"
+ * " 123" -> "int"
+ * " 123.123" -> "float"
+ * " abc" -> "hex"
+ * " userID=123" -> "keyValuePair" with "123" -> "val"
+ * " text" -> uncaught string
+ * " user123" -> "hasNumber"
+ * @endcode
+ */
+TEST_CASE("Use a buffer parser with CLP's default schema", "[BufferParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cVarSchema1{
+            R"(timestamp:[0-9]{4}\-[0-9]{2}\-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}[,\.][0-9]{0,3})"
+    };
+    constexpr string_view cVarSchema2{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cVarSchema3{R"(float:\-{0,1}[0-9]+\.[0-9]+)"};
+    constexpr string_view cVarSchema4{R"(hex:[a-fA-F]+)"};
+    constexpr string_view cVarSchema5{
+            R"(keyValuePair:[^ \r\n=]+=(?<val>[^ \r\n]*[A-Za-z0-9][^ \r\n]*))"
+    };
+    constexpr string_view cVarSchema6{R"(hasNumber:={0,1}[^ \r\n=]*\d[^ \r\n=]*={0,1})"};
+    constexpr string_view cInput{"2012-12-12 12:12:12.123 123 123.123 abc userID=123 text user123"};
+    ExpectedEvent const expected_event{
+            .m_logtype{R"( <int> <float> <hex>  userID=<val> text <hasNumber>)"},
+            .m_timestamp_raw{"2012-12-12 12:12:12.123"},
+            .m_tokens{
+                    {{"2012-12-12 12:12:12.123", "firstTimestamp", {}},
+                     {" 123", "int", {}},
+                     {" 123.123", "float", {}},
+                     {" abc", "hex", {}},
+                     {" userID=123", "keyValuePair", {{{"val", {{47}, {50}}}}}},
+                     {" text", "", {}},
+                     {" user123", "hasNumber", {}}}
+            }
+    };
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cVarSchema1, -1);
+    schema.add_variable(cVarSchema2, -1);
+    schema.add_variable(cVarSchema3, -1);
+    schema.add_variable(cVarSchema4, -1);
+    schema.add_variable(cVarSchema5, -1);
+    schema.add_variable(cVarSchema6, -1);
+    BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
+
+    parse_and_validate(buffer_parser, cInput, {expected_event});
+}
+
+/**
  * @ingroup test_buffer_parser_newline_vars
  *
  * @brief Test variable after static-text at the start of a newline when previous line ends in a
