@@ -75,8 +75,6 @@ public:
 
     explicit Dfa(Nfa<TypedNfaState> const& nfa);
 
-    auto reset() -> void { m_curr_state = get_root(); }
-
     /**
      * Determine the out-going transition based on the input character. Update the current state
      * and register values based on the transition.
@@ -93,8 +91,6 @@ public:
      * @param curr_pos The current position in the lexing.
      */
     auto process_reg_ops(std::vector<RegisterOperation> const& reg_ops, uint32_t curr_pos) -> void;
-
-    auto set_curr_state(TypedDfaState const* state) -> void { m_curr_state = state; }
 
     /**
      * @return A string representation of the DFA.
@@ -258,28 +254,12 @@ private:
     std::vector<std::unique_ptr<TypedDfaState>> m_states;
     std::map<tag_id_t, reg_id_t> m_tag_id_to_final_reg_id;
     RegisterHandler m_reg_handler;
-    TypedDfaState const* m_curr_state;
     size_t m_num_regs{0};
 };
 
 template <typename TypedDfaState, typename TypedNfaState>
-Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) : m_curr_state{nullptr} {
+Dfa<TypedDfaState, TypedNfaState>::Dfa(Nfa<TypedNfaState> const& nfa) {
     generate(nfa);
-}
-
-template <typename TypedDfaState, typename TypedNfaState>
-auto
-Dfa<TypedDfaState, TypedNfaState>::process_char(uint32_t const next_char, uint32_t const curr_pos)
-        -> void {
-    auto const optional_transition{m_curr_state->get_transition(next_char)};
-    if (false == optional_transition.has_value()) {
-        m_curr_state = nullptr;
-        return;
-    }
-    m_curr_state = optional_transition.value().get_dest_state();
-
-    auto const reg_ops{optional_transition.value().get_reg_ops()};
-    process_reg_ops(reg_ops, curr_pos);
 }
 
 template <typename TypedDfaState, typename TypedNfaState>
