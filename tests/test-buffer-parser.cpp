@@ -692,7 +692,7 @@ TEST_CASE("Parse a multi-line input #4", "[BufferParser]") {
  * ":my/path/to/file.txt" -> "path"
  * @endcode
  */
-TEST_CASE("Test buffer parser with delimited variables", "[BufferParser]") {
+TEST_CASE("Parse an input in which the variables contain delimiters", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema1{"function:[A-Za-z]+::[A-Za-z]+1"};
     constexpr string_view cVarSchema2{R"(path:[a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+)"};
