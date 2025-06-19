@@ -49,7 +49,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
     } else {
         m_state = m_dfa->get_root();
         if (m_match) {
-            m_optional_first_delimiter_pos = std::nullopt;
+            m_first_delimiter_pos = std::nullopt;
             m_match = false;
             m_last_match_pos = m_match_pos;
             m_last_match_line = m_match_line;
@@ -63,17 +63,16 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
                     std::move(m_dfa->release_reg_handler())
             };
             return {ErrorCode::Success, token};
-        } else if (m_optional_first_delimiter_pos.has_value()) {
+        }
+        if (m_first_delimiter_pos.has_value()) {
             input_buffer.set_log_fully_consumed(false);
-            input_buffer.set_pos(m_optional_first_delimiter_pos.value());
-            // TODO: what if we want to batch the uncaught string, what values do we need to
-            // preserve?
+            input_buffer.set_pos(m_first_delimiter_pos.value());
         }
         m_start_pos = input_buffer.storage().pos();
         m_match_pos = input_buffer.storage().pos();
         m_match_line = m_line;
         m_type_ids = nullptr;
-        m_optional_first_delimiter_pos = std::nullopt;
+        m_first_delimiter_pos = std::nullopt;
     }
     while (true) {
         auto prev_byte_buf_pos{input_buffer.storage().pos()};
@@ -82,10 +81,10 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
             m_asked_for_more_data = true;
             return {err, std::nullopt};
         }
-        if (false == m_optional_first_delimiter_pos.has_value() && m_is_delimiter[next_char]
+        if (false == m_first_delimiter_pos.has_value() && m_is_delimiter[next_char]
             && prev_byte_buf_pos != m_last_match_pos)
         {
-            m_optional_first_delimiter_pos = prev_byte_buf_pos;
+            m_first_delimiter_pos = prev_byte_buf_pos;
         }
 
         if ((m_is_delimiter[next_char] || input_buffer.log_fully_consumed()
@@ -103,9 +102,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
         if ('\n' == next_char) {
             m_line++;
             // The newline character itself needs to be treated as a match for non-timestamped logs.
-            // TODO: This block is a mess and also wrong if variables contain a central newline.
             if (m_has_delimiters && false == m_match) {
-                m_state = m_dfa->get_root()->get_transition(next_char)->get_dest_state();
                 m_state = m_dfa->get_root();
                 process_char(next_char, prev_byte_buf_pos);
                 m_match = true;
@@ -133,7 +130,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
                     };
                     return {ErrorCode::Success, token};
                 }
-                m_optional_first_delimiter_pos = std::nullopt;
+                m_first_delimiter_pos = std::nullopt;
                 m_match = false;
                 m_last_match_pos = m_match_pos;
                 m_last_match_line = m_match_line;
@@ -150,16 +147,16 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
             }
             if (input_buffer.log_fully_consumed() && input_buffer.storage().pos() == m_start_pos) {
                 if (m_last_match_pos != m_start_pos) {
-                    if (m_optional_first_delimiter_pos.has_value()) {
+                    if (m_first_delimiter_pos.has_value()) {
                         Token token{
                                 m_last_match_pos,
-                                m_optional_first_delimiter_pos.value(),
+                                m_first_delimiter_pos.value(),
                                 input_buffer.storage().get_active_buffer(),
                                 input_buffer.storage().size(),
                                 m_last_match_line,
                                 &cTokenUncaughtStringTypes
                         };
-                        m_last_match_pos = m_optional_first_delimiter_pos.value();
+                        m_last_match_pos = m_first_delimiter_pos.value();
                         return {ErrorCode::Success, token};
                     } else {
                         m_match_pos = input_buffer.storage().pos();
@@ -186,19 +183,19 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
                 };
                 return {ErrorCode::Success, token};
             }
-            if (m_optional_first_delimiter_pos.has_value()) {
+            if (m_first_delimiter_pos.has_value()) {
                 Token token{
                         m_last_match_pos,
-                        m_optional_first_delimiter_pos.value(),
+                        m_first_delimiter_pos.value(),
                         input_buffer.storage().get_active_buffer(),
                         input_buffer.storage().size(),
                         m_last_match_line,
                         &cTokenUncaughtStringTypes
                 };
-                m_last_match_pos = m_optional_first_delimiter_pos.value();
+                m_last_match_pos = m_first_delimiter_pos.value();
                 return {ErrorCode::Success, token};
             }
-            m_optional_first_delimiter_pos = std::nullopt;
+            m_first_delimiter_pos = std::nullopt;
 
             // TODO: remove timestamp from m_is_fist_char so that m_is_delimiter check not needed
             m_state = m_dfa->get_root();
@@ -391,7 +388,7 @@ void Lexer<TypedNfaState, TypedDfaState>::reset() {
     m_type_ids = nullptr;
     m_asked_for_more_data = false;
     m_prev_state = nullptr;
-    m_optional_first_delimiter_pos = std::nullopt;
+    m_first_delimiter_pos = std::nullopt;
     m_state = nullptr;
 }
 
