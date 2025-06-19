@@ -63,11 +63,10 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
                     std::move(m_dfa->release_reg_handler())
             };
             return {ErrorCode::Success, token};
-        } else if (m_optional_first_delimiter_pos.has_value()) {
+        }
+        if (m_optional_first_delimiter_pos.has_value()) {
             input_buffer.set_log_fully_consumed(false);
             input_buffer.set_pos(m_optional_first_delimiter_pos.value());
-            // TODO: what if we want to batch the uncaught string, what values do we need to
-            // preserve?
         }
         m_start_pos = input_buffer.storage().pos();
         m_match_pos = input_buffer.storage().pos();
