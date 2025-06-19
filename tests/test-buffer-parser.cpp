@@ -630,7 +630,7 @@ TEST_CASE("Parse a multi-line input #4", "[BufferParser]") {
  * @details
  * This test verifies that the `LogParser` correctly handles variables separated by
  * custom delimiters specified in the schema. The schema defines:
- * - Delimiters as newline, carriage return, backslash, colon, comma, and parenthesis (`\n\r\[:,)`)
+ * - Delimiters as newline, carriage return, openning bracket, colon, and comma (`\n\r\[:,`)
  * - Variable `function` with regex `function:[A-Za-z]+::[A-Za-z]+1`
  * - Variable `path` with regex `path:[a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+`
  *
@@ -639,7 +639,7 @@ TEST_CASE("Parse a multi-line input #4", "[BufferParser]") {
  *
  * @section schema Schema Definition
  * @code
- * delimiters: \n\r\[:,)
+ * delimiters: \n\r\[:,
  * function: [A-Za-z]+::[A-Za-z]+1
  * path: [a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+
  * @endcode
