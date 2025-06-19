@@ -657,7 +657,7 @@ TEST_CASE("Parse a multi-line input #4", "[BufferParser]") {
  * "1234567" -> "int"
  * @endcode
  */
-TEST_CASE("Test buffer parser first token after newline #5", "[BufferParser]") {
+TEST_CASE("Parse a multi-line input #5", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 \n1234567"};
