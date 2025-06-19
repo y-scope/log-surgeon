@@ -689,7 +689,7 @@ TEST_CASE("Test buffer parser first token after newline #5", "[BufferParser]") {
  * @details
  * This test verifies that the `LogParser` correctly handles variables separated by
  * custom delimiters specified in the schema. The schema defines:
- * - Delimiters as newline, carriage return, backslash, colon, comma, and parenthesis (`\n\r\[:,)`)
+ * - Delimiters as newline, carriage return, openning bracket, colon, and comma (`\n\r\[:,`)
  * - Variable `function` with regex `function:[A-Za-z]+::[A-Za-z]+1`
  * - Variable `path` with regex `path:[a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+`
  *
@@ -698,7 +698,7 @@ TEST_CASE("Test buffer parser first token after newline #5", "[BufferParser]") {
  *
  * @section schema Schema Definition
  * @code
- * delimiters: \n\r\[:,)
+ * delimiters: \n\r\[:,
  * function: [A-Za-z]+::[A-Za-z]+1
  * path: [a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+
  * @endcode
@@ -751,7 +751,7 @@ TEST_CASE("Test buffer parser first token after newline #5", "[BufferParser]") {
  * ":my/path/to/file.txt" -> "path"
  * @endcode
  */
-TEST_CASE("Test buffer parser with delimited variables", "[BufferParser]") {
+TEST_CASE("Parse an input in which the variables contain delimiters", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema1{"function:[A-Za-z]+::[A-Za-z]+1"};
     constexpr string_view cVarSchema2{R"(path:[a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+)"};
