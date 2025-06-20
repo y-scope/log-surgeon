@@ -623,6 +623,65 @@ TEST_CASE("Parse a multi-line input #4", "[BufferParser]") {
 }
 
 /**
+ * @ingroup test_buffer_parser_newline_vars
+ *
+ * @brief Test a variable at start of a newline when previous line ends in a delimiter.
+ *
+ * @details
+ * This test verifies that if a line ends with a delimiter (e.g., space) and the next line starts
+ * with an integer variable, the `BufferParser` correctly identifies the tokens including the
+ * newline.
+ *
+ * @section schema Schema Definition
+ * @code
+ * delimiters: \n\r\[:,)
+ * int: \-{0,1}[0-9]+
+ * @endcode
+ *
+ * @section input Input Example
+ * @code
+ * "1234567 \n1234567"
+ * @endcode
+ *
+ * @section expected Expected Logtype
+ * @code
+ * "<int> \n"
+ * "<int>"
+ * @endcode
+ *
+ * @section expected Expected Tokenization
+ * @code
+ * "1234567" -> "int"
+ * " " -> uncaught string
+ * "\n" -> uncaught string
+ * "1234567" -> "int"
+ * @endcode
+ */
+TEST_CASE("Parse a multi-line input #5", "[BufferParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cInput{"1234567 \n1234567"};
+    ExpectedEvent const expected_event1{
+            .m_logtype{"<int> \n"},
+            .m_timestamp_raw{""},
+            .m_tokens{{{"1234567", "int", {}}, {" ", "", {}}, {"\n", "", {}}}}
+    };
+    ExpectedEvent const expected_event2{
+            .m_logtype{R"(<int>)"},
+            .m_timestamp_raw{""},
+            .m_tokens{{{"1234567", "int", {}}}}
+    };
+    ExpectedEvent const expected_event3{.m_logtype{""}, .m_timestamp_raw{""}, .m_tokens{}};
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cRule, -1);
+    BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
+
+    parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2, expected_event3});
+}
+
+/**
  * @ingroup test_buffer_parser_delimited_variables
  *
  * @brief Tests `BufferParser` with delimited variables using a custom schema.
