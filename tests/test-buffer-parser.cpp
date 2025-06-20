@@ -625,7 +625,7 @@ TEST_CASE("Parse a multi-line input #4", "[BufferParser]") {
 /**
  * @ingroup test_buffer_parser_newline_vars
  *
- * @brief Test variable at start of newline when previous line ends in a delimiter.
+ * @brief Test a variable at start of a newline when previous line ends in a delimiter.
  *
  * @details
  * This test verifies that if a line ends with a delimiter (e.g., space) and the next line starts
