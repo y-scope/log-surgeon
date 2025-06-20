@@ -8,7 +8,7 @@
  */
 
 /**
- * @defgroup test_log_parser_capture Log Parser with Capture Groups
+ * @defgroup test_buffer_parser_capture Log Parser with Capture Groups
  * @brief Tests LogParser behavior with named capture groups in variable schemas.
  *
  * @details
@@ -23,7 +23,7 @@
  */
 
 /**
- * @defgroup test_log_parser_default_schema Log Parser: Default Schema
+ * @defgroup test_buffer_parser_default_schema Log Parser: Default Schema
  * @brief Tests for CLP's default variable schema: timestamp, int, float, hex, key-value pairs, etc.
  *
  * @details
@@ -31,7 +31,7 @@
  */
 
 /**
- * @defgroup test_log_parser_delimited_variables Log Parser: Variables with Delimiters Schema
+ * @defgroup test_buffer_parser_delimited_variables Log Parser: Variables with Delimiters Schema
  * @brief Tests for LogParser using a schema where variables are defined with custom delimiters.
  *
  * @details
@@ -44,7 +44,7 @@
  */
 
 /**
- * @defgroup test_log_parser_newline_vars Variable Tokens on Newlines
+ * @defgroup test_buffer_parser_newline_vars Variable Tokens on Newlines
  * @brief Tests covering how LogParser categorizes variable tokens appearing at the start of new lines,
  *        including interaction with static-text, delimiters, and capture group repetition.
  *
