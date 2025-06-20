@@ -117,6 +117,18 @@ task build:debug
   * `log-surgeon`'s [design objectives](docs/design-objectives.md)
 * [examples](examples) contains programs demonstrating usage of the library.
 
+### Doxygen
+You can generate additional documentation using Doxygen, which is useful for
+exploring functionality and test coverage. In particular, this documents all
+unit-tests, with additional detail for API-level tests.
+
+#### Commands
+* Run `doxygen Doxyfile` from the `docs/Doxygen` subdirectory.
+* Open `docs/Doxygen/docs/html/index` in preferred browser.
+
+#### Requirements
+* [doxygen] >= 1.8.17
+
 ## Testing
 
 To build and run all unit tests:
