@@ -634,7 +634,7 @@ TEST_CASE("Parse a multi-line input #4", "[BufferParser]") {
  *
  * @section schema Schema Definition
  * @code
- * delimiters: \n\r\[:,)
+ * delimiters: \n\r\[:,
  * int: \-{0,1}[0-9]+
  * @endcode
  *
