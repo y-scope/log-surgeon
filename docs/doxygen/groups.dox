@@ -36,7 +36,7 @@
  *
  * @details
  * This group contains tests that verify tokenization using:
- * - Custom delimiters (`\n\r\[:,)`)
+ * - Custom delimiters (`\n\r\[:,`)
  * - Variables that require delimiters to separate them properly in the input.
  *
  * These tests ensure the parser correctly handles and matches variables bounded by specified
