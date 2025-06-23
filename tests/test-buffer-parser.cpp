@@ -176,7 +176,7 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
  *
  * @section schema Schema Definition
  * @code
- * delimiters: \n\r\[:,)
+ * delimiters: \n\r\[:,
  * myVar:userID=123
  * @endcode
  *
@@ -238,7 +238,7 @@ TEST_CASE("Use a buffer parser without capture groups", "[BufferParser]") {
  *
  * @section schema Schema Definition
  * @code
- * delimiters: \n\r\[:,)
+ * delimiters: \n\r\[:,
  * myVar:userID=(?<uid>123)
  * @endcode
  *
@@ -310,7 +310,7 @@ TEST_CASE("Use a buffer parser with capture groups", "[BufferParser]") {
  *
  * @section schema Schema Definition
  * @code
- * delimiters: \n\r\[:,)
+ * delimiters: \n\r\[:,
  * firstTimestamp: [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}[,\.][0-9]{0,3}
  * int: -{0,1}[0-9]+
  * float: -{0,1}[0-9]+\.[0-9]+
@@ -398,7 +398,7 @@ TEST_CASE("Use a buffer parser with CLP's default schema", "[BufferParser]") {
  *
  * @section schema Schema Definition
  * @code
- * delimiters: \n\r\[:,)
+ * delimiters: \n\r\[:,
  * int: \-{0,1}[0-9]+
  * @endcode
  *
@@ -457,7 +457,7 @@ TEST_CASE("Parse a multi-line input #1", "[BufferParser]") {
  *
  * @section schema Schema Definition
  * @code
- * delimiters: \n\r\[:,)
+ * delimiters: \n\r\[:,
  * int: \-{0,1}[0-9]+
  * @endcode
  *
@@ -515,7 +515,7 @@ TEST_CASE("Parse a multi-line input #2", "[BufferParser]") {
  *
  * @section schema Schema Definition
  * @code
- * delimiters: \n\r\[:,)
+ * delimiters: \n\r\[:,
  * int: \-{0,1}[0-9]+
  * @endcode
  *
@@ -574,7 +574,7 @@ TEST_CASE("Parse a multi-line input #3", "[BufferParser]") {
  *
  * @section schema Schema Definition
  * @code
- * delimiters: \n\r\[:,)
+ * delimiters: \n\r\[:,
  * int: \-{0,1}[0-9]+
  * @endcode
  *
@@ -634,7 +634,7 @@ TEST_CASE("Parse a multi-line input #4", "[BufferParser]") {
  *
  * @section schema Schema Definition
  * @code
- * delimiters: \n\r\[:,)
+ * delimiters: \n\r\[:,
  * int: \-{0,1}[0-9]+
  * @endcode
  *
