@@ -1,0 +1,68 @@
+version: "3"
+
+vars:
+  # Paths
+  G_DOXYGEN_BUILD_DIR: "{{.G_BUILD_DIR}}/doxygen/html"
+  G_NODE_DEPS_DIR: "{{.G_BUILD_DIR}}/doxygen-node"
+
+tasks:
+  clean:
+    cmds:
+      - "rm -rf '{{.G_DOXYGEN_BUILD_DIR}}'"
+
+  serve:
+    deps:
+      - "http-server"
+      - "site"
+    cmds:
+      - "npm --prefix '{{.G_NODE_DEPS_DIR}}' exec http-server '{{.G_DOXYGEN_BUILD_DIR}}' -c-1"
+
+  http-server:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.G_NODE_DEPS_DIR}}"
+    deps:
+      - ":init"
+      - task: ":utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "npm --prefix '{{.OUTPUT_DIR}}' install http-server"
+      # This command must be last
+      - task: ":utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    sources:
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
+
+  site:
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.G_DOXYGEN_BUILD_DIR}}"
+    dir: "{{.TASKFILE_DIR}}"
+    deps:
+      - ":init"
+      - task: ":utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    cmds:
+      - task: "clean"
+      - "doxygen docs/Doxyfile"
+      # This command must be last
+      - task: ":utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    sources:
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.TASKFILE}}"
+      - "docs/Doxyfile"
+      - "src/**/*"
+    generates: ["{{.CHECKSUM_FILE}}"]
