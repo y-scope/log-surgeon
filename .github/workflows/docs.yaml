@@ -1,4 +1,4 @@
-name: "doxygen"
+name: "docs"
 
 on:
   pull_request:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   build:
-    name: "Build Doxygen Docs"
+    name: "Build docs site"
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
@@ -28,13 +28,9 @@ jobs:
         shell: "bash"
         run: "npm install -g @go-task/cli"
 
-      - name: "Install doxygen"
+      - name: "Build docs"
         shell: "bash"
-        run: "sudo apt-get install -y doxygen"
-
-      - name: "Build doxygen docs"
-        shell: "bash"
-        run: "task doxygen:site"
+        run: "task docs:site"
 
       # Upload the built docs site if we need to debug any issues
       - if: >-
@@ -42,7 +38,7 @@ jobs:
           && ('refs/heads/main' == github.ref || startsWith(github.ref, 'refs/tags/v'))
         uses: "actions/upload-artifact@v4"
         with:
-          name: "doxygen-html"
+          name: "docs-html"
           path: "build/docs/html"
           if-no-files-found: "error"
 
