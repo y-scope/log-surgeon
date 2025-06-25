@@ -357,9 +357,10 @@ TEST_CASE("Use a buffer parser with CLP's default schema", "[BufferParser]") {
             R"(keyValuePair:[^ \r\n=]+=(?<val>[^ \r\n]*[A-Za-z0-9][^ \r\n]*))"
     };
     constexpr string_view cVarSchema6{R"(hasNumber:={0,1}[^ \r\n=]*\d[^ \r\n=]*={0,1})"};
-    constexpr string_view cInput{"2012-12-12 12:12:12.123 123 123.123 abc userID=123 text user123"};
-    ExpectedEvent const expected_event{
-            .m_logtype{R"( <int> <float> <hex>  userID=<val> text <hasNumber>)"},
+    constexpr string_view cInput{"2012-12-12 12:12:12.123 123 123.123 abc userID=123 text user123 "
+                                 "\n2012-12-12 12:12:12.123"};
+    ExpectedEvent const expected_event1{
+            .m_logtype{" <int> <float> <hex>  userID=<val> text <hasNumber> \n"},
             .m_timestamp_raw{"2012-12-12 12:12:12.123"},
             .m_tokens{
                     {{"2012-12-12 12:12:12.123", "firstTimestamp", {}},
@@ -368,8 +369,15 @@ TEST_CASE("Use a buffer parser with CLP's default schema", "[BufferParser]") {
                      {" abc", "hex", {}},
                      {" userID=123", "keyValuePair", {{{"val", {{47}, {50}}}}}},
                      {" text", "", {}},
-                     {" user123", "hasNumber", {}}}
+                     {" user123", "hasNumber", {}},
+                     {" ", "", {}},
+                     {"\n", "", {}}}
             }
+    };
+    ExpectedEvent const expected_event2{
+            .m_logtype{R"()"},
+            .m_timestamp_raw{"2012-12-12 12:12:12.123"},
+            .m_tokens{{{"2012-12-12 12:12:12.123", "newLineTimestamp", {}}}}
     };
 
     Schema schema;
@@ -382,7 +390,7 @@ TEST_CASE("Use a buffer parser with CLP's default schema", "[BufferParser]") {
     schema.add_variable(cVarSchema6, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
-    parse_and_validate(buffer_parser, cInput, {expected_event});
+    parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
 }
 
 /**
@@ -671,14 +679,13 @@ TEST_CASE("Parse a multi-line input #5", "[BufferParser]") {
             .m_timestamp_raw{""},
             .m_tokens{{{"1234567", "int", {}}}}
     };
-    ExpectedEvent const expected_event3{.m_logtype{""}, .m_timestamp_raw{""}, .m_tokens{}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
     schema.add_variable(cRule, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
-    parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2, expected_event3});
+    parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
 }
 
 /**
