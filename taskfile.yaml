@@ -6,6 +6,7 @@ shopt: ["globstar"]
 includes:
   build: "taskfiles/build.yaml"
   deps: "taskfiles/deps.yaml"
+  doxygen: "taskfiles/doxygen.yaml"
   lint: "taskfiles/lint.yaml"
   test: "taskfiles/test.yaml"
 
