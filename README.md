@@ -124,15 +124,15 @@ unit-tests, with additional detail for API-level tests.
 
 #### Commands
 To generate and view the doxygen files:
-* Run `task doxygen:site`.
-* Open `docs/Doxygen/docs/html/index` in preferred browser.
+* Run `task docs:site`.
+* Open `build/docs/html/index.html` in preferred browser.
 
 To host and view the doxygen site on a server:
-* Run `task doxygen:serve`.
+* Run `task docs:serve`.
 * Go to the url output from the `serve` task.
 
 #### Requirements
-* [doxygen] >= 1.8.17
+* [doxygen] == 1.8.17
 
 ## Testing
 
