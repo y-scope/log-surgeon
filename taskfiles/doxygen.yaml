@@ -1,5 +1,10 @@
 version: "3"
 
+includes:
+  utils:
+    internal: true
+    taskfile: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
 vars:
   # Paths
   G_DOXYGEN_BUILD_DIR: "{{.G_BUILD_DIR}}/doxygen/html"
@@ -22,9 +27,13 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_NODE_DEPS_DIR}}"
+    sources:
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.TASKFILE}}"
+    generates: [ "{{.CHECKSUM_FILE}}" ]
     deps:
       - ":init"
-      - task: ":utils:checksum:validate"
+      - task: "utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
@@ -32,37 +41,33 @@ tasks:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "npm --prefix '{{.OUTPUT_DIR}}' install http-server"
       # This command must be last
-      - task: ":utils:checksum:compute"
+      - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-    sources:
-      - "{{.ROOT_DIR}}/taskfile.yaml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
 
   site:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_DOXYGEN_BUILD_DIR}}"
     dir: "{{.TASKFILE_DIR}}"
-    deps:
-      - ":init"
-      - task: ":utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-    cmds:
-      - task: "clean"
-      - "doxygen docs/Doxyfile"
-      # This command must be last
-      - task: ":utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     sources:
       - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
       - "docs/Doxyfile"
       - "src/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - ":init"
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    cmds:
+      - task: "clean"
+      - "doxygen {{.ROOT_DIR}}/docs/doxygen/Doxyfile"
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
