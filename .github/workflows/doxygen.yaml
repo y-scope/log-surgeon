@@ -28,6 +28,10 @@ jobs:
         shell: "bash"
         run: "npm install -g @go-task/cli"
 
+      - name: "Install doxygen"
+        shell: "bash"
+        run: "sudo apt-get install -y doxygen"
+
       - name: "Build doxygen docs"
         shell: "bash"
         run: "task doxygen:site"
