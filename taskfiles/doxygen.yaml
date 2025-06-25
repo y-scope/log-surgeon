@@ -7,7 +7,7 @@ includes:
 
 vars:
   # Paths
-  G_DOXYGEN_BUILD_DIR: "{{.G_BUILD_DIR}}/doxygen/html"
+  G_DOXYGEN_BUILD_DIR: "{{.ROOT_DIR}}/docs/doxygen/html"
   G_NODE_DEPS_DIR: "{{.G_BUILD_DIR}}/doxygen-node"
 
 tasks:
@@ -65,7 +65,7 @@ tasks:
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
       - task: "clean"
-      - "doxygen {{.ROOT_DIR}}/docs/doxygen/Doxyfile"
+      - "cd {{.ROOT_DIR}}/docs/doxygen && doxygen Doxyfile"
       # This command must be last
       - task: "utils:checksum:compute"
         vars:
