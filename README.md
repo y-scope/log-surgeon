@@ -114,7 +114,7 @@ task build:debug
 [examples](examples) contains programs demonstrating usage of the library.
 See [examples/README.md](examples/README.md) for information on building and running the examples.
 
-## Documentation and examples
+## Documentation
 
 * [docs](docs) contains more detailed documentation including:
   * The [schema specification](docs/schema.md), which describes the syntax for
@@ -131,12 +131,12 @@ In particular, this documents all unit-tests, with additional detail for API-lev
 To generate and view the files:
 
 * Run `task docs:site`.
-* Open `build/docs/html/index.html` in preferred browser.
+* Open `build/docs/html/index.html` in your preferred browser.
 
 To host the site locally and view it:
 
 * Run `task docs:serve`.
-* Go a URL and port output from the `serve` task.
+* Open the URL and port output from the `serve` task in your preferred browser.
 
 ## Testing
 
