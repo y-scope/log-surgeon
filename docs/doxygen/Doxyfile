@@ -1,63 +1,24 @@
-#-------------------------------------------------------------
 # Project Information
-#-------------------------------------------------------------
-PROJECT_NAME           = "Log Surgeon"
-PROJECT_BRIEF          = "Test coverage and internal documentation"
-OUTPUT_DIRECTORY       = build/docs/
-CREATE_SUBDIRS         = NO
-OUTPUT_LANGUAGE        = English
+PROJECT_NAME = "Log Surgeon"
+PROJECT_BRIEF = "Test coverage and internal documentation"
+OUTPUT_DIRECTORY = build/docs/
 
-#-------------------------------------------------------------
 # Input
-#-------------------------------------------------------------
-INPUT                  = tests/ docs/doxygen/mainpage.dox docs/doxygen/groups.dox
-RECURSIVE              = YES
-FILE_PATTERNS          = *.cpp
+INPUT = tests/ docs/doxygen/mainpage.dox docs/doxygen/groups.dox
+RECURSIVE = YES
 
-#-------------------------------------------------------------
 # Source Code Parsing
-#-------------------------------------------------------------
-EXTRACT_ALL            = YES
-EXTRACT_PRIVATE        = YES
-EXTRACT_STATIC         = YES
-EXTRACT_LOCAL_CLASSES  = YES
-EXTRACT_ANON_NSPACES   = YES
+EXTRACT_ALL = YES
+EXTRACT_PRIVATE = YES
+EXTRACT_STATIC = YES
+EXTRACT_ANON_NSPACES = YES
+MACRO_EXPANSION = YES
+PREDEFINED = "TEST_CASE(x,y)=void x()"
 
-ENABLE_PREPROCESSING   = YES
-MACRO_EXPANSION        = YES
-EXPAND_ONLY_PREDEF     = NO
-PREDEFINED             = TEST_CASE(x,y)=void x() /**< @testcase y */
+# Output
+GENERATE_LATEX = NO
+HTML_DYNAMIC_SECTIONS = YES
+TIMESTAMP = YES
 
-# If needed, fake out Catch2's SECTION to avoid warnings:
-PREDEFINED            += SECTION(x)=
-
-#-------------------------------------------------------------
-# Documentation Formatting
-#-------------------------------------------------------------
-TAB_SIZE               = 4
-OPTIMIZE_OUTPUT_FOR_C  = NO
-OPTIMIZE_OUTPUT_JAVA   = NO
-OPTIMIZE_FOR_FORTRAN   = NO
-OPTIMIZE_OUTPUT_VHDL   = NO
-EXTENSION_MAPPING      = cpp=C++
-HAVE_DOT = NO
-
-#-------------------------------------------------------------
-# HTML Output
-#-------------------------------------------------------------
-GENERATE_HTML          = YES
-HTML_COLORSTYLE_HUE    = 220
-HTML_TIMESTAMP         = YES
-
-#-------------------------------------------------------------
-# LaTeX / PDF Output
-#-------------------------------------------------------------
-GENERATE_LATEX         = NO
-
-#-------------------------------------------------------------
 # Misc
-#-------------------------------------------------------------
-QUIET                  = NO
-WARNINGS               = YES
-WARN_IF_UNDOCUMENTED   = NO
-INPUT_ENCODING         = UTF-8
+WARN_AS_ERROR = YES
