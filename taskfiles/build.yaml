@@ -80,14 +80,10 @@ tasks:
     requires:
       vars: ["BUILD_TYPE"]
     deps:
-      - "deps:all"
-    cmds:
-      - task: "utils:cmake:generate"
+      - task: "generate"
         vars:
-          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
-          EXTRA_ARGS:
-            - "-DCMAKE_BUILD_TYPE={{.BUILD_TYPE}}"
-          SOURCE_DIR: "{{.ROOT_DIR}}"
+          BUILD_TYPE: "{{.BUILD_TYPE}}"
+    cmds:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
@@ -114,6 +110,20 @@ tasks:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/{{.BUILD_TYPE}}"
+
+  generate:
+    internal: true
+    requires:
+      vars: ["BUILD_TYPE"]
+    deps:
+      - "deps:all"
+    cmds:
+      - task: "utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
+          EXTRA_ARGS:
+            - "-DCMAKE_BUILD_TYPE={{.BUILD_TYPE}}"
+          SOURCE_DIR: "{{.ROOT_DIR}}"
 
   install:
     internal: true
