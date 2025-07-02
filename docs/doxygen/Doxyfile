@@ -1,0 +1,26 @@
+# Project Information
+PROJECT_BRIEF = "Test coverage and internal documentation"
+PROJECT_NAME = "Log Surgeon"
+OUTPUT_DIRECTORY = build/docs/
+
+# Input
+INPUT = \
+    docs/doxygen/groups.dox \
+    docs/doxygen/mainpage.dox \
+    tests/
+RECURSIVE = YES
+
+# Source Code Parsing
+EXTRACT_ALL = YES
+EXTRACT_PRIVATE = YES
+EXTRACT_STATIC = YES
+MACRO_EXPANSION = YES
+PREDEFINED = "TEST_CASE(x,y)=void x()"
+
+# Output
+GENERATE_LATEX = NO
+HTML_DYNAMIC_SECTIONS = YES
+TIMESTAMP = YES
+
+# Misc
+WARN_AS_ERROR = YES

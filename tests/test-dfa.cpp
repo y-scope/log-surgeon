@@ -13,6 +13,13 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+/**
+ * @defgroup unit_tests_dfa DFA unit tests
+ * @brief DFA related unit tests.
+
+ * These unit tests contain the `DFA` tag.
+ */
+
 using log_surgeon::finite_automata::ByteDfaState;
 using log_surgeon::finite_automata::ByteNfaState;
 using log_surgeon::Schema;
@@ -71,7 +78,11 @@ auto test_dfa(std::vector<string> const& var_schemas, string const& expected_ser
 }
 }  // namespace
 
-TEST_CASE("Create a DFA for matching a simple non-captured variable", "[DFA]") {
+/**
+ * @ingroup unit_tests_dfa
+ * @brief Create a DFA for matching a simple non-captured variable.
+ */
+TEST_CASE("simple_var_no_capture", "[DFA]") {
     string const var_schema{"capture:userID=123"};
     string const expected_serialized_dfa{
             "0:byte_transitions={u-()->1}\n"
@@ -89,7 +100,11 @@ TEST_CASE("Create a DFA for matching a simple non-captured variable", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Create a DFA for matching a complex non-captured variable", "[DFA]") {
+/**
+ * @ingroup unit_tests_dfa
+ * @brief Create a DFA for matching a complex non-captured variable.
+ */
+TEST_CASE("complex_var_no_capture", "[DFA]") {
     string const var_schema{"capture:Z|(A[abcd]B\\d+C)"};
     string const expected_serialized_dfa{
             "0:byte_transitions={A-()->1,Z-()->2}\n"
@@ -104,7 +119,11 @@ TEST_CASE("Create a DFA for matching a complex non-captured variable", "[DFA]") 
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Create a DFA for matching a simple capture variable", "[DFA]") {
+/**
+ * @ingroup unit_tests_dfa
+ * @brief Create a DFA for matching a simple capture variable.
+ */
+TEST_CASE("simple_var_capture", "[DFA]") {
     string const var_schema{"capture:userID=(?<uID>123)"};
     string const expected_serialized_dfa{
             "0:byte_transitions={u-()->1}\n"
@@ -122,7 +141,11 @@ TEST_CASE("Create a DFA for matching a simple capture variable", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Create a DFA for matching a complex capture variable", "[DFA]") {
+/**
+ * @ingroup unit_tests_dfa
+ * @brief Create a DFA for matching a complex capture variable.
+ */
+TEST_CASE("complex_var_capture", "[DFA]") {
     string const var_schema{"capture:Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?<"
                             "containerID>\\d+)C)"};
     string const expected_serialized_dfa{
@@ -142,7 +165,11 @@ TEST_CASE("Create a DFA for matching a complex capture variable", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Create a DFA for matching a variable with a multi-valued capture", "[DFA]") {
+/**
+ * @ingroup unit_tests_dfa
+ * @brief Create a DFA for matching a variable with a multi-valued capture.
+ */
+TEST_CASE("var_capture_multiple_values", "[DFA]") {
     string const var_schema{"capture:([a]+=(?<val>1+),)+"};
     string const expected_serialized_dfa{
             "0:byte_transitions={a-()->1}\n"
@@ -157,7 +184,11 @@ TEST_CASE("Create a DFA for matching a variable with a multi-valued capture", "[
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Create a DFA for matching an integer", "[DFA]") {
+/**
+ * @ingroup unit_tests_dfa
+ * @brief Create a DFA for matching an integer.
+ */
+TEST_CASE("int_var", "[DFA]") {
     string const var_schema{"int:\\-{0,1}\\d+"};
     string const expected_serialized_dfa{
             "0:byte_transitions={--()->1,0-()->2,1-()->2,2-()->2,3-()->2,4-()->2,5-()->2,6-()->2,7-"
@@ -170,7 +201,11 @@ TEST_CASE("Create a DFA for matching an integer", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Create a DFA for matching a key-value pair", "[DFA]") {
+/**
+ * @ingroup unit_tests_dfa
+ * @brief Create a DFA for matching a key-value pair.
+ */
+TEST_CASE("kv_pair_var", "[DFA]") {
     string const var_schema{R"(keyValuePair:[A]+=(?<val>[=AB]*A[=AB]*))"};
     string const expected_serialized_dfa{
             "0:byte_transitions={A-()->1}\n"
@@ -185,7 +220,11 @@ TEST_CASE("Create a DFA for matching a key-value pair", "[DFA]") {
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
-TEST_CASE("Create a DFA for matching two variables", "[DFA]") {
+/**
+ * @ingroup unit_tests_dfa
+ * @brief Create a DFA for matching two variables.
+ */
+TEST_CASE("multiple_vars", "[DFA]") {
     string const var_schema1{R"(keyValuePair:[A]+=(?<val>[=AB]*A[=AB]*))"};
     string const var_schema2{R"(hasA:[AB]*[A][=AB]*)"};
     string const expected_serialized_dfa{
