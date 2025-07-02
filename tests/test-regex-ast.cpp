@@ -10,6 +10,13 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+/**
+ * @defgroup unit_tests_regex_ast Regex AST unit tests
+ * @brief Capture related unit tests.
+
+ * These unit tests contain the `Regex` tag.
+ */
+
 using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
 using std::codecvt_utf8;
@@ -56,7 +63,11 @@ auto u32string_to_string(u32string const& u32_str) -> string {
 }
 }  // namespace
 
-TEST_CASE("Create an AST from a capture regex", "[Regex]") {
+/**
+ * @ingroup unit_tests_regex_ast
+ * @brief Create an AST from a regex with a capture group.
+ */
+TEST_CASE("simple_capture", "[Regex]") {
     test_regex_ast(
             // clang-format off
             "capture:"
@@ -80,7 +91,11 @@ TEST_CASE("Create an AST from a capture regex", "[Regex]") {
     );
 }
 
-TEST_CASE("Create an AST from repetition regexes", "[Regex]") {
+/**
+ * @ingroup unit_tests_regex_ast
+ * @brief Create an AST from regexes with repetition.
+ */
+TEST_CASE("simple_repetitions", "[Regex]") {
     // Repetition without capture groups untagged and tagged AST are the same
     test_regex_ast("capture:a{0,10}", U"()|((a){1,10})");
     test_regex_ast("capture:a{5,10}", U"(a){5,10}");
@@ -88,7 +103,11 @@ TEST_CASE("Create an AST from repetition regexes", "[Regex]") {
     test_regex_ast("capture:a+", U"(a){1,inf}");
 }
 
-TEST_CASE("Create an AST from simple repeated-capture regexes", "[Regex]") {
+/**
+ * @ingroup unit_tests_regex_ast
+ * @brief Create an AST from simple regexes with multi-valued captures.
+ */
+TEST_CASE("simple_capture_multiple_values", "[Regex]") {
     // Repetition with capture groups untagged and tagged AST are different
     test_regex_ast("capture:(?<letter>a){0,10}", U"(<~letter>)|(((a)<letter>){1,10})");
     test_regex_ast("capture:(?<letter>a{0,10})", U"(()|((a){1,10}))<letter>");
@@ -98,7 +117,11 @@ TEST_CASE("Create an AST from simple repeated-capture regexes", "[Regex]") {
     test_regex_ast("capture:(?<letter>a)+", U"((a)<letter>){1,inf}");
 }
 
-TEST_CASE("Create an AST from a complex repeated-capture regex", "[Regex]") {
+/**
+ * @ingroup unit_tests_regex_ast
+ * @brief Create an AST from a complex regex with multi-valued captures.
+ */
+TEST_CASE("complex_repeated_capture_regex", "[Regex]") {
     test_regex_ast(
             // clang-format off
             "capture:"

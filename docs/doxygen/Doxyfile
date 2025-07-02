@@ -1,17 +1,19 @@
 # Project Information
-PROJECT_NAME = "Log Surgeon"
 PROJECT_BRIEF = "Test coverage and internal documentation"
+PROJECT_NAME = "Log Surgeon"
 OUTPUT_DIRECTORY = build/docs/
 
 # Input
-INPUT = tests/ docs/doxygen/mainpage.dox docs/doxygen/groups.dox
+INPUT = \
+    docs/doxygen/groups.dox \
+    docs/doxygen/mainpage.dox \
+    tests/
 RECURSIVE = YES
 
 # Source Code Parsing
 EXTRACT_ALL = YES
 EXTRACT_PRIVATE = YES
 EXTRACT_STATIC = YES
-EXTRACT_ANON_NSPACES = YES
 MACRO_EXPANSION = YES
 PREDEFINED = "TEST_CASE(x,y)=void x()"
 

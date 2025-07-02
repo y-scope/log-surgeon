@@ -8,6 +8,13 @@
 #include <catch2/catch_test_macros.hpp>
 #include <fmt/core.h>
 
+/**
+ * @defgroup unit_tests_schema Schema unit tests
+ * @brief Schema related unit tests.
+
+ * These unit tests contain the `SCHEMA` tag.
+ */
+
 using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
 using std::string;
@@ -24,7 +31,11 @@ using RegexASTLiteralByte
 using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultiplication<
         log_surgeon::finite_automata::ByteNfaState>;
 
-TEST_CASE("Add a number variable to a schema", "[Schema]") {
+/**
+ * @ingroup unit_tests_schema
+ * @brief Create a schema, adding a number variable to a schema.
+ */
+TEST_CASE("add_number_var", "[Schema]") {
     Schema schema;
     string const var_name = "myNumber";
     string const var_schema = var_name + string(":") + string("123");
@@ -42,7 +53,11 @@ TEST_CASE("Add a number variable to a schema", "[Schema]") {
     REQUIRE_NOTHROW([&]() { (void)dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr); }());
 }
 
-TEST_CASE("Add a capture variable to a schema", "[Schema]") {
+/**
+ * @ingroup unit_tests_schema
+ * @brief Create a schema, adding a variable with a capture group.
+ */
+TEST_CASE("add_capture_var", "[Schema]") {
     Schema schema;
     std::string const var_name = "capture";
     string const var_schema = var_name + string(":") + string("u(?<uID>[0-9]+)");
@@ -89,7 +104,11 @@ TEST_CASE("Add a capture variable to a schema", "[Schema]") {
     REQUIRE('9' == regex_ast_group_ast->get_ranges().at(0).second);
 }
 
-TEST_CASE("Create a schema with different invalid delimiter strings", "[Schema]") {
+/**
+ * @ingroup unit_tests_schema
+ * @brief Create a schema, adding different invalid delimiter strings.
+ */
+TEST_CASE("add_invalid_delims", "[Schema]") {
     constexpr string_view cInvalidDelimiterString1{"myVar:userID=123"};
     constexpr string_view cInvalidDelimiterString2{"Delimiter:userID=123"};
     constexpr string_view cInvalidDelimiterString3{"de_limiters:userID=123"};
@@ -102,7 +121,11 @@ TEST_CASE("Create a schema with different invalid delimiter strings", "[Schema]"
     REQUIRE_THROWS_AS(schema.add_delimiters(cInvalidDelimiterString4), std::runtime_error);
 }
 
-TEST_CASE("Create a schema with different invalid variable strings", "[Schema]") {
+/**
+ * @ingroup unit_tests_schema
+ * @brief Create a schema, adding different invalid variables.
+ */
+TEST_CASE("add_invalid_vars", "[Schema]") {
     constexpr string_view cInvalidVarString1{"my_var:userID=123"};
     constexpr string_view cInvalidVarString2{"myVar:[userID=123"};
     constexpr string_view cInvalidVarString3{"userID=123"};
@@ -117,7 +140,11 @@ TEST_CASE("Create a schema with different invalid variable strings", "[Schema]")
     REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString5, -1), std::runtime_error);
 }
 
-TEST_CASE("Create a schema with different invalid variable priorities", "[Schema]") {
+/**
+ * @ingroup unit_tests_schema
+ * @brief Create a schema, adding different invalid variable priorities.
+ */
+TEST_CASE("add_invalid_var_priorities", "[Schema]") {
     constexpr string_view cVarString1{"uId:userID=123"};
     constexpr string_view cVarString2{R"(int:\-{0,1}\d+)"};
     constexpr string_view cVarString3{R"(float:\-{0,1}\d+\.\d+)"};

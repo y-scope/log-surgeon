@@ -7,6 +7,13 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+/**
+ * @defgroup unit_tests_register_handler Register handler unit tests
+ * @brief Register handler related unit tests.
+
+ * These unit tests contain the `RegisterHandler` tag.
+ */
+
 using log_surgeon::finite_automata::RegisterHandler;
 using position_t = log_surgeon::finite_automata::PrefixTree::position_t;
 
@@ -24,7 +31,17 @@ auto handler_init(size_t const num_registers) -> RegisterHandler {
 }
 }  // namespace
 
-TEST_CASE("`RegisterHandler` tests", "[RegisterHandler]") {
+/**
+ * @ingroup unit_tests_register_handler
+ * @brief Tests various operations of the `RegisterHandler` class.
+ *
+ * The test covers the following cases:
+ * - Throws out of range.
+ * - Initial register is empty.
+ * - Append and copy position.
+ * - Handles negative position values.
+ */
+TEST_CASE("operations", "[RegisterHandler]") {
     constexpr position_t cInitialPos1{5};
     constexpr size_t cNumRegisters{5};
     constexpr size_t cRegId1{0};

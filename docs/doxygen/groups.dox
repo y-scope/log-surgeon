@@ -1,4 +1,4 @@
-/** @file groups.dox
+/**
  *  @brief Test group hierarchy for Doxygen documentation.
  */
 
@@ -11,7 +11,6 @@
  * @defgroup test_buffer_parser_capture Log Parser with Capture Groups
  * @brief Tests LogParser behavior with named capture groups in variable schemas.
  *
- * @details
  * Verifies:
  * - Symbol registration for variables and capture groups
  * - Correct association of tag positions
@@ -26,7 +25,6 @@
  * @defgroup test_buffer_parser_default_schema Log Parser: Default Schema
  * @brief Tests for CLP's default variable schema: timestamp, int, float, hex, key-value pairs, etc.
  *
- * @details
  * Validates token recognition across common variable types using a default schema definition.
  */
 
@@ -34,7 +32,6 @@
  * @defgroup test_buffer_parser_delimited_variables Log Parser: Variables with Delimiters Schema
  * @brief Tests for LogParser using a schema where variables are defined with custom delimiters.
  *
- * @details
  * This group contains tests that verify tokenization using:
  * - Custom delimiters (`\n\r\[:,`)
  * - Variables that require delimiters to separate them properly in the input.
@@ -51,4 +48,3 @@
  * These tests verify correct tokenization and recognition of variables and delimiters
  * when variables occur on new lines, especially following different token types.
  */
-
