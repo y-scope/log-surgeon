@@ -124,7 +124,7 @@ TEST_CASE("multi_valued_capture_0", "[Regex]") {
 
 /**
  * @ingroup unit_tests_regex_ast
- * @brief Create an AST from a complex regex with a multi-valued (repeated) capture group.
+ * @brief Create an AST from a complex regex with multi-valued (repeated) capture groups.
  */
 TEST_CASE("multi_valued_capture_1", "[Regex]") {
     test_regex_ast(
