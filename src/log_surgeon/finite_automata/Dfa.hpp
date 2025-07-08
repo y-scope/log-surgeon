@@ -25,9 +25,6 @@
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/Token.hpp>
 
-#include <fmt/core.h>
-#include <fmt/format.h>
-
 namespace log_surgeon::finite_automata {
 /**
  * Represents a Deterministic Finite Automaton (DFA).
@@ -594,27 +591,6 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_bfs_traversal_order() const
         }
     }
     return visited_order;
-}
-
-template <typename TypedDfaState, typename TypedNfaState>
-auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::optional<std::string> {
-    auto const traversal_order = get_bfs_traversal_order();
-
-    std::unordered_map<TypedDfaState const*, uint32_t> state_ids;
-    state_ids.reserve(traversal_order.size());
-    for (auto const* state : traversal_order) {
-        state_ids.emplace(state, state_ids.size());
-    }
-
-    std::vector<std::string> serialized_states;
-    for (auto const* state : traversal_order) {
-        auto const optional_serialized_state{state->serialize(state_ids)};
-        if (false == optional_serialized_state.has_value()) {
-            return std::nullopt;
-        }
-        serialized_states.emplace_back(optional_serialized_state.value());
-    }
-    return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
 }
 }  // namespace log_surgeon::finite_automata
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_DFA_HPP

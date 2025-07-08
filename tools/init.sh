@@ -7,7 +7,7 @@ set -e
 set -u
 
 repo_dir="$(git rev-parse --show-toplevel)"
-clang_tidy_config_src_relative_to_repo="tools/yscope-dev-utils/lint-configs/.clang-tidy"
+clang_tidy_config_src_relative_to_repo="tools/yscope-dev-utils/exports/lint-configs/.clang-tidy"
 
 clang_tidy_config_src="${repo_dir}/${clang_tidy_config_src_relative_to_repo}"
 clang_tidy_config_dst="${repo_dir}/.clang-tidy"

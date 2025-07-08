@@ -7,8 +7,6 @@
 
 #include <log_surgeon/types.hpp>
 
-#include <fmt/core.h>
-
 namespace log_surgeon::finite_automata {
 enum class TagOperationType : uint8_t {
     Set,
@@ -39,18 +37,7 @@ public:
     /**
      * @return A string representation of the tag operation.
      */
-    [[nodiscard]] auto serialize() const -> std::string {
-        char type_char = '?';
-        switch (m_type) {
-            case TagOperationType::Set:
-                type_char = 'p';
-                break;
-            case TagOperationType::Negate:
-                type_char = 'n';
-                break;
-        }
-        return fmt::format("{}{}{}", m_tag_id, type_char, m_multi_valued ? "+" : "");
-    }
+    [[nodiscard]] auto serialize() const -> std::string;
 
 private:
     tag_id_t m_tag_id;

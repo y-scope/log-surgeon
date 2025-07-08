@@ -7,8 +7,6 @@
 
 #include <log_surgeon/types.hpp>
 
-#include <fmt/core.h>
-
 namespace log_surgeon::finite_automata {
 /**
  * Represents a register operation:
@@ -58,21 +56,7 @@ public:
      * - the operation type is invalid.
      * - no source register is specified for a copy operation.
      */
-    [[nodiscard]] auto serialize() const -> std::optional<std::string> {
-        switch (m_type) {
-            case Type::Copy:
-                if (false == m_copy_reg_id.has_value()) {
-                    return std::nullopt;
-                }
-                return fmt::format("{}{}{}", m_reg_id, "c", m_copy_reg_id.value());
-            case Type::Set:
-                return fmt::format("{}{}", m_reg_id, "p");
-            case Type::Negate:
-                return fmt::format("{}{}", m_reg_id, "n");
-            default:
-                return std::nullopt;
-        }
-    }
+    [[nodiscard]] auto serialize() const -> std::optional<std::string>;
 
 private:
     RegisterOperation(reg_id_t const reg_id, Type const type) : m_reg_id{reg_id}, m_type{type} {}

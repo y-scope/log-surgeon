@@ -20,9 +20,6 @@
 #include <log_surgeon/types.hpp>
 #include <log_surgeon/UniqueIdGenerator.hpp>
 
-#include <fmt/core.h>
-#include <fmt/format.h>
-
 namespace log_surgeon::finite_automata {
 /**
  * Represents a Non-Deterministic Finite Automaton (NFA) designed to recognize a language based on
@@ -246,26 +243,6 @@ auto Nfa<TypedNfaState>::get_bfs_traversal_order() const -> std::vector<TypedNfa
         }
     }
     return visited_order;
-}
-
-template <typename TypedNfaState>
-auto Nfa<TypedNfaState>::serialize() const -> std::optional<std::string> {
-    auto const traversal_order = get_bfs_traversal_order();
-
-    std::unordered_map<TypedNfaState const*, uint32_t> state_ids;
-    for (auto const* state : traversal_order) {
-        state_ids.emplace(state, state_ids.size());
-    }
-
-    std::vector<std::string> serialized_states;
-    for (auto const* state : traversal_order) {
-        auto const optional_serialized_state{state->serialize(state_ids)};
-        if (false == optional_serialized_state.has_value()) {
-            return std::nullopt;
-        }
-        serialized_states.emplace_back(optional_serialized_state.value());
-    }
-    return fmt::format("{}\n", fmt::join(serialized_states, "\n"));
 }
 }  // namespace log_surgeon::finite_automata
 

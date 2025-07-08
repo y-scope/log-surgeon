@@ -11,8 +11,6 @@
 
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 
-#include <fmt/format.h>
-
 namespace log_surgeon::finite_automata {
 /**
  * Represents an NFA transition with a collection of tag operations to be performed during the
@@ -44,23 +42,6 @@ private:
     std::vector<TagOperation> m_tag_ops;
     TypedNfaState const* m_dest_state;
 };
-
-template <typename TypedNfaState>
-auto NfaSpontaneousTransition<TypedNfaState>::serialize(
-        std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids
-) const -> std::optional<std::string> {
-    if (false == state_ids.contains(m_dest_state)) {
-        return std::nullopt;
-    }
-    auto transformed_operations
-            = m_tag_ops | std::ranges::views::transform(&TagOperation::serialize);
-
-    return fmt::format(
-            "{}[{}]",
-            state_ids.at(m_dest_state),
-            fmt::join(transformed_operations, ",")
-    );
-}
 }  // namespace log_surgeon::finite_automata
 
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_NFASPONTANEOUSTRANSITION_HPP
