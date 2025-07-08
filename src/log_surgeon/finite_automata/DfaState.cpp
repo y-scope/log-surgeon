@@ -65,8 +65,4 @@ auto DfaState<state_type>::serialize(
 template auto DfaState<StateType::Byte>::serialize(
         std::unordered_map<ByteDfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string>;
-
-template auto DfaState<StateType::Utf8>::serialize(
-        std::unordered_map<Utf8DfaState const*, uint32_t> const& state_ids
-) const -> std::optional<std::string>;
 }  // namespace log_surgeon::finite_automata

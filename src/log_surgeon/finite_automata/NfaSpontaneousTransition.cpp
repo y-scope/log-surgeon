@@ -32,8 +32,4 @@ auto NfaSpontaneousTransition<TypedNfaState>::serialize(
 template auto NfaSpontaneousTransition<ByteNfaState>::serialize(
         std::unordered_map<ByteNfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string>;
-
-template auto NfaSpontaneousTransition<Utf8NfaState>::serialize(
-        std::unordered_map<Utf8NfaState const*, uint32_t> const& state_ids
-) const -> std::optional<std::string>;
 }  // namespace log_surgeon::finite_automata

@@ -139,29 +139,20 @@ template <typename TypedNfaState>
 }
 
 template auto RegexAST<ByteNfaState>::serialize_negative_captures() const -> std::u32string;
-template auto RegexAST<Utf8NfaState>::serialize_negative_captures() const -> std::u32string;
 
 template auto RegexASTEmpty<ByteNfaState>::serialize() const -> std::u32string;
-template auto RegexASTEmpty<Utf8NfaState>::serialize() const -> std::u32string;
 
 template auto RegexASTLiteral<ByteNfaState>::serialize() const -> std::u32string;
-template auto RegexASTLiteral<Utf8NfaState>::serialize() const -> std::u32string;
 
 template auto RegexASTInteger<ByteNfaState>::serialize() const -> std::u32string;
-template auto RegexASTInteger<Utf8NfaState>::serialize() const -> std::u32string;
 
 template auto RegexASTOr<ByteNfaState>::serialize() const -> std::u32string;
-template auto RegexASTOr<Utf8NfaState>::serialize() const -> std::u32string;
 
 template auto RegexASTCat<ByteNfaState>::serialize() const -> std::u32string;
-template auto RegexASTCat<Utf8NfaState>::serialize() const -> std::u32string;
 
 template auto RegexASTMultiplication<ByteNfaState>::serialize() const -> std::u32string;
-template auto RegexASTMultiplication<Utf8NfaState>::serialize() const -> std::u32string;
 
 template auto RegexASTCapture<ByteNfaState>::serialize() const -> std::u32string;
-template auto RegexASTCapture<Utf8NfaState>::serialize() const -> std::u32string;
 
 template auto RegexASTGroup<ByteNfaState>::serialize() const -> std::u32string;
-template auto RegexASTGroup<Utf8NfaState>::serialize() const -> std::u32string;
 }  // namespace log_surgeon::finite_automata
