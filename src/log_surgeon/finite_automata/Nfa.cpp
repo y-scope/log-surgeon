@@ -33,5 +33,4 @@ auto Nfa<TypedNfaState>::serialize() const -> std::optional<std::string> {
 }
 
 template auto Nfa<ByteNfaState>::serialize() const -> std::optional<std::string>;
-template auto Nfa<Utf8NfaState>::serialize() const -> std::optional<std::string>;
 }  // namespace log_surgeon::finite_automata

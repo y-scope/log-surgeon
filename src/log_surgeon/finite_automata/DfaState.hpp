@@ -79,6 +79,12 @@ private:
     // use an empty class (`std::tuple<>`) in that case.
     std::conditional_t<state_type == StateType::Utf8, Tree, std::tuple<>> m_tree_transitions;
 };
+
+template <>
+[[nodiscard]] inline auto DfaState<StateType::Byte>::get_transition(uint8_t const character) const
+        -> std::optional<DfaTransition<StateType::Byte>> const& {
+    return m_bytes_transition[character];
+}
 }  // namespace log_surgeon::finite_automata
 
 #endif  // LOG_SURGEON_FINITE_AUTOMATA_DFA_STATE

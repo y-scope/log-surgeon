@@ -35,5 +35,4 @@ auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::optional<std::
 }
 
 template auto Dfa<ByteDfaState, ByteNfaState>::serialize() const -> std::optional<std::string>;
-template auto Dfa<Utf8DfaState, Utf8NfaState>::serialize() const -> std::optional<std::string>;
 }  // namespace log_surgeon::finite_automata

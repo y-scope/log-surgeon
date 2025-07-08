@@ -190,7 +190,9 @@ public:
             [[maybe_unused]] Nfa<TypedNfaState>* nfa,
             [[maybe_unused]] TypedNfaState* end_state,
             [[maybe_unused]] bool descendent_of_repetition
-    ) const -> void override;
+    ) const -> void override {
+        nfa->get_root()->add_spontaneous_transition(end_state);
+    }
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 };
