@@ -1,4 +1,7 @@
-#include <log_surgeon/finite_automata/RegisterOperation.hpp>
+#include "RegisterOperation.hpp"
+
+#include <optional>
+#include <string>
 
 #include <fmt/core.h>
 
