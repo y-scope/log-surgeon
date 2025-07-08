@@ -51,8 +51,4 @@ auto NfaState<state_type>::serialize(
 template auto NfaState<StateType::Byte>::serialize(
         std::unordered_map<ByteNfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string>;
-
-template auto NfaState<StateType::Utf8>::serialize(
-        std::unordered_map<NfaState const*, uint32_t> const& state_ids
-) const -> std::optional<std::string>;
 }  // namespace log_surgeon::finite_automata
