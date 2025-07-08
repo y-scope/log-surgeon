@@ -23,7 +23,7 @@
 #include <log_surgeon/finite_automata/RegisterHandler.hpp>
 #include <log_surgeon/finite_automata/RegisterOperation.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
-#include <log_surgeon/Token.hpp>
+#include <log_surgeon/types.hpp>
 
 namespace log_surgeon::finite_automata {
 /**

@@ -1,4 +1,11 @@
-#include <log_surgeon/finite_automata/Dfa.hpp>
+#include "Dfa.hpp"
+
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include <log_surgeon/finite_automata/DfaState.hpp>
 #include <log_surgeon/finite_automata/NfaState.hpp>
 
