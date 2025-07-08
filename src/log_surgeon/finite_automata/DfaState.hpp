@@ -4,7 +4,6 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>

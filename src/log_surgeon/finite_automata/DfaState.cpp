@@ -1,4 +1,14 @@
-#include <log_surgeon/finite_automata/DfaState.hpp>
+#include "DfaState.hpp"
+
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/DfaTransition.hpp>
+#include <log_surgeon/finite_automata/StateType.hpp>
 
 #include <fmt/core.h>
 #include <fmt/format.h>
