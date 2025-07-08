@@ -107,7 +107,7 @@ TEST_CASE("simple_repetitions", "[Regex]") {
  * @ingroup unit_tests_regex_ast
  * @brief Create an AST from simple regexes with multi-valued captures.
  */
-TEST_CASE("simple_capture_multiple_values", "[Regex]") {
+TEST_CASE("simple_multi_valued_capture", "[Regex]") {
     // Repetition with capture groups untagged and tagged AST are different
     test_regex_ast("capture:(?<letter>a){0,10}", U"(<~letter>)|(((a)<letter>){1,10})");
     test_regex_ast("capture:(?<letter>a{0,10})", U"(()|((a){1,10}))<letter>");
@@ -121,7 +121,7 @@ TEST_CASE("simple_capture_multiple_values", "[Regex]") {
  * @ingroup unit_tests_regex_ast
  * @brief Create an AST from a complex regex with multi-valued captures.
  */
-TEST_CASE("complex_repeated_capture_regex", "[Regex]") {
+TEST_CASE("repeated_multi_valued_capture", "[Regex]") {
     test_regex_ast(
             // clang-format off
             "capture:"

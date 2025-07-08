@@ -198,7 +198,7 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
  * " userID=123" -> "myVar"
  * @endcode
  */
-TEST_CASE("single_line_vars_no_capture", "[BufferParser]") {
+TEST_CASE("single_line_without_capture_var", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=123"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
@@ -259,7 +259,7 @@ TEST_CASE("single_line_vars_no_capture", "[BufferParser]") {
  * " userID=123" -> "myVar" with "123" -> "uid"
  * @endcode
  */
-TEST_CASE("single_line_vars_with_capture", "[BufferParser]") {
+TEST_CASE("single_line_with_capture_var", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=(?<uid>123)"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
@@ -342,7 +342,7 @@ TEST_CASE("single_line_vars_with_capture", "[BufferParser]") {
  * " user123" -> "hasNumber"
  * @endcode
  */
-TEST_CASE("single_line_clp_default_schema", "[BufferParser]") {
+TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema1{
             R"(timestamp:[0-9]{4}\-[0-9]{2}\-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}[,\.][0-9]{0,3})"
@@ -425,7 +425,7 @@ TEST_CASE("single_line_clp_default_schema", "[BufferParser]") {
  * " 1234567" -> "int"
  * @endcode
  */
-TEST_CASE("multi_line_var_newline_static_delim_var", "[BufferParser]") {
+TEST_CASE("multi_line_with_newline_static_var_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567\nText 1234567"};
@@ -484,7 +484,7 @@ TEST_CASE("multi_line_var_newline_static_delim_var", "[BufferParser]") {
  * " 1234567" -> "int"
  * @endcode
  */
-TEST_CASE("multi_line_var_delim_static_newline_static_delim_var", "[BufferParser]") {
+TEST_CASE("multi_line_with_static_newline_static_var_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\nText 1234567"};
@@ -540,7 +540,7 @@ TEST_CASE("multi_line_var_delim_static_newline_static_delim_var", "[BufferParser
  * "1234567" -> "int"
  * @endcode
  */
-TEST_CASE("multi_line_var_delim_static_newline_var", "[BufferParser]") {
+TEST_CASE("multi_line_with_static_newline_var_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\n1234567"};
@@ -599,7 +599,7 @@ TEST_CASE("multi_line_var_delim_static_newline_var", "[BufferParser]") {
  * "\n" -> "newLine"
  * @endcode
  */
-TEST_CASE("multi_line_var_delim_static_newline_var_newline", "[BufferParser]") {
+TEST_CASE("multi_line_with_static_newline_var_newline_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\n1234567\n"};
@@ -657,7 +657,7 @@ TEST_CASE("multi_line_var_delim_static_newline_var_newline", "[BufferParser]") {
  * "1234567" -> "int"
  * @endcode
  */
-TEST_CASE("multi_line_var_delim_newline_var", "[BufferParser]") {
+TEST_CASE("multi_line_with_delim_newline_var_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 \n1234567"};
@@ -749,7 +749,7 @@ TEST_CASE("multi_line_var_delim_newline_var", "[BufferParser]") {
  * ":my/path/to/file.txt" -> "path"
  * @endcode
  */
-TEST_CASE("multi_line_vars_contain_delims", "[BufferParser]") {
+TEST_CASE("multi_line_with_delimited_vars", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema1{"function:[A-Za-z]+::[A-Za-z]+1"};
     constexpr string_view cVarSchema2{R"(path:[a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+)"};

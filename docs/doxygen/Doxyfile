@@ -5,7 +5,6 @@ OUTPUT_DIRECTORY = build/docs/
 
 # Input
 INPUT = \
-    docs/doxygen/groups.dox \
     docs/doxygen/mainpage.dox \
     tests/
 RECURSIVE = YES
