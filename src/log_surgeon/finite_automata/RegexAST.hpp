@@ -15,7 +15,6 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Capture.hpp>
-#include <log_surgeon/finite_automata/Nfa.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 #include <gsl/pointers>
@@ -190,10 +189,8 @@ public:
     auto add_to_nfa(
             [[maybe_unused]] Nfa<TypedNfaState>* nfa,
             [[maybe_unused]] TypedNfaState* end_state,
-            [[maybe_unused]] bool const descendent_of_repetition
-    ) const -> void override {
-        nfa->get_root()->add_spontaneous_transition(end_state);
-    }
+            [[maybe_unused]] bool descendent_of_repetition
+    ) const -> void override;
 
     [[nodiscard]] auto serialize() const -> std::u32string override;
 };

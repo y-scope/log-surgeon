@@ -6,6 +6,7 @@
 #include <utility>
 
 #include <log_surgeon/finite_automata/Capture.hpp>
+#include <log_surgeon/finite_automata/Nfa.hpp>
 #include <log_surgeon/finite_automata/NfaState.hpp>
 
 #include <fmt/core.h>
@@ -14,6 +15,15 @@
 #include <fmt/xchar.h>
 
 namespace log_surgeon::finite_automata {
+template <typename TypedNfaState>
+auto RegexASTEmpty<TypedNfaState>::add_to_nfa(
+        [[maybe_unused]] Nfa<TypedNfaState>* nfa,
+        [[maybe_unused]] TypedNfaState* end_state,
+        [[maybe_unused]] bool const descendent_of_repetition
+) const -> void {
+    nfa->get_root()->add_spontaneous_transition(end_state);
+}
+
 template <typename TypedNfaState>
 auto RegexAST<TypedNfaState>::serialize_negative_captures() const -> std::u32string {
     if (m_negative_captures.empty()) {
@@ -136,6 +146,17 @@ template <typename TypedNfaState>
             RegexAST<TypedNfaState>::serialize_negative_captures()
     );
 }
+
+template auto RegexASTEmpty<ByteNfaState>::add_to_nfa(
+        [[maybe_unused]] Nfa<ByteNfaState>* nfa,
+        [[maybe_unused]] ByteNfaState* end_state,
+        [[maybe_unused]] bool descendent_of_repetition
+) const -> void;
+template auto RegexASTEmpty<Utf8NfaState>::add_to_nfa(
+        [[maybe_unused]] Nfa<Utf8NfaState>* nfa,
+        [[maybe_unused]] Utf8NfaState* end_state,
+        [[maybe_unused]] bool descendent_of_repetition
+) const -> void;
 
 template auto RegexAST<ByteNfaState>::serialize_negative_captures() const -> std::u32string;
 template auto RegexAST<Utf8NfaState>::serialize_negative_captures() const -> std::u32string;
