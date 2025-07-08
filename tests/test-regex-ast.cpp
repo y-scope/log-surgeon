@@ -95,8 +95,7 @@ TEST_CASE("simple_capture", "[Regex]") {
  * @ingroup unit_tests_regex_ast
  * @brief Create an AST from regexes with repetition.
  */
-TEST_CASE("simple_repetitions", "[Regex]") {
-    // Repetition without capture groups untagged and tagged AST are the same
+TEST_CASE("simple_repetition", "[Regex]") {
     test_regex_ast("capture:a{0,10}", U"()|((a){1,10})");
     test_regex_ast("capture:a{5,10}", U"(a){5,10}");
     test_regex_ast("capture:a*", U"()|((a){1,inf})");
@@ -105,23 +104,29 @@ TEST_CASE("simple_repetitions", "[Regex]") {
 
 /**
  * @ingroup unit_tests_regex_ast
- * @brief Create an AST from simple regexes with multi-valued captures.
+ * @brief Create an AST from simple regexes with a capture group containing repetition.
+ */
+TEST_CASE("simple_capture_containing_repetition", "[Regex]") {
+    test_regex_ast("capture:(?<letter>a{0,10})", U"(()|((a){1,10}))<letter>");
+    test_regex_ast("capture:(?<letter>a{5,10})", U"((a){5,10})<letter>");
+}
+
+/**
+ * @ingroup unit_tests_regex_ast
+ * @brief Create an AST from simple regexes with a repeated capture group.
  */
 TEST_CASE("simple_multi_valued_capture", "[Regex]") {
-    // Repetition with capture groups untagged and tagged AST are different
     test_regex_ast("capture:(?<letter>a){0,10}", U"(<~letter>)|(((a)<letter>){1,10})");
-    test_regex_ast("capture:(?<letter>a{0,10})", U"(()|((a){1,10}))<letter>");
     test_regex_ast("capture:(?<letter>a){5,10}", U"((a)<letter>){5,10}");
-    test_regex_ast("capture:(?<letter>a{5,10})", U"((a){5,10})<letter>");
     test_regex_ast("capture:(?<letter>a)*", U"(<~letter>)|(((a)<letter>){1,inf})");
     test_regex_ast("capture:(?<letter>a)+", U"((a)<letter>){1,inf}");
 }
 
 /**
  * @ingroup unit_tests_regex_ast
- * @brief Create an AST from a complex regex with multi-valued captures.
+ * @brief Create an AST from a complex regex with repeated capture groups.
  */
-TEST_CASE("repeated_multi_valued_capture", "[Regex]") {
+TEST_CASE("complex_multi_valued_capture", "[Regex]") {
     test_regex_ast(
             // clang-format off
             "capture:"

@@ -70,9 +70,9 @@ auto test_nfa(string const& var_schema, string const& expected_serialized_nfa) -
 
 /**
  * @ingroup unit_tests_nfa
- * @brief Create a NFA for matching a simple capture variable.
+ * @brief Create a NFA for matching a simple variable with a capture group.
  */
-TEST_CASE("simple_var_with_capture", "[NFA]") {
+TEST_CASE("capture_0", "[NFA]") {
     string const var_schema{"capture:userID=(?<uid>123)"};
     string const expected_serialized_nfa{
             "0:byte_transitions={u-->1},spontaneous_transition={}\n"
@@ -94,9 +94,9 @@ TEST_CASE("simple_var_with_capture", "[NFA]") {
 
 /**
  * @ingroup unit_tests_nfa
- * @brief Create a NFA for matching a complex capture variable.
+ * @brief Create a NFA for matching a complex variable with a capture group.
  */
-TEST_CASE("complex_var_with_capture", "[NFA]") {
+TEST_CASE("capture_1", "[NFA]") {
     string const var_schema{"capture:Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?"
                             "<containerID>\\d+)C)"};
     // tags: letter1(0,1), letter2(2,3), letter(4,5), containerID(6,7)
@@ -126,9 +126,9 @@ TEST_CASE("complex_var_with_capture", "[NFA]") {
 
 /**
  * @ingroup unit_tests_nfa
- * @brief Create a NFA for matching a complex capture variable.
+ * @brief Create a NFA for matching a multi-valued capture group.
  */
-TEST_CASE("simple_var_with_multi_valued_capture", "[NFA]") {
+TEST_CASE("multi_valued_capture_0", "[NFA]") {
     string const var_schema{"capture:a*(?<one>1)+"};
     string const expected_serialized_nfa{
             "0:byte_transitions={a-->1},spontaneous_transition={1[]}\n"
@@ -144,9 +144,9 @@ TEST_CASE("simple_var_with_multi_valued_capture", "[NFA]") {
 
 /**
  * @ingroup unit_tests_nfa
- * @brief Create a NFA for matching a variable with a multi-valued capture.
+ * @brief Create a NFA for matching a multi-valued capture group.
  */
-TEST_CASE("complex_var_with_multi_valued_capture_0", "[NFA]") {
+TEST_CASE("multi_valued_capture_1", "[NFA]") {
     string const var_schema{"capture:(a*(?<one>1))+"};
     string const expected_serialized_nfa{
             "0:byte_transitions={a-->1},spontaneous_transition={1[]}\n"
@@ -163,9 +163,9 @@ TEST_CASE("complex_var_with_multi_valued_capture_0", "[NFA]") {
 
 /**
  * @ingroup unit_tests_nfa
- * @brief Create a NFA for matching a more complex variable with a multi-valued capture.
+ * @brief Create a NFA for matching a multi-valued capture group containing repetition.
  */
-TEST_CASE("complex_var_with_multi_valued_capture_1", "[NFA]") {
+TEST_CASE("multi_valued_capture_containing_repetition", "[NFA]") {
     string const var_schema{"capture:(a+=(?<val>1+),)+"};
     string const expected_serialized_nfa{
             "0:byte_transitions={a-->1},spontaneous_transition={}\n"

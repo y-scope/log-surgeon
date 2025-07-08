@@ -80,9 +80,9 @@ auto test_dfa(std::vector<string> const& var_schemas, string const& expected_ser
 
 /**
  * @ingroup unit_tests_dfa
- * @brief Create a DFA for matching a simple non-captured variable.
+ * @brief Create a DFA for matching a simple variable with no capture group.
  */
-TEST_CASE("simple_var_without_capture", "[DFA]") {
+TEST_CASE("no_capture_0", "[DFA]") {
     string const var_schema{"capture:userID=123"};
     string const expected_serialized_dfa{
             "0:byte_transitions={u-()->1}\n"
@@ -102,9 +102,9 @@ TEST_CASE("simple_var_without_capture", "[DFA]") {
 
 /**
  * @ingroup unit_tests_dfa
- * @brief Create a DFA for matching a complex non-captured variable.
+ * @brief Create a DFA for matching a complex variable with no capture group.
  */
-TEST_CASE("complex_var_without_capture", "[DFA]") {
+TEST_CASE("no_capture_1", "[DFA]") {
     string const var_schema{"capture:Z|(A[abcd]B\\d+C)"};
     string const expected_serialized_dfa{
             "0:byte_transitions={A-()->1,Z-()->2}\n"
@@ -121,9 +121,9 @@ TEST_CASE("complex_var_without_capture", "[DFA]") {
 
 /**
  * @ingroup unit_tests_dfa
- * @brief Create a DFA for matching a simple capture variable.
+ * @brief Create a DFA for matching a simple capture group containing repetition.
  */
-TEST_CASE("simple_var_with_capture", "[DFA]") {
+TEST_CASE("capture_containing_repetition_0", "[DFA]") {
     string const var_schema{"capture:userID=(?<uID>123)"};
     string const expected_serialized_dfa{
             "0:byte_transitions={u-()->1}\n"
@@ -143,9 +143,9 @@ TEST_CASE("simple_var_with_capture", "[DFA]") {
 
 /**
  * @ingroup unit_tests_dfa
- * @brief Create a DFA for matching a complex capture variable.
+ * @brief Create a DFA for matching a complex capture group containing repetition.
  */
-TEST_CASE("complex_var_with_capture", "[DFA]") {
+TEST_CASE("capture_containing_repetition_1", "[DFA]") {
     string const var_schema{"capture:Z|(A(?<letter>((?<letter1>(a)|(b))|(?<letter2>(c)|(d))))B(?<"
                             "containerID>\\d+)C)"};
     string const expected_serialized_dfa{
@@ -167,9 +167,9 @@ TEST_CASE("complex_var_with_capture", "[DFA]") {
 
 /**
  * @ingroup unit_tests_dfa
- * @brief Create a DFA for matching a variable with a multi-valued capture.
+ * @brief Create a DFA for matching a multi-valued capture group containing repetition.
  */
-TEST_CASE("var_with_multi_valued_capture", "[DFA]") {
+TEST_CASE("multi_valued_capture_containing_repetition", "[DFA]") {
     string const var_schema{"capture:([a]+=(?<val>1+),)+"};
     string const expected_serialized_dfa{
             "0:byte_transitions={a-()->1}\n"

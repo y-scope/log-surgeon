@@ -202,7 +202,7 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
  * " userID=123" -> "myVar"
  * @endcode
  */
-TEST_CASE("single_line_without_capture_var", "[BufferParser]") {
+TEST_CASE("single_line_without_capture", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=123"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
@@ -276,7 +276,7 @@ TEST_CASE("single_line_without_capture_var", "[BufferParser]") {
  * " userID=123" -> "myVar" with "123" -> "uid"
  * @endcode
  */
-TEST_CASE("single_line_with_capture_var", "[BufferParser]") {
+TEST_CASE("single_line_with_capture", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=(?<uid>123)"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
