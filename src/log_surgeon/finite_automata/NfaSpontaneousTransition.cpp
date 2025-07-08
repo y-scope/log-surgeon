@@ -1,5 +1,13 @@
-#include <log_surgeon/finite_automata/NfaSpontaneousTransition.hpp>
+#include "NfaSpontaneousTransition.hpp"
+
+#include <cstdint>
+#include <optional>
+#include <ranges>
+#include <string>
+#include <unordered_map>
+
 #include <log_surgeon/finite_automata/NfaState.hpp>
+#include <log_surgeon/finite_automata/TagOperation.hpp>
 
 #include <fmt/format.h>
 
@@ -21,11 +29,11 @@ auto NfaSpontaneousTransition<TypedNfaState>::serialize(
     );
 }
 
-template auto NfaSpontaneousTransition<NfaState<StateType::Byte>>::serialize(
+template auto NfaSpontaneousTransition<ByteNfaState>::serialize(
         std::unordered_map<ByteNfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string>;
 
-template auto NfaSpontaneousTransition<NfaState<StateType::Utf8>>::serialize(
+template auto NfaSpontaneousTransition<Utf8NfaState>::serialize(
         std::unordered_map<Utf8NfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string>;
 }  // namespace log_surgeon::finite_automata
