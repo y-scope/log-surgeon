@@ -15,6 +15,7 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Capture.hpp>
+#include <log_surgeon/finite_automata/Nfa.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 #include <gsl/pointers>
