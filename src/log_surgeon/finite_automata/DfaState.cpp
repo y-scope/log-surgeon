@@ -62,22 +62,22 @@ auto DfaState<state_type>::serialize(
     );
 }
 
-template auto ByteDfaState::serialize(
+template auto DfaState<StateType::Byte>::serialize(
         std::unordered_map<ByteDfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string>;
 
-template auto Utf8DfaState::serialize(
+template auto DfaState<StateType::Utf8>::serialize(
         std::unordered_map<Utf8DfaState const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string>;
 
 template <>
-auto ByteDfaState::get_transition(uint8_t const character) const
+auto DfaState<StateType::Byte>::get_transition(uint8_t const character) const
         -> std::optional<DfaTransition<StateType::Byte>> const& {
     return m_bytes_transition[character];
 }
 
 template <>
-auto Utf8DfaState::get_transition(uint8_t const character) const
+auto DfaState<StateType::Utf8>::get_transition(uint8_t const character) const
         -> std::optional<DfaTransition<StateType::Utf8>> const& {
     // TODO: Handle UTF8
     return m_bytes_transition[character];
