@@ -1,4 +1,6 @@
-#include <log_surgeon/finite_automata/TagOperation.hpp>
+#include "TagOperation.hpp"
+
+#include <string>
 
 #include <fmt/core.h>
 
