@@ -1,7 +1,6 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
 
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -125,6 +124,9 @@ private:
 
 template <typename TypedNfaState>
 Nfa<TypedNfaState>::Nfa(std::vector<LexicalRule<TypedNfaState>> const& rules) {
+    // Note: If `m_root` is in the initializer list it will use uninitialized
+    // `m_state_id_generator`. Instead of relying on member ordering we initialize below.
+    // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
     m_root = new_state();
     for (auto const& rule : rules) {
         rule.add_to_nfa(this);
