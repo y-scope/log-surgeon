@@ -1,3 +1,5 @@
+#include "NfaState.hpp"
+
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -5,7 +7,6 @@
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/NfaState.hpp>
 #include <log_surgeon/finite_automata/StateType.hpp>
 
 #include <fmt/core.h>

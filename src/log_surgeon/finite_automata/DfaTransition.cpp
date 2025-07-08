@@ -1,3 +1,5 @@
+#include "DfaTransition.hpp"
+
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -5,7 +7,6 @@
 #include <vector>
 
 #include <log_surgeon/finite_automata/DfaState.hpp>
-#include <log_surgeon/finite_automata/DfaTransition.hpp>
 #include <log_surgeon/finite_automata/StateType.hpp>
 
 #include <fmt/core.h>

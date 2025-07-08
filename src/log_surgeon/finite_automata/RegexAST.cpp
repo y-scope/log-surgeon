@@ -1,7 +1,15 @@
+#include "RegexAST.hpp"
+
+#include <cstdint>
+#include <ranges>
+#include <string>
+#include <utility>
+
+#include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/finite_automata/NfaState.hpp>
-#include <log_surgeon/finite_automata/RegexAST.hpp>
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <fmt/xchar.h>
 
