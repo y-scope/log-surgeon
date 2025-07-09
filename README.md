@@ -136,7 +136,7 @@ To generate and view the files:
 To host the site locally and view it:
 
 * Run `task docs:serve`.
-* Open the URL and port output from the `serve` task in your preferred browser.
+* Open the URL output by the task in your preferred browser.
 
 ## Testing
 
