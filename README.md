@@ -111,8 +111,8 @@ task build:debug
 
 ## Examples
 
-[examples](examples) contains programs demonstrating usage of the library.
-See [examples/README.md](examples/README.md) for information on building and running the examples.
+[examples](examples) contains programs demonstrating usage of the library. See
+[examples/README.md](examples/README.md) for information on building and running the examples.
 
 ## Documentation
 
