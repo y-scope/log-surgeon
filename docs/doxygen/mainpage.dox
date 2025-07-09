@@ -2,8 +2,8 @@
  *
  * # Use case examples of schema rules and parsing results:
  *
- * - @ref test_buffer_parser_no_capture "Use basic log parser"
- * - @ref test_buffer_parser_capture "Use captures"
+ * - @ref test_buffer_parser_no_capture "Basic log parser"
+ * - @ref test_buffer_parser_capture "Captures"
  * - @ref test_buffer_parser_default_schema "Default CLP schema"
  * - @ref test_buffer_parser_delimited_variables "Backtracking on delimited variables"
  * - @ref test_buffer_parser_newline_vars "Identifying variables at the start of a line"
