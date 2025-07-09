@@ -76,6 +76,7 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "npm --prefix '{{.OUTPUT_DIR}}' install http-server"
+
       # This command must be last
       - task: "utils:checksum:compute"
         vars:
