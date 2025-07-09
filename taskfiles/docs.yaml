@@ -26,7 +26,7 @@ tasks:
       - "http-server"
       - "site"
     cmds:
-      - "npm --prefix '{{.G_NODE_DEPS_DIR}}' exec -- http-server '{{.G_DOCS_HTML_DIR}}' -c-1"
+      - "npm --prefix '{{.G_NODE_DEPS_DIR}}' exec -- http-server '{{.G_DOCS_HTML_DIR}}' -c -1"
 
   site:
     vars:
