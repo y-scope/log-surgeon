@@ -1,4 +1,4 @@
-# Project Information
+# Project information
 PROJECT_BRIEF = "Test coverage and internal documentation"
 PROJECT_NAME = "Log Surgeon"
 OUTPUT_DIRECTORY = build/docs/
@@ -9,7 +9,7 @@ INPUT = \
     tests/
 RECURSIVE = YES
 
-# Source Code Parsing
+# Source code parsing
 EXTRACT_ALL = YES
 EXTRACT_PRIVATE = YES
 EXTRACT_STATIC = YES
