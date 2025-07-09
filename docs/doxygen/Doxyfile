@@ -1,5 +1,5 @@
 # Project information
-PROJECT_BRIEF = "Test coverage and internal documentation"
+PROJECT_BRIEF = "Test & API docs"
 PROJECT_NAME = "Log Surgeon"
 OUTPUT_DIRECTORY = build/docs/
 
