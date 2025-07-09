@@ -51,6 +51,7 @@ tasks:
         rm -rf "{{.G_DOCS_HTML_DIR}}"
         cd "{{.ROOT_DIR}}"
         {{.G_DOXYGEN_CMD}} "{{.G_DOXYFILE_PATH}}"
+
       # This command must be last
       - task: "utils:checksum:compute"
         vars:
