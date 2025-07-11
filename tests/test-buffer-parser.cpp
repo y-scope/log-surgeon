@@ -415,8 +415,8 @@ TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
 
 /**
  * @defgroup test_buffer_parser_newline_vars Buffer parser identifying variable tokens on newlines.
- * @brief Tests covering how `BufferParser` categorizes variable tokens appearing at the start of new
- * lines, including interaction with static-text, delimiters, and capture group repetition.
+ * @brief Tests covering how `BufferParser` categorizes variable tokens appearing at the start of
+ * new lines, including interaction with static-text, delimiters, and capture group repetition.
  *
  * These tests verify correct tokenization and recognition of variables and delimiters when
  * variables occur on new lines, especially following different token types.
@@ -710,7 +710,8 @@ TEST_CASE("multi_line_with_delim_newline_var_sequence", "[BufferParser]") {
 /**
  * @defgroup test_buffer_parser_delimited_variables Buffer parser using variables containing
  * delimiters.
- * @brief Tests for `BufferParser` using a schema where variables are defined with custom delimiters.
+ * @brief Tests for `BufferParser` using a schema where variables are defined with custom
+ * delimiters.
  *
  * This group contains tests that verify tokenization using:
  * - Custom delimiters (`\n\r\[:,`)
