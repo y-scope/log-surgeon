@@ -17,7 +17,9 @@ jobs:
   lint:
     strategy:
       matrix:
-        os: ["macos-latest", "ubuntu-latest"]
+        os:
+          - "macos-15"
+          - "ubuntu-24.04"
     runs-on: "${{matrix.os}}"
     steps:
       - uses: "actions/checkout@v4"
