@@ -4,6 +4,9 @@ includes:
   build:
     internal: true
     taskfile: "./build.yaml"
+  deps:
+    internal: true
+    taskfile: "./deps.yaml"
   utils:
     internal: true
     taskfile: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
