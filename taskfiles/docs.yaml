@@ -60,6 +60,7 @@ tasks:
 
   http-server:
     internal: true
+    run: "once"
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_NODE_DEPS_DIR}}"
