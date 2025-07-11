@@ -41,11 +41,11 @@ tasks:
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
-      - "venv"
       - task: "utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+      - "venv"
     cmds:
       - |-
         rm -rf "{{.G_DOCS_HTML_DIR}}"
