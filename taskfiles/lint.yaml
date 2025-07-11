@@ -139,6 +139,12 @@ tasks:
       - task: "fix-cpp-full"
       - task: "yaml-fix"
 
+  fix-cmake:
+    cmds:
+      - task: "gersemi"
+        vars:
+          FLAGS: "--in-place"
+
   fix-cpp-diff:
     cmds:
       - task: "fix-cpp-format"
