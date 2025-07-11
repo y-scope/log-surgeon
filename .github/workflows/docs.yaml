@@ -19,7 +19,7 @@ jobs:
     name: "Build docs site"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
           lfs: "true"
           submodules: "recursive"
@@ -36,7 +36,7 @@ jobs:
       - if: >-
           contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name)
           && ('refs/heads/main' == github.ref || startsWith(github.ref, 'refs/tags/v'))
-        uses: "actions/upload-artifact@v4"
+        uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
         with:
           name: "docs-html"
           path: "build/docs/html"
