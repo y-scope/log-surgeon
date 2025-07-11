@@ -152,7 +152,7 @@ if("GNU" STREQUAL "${CMAKE_CXX_COMPILER_ID}"
              AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL 13.3)
          OR (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14
              AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL 14.2)))
-    target_compile_options(log_surgeon PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-stringop-overflow>)
+    target_compile_options(log_surgeon PRIVATE "-Wno-stringop-overflow")
 endif()
 
 # Make off_t 64-bit
