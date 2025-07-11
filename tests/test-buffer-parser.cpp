@@ -163,34 +163,37 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
 }  // namespace
 
 /**
+ * @defgroup test_buffer_parser_no_capture Buffer parser using variables without capture groups.
+ * @brief Tests covering variable matching without regex capture groups.
+ */
+
+/**
  * @ingroup test_buffer_parser_no_capture
- *
  * @brief Tests the buffer parser behavior when parsing variables without capture groups.
  *
- * @details
- * This test verifies that the buffer parser correctly matches exact variable patterns when
- * no capture groups are involved. It confirms the `BufferParser`:
+ * This test verifies that the buffer parser correctly matches exact variable patterns when no
+ * capture groups are involved. It confirms the `BufferParser`:
  * - Recognizes a variable exactly matching the defined schema ("myVar:userID=123").
  * - Treats close but non-matching strings as uncaught tokens.
  * - Correctly classifies tokens that don't match any variable schema as uncaught strings.
  *
- * @section schema Schema Definition
+ * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
  * myVar:userID=123
  * @endcode
  *
- * @section input Test Input
+ * ### Test Input
  * @code
  * "userID=123 userID=234 userID=123 123 userID=123"
  * @endcode
  *
- * @section expected Expected Logtype
+ * ### Expected Logtype
  * @code
  * "<myVar> userID=234 <myVar> 123 <myVar>"
  * @endcode
  *
- * @section expected Expected Tokenization
+ * ### Expected Tokenization
  * @code
  * "userID=123" -> "myVar"
  * " userID=234" -> uncaught string
@@ -199,7 +202,7 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
  * " userID=123" -> "myVar"
  * @endcode
  */
-TEST_CASE("Use a buffer parser without capture groups", "[BufferParser]") {
+TEST_CASE("single_line_without_capture", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=123"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
@@ -224,11 +227,23 @@ TEST_CASE("Use a buffer parser without capture groups", "[BufferParser]") {
 }
 
 /**
- * @ingroup test_buffer_parser_capture
+ * @defgroup test_buffer_parser_capture Buffer parser using variables with capture groups.
+ * @brief Tests `BufferParser` behavior with named capture groups in variable schemas.
  *
+ * Verifies:
+ * - Symbol registration for variables and capture groups
+ * - Correct association of tag positions
+ * - Proper assignment and lookup of tag registers
+ *
+ * Useful for validating advanced schema features like `(?<name>...)` integration.
+ *
+ * @see test_buffer_parser_no_capture for simpler variable matching.
+ */
+
+/**
+ * @ingroup test_buffer_parser_capture
  * @brief Validates tokenization behavior when using capture groups in variable schemas.
  *
- * @details
  * This test verifies the `BufferParser`'s ability to:
  * - Recognize a variable definition containing a named capture group.
  * - Identify and register both the variable name and the capture group name as valid symbols.
@@ -236,23 +251,23 @@ TEST_CASE("Use a buffer parser without capture groups", "[BufferParser]") {
  * - Extract matched positions correctly when parsing a token.
  * - Fail to match tokens that don't align exactly with the specified capture pattern.
  *
- * @section schema Schema Definition
+ * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
  * myVar:userID=(?<uid>123)
  * @endcode
  *
- * @section input Test Input
+ * ### Test Input
  * @code
  * "userID=123 userID=234 userID=123 123 userID=123"
  * @endcode
  *
- * @section expected Expected Logtype
+ * ### Expected Logtype
  * @code
  * "userID=<uid> userID=234  userID=<uid> 123  userID=<uid>"
  * @endcode
  *
- * @section expected Expected Tokenization
+ * ### Expected Tokenization
  * @code
  * "userID=123" -> "myVar" with "123" -> "uid"
  * " userID=234" -> uncaught string
@@ -261,7 +276,7 @@ TEST_CASE("Use a buffer parser without capture groups", "[BufferParser]") {
  * " userID=123" -> "myVar" with "123" -> "uid"
  * @endcode
  */
-TEST_CASE("Use a buffer parser with capture groups", "[BufferParser]") {
+TEST_CASE("single_line_with_capture", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=(?<uid>123)"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
@@ -287,11 +302,16 @@ TEST_CASE("Use a buffer parser with capture groups", "[BufferParser]") {
 }
 
 /**
- * @ingroup test_buffer_parser_default_schema
+ * @defgroup test_buffer_parser_default_schema Buffer parser using the default schema.
+ * @brief Tests for CLP's default variable schema: timestamp, int, float, hex, key-value pairs, etc.
  *
+ * Validates token recognition across common variable types using a default schema definition.
+ */
+
+/**
+ * @ingroup test_buffer_parser_default_schema
  * @brief Validates tokenization behavior using the default schema commonly used in CLP.
  *
- * @details
  * This tests the `BufferParser`'s ability to correctly tokenize inputs according to a schema
  * defining:
  * - Timestamps
@@ -308,7 +328,7 @@ TEST_CASE("Use a buffer parser with capture groups", "[BufferParser]") {
  * This group demonstrates how to define and integrate regex-based schemas, including named capture
  * groups, for structured log tokenization.
  *
- * @section schema Schema Definition
+ * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
  * firstTimestamp: [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}[,\.][0-9]{0,3}
@@ -319,22 +339,22 @@ TEST_CASE("Use a buffer parser with capture groups", "[BufferParser]") {
  * hasNumber: ={0,1}[^ \r\n=]*\d[^ \r\n=]*={0,1}
  * @endcode
  *
- * @section input Test Input
+ * ### Test Input
  * @code
  * "2012-12-12 12:12:12.123 123 123.123 abc userID=123 text user123"
  * @endcode
  *
- * @section expected Expected Logtype
+ * ### Expected Logtype
  * @code
  * " <int> <float> <hex>  userID=<val> text <hasNumber>"
  * @endcode
  *
- * @section expected Expected Timestamp
+ * ### Expected Timestamp
  * @code
  * "2012-12-12 12:12:12.123"
  * @endcode
  *
- * @section expected Expected Tokenization
+ * ### Expected Tokenization
  * @code
  * "2012-12-12 12:12:12.123" -> "firstTimestamp"
  * " 123" -> "int"
@@ -345,7 +365,7 @@ TEST_CASE("Use a buffer parser with capture groups", "[BufferParser]") {
  * " user123" -> "hasNumber"
  * @endcode
  */
-TEST_CASE("Use a buffer parser with CLP's default schema", "[BufferParser]") {
+TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema1{
             R"(timestamp:[0-9]{4}\-[0-9]{2}\-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}[,\.][0-9]{0,3})"
@@ -394,34 +414,41 @@ TEST_CASE("Use a buffer parser with CLP's default schema", "[BufferParser]") {
 }
 
 /**
- * @ingroup test_buffer_parser_newline_vars
+ * @defgroup test_buffer_parser_newline_vars Buffer parser identifying variable tokens on newlines.
+ * @brief Tests covering how `BufferParser` categorizes variable tokens appearing at the start of
+ * new lines, including interaction with static-text, delimiters, and capture group repetition.
  *
+ * These tests verify correct tokenization and recognition of variables and delimiters when
+ * variables occur on new lines, especially following different token types.
+ */
+
+/**
+ * @ingroup test_buffer_parser_newline_vars
  * @brief Test variable after static-text at the start of a newline when previous line ends in a
  * variable.
  *
- * @details
  * This test verifies that when a line ends with a variable token and the next line starts with
  * static text followed by an integer variable, the `BufferParser` correctly recognizes the newline
  * as a delimiter and parses the tokens appropriately.
  *
- * @section schema Schema Definition
+ * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
  * int: \-{0,1}[0-9]+
  * @endcode
  *
- * @section input Test Input
+ * ### Test Input
  * @code
  * "1234567\nText 1234567"
  * @endcode
  *
- * @section expected Expected Logtype
+ * ### Expected Logtype
  * @code
  * "<int><newLine>"
  * "Text <int>"
  * @endcode
  *
- * @section expected Expected Tokenization
+ * ### Expected Tokenization
  * @code
  * "1234567" -> "int"
  * "\n" -> "newLine"
@@ -429,7 +456,7 @@ TEST_CASE("Use a buffer parser with CLP's default schema", "[BufferParser]") {
  * " 1234567" -> "int"
  * @endcode
  */
-TEST_CASE("Parse a multi-line input #1", "[BufferParser]") {
+TEST_CASE("multi_line_with_newline_static_var_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567\nText 1234567"};
@@ -454,33 +481,31 @@ TEST_CASE("Parse a multi-line input #1", "[BufferParser]") {
 
 /**
  * @ingroup test_buffer_parser_newline_vars
- *
  * @brief Test variable after static-text at start of newline when previous line ends in
  * static-text.
  *
- * @details
  * This test verifies that when a line ends with static text and the next line starts with static
  * text followed by an integer variable, the `BufferParser` identifies the newline properly and
  * tokenizes the input correctly.
  *
- * @section schema Schema Definition
+ * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
  * int: \-{0,1}[0-9]+
  * @endcode
  *
- * @section input Test Input
+ * ### Test Input
  * @code
  * "1234567 abc\nText 1234567"
  * @endcode
  *
- * @section expected Expected Logtype
+ * ### Expected Logtype
  * @code
  * "<int> abc<newLine>"
  * "Text <int>"
  * @endcode
  *
- * @section expected Expected Tokenization
+ * ### Expected Tokenization
  * @code
  * "1234567" -> "int"
  * " abc" -> uncaught string
@@ -489,7 +514,7 @@ TEST_CASE("Parse a multi-line input #1", "[BufferParser]") {
  * " 1234567" -> "int"
  * @endcode
  */
-TEST_CASE("Parse a multi-line input #2", "[BufferParser]") {
+TEST_CASE("multi_line_with_static_newline_static_var_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\nText 1234567"};
@@ -514,31 +539,29 @@ TEST_CASE("Parse a multi-line input #2", "[BufferParser]") {
 
 /**
  * @ingroup test_buffer_parser_newline_vars
- *
  * @brief Test variable at start of newline when previous line ends in static-text.
  *
- * @details
  * This test verifies that when a line ends with static text and the next line starts directly with
  * an integer variable, the `BufferParser` treats the newline and variable token correctly.
  *
- * @section schema Schema Definition
+ * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
  * int: \-{0,1}[0-9]+
  * @endcode
  *
- * @section input Test Input
+ * ### Test Input
  * @code
  * "1234567 abc\n1234567"
  * @endcode
  *
- * @section expected Expected Logtype
+ * ### Expected Logtype
  * @code
  * "<int> abc\n"
  * "<int>"
  * @endcode
  *
- * @section expected Expected Tokenization
+ * ### Expected Tokenization
  * @code
  * "1234567" -> "int"
  * " abc" -> uncaught string
@@ -546,7 +569,7 @@ TEST_CASE("Parse a multi-line input #2", "[BufferParser]") {
  * "1234567" -> "int"
  * @endcode
  */
-TEST_CASE("Parse a multi-line input #3", "[BufferParser]") {
+TEST_CASE("multi_line_with_static_newline_var_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\n1234567"};
@@ -571,33 +594,31 @@ TEST_CASE("Parse a multi-line input #3", "[BufferParser]") {
 
 /**
  * @ingroup test_buffer_parser_newline_vars
- *
  * @brief Test variable followed by newline at start of newline when previous line ends in
  * static-text.
  *
- * @details
  * This test verifies that when a line ends with static text, and the next line contains an integer
  * variable followed by a newline, the `BufferParser` correctly separates the tokens, recognizing
  * the newline delimiter.
  *
- * @section schema Schema Definition
+ * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
  * int: \-{0,1}[0-9]+
  * @endcode
  *
- * @section input Test Input
+ * ### Test Input
  * @code
  * "1234567 abc\n1234567\n"
  * @endcode
  *
- * @section expected Expected Logtype
+ * ### Expected Logtype
  * @code
  * "<int> abc\n"
  * "<int><newLine>"
  * @endcode
  *
- * @section expected Expected Tokenization
+ * ### Expected Tokenization
  * @code
  * "1234567" -> "int"
  * " abc" -> uncaught string
@@ -606,7 +627,7 @@ TEST_CASE("Parse a multi-line input #3", "[BufferParser]") {
  * "\n" -> "newLine"
  * @endcode
  */
-TEST_CASE("Parse a multi-line input #4", "[BufferParser]") {
+TEST_CASE("multi_line_with_static_newline_var_newline_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\n1234567\n"};
@@ -632,32 +653,30 @@ TEST_CASE("Parse a multi-line input #4", "[BufferParser]") {
 
 /**
  * @ingroup test_buffer_parser_newline_vars
- *
  * @brief Test a variable at start of a newline when previous line ends in a delimiter.
  *
- * @details
  * This test verifies that if a line ends with a delimiter (e.g., space) and the next line starts
  * with an integer variable, the `BufferParser` correctly identifies the tokens including the
  * newline.
  *
- * @section schema Schema Definition
+ * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
  * int: \-{0,1}[0-9]+
  * @endcode
  *
- * @section input Input Example
+ * ### Input Example
  * @code
  * "1234567 \n1234567"
  * @endcode
  *
- * @section expected Expected Logtype
+ * ### Expected Logtype
  * @code
  * "<int> \n"
  * "<int>"
  * @endcode
  *
- * @section expected Expected Tokenization
+ * ### Expected Tokenization
  * @code
  * "1234567" -> "int"
  * " " -> uncaught string
@@ -665,7 +684,7 @@ TEST_CASE("Parse a multi-line input #4", "[BufferParser]") {
  * "1234567" -> "int"
  * @endcode
  */
-TEST_CASE("Parse a multi-line input #5", "[BufferParser]") {
+TEST_CASE("multi_line_with_delim_newline_var_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 \n1234567"};
@@ -689,40 +708,52 @@ TEST_CASE("Parse a multi-line input #5", "[BufferParser]") {
 }
 
 /**
- * @ingroup test_buffer_parser_delimited_variables
+ * @defgroup test_buffer_parser_delimited_variables Buffer parser using variables containing
+ * delimiters.
+ * @brief Tests for `BufferParser` using a schema where variables are defined with custom
+ * delimiters.
  *
+ * This group contains tests that verify tokenization using:
+ * - Custom delimiters (`\n\r\[:,`)
+ * - Variables that require delimiters to separate them properly in the input.
+ *
+ * These tests ensure the parser correctly handles and matches variables bounded by specified
+ * delimiters.
+ */
+
+/**
+ * @ingroup test_buffer_parser_delimited_variables
  * @brief Tests `BufferParser` with delimited variables using a custom schema.
  *
- * @details
- * This test verifies that the `LogParser` correctly handles variables separated by
- * custom delimiters specified in the schema. The schema defines:
+ * This test verifies that the `BufferParser` correctly handles variables separated by custom
+ * delimiters specified in the schema. The schema defines:
  * - Delimiters as newline, carriage return, openning bracket, colon, and comma (`\n\r\[:,`)
  * - Variable `function` with regex `function:[A-Za-z]+::[A-Za-z]+1`
  * - Variable `path` with regex `path:[a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+`
  *
- * The test inputs validate tokenization of strings containing these variables,
- * ensuring variables are correctly identified and delimited tokens are separated.
+ * The test inputs validate tokenization of strings containing these variables, ensuring variables
+ * are correctly identified and delimited tokens are separated.
  *
- * @section schema Schema Definition
+ * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
  * function: [A-Za-z]+::[A-Za-z]+1
  * path: [a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+
  * @endcode
  *
- * @section input Test Inputs
+ * ### Test Inputs
  * @code
  * "[WARNING] A:2 [folder/file.cc:150] insert node:folder/file-op7, id:7 and folder/file-op8, id:8\n
  * Perform App::Action App::Action1 ::App::Action::Action1 on word::my/path/to/file.txt"
  * @endcode
  *
- * @section expected Expected Logtype
+ * ### Expected Logtype
  * @code
  * "[WARNING] A:2 [<path>:150] insert node:<path>, id:7 and <path>, id:8<newLine>"
  * "Perform App::Action <function> ::App::<function> on word::<path>"
  * @endcode
  *
- * @section expected Expected Tokenization
+ * ### Expected Tokenization
  * @code
  * "[WARNING]" -> uncaught string
  * " A" -> uncaught string
@@ -758,7 +789,7 @@ TEST_CASE("Parse a multi-line input #5", "[BufferParser]") {
  * ":my/path/to/file.txt" -> "path"
  * @endcode
  */
-TEST_CASE("Parse an input in which the variables contain delimiters", "[BufferParser]") {
+TEST_CASE("multi_line_with_delimited_vars", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
     constexpr string_view cVarSchema1{"function:[A-Za-z]+::[A-Za-z]+1"};
     constexpr string_view cVarSchema2{R"(path:[a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+)"};
