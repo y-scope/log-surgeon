@@ -109,13 +109,32 @@ To build the debug version:
 task build:debug
 ```
 
-## Documentation and examples
+## Examples
+
+[examples](examples) contains programs demonstrating usage of the library. See
+[examples/README.md](examples/README.md) for information on building and running the examples.
+
+## Documentation
 
 * [docs](docs) contains more detailed documentation including:
   * The [schema specification](docs/schema.md), which describes the syntax for
     writing your own schema
   * `log-surgeon`'s [design objectives](docs/design-objectives.md)
-* [examples](examples) contains programs demonstrating usage of the library.
+
+### Documentation site
+
+The project includes a documentation site that's useful for exploring functionality and test
+coverage. In particular, it documents all unit tests, with additional detail for API-level tests.
+
+To generate and view the files:
+
+* Run `task docs:site`.
+* Open `build/docs/html/index.html` in your preferred browser.
+
+To host the site locally and view it:
+
+* Run `task docs:serve`.
+* Open the URL output by the task in your preferred browser.
 
 ## Testing
 
