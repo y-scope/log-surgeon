@@ -16,13 +16,7 @@ tasks:
   check:
     cmds:
       - task: "check-cpp-full"
-      - task: "yaml-check"
-
-  check-cmake:
-    cmds:
-      - task: "gersemi"
-        vars:
-          FLAGS: "--check"
+      - task: "check-yaml"
 
   check-cpp-diff:
     cmds:
@@ -88,9 +82,11 @@ tasks:
           EXCLUDE_PATTERNS:
             - "{{.ROOT_DIR}}/src/log_surgeon/Buffer.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/BufferParser.cpp"
+            - "{{.ROOT_DIR}}/src/log_surgeon/BufferParser.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/Constants.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/FileReader.cpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/FileReader.hpp"
+            - "{{.ROOT_DIR}}/src/log_surgeon/finite_automata/Dfa.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/finite_automata/DfaState.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/finite_automata/Nfa.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/finite_automata/RegexAST.hpp"
@@ -113,6 +109,8 @@ tasks:
             - "{{.ROOT_DIR}}/src/log_surgeon/ParserInputBuffer.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/Reader.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/ReaderParser.cpp"
+            - "{{.ROOT_DIR}}/src/log_surgeon/ReaderParser.hpp"
+            - "{{.ROOT_DIR}}/src/log_surgeon/Schema.cpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/SchemaParser.cpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/SchemaParser.hpp"
             - "{{.ROOT_DIR}}/src/log_surgeon/Token.cpp"
@@ -134,10 +132,28 @@ tasks:
           ROOT_PATHS: ["{{.ROOT_DIR}}"]
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
+  check-yaml:
+    aliases:
+      - "fix-yaml"
+    deps:
+      - "venv"
+    cmds:
+      - |-
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
+        yamllint \
+          --config-file "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml" \
+          --strict \
+          .coderabbit.yaml \
+          .github \
+          .clang-format \
+          taskfile.yaml \
+          taskfiles/docs.yaml \
+          {{.TASKFILE}}
+
   fix:
     cmds:
       - task: "fix-cpp-full"
-      - task: "yaml-fix"
+      - task: "fix-yaml"
 
   fix-cmake:
     cmds:
@@ -168,46 +184,9 @@ tasks:
           ROOT_PATHS: *cpp_source_files
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
-  yaml:
-    aliases:
-      - "yaml-check"
-      - "yaml-fix"
-    deps:
-      - "venv"
-    cmds:
-      - |-
-        . "{{.G_LINT_VENV_DIR}}/bin/activate"
-        yamllint \
-          --config-file "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml" \
-          --strict \
-          .coderabbit.yaml \
-          .github \
-          .clang-format \
-          taskfile.yaml \
-          taskfiles/docs.yaml \
-          {{.TASKFILE}}
-
   cpp-lint-configs:
     internal: true
     cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/symlink-cpp-lint-configs.sh"
-
-  gersemi:
-    internal: true
-    requires:
-      vars: ["FLAGS"]
-    deps:
-      - "deps:all"
-      - "venv"
-    cmd: |-
-      . "{{.G_LINT_VENV_DIR}}/bin/activate"
-      "{{.G_UTILS_SCRIPTS_DIR}}/find.py" \
-        "{{.ROOT_DIR}}" \
-        --exclude "build/**/*" \
-        --exclude "tools/**/*" \
-        --file-name "CMakeLists.txt" \
-        --file-name "*.cmake" \
-        --file-name "*.cmake.in" \
-        | xargs gersemi {{.FLAGS}}
 
   venv:
     internal: true
