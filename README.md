@@ -123,10 +123,8 @@ task build:debug
 
 ### Documentation site
 
-You can generate a documentation site that is useful for exploring functionality and test coverage.
-In particular, this documents all unit-tests, with additional detail for API-level tests.
-
-#### Commands
+The project includes a documentation site that's useful for exploring functionality and test
+coverage. In particular, it documents all unit tests, with additional detail for API-level tests.
 
 To generate and view the files:
 
