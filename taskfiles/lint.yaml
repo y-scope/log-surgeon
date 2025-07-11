@@ -18,6 +18,12 @@ tasks:
       - task: "check-cpp-full"
       - task: "check-yaml"
 
+  check-cmake:
+    cmds:
+      - task: "gersemi"
+        vars:
+          FLAGS: "--check"
+
   check-cpp-diff:
     cmds:
       - task: "check-cpp-format"
@@ -187,6 +193,24 @@ tasks:
   cpp-lint-configs:
     internal: true
     cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/symlink-cpp-lint-configs.sh"
+
+  gersemi:
+    internal: true
+    requires:
+      vars: ["FLAGS"]
+    deps:
+      - "deps:all"
+      - "venv"
+    cmd: |-
+      . "{{.G_LINT_VENV_DIR}}/bin/activate"
+      "{{.G_UTILS_SCRIPTS_DIR}}/find.py" \
+        "{{.ROOT_DIR}}" \
+        --exclude "build/**/*" \
+        --exclude "tools/**/*" \
+        --file-name "CMakeLists.txt" \
+        --file-name "*.cmake" \
+        --file-name "*.cmake.in" \
+        | xargs gersemi {{.FLAGS}}
 
   venv:
     internal: true
