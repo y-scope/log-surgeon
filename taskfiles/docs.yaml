@@ -1,0 +1,103 @@
+version: "3"
+
+includes:
+  utils:
+    internal: true
+    taskfile: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
+vars:
+  # General paths
+  G_DOCS_BUILD_DIR: "{{.G_BUILD_DIR}}/docs"
+  G_DOCS_HTML_DIR: "{{.G_DOCS_BUILD_DIR}}/html"
+  G_DOCS_VENV_DIR: "{{.G_DOCS_BUILD_DIR}}/docs-venv"
+  G_NODE_DEPS_DIR: "{{.G_DOCS_BUILD_DIR}}/docs-node"
+
+  # Doxygen paths
+  G_DOXYFILE_PATH: "{{.ROOT_DIR}}/docs/doxygen/Doxyfile"
+  G_DOXYGEN_CMD: "{{.G_DOCS_VENV_DIR}}/bin/doxygen"
+
+tasks:
+  clean:
+    cmds:
+      - "rm -rf '{{.G_DOCS_BUILD_DIR}}'"
+
+  serve:
+    deps:
+      - "http-server"
+      - "site"
+    cmds:
+      - "npm --prefix '{{.G_NODE_DEPS_DIR}}' exec -- http-server '{{.G_DOCS_HTML_DIR}}' -c-1"
+
+  site:
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.G_DOCS_HTML_DIR}}"
+    sources:
+      - "{{.G_DOXYFILE_PATH}}"
+      - "{{.ROOT_DIR}}/docs/**/*"
+      - "{{.ROOT_DIR}}/src/**/*"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.ROOT_DIR}}/tests/**/*"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+      - "venv"
+    cmds:
+      - |-
+        rm -rf "{{.G_DOCS_HTML_DIR}}"
+        cd "{{.ROOT_DIR}}"
+        "{{.G_DOXYGEN_CMD}}" "{{.G_DOXYFILE_PATH}}"
+
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  http-server:
+    internal: true
+    run: "once"
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.G_NODE_DEPS_DIR}}"
+    sources:
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - ":init"
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "npm --prefix '{{.OUTPUT_DIR}}' install http-server"
+
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  venv:
+    internal: true
+    run: "once"
+    vars:
+      DOXYGEN_FILENAME: "doxygen-1.14.0.linux.bin.tar.gz"
+    deps:
+      - ":init"
+    cmds:
+      - "mkdir -p '{{.G_DOCS_VENV_DIR}}'"
+      - task: "utils:remote:download-and-extract-tar"
+        vars:
+          FILE_SHA256: "e5d6ae24d0bf3f0cdc4d8f146726b89ca323922f19441af99b1872d503665ad6"
+          INCLUDE_PATTERNS:
+            - "bin"
+          OUTPUT_DIR: "{{.G_DOCS_VENV_DIR}}"
+          TAR_FILE: "{{.G_DOCS_BUILD_DIR}}/{{.DOXYGEN_FILENAME}}"
+          URL: "https://www.doxygen.nl/files/{{.DOXYGEN_FILENAME}}"

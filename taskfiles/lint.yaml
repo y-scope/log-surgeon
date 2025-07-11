@@ -145,6 +145,7 @@ tasks:
           .github \
           .clang-format \
           taskfile.yaml \
+          taskfiles/docs.yaml \
           {{.TASKFILE}}
 
   fix:
