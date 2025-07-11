@@ -87,6 +87,8 @@ tasks:
   venv:
     internal: true
     run: "once"
+    vars:
+      DOXYGEN_FILENAME: "doxygen-1.14.0.linux.bin.tar.gz"
     deps:
       - ":init"
     cmds:
@@ -97,5 +99,5 @@ tasks:
           INCLUDE_PATTERNS:
             - "bin"
           OUTPUT_DIR: "{{.G_DOCS_VENV_DIR}}"
-          TAR_FILE: "{{.G_DOCS_BUILD_DIR}}/doxygen-1.14.0.linux.bin.tar.gz"
-          URL: "https://www.doxygen.nl/files/doxygen-1.14.0.linux.bin.tar.gz"
+          TAR_FILE: "{{.G_DOCS_BUILD_DIR}}/{{.DOXYGEN_FILENAME}}"
+          URL: "https://www.doxygen.nl/files/{{.DOXYGEN_FILENAME}}"
