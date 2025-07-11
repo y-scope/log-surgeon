@@ -9,7 +9,7 @@
 #include <fmt/core.h>
 
 /**
- * @defgroup unit_tests_schema Schema unit tests
+ * @defgroup unit_tests_schema Schema unit tests.
  * @brief Schema related unit tests.
  *
  * These unit tests contain the `Schema` tag.

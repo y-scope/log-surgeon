@@ -11,7 +11,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 /**
- * @defgroup unit_tests_regex_ast Regex AST unit tests
+ * @defgroup unit_tests_regex_ast Regex AST unit tests.
  * @brief Capture related unit tests.
 
  * These unit tests contain the `Regex` tag.

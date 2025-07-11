@@ -7,7 +7,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 /**
- * @defgroup unit_tests_prefix_tree Prefix tree unit tests
+ * @defgroup unit_tests_prefix_tree Prefix tree unit tests.
  * @brief Capture related unit tests.
 
  * These unit tests contain the `PrefixTree` tag.

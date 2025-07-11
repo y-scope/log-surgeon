@@ -14,7 +14,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 /**
- * @defgroup unit_tests_dfa DFA unit tests
+ * @defgroup unit_tests_dfa DFA unit tests.
  * @brief DFA related unit tests.
 
  * These unit tests contain the `DFA` tag.

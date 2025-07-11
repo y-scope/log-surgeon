@@ -163,7 +163,7 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
 }  // namespace
 
 /**
- * @defgroup test_buffer_parser_no_capture Basic Variable Matching (No Capture Groups)
+ * @defgroup test_buffer_parser_no_capture Buffer parser using variables without capture groups.
  * @brief Tests covering variable matching without regex capture groups.
  */
 
@@ -227,8 +227,8 @@ TEST_CASE("single_line_without_capture", "[BufferParser]") {
 }
 
 /**
- * @defgroup test_buffer_parser_capture Log Parser with Capture Groups
- * @brief Tests LogParser behavior with named capture groups in variable schemas.
+ * @defgroup test_buffer_parser_capture Buffer parser using variables with capture groups.
+ * @brief Tests `BufferParser` behavior with named capture groups in variable schemas.
  *
  * Verifies:
  * - Symbol registration for variables and capture groups
@@ -302,7 +302,7 @@ TEST_CASE("single_line_with_capture", "[BufferParser]") {
 }
 
 /**
- * @defgroup test_buffer_parser_default_schema Log Parser: Default Schema
+ * @defgroup test_buffer_parser_default_schema Buffer parser using the default schema.
  * @brief Tests for CLP's default variable schema: timestamp, int, float, hex, key-value pairs, etc.
  *
  * Validates token recognition across common variable types using a default schema definition.
@@ -414,8 +414,8 @@ TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
 }
 
 /**
- * @defgroup test_buffer_parser_newline_vars Variable Tokens on Newlines
- * @brief Tests covering how LogParser categorizes variable tokens appearing at the start of new
+ * @defgroup test_buffer_parser_newline_vars Buffer parser identifying variable tokens on newlines.
+ * @brief Tests covering how `BufferParser` categorizes variable tokens appearing at the start of new
  * lines, including interaction with static-text, delimiters, and capture group repetition.
  *
  * These tests verify correct tokenization and recognition of variables and delimiters when
@@ -708,8 +708,9 @@ TEST_CASE("multi_line_with_delim_newline_var_sequence", "[BufferParser]") {
 }
 
 /**
- * @defgroup test_buffer_parser_delimited_variables Log Parser: Variables with Delimiters Schema
- * @brief Tests for LogParser using a schema where variables are defined with custom delimiters.
+ * @defgroup test_buffer_parser_delimited_variables Buffer parser using variables containing
+ * delimiters.
+ * @brief Tests for `BufferParser` using a schema where variables are defined with custom delimiters.
  *
  * This group contains tests that verify tokenization using:
  * - Custom delimiters (`\n\r\[:,`)
@@ -723,7 +724,7 @@ TEST_CASE("multi_line_with_delim_newline_var_sequence", "[BufferParser]") {
  * @ingroup test_buffer_parser_delimited_variables
  * @brief Tests `BufferParser` with delimited variables using a custom schema.
  *
- * This test verifies that the `LogParser` correctly handles variables separated by custom
+ * This test verifies that the `BufferParser` correctly handles variables separated by custom
  * delimiters specified in the schema. The schema defines:
  * - Delimiters as newline, carriage return, openning bracket, colon, and comma (`\n\r\[:,`)
  * - Variable `function` with regex `function:[A-Za-z]+::[A-Za-z]+1`

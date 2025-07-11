@@ -5,7 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 /**
- * @defgroup unit_tests_capture Capture unit tests
+ * @defgroup unit_tests_capture Capture unit tests.
  * @brief Capture related unit tests.
 
  * These unit tests contain the `Capture` tag.

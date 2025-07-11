@@ -12,7 +12,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 /**
- * @defgroup unit_tests_nfa NFA unit tests
+ * @defgroup unit_tests_nfa NFA unit tests.
  * @brief NFA related unit tests.
 
  * These unit tests contain the `NFA` tag.

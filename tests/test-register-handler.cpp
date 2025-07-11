@@ -8,7 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 /**
- * @defgroup unit_tests_register_handler Register handler unit tests
+ * @defgroup unit_tests_register_handler Register handler unit tests.
  * @brief Register handler related unit tests.
 
  * These unit tests contain the `RegisterHandler` tag.
