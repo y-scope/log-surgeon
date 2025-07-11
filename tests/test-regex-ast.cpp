@@ -10,6 +10,13 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+/**
+ * @defgroup unit_tests_regex_ast Regex AST unit tests.
+ * @brief Capture related unit tests.
+
+ * These unit tests contain the `Regex` tag.
+ */
+
 using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
 using std::codecvt_utf8;
@@ -56,7 +63,11 @@ auto u32string_to_string(u32string const& u32_str) -> string {
 }
 }  // namespace
 
-TEST_CASE("Create an AST from a capture regex", "[Regex]") {
+/**
+ * @ingroup unit_tests_regex_ast
+ * @brief Create an AST from a regex with a capture group.
+ */
+TEST_CASE("capture", "[Regex]") {
     test_regex_ast(
             // clang-format off
             "capture:"
@@ -80,25 +91,42 @@ TEST_CASE("Create an AST from a capture regex", "[Regex]") {
     );
 }
 
-TEST_CASE("Create an AST from repetition regexes", "[Regex]") {
-    // Repetition without capture groups untagged and tagged AST are the same
-    test_regex_ast("capture:a{0,10}", U"()|((a){1,10})");
-    test_regex_ast("capture:a{5,10}", U"(a){5,10}");
-    test_regex_ast("capture:a*", U"()|((a){1,inf})");
-    test_regex_ast("capture:a+", U"(a){1,inf}");
+/**
+ * @ingroup unit_tests_regex_ast
+ * @brief Create ASTs from regexes with repetition.
+ */
+TEST_CASE("repetition", "[Regex]") {
+    test_regex_ast("repetition:a{0,10}", U"()|((a){1,10})");
+    test_regex_ast("repetition:a{5,10}", U"(a){5,10}");
+    test_regex_ast("repetition:a*", U"()|((a){1,inf})");
+    test_regex_ast("repetition:a+", U"(a){1,inf}");
 }
 
-TEST_CASE("Create an AST from simple repeated-capture regexes", "[Regex]") {
-    // Repetition with capture groups untagged and tagged AST are different
-    test_regex_ast("capture:(?<letter>a){0,10}", U"(<~letter>)|(((a)<letter>){1,10})");
+/**
+ * @ingroup unit_tests_regex_ast
+ * @brief Create ASTs from simple regexes with a capture group containing repetition.
+ */
+TEST_CASE("capture_containing_repetition", "[Regex]") {
     test_regex_ast("capture:(?<letter>a{0,10})", U"(()|((a){1,10}))<letter>");
-    test_regex_ast("capture:(?<letter>a){5,10}", U"((a)<letter>){5,10}");
     test_regex_ast("capture:(?<letter>a{5,10})", U"((a){5,10})<letter>");
+}
+
+/**
+ * @ingroup unit_tests_regex_ast
+ * @brief Create ASTs from simple regexes with a multi-valued (repeated) capture group.
+ */
+TEST_CASE("multi_valued_capture_0", "[Regex]") {
+    test_regex_ast("capture:(?<letter>a){0,10}", U"(<~letter>)|(((a)<letter>){1,10})");
+    test_regex_ast("capture:(?<letter>a){5,10}", U"((a)<letter>){5,10}");
     test_regex_ast("capture:(?<letter>a)*", U"(<~letter>)|(((a)<letter>){1,inf})");
     test_regex_ast("capture:(?<letter>a)+", U"((a)<letter>){1,inf}");
 }
 
-TEST_CASE("Create an AST from a complex repeated-capture regex", "[Regex]") {
+/**
+ * @ingroup unit_tests_regex_ast
+ * @brief Create an AST from a complex regex with multi-valued (repeated) capture groups.
+ */
+TEST_CASE("multi_valued_capture_1", "[Regex]") {
     test_regex_ast(
             // clang-format off
             "capture:"
