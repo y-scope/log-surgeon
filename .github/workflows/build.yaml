@@ -31,9 +31,9 @@ jobs:
     strategy:
       matrix:
         os:
-          - "macos-15"
+          - "macos-latest"
           - "ubuntu-22.04"
-          - "ubuntu-24.04"
+          - "ubuntu-latest"
         build_type:
           - "debug"
           - "release"
