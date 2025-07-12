@@ -143,6 +143,18 @@ target_compile_options(log_surgeon PRIVATE
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
     )
 
+# Disable -Wstringop-overflow to avoid a false positive in the following compiler versions.
+# See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=117983
+if("GNU" STREQUAL "${CMAKE_CXX_COMPILER_ID}"
+    AND ((CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12
+         AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.5)
+         OR (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13
+             AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.4)
+         OR (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14
+             AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14.3)))
+    target_compile_options(log_surgeon PRIVATE "-Wno-stringop-overflow")
+endif()
+
 # Make off_t 64-bit
 target_compile_definitions(log_surgeon
     PRIVATE
