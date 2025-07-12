@@ -42,7 +42,7 @@ jobs:
       - if: "matrix.os == 'ubuntu-24.04'"
         name: "Install clang."
         run: |-
-          curl https://apt.llvm.org/llvm.sh | sudo bash -s
+          curl https://apt.llvm.org/llvm.sh | sudo bash -s -- 20
           sudo ln -s /usr/bin/clang-20 /usr/local/bin/cc
           sudo ln -s /usr/bin/clang++-20 /usr/local/bin/c++
 
