@@ -63,8 +63,8 @@ public:
      * @return The LogParserOutputBuffer containing the tokens that make up the
      * LogEventView.
      */
-    [[nodiscard]] auto get_log_output_buffer(
-    ) const -> std::unique_ptr<LogParserOutputBuffer> const& {
+    [[nodiscard]] auto get_log_output_buffer() const
+            -> std::unique_ptr<LogParserOutputBuffer> const& {
         return m_log_output_buffer;
     }
 

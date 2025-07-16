@@ -1,0 +1,20 @@
+/** @mainpage
+ *
+ * # Use case examples of schema rules and parsing results:
+ *
+ * - @ref test_buffer_parser_no_capture "Basic log parser"
+ * - @ref test_buffer_parser_capture "Captures"
+ * - @ref test_buffer_parser_default_schema "Default CLP schema"
+ * - @ref test_buffer_parser_delimited_variables "Backtracking on delimited variables"
+ * - @ref test_buffer_parser_newline_vars "Identifying variables at the start of a line"
+ *
+ * # Unit-tests:
+ *
+ * - @ref unit_tests_capture "Capture"
+ * - @ref unit_tests_dfa "DFA"
+ * - @ref unit_tests_nfa "NFA"
+ * - @ref unit_tests_prefix_tree "Prefix tree"
+ * - @ref unit_tests_regex_ast "Regex AST"
+ * - @ref unit_tests_register_handler "Register handler"
+ * - @ref unit_tests_schema "Schema"
+ */

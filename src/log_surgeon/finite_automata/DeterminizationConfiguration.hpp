@@ -81,6 +81,16 @@ public:
         return m_lookahead < rhs.m_lookahead;
     }
 
+    auto child_configuration_with_new_state(TypedNfaState const* new_nfa_state) const
+            -> DeterminizationConfiguration {
+        return DeterminizationConfiguration(
+                new_nfa_state,
+                m_tag_id_to_reg_ids,
+                m_history,
+                m_lookahead
+        );
+    }
+
     /**
      * Creates a new configuration from the current configuration by replacing the NFA state and
      * appending a future tag operation.
@@ -132,8 +142,8 @@ public:
 
     [[nodiscard]] auto get_lookahead() const -> std::vector<TagOperation> { return m_lookahead; }
 
-    [[nodiscard]] auto get_tag_lookahead(tag_id_t const tag_id
-    ) const -> std::optional<TagOperation> {
+    [[nodiscard]] auto get_tag_lookahead(tag_id_t const tag_id) const
+            -> std::optional<TagOperation> {
         for (auto const tag_op : m_lookahead) {
             if (tag_op.get_tag_id() == tag_id) {
                 return std::make_optional<TagOperation>(tag_op);
@@ -147,8 +157,8 @@ private:
      * @param unexplored_stack Returns the stack of configurations updated to contain configurations
      * reachable from this configuration via a single spontaneous transition.
      */
-    auto update_reachable_configs(std::stack<DeterminizationConfiguration>& unexplored_stack
-    ) const -> void;
+    auto update_reachable_configs(std::stack<DeterminizationConfiguration>& unexplored_stack) const
+            -> void;
 
     TypedNfaState const* m_nfa_state;
     std::map<tag_id_t, reg_id_t> m_tag_id_to_reg_ids;
@@ -161,21 +171,22 @@ auto DeterminizationConfiguration<TypedNfaState>::update_reachable_configs(
         std::stack<DeterminizationConfiguration>& unexplored_stack
 ) const -> void {
     for (auto const& nfa_spontaneous_transition : m_nfa_state->get_spontaneous_transitions()) {
-        auto parent_config{*this};
+        auto child_config{this->child_configuration_with_new_state(
+                nfa_spontaneous_transition.get_dest_state()
+        )};
         for (auto const tag_op : nfa_spontaneous_transition.get_tag_ops()) {
-            auto child_config{parent_config.child_configuration_with_new_state_and_tag(
+            child_config = child_config.child_configuration_with_new_state_and_tag(
                     nfa_spontaneous_transition.get_dest_state(),
                     tag_op
-            )};
-            parent_config = child_config;
+            );
         }
-        unexplored_stack.push(parent_config);
+        unexplored_stack.push(child_config);
     }
 }
 
 template <typename TypedNfaState>
-auto DeterminizationConfiguration<TypedNfaState>::spontaneous_closure(
-) const -> std::set<DeterminizationConfiguration> {
+auto DeterminizationConfiguration<TypedNfaState>::spontaneous_closure() const
+        -> std::set<DeterminizationConfiguration> {
     std::set<DeterminizationConfiguration> reachable_set;
     std::stack<DeterminizationConfiguration> unexplored_stack;
     unexplored_stack.push(*this);

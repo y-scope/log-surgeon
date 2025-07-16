@@ -1,12 +1,30 @@
 #include <utility>
 
+#include <log_surgeon/finite_automata/Capture.hpp>
+
 #include <catch2/catch_test_macros.hpp>
 
-#include <log_surgeon/finite_automata/Capture.hpp>
+/**
+ * @defgroup unit_tests_capture Capture unit tests.
+ * @brief Capture related unit tests.
+
+ * These unit tests contain the `Capture` tag.
+ */
 
 using log_surgeon::finite_automata::Capture;
 
-TEST_CASE("Capture operations", "[Capture]") {
+/**
+ * @ingroup unit_tests_capture
+ * @brief Tests various operations of the `Capture` class.
+ *
+ * The test covers the following cases:
+ * - Basic name retrieval.
+ * - Empty capture name.
+ * - Special characters in capture names are preserved.
+ * - Copy constructor.
+ * - Move constructor.
+ */
+TEST_CASE("operations", "[Capture]") {
     SECTION("Basic name retrieval works correctly") {
         Capture const capture{"uID"};
         REQUIRE("uID" == capture.get_name());

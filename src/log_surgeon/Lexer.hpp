@@ -70,8 +70,8 @@ public:
      * @param rule_id The ID of the rule to retrieve.
      * @return A pointer to the corresponding `RegexAST` object.
      */
-    [[nodiscard]] auto get_highest_priority_rule(uint32_t rule_id
-    ) -> finite_automata::RegexAST<TypedNfaState>*;
+    [[nodiscard]] auto get_highest_priority_rule(uint32_t rule_id)
+            -> finite_automata::RegexAST<TypedNfaState>*;
 
     /**
      * Generates the DFA for the lexer.
@@ -99,17 +99,37 @@ public:
     auto flip_states(uint32_t old_storage_size) -> void;
 
     /**
+     * Determine the out-going transition based on the input character. Update the current state
+     * and register values based on the transition.
+     * @param next_char The character to transition on.
+     * @param curr_pos The current position in the lexing.
+     */
+    auto process_char(uint32_t const next_char, uint32_t const curr_pos) -> void {
+        auto const optional_transition{m_state->get_transition(next_char)};
+        if (false == optional_transition.has_value()) {
+            m_state = nullptr;
+            return;
+        }
+        m_state = optional_transition.value().get_dest_state();
+
+        auto const reg_ops{optional_transition.value().get_reg_ops()};
+        m_dfa->process_reg_ops(reg_ops, curr_pos);
+    }
+
+    /**
      * Scans the input buffer and retrieves the next token.
      * If the next token is an uncaught string, the next variable token is already prepped to be
      * returned on the next call.
      * @param input_buffer The input buffer to scan.
-     * @param token The token object to be populated with the next token.
-     * @return ErrorCode::Success if a token is successfully scanned.
-     * @return ErrorCode::BufferOutOfBounds if the end of the input is reached before lexing a
-     * token.
+     * @return If lexing is completed, a pair containing:
+     * - `ErrorCode::Success`.
+     * - The lexed token.
+     * @return If the end of the input is reached before lexing is completed, a pair containing:
+     * - `ErrorCode::BufferOutOfBounds`.
+     * - `std::nullopt`.
      * @throw runtime_error if the input buffer is about to overflow.
      */
-    auto scan(ParserInputBuffer& input_buffer, Token& token) -> ErrorCode;
+    auto scan(ParserInputBuffer& input_buffer) -> std::pair<ErrorCode, std::optional<Token>>;
 
     /**
      * Scans the input buffer with wildcards, allowing for more flexible token matching.
@@ -120,8 +140,8 @@ public:
      * @return ErrorCode::Success if a token is successfully scanned.
      * @throw runtime_error if the input buffer is about to overflow.
      */
-    auto
-    scan_with_wildcard(ParserInputBuffer& input_buffer, char wildcard, Token& token) -> ErrorCode;
+    auto scan_with_wildcard(ParserInputBuffer& input_buffer, char wildcard, Token& token)
+            -> ErrorCode;
 
     /**
      * Increases the capacity of the input buffer if it is not large enough to store an entire
@@ -136,8 +156,8 @@ public:
         return m_is_delimiter[byte];
     }
 
-    [[nodiscard]] auto get_dfa(
-    ) const -> std::unique_ptr<finite_automata::Dfa<TypedDfaState, TypedNfaState>> const& {
+    [[nodiscard]] auto get_dfa() const
+            -> std::unique_ptr<finite_automata::Dfa<TypedDfaState, TypedNfaState>> const& {
         return m_dfa;
     }
 
@@ -148,8 +168,8 @@ public:
      * @return A vector of capture IDs if the rule contains captures;
      * @return std::nullopt if no captures are found for the rule.
      */
-    [[nodiscard]] auto get_capture_ids_from_rule_id(rule_id_t const rule_id
-    ) const -> std::optional<std::vector<capture_id_t>> {
+    [[nodiscard]] auto get_capture_ids_from_rule_id(rule_id_t const rule_id) const
+            -> std::optional<std::vector<capture_id_t>> {
         if (m_rule_id_to_capture_ids.contains(rule_id)) {
             return m_rule_id_to_capture_ids.at(rule_id);
         }
@@ -161,8 +181,8 @@ public:
      * @return The start and end tag of the capture on success.
      * @return std::nullopt if no capture is associated with the given capture ID.
      */
-    [[nodiscard]] auto get_tag_id_pair_from_capture_id(capture_id_t const capture_id
-    ) const -> std::optional<std::pair<tag_id_t, tag_id_t>> {
+    [[nodiscard]] auto get_tag_id_pair_from_capture_id(capture_id_t const capture_id) const
+            -> std::optional<std::pair<tag_id_t, tag_id_t>> {
         if (m_capture_id_to_tag_id_pair.contains(capture_id)) {
             return m_capture_id_to_tag_id_pair.at(capture_id);
         }
@@ -175,8 +195,8 @@ public:
      * success.
      * @return std::nullopt if no tag is associated with the given tag ID.
      */
-    [[nodiscard]] auto get_reg_id_from_tag_id(tag_id_t const tag_id
-    ) const -> std::optional<reg_id_t> {
+    [[nodiscard]] auto get_reg_id_from_tag_id(tag_id_t const tag_id) const
+            -> std::optional<reg_id_t> {
         auto const& tag_id_to_final_reg_id{m_dfa->get_tag_id_to_final_reg_id()};
         if (tag_id_to_final_reg_id.contains(tag_id)) {
             return tag_id_to_final_reg_id.at(tag_id);
@@ -190,8 +210,8 @@ public:
      * @return A pair of register IDs corresponding to the start and end tags of the capture.
      * @return std::nullopt if no such capture is found.
      */
-    [[nodiscard]] auto get_reg_ids_from_capture_id(capture_id_t const capture_id
-    ) const -> std::optional<std::pair<reg_id_t, reg_id_t>> {
+    [[nodiscard]] auto get_reg_ids_from_capture_id(capture_id_t const capture_id) const
+            -> std::optional<std::pair<reg_id_t, reg_id_t>> {
         auto const optional_tag_id_pair{get_tag_id_pair_from_capture_id(capture_id)};
         if (false == optional_tag_id_pair.has_value()) {
             return std::nullopt;
@@ -208,7 +228,7 @@ public:
             return std::nullopt;
         }
 
-        return {optional_start_reg_id.value(), optional_end_reg_id.value()};
+        return std::make_pair(optional_start_reg_id.value(), optional_end_reg_id.value());
     }
 
     std::unordered_map<std::string, rule_id_t> m_symbol_id;
@@ -234,8 +254,10 @@ private:
     uint32_t m_line{0};
     bool m_has_delimiters{false};
     std::unique_ptr<finite_automata::Dfa<TypedDfaState, TypedNfaState>> m_dfa;
+    std::optional<uint32_t> m_first_delimiter_pos{std::nullopt};
     bool m_asked_for_more_data{false};
     TypedDfaState const* m_prev_state{nullptr};
+    TypedDfaState const* m_state{nullptr};
     std::unordered_map<rule_id_t, std::vector<capture_id_t>> m_rule_id_to_capture_ids;
     std::unordered_map<capture_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_id_pair;
 };

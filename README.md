@@ -21,6 +21,7 @@ constraints](docs/parsing-constraints.md) on how log events can be parsed.
 ## Motivating example
 
 Let's say we want to parse and inspect multi-line log events like this:
+
 ```
 2023-02-23T18:10:14-0500 DEBUG task_123 crashed. Dumping stacktrace:
 #0  0x000000000040110e in bar () at example.cpp:6
@@ -29,6 +30,7 @@ Let's say we want to parse and inspect multi-line log events like this:
 ```
 
 Using the [example schema file](examples/schema.txt) which includes these rules:
+
 ```
 timestamp:\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\-\d{4}
 ...
@@ -36,6 +38,7 @@ loglevel:INFO|DEBUG|WARN|ERROR
 ```
 
 We can parse and inspect the events as follows:
+
 ```cpp
 // Define a reader to read from your data source
 Reader reader{/* <Omitted> */};
@@ -81,49 +84,64 @@ For advanced uses, `log-surgeon` also has a
 
 Requirements:
 
-* CMake
+* CMake >= 3.22.1
 * GCC >= 10 or Clang >= 7
-* [Catch2] >= 3
-  * On Ubuntu <= 20.04, you can install it using:
-    ```shell
-    sudo tools/deps-install/ubuntu/install-catch2.sh 3.6.0
-    ```
-  * On Ubuntu >= 22.04, you can install it using:
-    ```shell
-    sudo apt-get update
-    sudo apt-get install catch2
-    ```
-  * On macOS, you can install it using:
-    ```shell
-    brew install catch2
-    ```
+* [Catch2] >= 3.8.1
+* [fmt] >= 8.0.1
+* [GSL] >= 4.0.0
+* [Task] >= 3.38
 
-From the repo's root, run:
+To build and install the project to `~/.local`:
+
 ```shell
-# Generate the CMake project
-cmake -S . -B build -DBUILD_TESTING=OFF
-# Build the project
-cmake --build ./build -j
-# Install the project to ~/.local
-cmake --install ./build --prefix ~/.local
+task install:release INSTALL_PREFIX="~/.local"
 ```
 
-To build the debug version and tests replace the first command with:
-`cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON`
+Or to only build the project:
 
-## Documentation and examples
+```shell
+task build:release
+```
+
+To build the debug version:
+
+```shell
+task build:debug
+```
+
+## Examples
+
+[examples](examples) contains programs demonstrating usage of the library. See
+[examples/README.md](examples/README.md) for information on building and running the examples.
+
+## Documentation
 
 * [docs](docs) contains more detailed documentation including:
   * The [schema specification](docs/schema.md), which describes the syntax for
     writing your own schema
   * `log-surgeon`'s [design objectives](docs/design-objectives.md)
-* [examples](examples) contains programs demonstrating usage of the library.
+
+### Documentation site
+
+The project includes a documentation site that's useful for exploring functionality and test
+coverage. In particular, it documents all unit tests, with additional detail for API-level tests.
+
+To generate and view the files:
+
+* Run `task docs:site`.
+* Open `build/docs/html/index.html` in your preferred browser.
+
+To host the site locally and view it:
+
+* Run `task docs:serve`.
+* Open the URL output by the task in your preferred browser.
 
 ## Testing
 
-To run unit tests, run:
+To build and run all unit tests:
+
 ```shell
-cmake --build ./build --target test
+task test:debug
 ```
 
 When generating targets, the CMake variable `BUILD_TESTING` is followed (unless overruled by setting
@@ -158,6 +176,7 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 ### Running the linters
 
 Currently, `clang-tidy` has to be run manually:
+
 ```shell
 find src tests \
     -type f \
@@ -200,5 +219,7 @@ The following are issues we're aware of and working on:
 [Catch2]: https://github.com/catchorg/Catch2/tree/devel
 [clang-tidy]: https://clang.llvm.org/extra/clang-tidy/
 [feature-req]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[fmt]: https://github.com/fmtlib/fmt
+[GSL]: https://github.com/microsoft/GSL
 [lint]: https://github.com/y-scope/log-surgeon/blob/main/.github/workflows/lint.yml
 [Task]: https://taskfile.dev/

@@ -2,15 +2,33 @@
 #include <stdexcept>
 #include <vector>
 
+#include <log_surgeon/finite_automata/PrefixTree.hpp>
+
 #include <catch2/catch_test_macros.hpp>
 
-#include <log_surgeon/finite_automata/PrefixTree.hpp>
+/**
+ * @defgroup unit_tests_prefix_tree Prefix tree unit tests.
+ * @brief Capture related unit tests.
+
+ * These unit tests contain the `PrefixTree` tag.
+ */
 
 using log_surgeon::finite_automata::PrefixTree;
 using id_t = PrefixTree::id_t;
 using position_t = PrefixTree::position_t;
 
-TEST_CASE("`PrefixTree` operations", "[PrefixTree]") {
+/**
+ * @ingroup unit_tests_prefix_tree
+ * @brief Tests various operations of the `PrefixTree` class.
+ *
+ * The test covers the following cases:
+ * - Newly constructed tree.
+ * - Inserting nodes into the prefix tree.
+ * - Invalid index access throws.
+ * - Set position for a valid index.
+ * - Set position for an invalid index.
+ */
+TEST_CASE("operations", "[PrefixTree]") {
     constexpr auto cRootId{PrefixTree::cRootId};
     constexpr position_t cInitialPos1{4};
     constexpr position_t cSetPos1{10};

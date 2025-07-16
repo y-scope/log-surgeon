@@ -209,8 +209,8 @@ private:
      * @param parse_stack_matches
      * @return std::string
      */
-    static auto get_input_after_last_newline(std::stack<MatchedSymbol>& parse_stack_matches
-    ) -> std::string;
+    static auto get_input_after_last_newline(std::stack<MatchedSymbol>& parse_stack_matches)
+            -> std::string;
 
     /**
      * Get the current line after the error symbol
