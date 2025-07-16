@@ -51,10 +51,10 @@ void Token::append_context_to_logtype(
             if (reg_start_positions[j] < 0) {
                 continue;
             }
-            variable_positions.emplace_back(
-                    static_cast<uint32_t>(reg_start_positions[j]),
-                    static_cast<uint32_t>(reg_end_positions[j]),
-                    capture_id
+            variable_positions.push_back(
+                    {static_cast<uint32_t>(reg_start_positions[j]),
+                     static_cast<uint32_t>(reg_end_positions[j]),
+                     capture_id}
             );
         }
     }
@@ -64,7 +64,7 @@ void Token::append_context_to_logtype(
             variable_positions.end(),
             [](auto const& a, auto const& b) { return a.m_start_pos < b.m_start_pos; }
     );
-    variable_positions.emplace_back(m_end_pos, m_end_pos, 0);
+    variable_positions.push_back({m_end_pos, m_end_pos, 0});
 
     uint32_t prev{m_start_pos};
     for (auto const& variable_position : variable_positions) {
