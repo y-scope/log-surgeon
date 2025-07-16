@@ -104,7 +104,7 @@ equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
 * `int`, `float`, `hex`, `hasNumber`, and `equalsCapture` all match different
   user defined variables.
 * `equalsCapture` also contains the named capture group `equals`. This allows
-  the user to extract the substring following the equals sign if desired.
+  the user to extract the substring following the equals sign.
 
 ## Regular Expression Syntax
 
