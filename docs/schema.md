@@ -30,15 +30,17 @@ preceded by `//`.
 
 **Syntax:**
 
-```
+```txt
 <variable-name>:<variable-pattern>
 ```
+
 * `variable-name` may contain any alphanumeric characters, but may not be
   the reserved names `delimiters` or `timestamp`.
 * `variable-pattern` is a regular expression using the supported
   [syntax](#regular-expression-syntax).
 
 Note that:
+
 * A schema file may contain zero or more variable rules.
 * Repeating the same variable name in another rule will `OR` the regular
   expressions (perform an alternation).
@@ -50,14 +52,16 @@ Note that:
 
 **Syntax:**
 
-```
+```txt
 delimiters:<characters>
 ```
+
 * `delimiters` is a reserved name for this rule.
 * `characters` is a set of characters that should be treated as delimiters.
   These characters define the boundaries between tokens in the log.
 
 Note that:
+
 * A schema file must contain at least one `delimiters` rule. If multiple
   `delimiters` rules are specified, only the last one will be used.
 
@@ -65,14 +69,16 @@ Note that:
 
 **Syntax:**
 
-```
+```txt
 timestamp:<timestamp-pattern>
 ```
+
 * `timestamp` is a reserved name for this rule.
 * `timestamp-pattern` is a regular expression using the supported
   [syntax](#regular-expression-syntax).
 
 Note that:
+
 * The parser uses a timestamp to denote the start of a new log event if:
   * It appears as the first token in the input, or
   * It appears after a newline character.
@@ -81,7 +87,7 @@ Note that:
 
 ## Example schema file
 
-```
+```txt
 // Delimiters
 delimiters: \t\r\n:,!;%
 
@@ -96,11 +102,12 @@ hex:[a-fA-F]+
 hasNumber:.*\d.*
 equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
 ```
+
 * `delimiters: \t\r\n:,!;%'` indicates that ` `, `\t`, `\r`, `\n`, `:`, `,`,
   `!`, `;`, `%`, and `'` are delimiters.
 * `timestamp` matches two different patterns:
-    * 2023-04-19 12:32:08.064
-    * [20230419-12:32:08]
+  * `2023-04-19 12:32:08.064`
+  * `[20230419-12:32:08]`
 * `int`, `float`, `hex`, `hasNumber`, and `equalsCapture` all match different
   user defined variables.
 * `equalsCapture` also contains the named capture group `equals`. This allows
@@ -111,7 +118,8 @@ equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
 The following regular expression rules are supported by the schema. When
 building a regular expression, the rules are applied as they appear in this
 list, from top to bottom.
-```
+
+```txt
 REGEX RULE   DEFINITION
 ab           Match 'a' followed by 'b'
 a|b          Match a OR b
