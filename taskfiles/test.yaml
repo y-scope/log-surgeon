@@ -1,9 +1,9 @@
 version: "3"
 
 includes:
-  build:
+  log-surgeon:
     internal: true
-    taskfile: "build.yaml"
+    taskfile: "log-surgeon.yaml"
 
 tasks:
   debug:
@@ -21,5 +21,5 @@ tasks:
   unit-test:
     internal: true
     deps:
-      - "build:{{.BUILD_TYPE}}"
+      - "log-surgeon:build-{{.BUILD_TYPE}}"
     cmd: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}/tests/unit-test"

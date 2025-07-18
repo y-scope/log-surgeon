@@ -9,55 +9,33 @@ includes:
     taskfile: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 tasks:
-  debug:
+  build-debug:
     cmds:
       - task: "build"
         vars:
           BUILD_TYPE: "debug"
 
-  release:
+  build-release:
     cmds:
       - task: "build"
         vars:
           BUILD_TYPE: "release"
 
   clean-debug:
-    deps:
-      - task: "utils:cmake:clean"
-        vars:
-          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/debug"
-
-  clean-release:
-    deps:
-      - task: "utils:cmake:clean"
-        vars:
-          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/release"
-
-  examples-debug:
     cmds:
-      - task: "examples"
+      - task: "clean"
         vars:
           BUILD_TYPE: "debug"
 
-  examples-release:
+  clean-release:
     cmds:
-      - task: "examples"
+      - task: "clean"
         vars:
           BUILD_TYPE: "release"
 
-  examples-clean-debug:
-    deps:
-      - task: "utils:cmake:clean"
-        vars:
-          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/debug"
-
-  examples-clean-release:
-    deps:
-      - task: "utils:cmake:clean"
-        vars:
-          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/release"
-
   install-debug:
+    desc: >-
+      install-debug INSTALL_PREFIX="<prefix path>": Install the debug build into <prefix path>.
     requires:
       vars: ["INSTALL_PREFIX"]
     cmds:
@@ -67,6 +45,8 @@ tasks:
           INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
 
   install-release:
+    desc: >-
+      install-release INSTALL_PREFIX="<prefix path>": Install the release build into <prefix path>.
     requires:
       vars: ["INSTALL_PREFIX"]
     cmds:
@@ -88,28 +68,14 @@ tasks:
         vars:
           BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
 
-  examples:
+  clean:
     internal: true
     requires:
       vars: ["BUILD_TYPE"]
-    vars:
-      INSTALL_PREFIX: "{{.G_EXAMPLES_BUILD_DIR}}/deps/log_surgeon/{{.BUILD_TYPE}}"
-    deps:
-      - "{{.BUILD_TYPE}}"
     cmds:
-      - task: "install-{{.BUILD_TYPE}}"
+      - task: "utils:cmake:clean"
         vars:
-          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
-      - task: "utils:cmake:generate"
-        vars:
-          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/{{.BUILD_TYPE}}"
-          EXTRA_ARGS:
-            - "-DCMAKE_BUILD_TYPE={{.BUILD_TYPE}}"
-            - "-Dlog_surgeon_ROOT={{.INSTALL_PREFIX}}"
-          SOURCE_DIR: "{{.ROOT_DIR}}/examples"
-      - task: "utils:cmake:build"
-        vars:
-          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/{{.BUILD_TYPE}}"
+          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
 
   generate:
     internal: true
@@ -127,12 +93,17 @@ tasks:
 
   install:
     internal: true
+    vars:
+      ABSOLUTE_INSTALL_PREFIX:
+        sh: "realpath '{{.INSTALL_PREFIX}}'"
     requires:
       vars: ["BUILD_TYPE", "INSTALL_PREFIX"]
     deps:
-      - "{{.BUILD_TYPE}}"
+      - task: "build"
+        vars:
+          BUILD_TYPE: "{{.BUILD_TYPE}}"
     cmds:
       - task: "utils:cmake:install"
         vars:
           BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
-          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+          INSTALL_PREFIX: "{{.ABSOLUTE_INSTALL_PREFIX}}"

@@ -1,0 +1,84 @@
+version: "3"
+
+includes:
+  log-surgeon:
+    internal: true
+    taskfile: "log-surgeon.yaml"
+  utils:
+    internal: true
+    taskfile: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
+tasks:
+  build-debug:
+    cmds:
+      - task: "build"
+        vars:
+          BUILD_TYPE: "debug"
+
+  build-release:
+    cmds:
+      - task: "build"
+        vars:
+          BUILD_TYPE: "release"
+
+  clean-debug:
+    cmds:
+      - task: "clean"
+        vars:
+          BUILD_TYPE: "debug"
+
+  clean-release:
+    cmds:
+      - task: "clean"
+        vars:
+          BUILD_TYPE: "release"
+
+  build:
+    internal: true
+    requires:
+      vars: ["BUILD_TYPE"]
+    deps:
+      - task: "generate"
+        vars:
+          BUILD_TYPE: "{{.BUILD_TYPE}}"
+    cmds:
+      - task: "utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/{{.BUILD_TYPE}}"
+
+  clean:
+    internal: true
+    requires:
+      vars: ["BUILD_TYPE"]
+    cmds:
+      - task: "utils:cmake:clean"
+        vars:
+          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/{{.BUILD_TYPE}}"
+
+  generate:
+    internal: true
+    requires:
+      vars: ["BUILD_TYPE"]
+    vars:
+      EXAMPLES_DEPS_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/deps"
+      CMAKE_SETTINGS_DIR: "{{.EXAMPLES_DEPS_DIR}}/cmake-settings"
+      CMAKE_SETTINGS_FILE: "{{.CMAKE_SETTINGS_DIR}}/all.cmake"
+      INSTALL_PREFIX: "{{.EXAMPLES_DEPS_DIR}}/{{.G_CMAKE_PACKAGE_NAME}}/{{.BUILD_TYPE}}"
+    cmds:
+      - "mkdir -p '{{.INSTALL_PREFIX}}'"
+      - "mkdir -p '{{.CMAKE_SETTINGS_DIR}}'"
+      - task: "log-surgeon:install-{{.BUILD_TYPE}}"
+        vars:
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+      - >-
+        echo "include(\"{{.G_DEPS_CMAKE_SETTINGS_DIR}}/all.cmake\")" > "{{.CMAKE_SETTINGS_FILE}}";
+        echo "set({{.G_CMAKE_PACKAGE_NAME}}_ROOT \"{{.INSTALL_PREFIX}}\"
+          CACHE PATH
+          \"Package root for {{.G_CMAKE_PACKAGE_NAME}}.\"
+        )" >> "{{.CMAKE_SETTINGS_FILE}}"
+      - task: "utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/{{.BUILD_TYPE}}"
+          EXTRA_ARGS:
+            - "-DCMAKE_BUILD_TYPE={{.BUILD_TYPE}}"
+          SOURCE_DIR: "{{.ROOT_DIR}}/examples"
