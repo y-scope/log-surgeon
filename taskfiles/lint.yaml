@@ -22,6 +22,7 @@ tasks:
   cpp-check:
     sources: &cpp_source_files
       - "{{.TASKFILE}}"
+      - ".clang-format"
       - "examples/**/*.cpp"
       - "examples/**/*.h"
       - "examples/**/*.hpp"
@@ -59,6 +60,7 @@ tasks:
           --strict \
           .coderabbit.yaml \
           .github \
+          .clang-format \
           taskfile.yaml \
           taskfiles/docs.yaml \
           {{.TASKFILE}}
@@ -67,9 +69,7 @@ tasks:
     internal: true
     requires:
       vars: ["FLAGS"]
-    deps:
-      - "cpp-lint-configs"
-      - "venv"
+    deps: ["venv"]
     cmds:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
@@ -79,10 +79,6 @@ tasks:
           ! -path "examples/*build*/*" \
           -print0 | \
             xargs -0 clang-format {{.FLAGS}} -Werror
-
-  cpp-lint-configs:
-    internal: true
-    cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/symlink-cpp-lint-configs.sh"
 
   venv:
     internal: true

@@ -1,0 +1,161 @@
+# yamllint disable-line rule:document-start
+---
+ColumnLimit: 100
+IndentWidth: 4
+# yamllint disable-line rule:document-start
+---
+Language: "Cpp"
+AccessModifierOffset: -4
+AlignAfterOpenBracket: "BlockIndent"
+AlignArrayOfStructures: "None"
+AlignConsecutiveAssignments: "None"
+AlignConsecutiveBitFields: "None"
+AlignConsecutiveDeclarations: "None"
+AlignConsecutiveMacros: "None"
+AlignEscapedNewlines: "DontAlign"
+AlignOperands: "Align"
+AlignTrailingComments:
+  Kind: "Never"
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowBreakBeforeNoexceptSpecifier: "OnlyWithParen"
+AllowShortBlocksOnASingleLine: "Always"
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortCompoundRequirementOnASingleLine: true
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: "Inline"
+AllowShortIfStatementsOnASingleLine: "Never"
+AllowShortLambdasOnASingleLine: "All"
+AllowShortLoopsOnASingleLine: false
+AllowShortNamespacesOnASingleLine: false
+AlwaysBreakBeforeMultilineStrings: false
+BinPackArguments: false
+BinPackParameters: false
+BitFieldColonSpacing: "Both"
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterControlStatement: "MultiLine"
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterExternBlock: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyNamespace: false
+  SplitEmptyRecord: false
+BreakAfterAttributes: "Never"
+BreakAfterReturnType: "Automatic"
+BreakBeforeBinaryOperators: "All"
+BreakBeforeBraces: "Custom"
+BreakBeforeConceptDeclarations: "Always"
+BreakBeforeInlineASMColon: "OnlyMultiline"
+BreakBeforeTernaryOperators: true
+BreakBinaryOperations: "Never"
+BreakConstructorInitializers: "BeforeColon"
+BreakFunctionDefinitionParameters: false
+BreakInheritanceList: "BeforeColon"
+BreakStringLiterals: true
+BreakTemplateDeclarations: "Yes"
+CompactNamespaces: true
+ConstructorInitializerIndentWidth: 8
+ContinuationIndentWidth: 8
+Cpp11BracedListStyle: true
+DerivePointerAlignment: false
+DisableFormat: false
+EmptyLineAfterAccessModifier: "Never"
+EmptyLineBeforeAccessModifier: "LogicalBlock"
+FixNamespaceComments: true
+IncludeBlocks: "Regroup"
+IndentAccessModifiers: false
+IndentCaseBlocks: false
+IndentCaseLabels: true
+IndentExportBlock: true
+IndentExternBlock: "Indent"
+IndentGotoLabels: false
+IndentPPDirectives: "BeforeHash"
+IndentRequiresClause: false
+IndentWrappedFunctionNames: false
+InsertBraces: true
+InsertNewlineAtEOF: true
+IntegerLiteralSeparator:
+  Binary: 4
+  BinaryMinDigits: 4
+  Decimal: 3
+  DecimalMinDigits: 5
+  Hex: 4
+  HexMinDigits: 4
+KeepEmptyLines:
+  AtEndOfFile: true
+  AtStartOfBlock: false
+  AtStartOfFile: false
+KeepFormFeed: false
+LambdaBodyIndentation: "Signature"
+LineEnding: "LF"
+MainIncludeChar: "Quote"
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: "None"
+PPIndentWidth: -1
+PackConstructorInitializers: "CurrentLine"
+PenaltyBreakOpenParenthesis: 25
+PenaltyBreakBeforeFirstCallParameter: 25
+PenaltyReturnTypeOnItsOwnLine: 100
+PointerAlignment: "Left"
+QualifierAlignment: "Custom"
+QualifierOrder:
+  - "static"
+  - "friend"
+  - "inline"
+  # constexpr west as explained in https://www.youtube.com/watch?v=z6s6bacI424
+  - "constexpr"
+  - "type"
+  - "const"
+  - "volatile"
+ReferenceAlignment: "Pointer"
+ReflowComments: "Always"
+RemoveBracesLLVM: false
+RemoveEmptyLinesInUnwrappedLines: true
+RemoveSemicolon: true
+RequiresClausePosition: "OwnLine"
+RequiresExpressionIndentation: "OuterScope"
+SeparateDefinitionBlocks: "Always"
+ShortNamespaceLines: 0
+SortIncludes: "CaseInsensitive"
+SortUsingDeclarations: "Lexicographic"
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceAroundPointerQualifiers: "Default"
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: "ControlStatements"
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpacesBeforeTrailingComments: 2
+SpacesInAngles: false
+SpacesInContainerLiterals: false
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: -1
+SpacesInParens: "Custom"
+SpacesInParensOptions:
+  ExceptDoubleParentheses: false
+  InConditionalStatements: false
+  InCStyleCasts: false
+  InEmptyParentheses: false
+  Other: false
+SpacesInSquareBrackets: false
+Standard: "Latest"
+TabWidth: 4
+UseTab: "Never"
+WrapNamespaceBodyWithEmptyLines: "Never"
