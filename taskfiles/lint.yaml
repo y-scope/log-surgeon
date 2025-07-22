@@ -1,41 +1,83 @@
 version: "3"
 
 includes:
-  build:
+  examples:
     internal: true
-    taskfile: "./build.yaml"
+    taskfile: "examples.yaml"
+  log-surgeon:
+    internal: true
+    taskfile: "log-surgeon.yaml"
   utils:
     internal: true
     taskfile: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:
+  # General linting variables
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
   G_UTILS_CONFIGS_DIR: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs"
+
+  # Root paths for source files
+  G_LOG_SURGEON_ROOT_PATHS:
+    - "{{.ROOT_DIR}}/src"
+    - "{{.ROOT_DIR}}/tests"
+  G_EXAMPLES_ROOT_PATHS:
+    - "{{.ROOT_DIR}}/examples"
+
+  # yaml anchors for `sources` fields
+  G_EXAMPLES_SOURCES: &examples_sources
+    - "{{.ROOT_DIR}}/.clang-tidy"
+    - "{{.ROOT_DIR}}/examples/.clang-format"
+    - "{{.ROOT_DIR}}/examples/**/*"
+    - "{{.TASKFILE}}"
+  G_LOG_SURGEON_SOURCES: &log_surgeon_sources
+      - "{{.ROOT_DIR}}/.clang-format"
+      - "{{.ROOT_DIR}}/.clang-tidy"
+      - "{{.ROOT_DIR}}/src/**/*"
+      - "{{.ROOT_DIR}}/tests/**/*"
+      - "{{.TASKFILE}}"
 
 tasks:
   check:
     cmds:
-      - task: "check-cpp-full"
+      - task: "check-cpp"
       - task: "check-yaml"
 
-  check-cpp-diff:
+  check-cpp:
     cmds:
-      - task: "check-cpp-format"
-      - task: "check-cpp-static-diff"
+      - task: "check-examples-cpp-format"
+      - task: "check-examples-cpp-static"
+      - task: "check-log-surgeon-cpp-format"
+      - task: "check-log-surgeon-cpp-static"
 
-  check-cpp-full:
+  check-examples-cpp-format:
     cmds:
-      - task: "check-cpp-format"
-      - task: "check-cpp-static-full"
+      - task: "examples-cpp-format"
+        vars:
+          FLAGS: ["--dry-run"]
 
-  check-cpp-format:
-    sources: &cpp_source_files
-      - "{{.ROOT_DIR}}/.clang-format"
-      - "{{.ROOT_DIR}}/.clang-tidy"
-      - "{{.ROOT_DIR}}/examples/**/*"
-      - "{{.ROOT_DIR}}/src/**/*"
-      - "{{.ROOT_DIR}}/tests/**/*"
-      - "{{.TASKFILE}}"
+  check-examples-cpp-static:
+    # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
+    aliases: ["fix-cpp-static-examples"]
+    sources: *examples_sources
+    deps:
+      - task: "examples:generate"
+        vars:
+          BUILD_TYPE: "debug"
+      - "cpp-lint-configs"
+      - "venv"
+    cmds:
+      - task: "utils:cpp-lint:clang-tidy-find"
+        vars:
+          FLAGS:
+            - "--config-file '{{.G_UTILS_CONFIGS_DIR}}/.clang-tidy'"
+            - "-p '{{.G_EXAMPLES_BUILD_DIR}}/debug'"
+          OUTPUT_DIR: "{{.G_BUILD_DIR}}/lint-clang-tidy"
+          ROOT_PATHS:
+            ref: ".G_EXAMPLES_ROOT_PATHS"
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
+
+  check-log-surgeon-cpp-format:
+    sources: *log_surgeon_sources
     deps:
       - "cpp-lint-configs"
       - "venv"
@@ -44,34 +86,22 @@ tasks:
         vars:
           FLAGS: ["--dry-run"]
           INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.tpp"]
-          ROOT_PATHS: *cpp_source_files
+          ROOT_PATHS:
+            ref: ".G_LOG_SURGEON_ROOT_PATHS"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
-  check-cpp-static-diff:
-    # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
-    aliases: ["fix-cpp-static-diff"]
-    sources: *cpp_source_files
-    deps:
-      - task: "build:generate"
-        vars:
-          BUILD_TYPE: "debug"
-      - "cpp-lint-configs"
-      - "venv"
+  check-log-surgeon-cpp-format:
     cmds:
-      - task: "utils:cpp-lint:clang-tidy-diff"
+      - task: "log-surgeon-cpp-format"
         vars:
-          FLAGS:
-            - "--config-file '{{.G_UTILS_CONFIGS_DIR}}/.clang-tidy'"
-            - "-p '{{.G_LOG_SURGEON_BUILD_DIR}}/debug'"
-          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.tpp"]
-          OUTPUT_DIR: "{{.G_BUILD_DIR}}/lint-clang-tidy"
-          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
+          FLAGS: ["--dry-run"]
 
-  check-cpp-static-full:
+  check-log-surgeon-cpp-static:
     # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
-    aliases: ["fix-cpp-static-full"]
+    aliases: ["fix-cpp-static"]
+    sources: *log_surgeon_sources
     deps:
-      - task: "build:generate"
+      - task: "log-surgeon:generate"
         vars:
           BUILD_TYPE: "debug"
       - "cpp-lint-configs"
@@ -124,12 +154,9 @@ tasks:
             - "--config-file '{{.G_UTILS_CONFIGS_DIR}}/.clang-tidy'"
             - "-p '{{.G_LOG_SURGEON_BUILD_DIR}}/debug'"
           INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.tpp"]
-          INCLUDE_PATTERNS:
-            - "{{.ROOT_DIR}}/examples/**/*"
-            - "{{.ROOT_DIR}}/src/**/*"
-            - "{{.ROOT_DIR}}/tests/**/*"
           OUTPUT_DIR: "{{.G_BUILD_DIR}}/lint-clang-tidy"
-          ROOT_PATHS: ["{{.ROOT_DIR}}"]
+          ROOT_PATHS:
+            ref: ".G_LOG_SURGEON_ROOT_PATHS"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
   check-yaml:
@@ -152,35 +179,68 @@ tasks:
 
   fix:
     cmds:
-      - task: "fix-cpp-full"
+      - task: "fix-cpp"
       - task: "fix-yaml"
 
-  fix-cpp-diff:
+  fix-cpp:
     cmds:
-      - task: "fix-cpp-format"
-      - task: "fix-cpp-static-diff"
+      - task: "fix-examples-cpp-format"
+      - task: "fix-examples-cpp-static"
+      - task: "fix-log-surgeon-cpp-format"
+      - task: "fix-log-surgeon-cpp-static"
 
-  fix-cpp-full:
+  fix-examples-cpp-format:
     cmds:
-      - task: "fix-cpp-format"
-      - task: "fix-cpp-static-full"
+      - task: "examples-cpp-format"
+        vars:
+          FLAGS: ["-i"]
 
-  fix-cpp-format:
-    sources: *cpp_source_files
+  fix-log-surgeon-cpp-format:
+    cmds:
+      - task: "log-surgeon-cpp-format"
+        vars:
+          FLAGS: ["-i"]
+
+  cpp-lint-configs:
+    internal: true
+    cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/symlink-cpp-lint-configs.sh"
+
+  examples-cpp-format:
+    internal: true
+    label: "{{.TASK}}:{{.FLAGS}}"
+    requires:
+      vars: ["FLAGS"]
+    sources: *examples_sources
     deps:
       - "cpp-lint-configs"
       - "venv"
     cmds:
       - task: "utils:cpp-lint:clang-format"
         vars:
-          FLAGS: ["-i"]
-          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.tpp"]
-          ROOT_PATHS: *cpp_source_files
+          FLAGS:
+            ref: ".FLAGS"
+          ROOT_PATHS:
+            ref: ".G_EXAMPLES_ROOT_PATHS"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
-  cpp-lint-configs:
+  log-surgeon-cpp-format:
     internal: true
-    cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/symlink-cpp-lint-configs.sh"
+    label: "{{.TASK}}:{{.FLAGS}}"
+    requires:
+      vars: ["FLAGS"]
+    sources: *log_surgeon_sources
+    deps:
+      - "cpp-lint-configs"
+      - "venv"
+    cmds:
+      - task: "utils:cpp-lint:clang-format"
+        vars:
+          FLAGS:
+            ref: ".FLAGS"
+          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.tpp"]
+          ROOT_PATHS:
+            ref: ".G_LOG_SURGEON_ROOT_PATHS"
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
   venv:
     internal: true
@@ -188,9 +248,9 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
     sources:
+      - "{{.ROOT_DIR}}/lint-requirements.txt"
       - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
-      - "{{.ROOT_DIR}}/lint-requirements.txt"
     generates: ["{{.CHECKSUM_FILE}}"]
     run: "once"
     deps:

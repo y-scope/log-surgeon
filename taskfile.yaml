@@ -12,10 +12,11 @@ includes:
   test: "taskfiles/test.yaml"
 
 vars:
+  # General variables
   # This must match the package name in CMakeLists.txt.
   G_CMAKE_PACKAGE_NAME: "log_surgeon"
 
-  # Build directories
+  # Build variables
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_EXAMPLES_BUILD_DIR: "{{.G_BUILD_DIR}}/examples"
   G_LOG_SURGEON_BUILD_DIR: "{{.G_BUILD_DIR}}/{{.G_CMAKE_PACKAGE_NAME}}"

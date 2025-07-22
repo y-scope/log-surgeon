@@ -94,8 +94,12 @@ tasks:
   install:
     internal: true
     vars:
-      ABSOLUTE_INSTALL_PREFIX:
-        sh: "realpath '{{.INSTALL_PREFIX}}'"
+      ABSOLUTE_INSTALL_PREFIX: >-
+        {{- if osIsAbs .INSTALL_PREFIX -}}
+          {{.INSTALL_PREFIX}}
+        {{- else -}}
+          {{.USER_WORKING_DIR}}/{{.INSTALL_PREFIX}}
+        {{- end}}
     requires:
       vars: ["BUILD_TYPE", "INSTALL_PREFIX"]
     deps:
