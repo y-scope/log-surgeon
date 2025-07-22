@@ -37,14 +37,5 @@ jobs:
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
 
-      # We use clang for linting so CMake doesn't generate compile_commands.json with any gcc
-      # specific flags that would confuse clang-tidy.
-      - if: "matrix.os == 'ubuntu-24.04'"
-        name: "Install clang."
-        run: |-
-          curl https://apt.llvm.org/llvm.sh | sudo bash -s -- 20
-          sudo ln -s /usr/bin/clang-20 /usr/local/bin/cc
-          sudo ln -s /usr/bin/clang++-20 /usr/local/bin/c++
-
       - name: "Run lint task"
         run: "task lint:check"
