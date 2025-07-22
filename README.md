@@ -94,19 +94,19 @@ Requirements:
 To build and install the project to `~/.local`:
 
 ```shell
-task install:release INSTALL_PREFIX="~/.local"
+task log-surgeon:install-release INSTALL_PREFIX="~/.local"
 ```
 
 Or to only build the project:
 
 ```shell
-task build:release
+task log-surgeon:build-release
 ```
 
 To build the debug version:
 
 ```shell
-task build:debug
+task log-surgeon:build-debug
 ```
 
 ## Examples
