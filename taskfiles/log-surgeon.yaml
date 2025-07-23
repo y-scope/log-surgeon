@@ -82,7 +82,7 @@ tasks:
     requires:
       vars: ["BUILD_TYPE"]
     deps:
-      - "deps:all"
+      - "deps:install-all"
     cmds:
       - task: "utils:cmake:generate"
         vars:

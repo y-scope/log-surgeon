@@ -8,17 +8,17 @@ includes:
 tasks:
   debug:
     cmds:
-      - task: "unit-test"
+      - task: "run-unit-test"
         vars:
           BUILD_TYPE: "debug"
 
   release:
     cmds:
-      - task: "unit-test"
+      - task: "run-unit-test"
         vars:
           BUILD_TYPE: "release"
 
-  unit-test:
+  run-unit-test:
     internal: true
     deps:
       - "log-surgeon:build-{{.BUILD_TYPE}}"
