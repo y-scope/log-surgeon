@@ -6,13 +6,13 @@ includes:
     taskfile: "log-surgeon.yaml"
 
 tasks:
-  debug:
+  run-debug:
     cmds:
       - task: "run-unit-test"
         vars:
           BUILD_TYPE: "debug"
 
-  release:
+  run-release:
     cmds:
       - task: "run-unit-test"
         vars:

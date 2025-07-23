@@ -50,7 +50,7 @@ jobs:
         run: "npm install -g @go-task/cli"
 
       - name: "Build and run unit tests"
-        run: "task test:${{matrix.build_type}}"
+        run: "task test:run-${{matrix.build_type}}"
 
       - name: "Print test log on failure"
         if: "failure()"
