@@ -12,27 +12,23 @@ vars:
   G_DEPS_CMAKE_SETTINGS_DIR: "{{.G_DEPS_DIR}}/cmake-settings"
 
 tasks:
-  default:
-    deps:
-      - "all"
-
-  all:
+  install-all:
     run: "once"
     cmds:
       - task: "utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
-          DEP_TASK: "all-parallel"
+          DEP_TASK: "install-all-parallel"
 
-  all-parallel:
+  install-all-parallel:
     internal: true
     run: "once"
     deps:
-      - "Catch2"
-      - "fmt"
-      - "Microsoft.GSL"
+      - "install-catch2"
+      - "install-fmt"
+      - "install-microsoft.gsl"
 
-  Catch2:
+  install-catch2:
     internal: true
     run: "once"
     cmds:
@@ -48,7 +44,7 @@ tasks:
           TAR_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v3.8.1.tar.gz"
           WORK_DIR: "{{.G_DEPS_DIR}}"
 
-  fmt:
+  install-fmt:
     internal: true
     run: "once"
     cmds:
@@ -65,7 +61,7 @@ tasks:
           TAR_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/8.0.1.tar.gz"
           WORK_DIR: "{{.G_DEPS_DIR}}"
 
-  Microsoft.GSL:
+  install-microsoft.gsl:
     internal: true
     run: "once"
     cmds:

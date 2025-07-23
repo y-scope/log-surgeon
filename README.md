@@ -91,22 +91,22 @@ Requirements:
 * [GSL] >= 4.0.0
 * [Task] >= 3.38
 
-To build and install the project to `~/.local`:
+To build and install the project to `$HOME/.local`:
 
 ```shell
-task install:release INSTALL_PREFIX="~/.local"
+task log-surgeon:install-release INSTALL_PREFIX="$HOME/.local"
 ```
 
 Or to only build the project:
 
 ```shell
-task build:release
+task log-surgeon:build-release
 ```
 
 To build the debug version:
 
 ```shell
-task build:debug
+task log-surgeon:build-debug
 ```
 
 ## Examples
@@ -141,7 +141,7 @@ To host the site locally and view it:
 To build and run all unit tests:
 
 ```shell
-task test:debug
+task test:run-debug
 ```
 
 When generating targets, the CMake variable `BUILD_TESTING` is followed (unless overruled by setting
