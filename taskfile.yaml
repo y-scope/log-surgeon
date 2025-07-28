@@ -16,7 +16,7 @@ vars:
   # This must match the package name in CMakeLists.txt.
   G_CMAKE_PACKAGE_NAME: "log_surgeon"
 
-  # Build variables
+  # Build directories
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_EXAMPLES_BUILD_DIR: "{{.G_BUILD_DIR}}/examples"
   G_EXAMPLES_DEBUG_BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/debug"
