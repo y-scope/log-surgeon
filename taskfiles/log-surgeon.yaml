@@ -12,11 +12,12 @@ tasks:
   build-debug:
     vars:
       BUILD_DIR: "{{.G_LOG_SURGEON_DEBUG_BUILD_DIR}}"
-    cmds:
+    deps:
       - task: "generate"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
           BUILD_TYPE: "debug"
+    cmds:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
@@ -24,11 +25,12 @@ tasks:
   build-release:
     vars:
       BUILD_DIR: "{{.G_LOG_SURGEON_RELEASE_BUILD_DIR}}"
-    cmds:
+    deps:
       - task: "generate"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
           BUILD_TYPE: "release"
+    cmds:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
@@ -51,8 +53,9 @@ tasks:
     requires:
       vars:
         - "INSTALL_PREFIX"
+    deps:
+      - "build-debug"
     cmds:
-      - task: "build-debug"
       - task: "utils:cmake:install"
         vars:
           BUILD_DIR: "{{.G_LOG_SURGEON_DEBUG_BUILD_DIR}}"
@@ -64,8 +67,9 @@ tasks:
     requires:
       vars:
         - "INSTALL_PREFIX"
+    deps:
+      - "build-release"
     cmds:
-      - task: "build-release"
       - task: "utils:cmake:install"
         vars:
           BUILD_DIR: "{{.G_LOG_SURGEON_RELEASE_BUILD_DIR}}"

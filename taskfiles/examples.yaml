@@ -12,11 +12,12 @@ tasks:
   build-debug:
     vars:
       BUILD_DIR: "{{.G_EXAMPLES_DEBUG_BUILD_DIR}}"
-    cmds:
+    deps:
       - task: "generate"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
           BUILD_TYPE: "debug"
+    cmds:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
@@ -24,6 +25,11 @@ tasks:
   build-release:
     vars:
       BUILD_DIR: "{{.G_EXAMPLES_RELEASE_BUILD_DIR}}"
+    deps:
+      - task: "generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          BUILD_TYPE: "release"
     cmds:
       - task: "generate"
         vars:
