@@ -126,11 +126,7 @@ public:
             std::string query_substring,
             bool const contains_wildcard
     ) {
-        append_variable_token(
-                variable_type,
-                std::move(query_substring),
-                contains_wildcard
-        );
+        append_variable_token(variable_type, std::move(query_substring), contains_wildcard);
     }
 
     auto operator==(QueryInterpretation const& rhs) const -> bool {

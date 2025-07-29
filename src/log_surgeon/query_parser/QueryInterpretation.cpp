@@ -53,16 +53,21 @@ auto VariableQueryToken::operator>(VariableQueryToken const& rhs) const -> bool 
 }
 
 void QueryInterpretation::append_logtype(QueryInterpretation& suffix) {
-    if(suffix.m_logtype.empty()) {
+    if (suffix.m_logtype.empty()) {
         return;
     }
+    if (m_logtype.empty()) {
+        m_logtype = suffix.m_logtype;
+        return;
+    }
+
+    auto& last_old_token = m_logtype.back();
     auto const& first_new_token = suffix.m_logtype[0];
-    if (auto& prev_token = m_logtype.back();
-        false == m_logtype.empty() && std::holds_alternative<StaticQueryToken>(prev_token)
-        && false == suffix.m_logtype.empty()
+    if (std::holds_alternative<StaticQueryToken>(last_old_token)
         && std::holds_alternative<StaticQueryToken>(first_new_token))
     {
-        std::get<StaticQueryToken>(prev_token).append(std::get<StaticQueryToken>(first_new_token));
+        std::get<StaticQueryToken>(last_old_token)
+                .append(std::get<StaticQueryToken>(first_new_token));
         m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin() + 1, suffix.m_logtype.end());
     } else {
         m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin(), suffix.m_logtype.end());
