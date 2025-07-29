@@ -14,7 +14,7 @@ namespace log_surgeon::query_parser {
 /**
  * Represents static-text in the query as a token.
  *
- * Stores the raw text as a string and provides comparison operations.
+ * Stores the raw log as a string.
  */
 class StaticQueryToken {
 public:
@@ -48,23 +48,20 @@ private:
 /**
  * Represents a variable in the query as a token.
  *
- * Stores the raw text as a string, as well as metadata specifying:
- * - if the variable contains a wildcard,
- * - the length of the variable.
- * Also provides comparison operations.
+ * Stores the raw log as a string with metadata specifying:
+ * 1. The variable type.
+ * 2. If the variable contains a wildcard.
  */
 class VariableQueryToken {
 public:
     VariableQueryToken(
             uint32_t const variable_type,
             std::string query_substring,
-            bool const has_wildcard,
-            bool const is_encoded
+            bool const has_wildcard
     )
             : m_variable_type(variable_type),
               m_query_substring(std::move(query_substring)),
-              m_has_wildcard(has_wildcard),
-              m_is_encoded(is_encoded) {}
+              m_has_wildcard(has_wildcard) {}
 
     auto operator==(VariableQueryToken const& rhs) const -> bool = default;
 
@@ -77,7 +74,6 @@ public:
      * 1. `m_variable_type`
      * 2. `m_query_substring`
      * 3. `m_has_wildcard` (`false` < `true`)
-     * 4. `m_is_encoded` (`false` < `true`)
      *
      * @param rhs The `VariableQueryToken` to compare against.
      * @return true if this object is considered less than rhs, false otherwise.
@@ -91,7 +87,6 @@ public:
      * 1. `m_variable_type`
      * 2. `m_query_substring`
      * 3. `m_has_wildcard` (`true` > `false`)
-     * 4. `m_is_encoded` (`true` > `false`)
      *
      * @param rhs The `VariableQueryToken` to compare against.
      * @return true if this object is considered greater than rhs, false otherwise.
@@ -106,15 +101,10 @@ public:
 
     [[nodiscard]] auto get_has_wildcard() const -> bool { return m_has_wildcard; }
 
-    [[nodiscard]] auto get_is_encoded_with_wildcard() const -> bool {
-        return m_is_encoded && m_has_wildcard;
-    }
-
 private:
     uint32_t m_variable_type;
     std::string m_query_substring;
     bool m_has_wildcard{false};
-    bool m_is_encoded{false};
 };
 
 /**
@@ -134,14 +124,12 @@ public:
     QueryInterpretation(
             uint32_t const variable_type,
             std::string query_substring,
-            bool const contains_wildcard,
-            bool const is_encoded
+            bool const contains_wildcard
     ) {
         append_variable_token(
                 variable_type,
                 std::move(query_substring),
-                contains_wildcard,
-                is_encoded
+                contains_wildcard
         );
     }
 
@@ -191,15 +179,11 @@ public:
     auto append_variable_token(
             uint32_t const variable_type,
             std::string query_substring,
-            bool const contains_wildcard,
-            bool const is_encoded
+            bool const contains_wildcard
     ) -> void {
-        m_logtype.emplace_back(VariableQueryToken(
-                variable_type,
-                std::move(query_substring),
-                contains_wildcard,
-                is_encoded
-        ));
+        m_logtype.emplace_back(
+                VariableQueryToken(variable_type, std::move(query_substring), contains_wildcard)
+        );
     }
 
     [[nodiscard]] auto get_logtype() const
@@ -211,9 +195,6 @@ public:
      * @return A string representation of the QueryInterpretation.
      */
     [[nodiscard]] auto serialize() const -> std::string;
-
-    static constexpr std::string_view cIntVarName = "int";
-    static constexpr std::string_view cFloatVarName = "float";
 
 private:
     std::vector<std::variant<StaticQueryToken, VariableQueryToken>> m_logtype;

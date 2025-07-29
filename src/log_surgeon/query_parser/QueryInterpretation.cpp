@@ -30,9 +30,6 @@ auto VariableQueryToken::operator<(VariableQueryToken const& rhs) const -> bool 
     if (m_has_wildcard != rhs.m_has_wildcard) {
         return rhs.m_has_wildcard;
     }
-    if (m_is_encoded != rhs.m_is_encoded) {
-        return rhs.m_is_encoded;
-    }
     return false;
 }
 
@@ -52,13 +49,13 @@ auto VariableQueryToken::operator>(VariableQueryToken const& rhs) const -> bool 
     if (m_has_wildcard != rhs.m_has_wildcard) {
         return m_has_wildcard;
     }
-    if (m_is_encoded != rhs.m_is_encoded) {
-        return m_is_encoded;
-    }
     return false;
 }
 
 void QueryInterpretation::append_logtype(QueryInterpretation& suffix) {
+    if(suffix.m_logtype.empty()) {
+        return;
+    }
     auto const& first_new_token = suffix.m_logtype[0];
     if (auto& prev_token = m_logtype.back();
         false == m_logtype.empty() && std::holds_alternative<StaticQueryToken>(prev_token)
@@ -93,28 +90,24 @@ auto QueryInterpretation::operator<(QueryInterpretation const& rhs) const -> boo
 auto QueryInterpretation::serialize() const -> string {
     vector<string> token_strings;
     vector<string> has_wildcard_strings;
-    vector<string> is_encoded_strings;
 
     for (auto const& token : m_logtype) {
         if (std::holds_alternative<StaticQueryToken>(token)) {
             token_strings.emplace_back(std::get<StaticQueryToken>(token).get_query_substring());
             has_wildcard_strings.emplace_back("0");
-            is_encoded_strings.emplace_back("0");
         } else {
             auto const& var = std::get<VariableQueryToken>(token);
             token_strings.emplace_back(
                     fmt::format("<{}>({})", var.get_variable_type(), var.get_query_substring())
             );
             has_wildcard_strings.emplace_back(var.get_has_wildcard() ? "1" : "0");
-            is_encoded_strings.emplace_back(var.get_is_encoded_with_wildcard() ? "1" : "0");
         }
     }
 
     return fmt::format(
-            "logtype='{}', has_wildcard='{}', is_encoded_with_wildcard='{}'",
+            "logtype='{}', has_wildcard='{}'",
             fmt::join(token_strings, ""),
-            fmt::join(has_wildcard_strings, ""),
-            fmt::join(is_encoded_strings, "")
+            fmt::join(has_wildcard_strings, "")
     );
 }
 }  // namespace log_surgeon::query_parser
