@@ -31,10 +31,6 @@ tasks:
           BUILD_DIR: "{{.BUILD_DIR}}"
           BUILD_TYPE: "release"
     cmds:
-      - task: "generate"
-        vars:
-          BUILD_DIR: "{{.BUILD_DIR}}"
-          BUILD_TYPE: "release"
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
