@@ -23,18 +23,18 @@ vars:
   G_EXAMPLES_ROOT_PATHS:
     - "{{.ROOT_DIR}}/examples"
 
-  # yaml anchors for `sources` fields
+  # Anchors for `sources` fields
   G_EXAMPLES_SOURCES: &examples_sources
     - "{{.ROOT_DIR}}/.clang-tidy"
     - "{{.ROOT_DIR}}/examples/.clang-format"
     - "{{.ROOT_DIR}}/examples/**/*"
     - "{{.TASKFILE}}"
   G_LOG_SURGEON_SOURCES: &log_surgeon_sources
-      - "{{.ROOT_DIR}}/.clang-format"
-      - "{{.ROOT_DIR}}/.clang-tidy"
-      - "{{.ROOT_DIR}}/src/**/*"
-      - "{{.ROOT_DIR}}/tests/**/*"
-      - "{{.TASKFILE}}"
+    - "{{.ROOT_DIR}}/.clang-format"
+    - "{{.ROOT_DIR}}/.clang-tidy"
+    - "{{.ROOT_DIR}}/src/**/*"
+    - "{{.ROOT_DIR}}/tests/**/*"
+    - "{{.TASKFILE}}"
 
 tasks:
   check:
@@ -44,67 +44,59 @@ tasks:
 
   check-cpp:
     cmds:
-      - task: "check-examples-cpp-format"
-      - task: "check-examples-cpp-static"
-      - task: "check-log-surgeon-cpp-format"
-      - task: "check-log-surgeon-cpp-static"
+      - task: "check-cpp-format-examples"
+      - task: "check-cpp-format-log-surgeon"
+      - task: "check-cpp-static-examples"
+      - task: "check-cpp-static-log-surgeon"
 
-  check-examples-cpp-format:
+  check-cpp-format-examples:
     cmds:
-      - task: "examples-cpp-format"
+      - task: "cpp-format-examples"
         vars:
           FLAGS: ["--dry-run"]
 
-  check-examples-cpp-static:
+  check-cpp-format-log-surgeon:
+    cmds:
+      - task: "cpp-format-log-surgeon"
+        vars:
+          FLAGS: ["--dry-run"]
+
+  check-cpp-static-examples:
     # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
     aliases: ["fix-cpp-static-examples"]
+    vars:
+      BUILD_DIR: "{{.G_EXAMPLES_DEBUG_BUILD_DIR}}"
     sources: *examples_sources
     deps:
+      - "cpp-lint-configs"
       - task: "examples:generate"
         vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
           BUILD_TYPE: "debug"
-      - "cpp-lint-configs"
       - "venv"
     cmds:
       - task: "utils:cpp-lint:clang-tidy-find"
         vars:
           FLAGS:
             - "--config-file '{{.G_UTILS_CONFIGS_DIR}}/.clang-tidy'"
-            - "-p '{{.G_EXAMPLES_BUILD_DIR}}/debug'"
+            - "-p '{{.BUILD_DIR}}'"
           OUTPUT_DIR: "{{.G_BUILD_DIR}}/lint-clang-tidy"
           ROOT_PATHS:
             ref: ".G_EXAMPLES_ROOT_PATHS"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
-  check-log-surgeon-cpp-format:
-    sources: *log_surgeon_sources
-    deps:
-      - "cpp-lint-configs"
-      - "venv"
-    cmds:
-      - task: "utils:cpp-lint:clang-format"
-        vars:
-          FLAGS: ["--dry-run"]
-          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.tpp"]
-          ROOT_PATHS:
-            ref: ".G_LOG_SURGEON_ROOT_PATHS"
-          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
-
-  check-log-surgeon-cpp-format:
-    cmds:
-      - task: "log-surgeon-cpp-format"
-        vars:
-          FLAGS: ["--dry-run"]
-
-  check-log-surgeon-cpp-static:
+  check-cpp-static-log-surgeon:
     # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
     aliases: ["fix-cpp-static"]
+    vars:
+      BUILD_DIR: "{{.G_LOG_SURGEON_DEBUG_BUILD_DIR}}"
     sources: *log_surgeon_sources
     deps:
+      - "cpp-lint-configs"
       - task: "log-surgeon:generate"
         vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
           BUILD_TYPE: "debug"
-      - "cpp-lint-configs"
       - "venv"
     cmds:
       - task: "utils:cpp-lint:clang-tidy-find"
@@ -152,18 +144,20 @@ tasks:
             - "{{.ROOT_DIR}}/tests/test-nfa.cpp"
           FLAGS:
             - "--config-file '{{.G_UTILS_CONFIGS_DIR}}/.clang-tidy'"
-            - "-p '{{.G_LOG_SURGEON_BUILD_DIR}}/debug'"
-          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.tpp"]
+            - "-p '{{.BUILD_DIR}}'"
+          INCLUDE_FILENAME_PATTERNS:
+            - "*.cpp"
+            - "*.h"
+            - "*.hpp"
+            - "*.tpp"
           OUTPUT_DIR: "{{.G_BUILD_DIR}}/lint-clang-tidy"
           ROOT_PATHS:
             ref: ".G_LOG_SURGEON_ROOT_PATHS"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
   check-yaml:
-    aliases:
-      - "fix-yaml"
-    deps:
-      - "venv"
+    aliases: ["fix-yaml"]
+    deps: ["venv"]
     cmds:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
@@ -184,20 +178,20 @@ tasks:
 
   fix-cpp:
     cmds:
-      - task: "fix-examples-cpp-format"
-      - task: "fix-examples-cpp-static"
-      - task: "fix-log-surgeon-cpp-format"
-      - task: "fix-log-surgeon-cpp-static"
+      - task: "fix-cpp-format-examples"
+      - task: "fix-cpp-format-log-surgeon"
+      - task: "fix-cpp-static-examples"
+      - task: "fix-cpp-static-log-surgeon"
 
-  fix-examples-cpp-format:
+  fix-cpp-format-examples:
     cmds:
-      - task: "examples-cpp-format"
+      - task: "cpp-format-examples"
         vars:
           FLAGS: ["-i"]
 
-  fix-log-surgeon-cpp-format:
+  fix-cpp-format-log-surgeon:
     cmds:
-      - task: "log-surgeon-cpp-format"
+      - task: "cpp-format-log-surgeon"
         vars:
           FLAGS: ["-i"]
 
@@ -205,7 +199,7 @@ tasks:
     internal: true
     cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/symlink-cpp-lint-configs.sh"
 
-  examples-cpp-format:
+  cpp-format-examples:
     internal: true
     label: "{{.TASK}}:{{.FLAGS}}"
     requires:
@@ -223,11 +217,12 @@ tasks:
             ref: ".G_EXAMPLES_ROOT_PATHS"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
-  log-surgeon-cpp-format:
+  cpp-format-log-surgeon:
     internal: true
     label: "{{.TASK}}:{{.FLAGS}}"
     requires:
-      vars: ["FLAGS"]
+      vars:
+        - "FLAGS"
     sources: *log_surgeon_sources
     deps:
       - "cpp-lint-configs"
@@ -237,7 +232,11 @@ tasks:
         vars:
           FLAGS:
             ref: ".FLAGS"
-          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.tpp"]
+          INCLUDE_FILENAME_PATTERNS:
+            - "*.cpp"
+            - "*.h"
+            - "*.hpp"
+            - "*.tpp"
           ROOT_PATHS:
             ref: ".G_LOG_SURGEON_ROOT_PATHS"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
