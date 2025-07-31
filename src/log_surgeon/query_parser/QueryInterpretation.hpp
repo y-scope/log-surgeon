@@ -129,9 +129,7 @@ public:
         append_variable_token(variable_type, std::move(query_substring), contains_wildcard);
     }
 
-    auto operator==(QueryInterpretation const& rhs) const -> bool {
-        return m_logtype == rhs.m_logtype;
-    }
+    auto operator==(QueryInterpretation const& rhs) const -> bool = default;
 
     /**
      * Lexicographical less-than comparison.
@@ -145,7 +143,7 @@ public:
      */
     auto operator<(QueryInterpretation const& rhs) const -> bool;
 
-    auto clear() -> void { m_logtype.clear(); }
+    auto clear() -> void { m_tokens.clear(); }
 
     /**
      * Appends the logtype of another `QueryInterpretation` to this one.
@@ -159,16 +157,20 @@ public:
      *
      * @param suffix The `QueryInterpretation` to append.
      */
-    auto append_logtype(QueryInterpretation& suffix) -> void;
+    auto append_query_interpretation(QueryInterpretation& suffix) -> void;
 
     auto append_static_token(std::string const& query_substring) -> void {
+        if (query_substring.empty()) {
+            return;
+        }
+
         StaticQueryToken static_query_token(query_substring);
-        if (auto& prev_token = m_logtype.back();
-            false == m_logtype.empty() && std::holds_alternative<StaticQueryToken>(prev_token))
+        if (auto& prev_token = m_tokens.back();
+            false == m_tokens.empty() && std::holds_alternative<StaticQueryToken>(prev_token))
         {
             std::get<StaticQueryToken>(prev_token).append(static_query_token);
         } else {
-            m_logtype.emplace_back(static_query_token);
+            m_tokens.emplace_back(static_query_token);
         }
     }
 
@@ -177,14 +179,14 @@ public:
             std::string query_substring,
             bool const contains_wildcard
     ) -> void {
-        m_logtype.emplace_back(
+        m_tokens.emplace_back(
                 VariableQueryToken(variable_type, std::move(query_substring), contains_wildcard)
         );
     }
 
     [[nodiscard]] auto get_logtype() const
             -> std::vector<std::variant<StaticQueryToken, VariableQueryToken>> {
-        return m_logtype;
+        return m_tokens;
     }
 
     /**
@@ -193,7 +195,7 @@ public:
     [[nodiscard]] auto serialize() const -> std::string;
 
 private:
-    std::vector<std::variant<StaticQueryToken, VariableQueryToken>> m_logtype;
+    std::vector<std::variant<StaticQueryToken, VariableQueryToken>> m_tokens;
 };
 }  // namespace log_surgeon::query_parser
 

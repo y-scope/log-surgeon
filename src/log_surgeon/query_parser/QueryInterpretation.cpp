@@ -52,40 +52,40 @@ auto VariableQueryToken::operator>(VariableQueryToken const& rhs) const -> bool 
     return false;
 }
 
-void QueryInterpretation::append_logtype(QueryInterpretation& suffix) {
-    if (suffix.m_logtype.empty()) {
+void QueryInterpretation::append_query_interpretation(QueryInterpretation& suffix) {
+    if (suffix.m_tokens.empty()) {
         return;
     }
-    if (m_logtype.empty()) {
-        m_logtype = suffix.m_logtype;
+    if (m_tokens.empty()) {
+        m_tokens = suffix.m_tokens;
         return;
     }
 
-    auto& last_old_token = m_logtype.back();
-    auto const& first_new_token = suffix.m_logtype[0];
+    auto& last_old_token = m_tokens.back();
+    auto const& first_new_token = suffix.m_tokens[0];
     if (std::holds_alternative<StaticQueryToken>(last_old_token)
         && std::holds_alternative<StaticQueryToken>(first_new_token))
     {
         std::get<StaticQueryToken>(last_old_token)
                 .append(std::get<StaticQueryToken>(first_new_token));
-        m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin() + 1, suffix.m_logtype.end());
+        m_tokens.insert(m_tokens.end(), suffix.m_tokens.begin() + 1, suffix.m_tokens.end());
     } else {
-        m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin(), suffix.m_logtype.end());
+        m_tokens.insert(m_tokens.end(), suffix.m_tokens.begin(), suffix.m_tokens.end());
     }
 }
 
 auto QueryInterpretation::operator<(QueryInterpretation const& rhs) const -> bool {
-    if (m_logtype.size() < rhs.m_logtype.size()) {
+    if (m_tokens.size() < rhs.m_tokens.size()) {
         return true;
     }
-    if (m_logtype.size() > rhs.m_logtype.size()) {
+    if (m_tokens.size() > rhs.m_tokens.size()) {
         return false;
     }
-    for (uint32_t i{0}; i < m_logtype.size(); ++i) {
-        if (m_logtype[i] < rhs.m_logtype[i]) {
+    for (uint32_t i{0}; i < m_tokens.size(); ++i) {
+        if (m_tokens[i] < rhs.m_tokens[i]) {
             return true;
         }
-        if (m_logtype[i] > rhs.m_logtype[i]) {
+        if (m_tokens[i] > rhs.m_tokens[i]) {
             return false;
         }
     }
@@ -96,7 +96,7 @@ auto QueryInterpretation::serialize() const -> string {
     vector<string> token_strings;
     vector<string> has_wildcard_strings;
 
-    for (auto const& token : m_logtype) {
+    for (auto const& token : m_tokens) {
         if (std::holds_alternative<StaticQueryToken>(token)) {
             token_strings.emplace_back(std::get<StaticQueryToken>(token).get_query_substring());
             has_wildcard_strings.emplace_back("0");
