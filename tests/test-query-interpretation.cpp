@@ -88,6 +88,19 @@ TEST_CASE("append_empty_variable", "[QueryInterpretation]") {
 
 /**
  * @ingroup unit_tests_query_interpretation
+ * @brief Appends an empty `QueryInterpretation` to another and tests serialization.
+ */
+TEST_CASE("append_empty_query_interpretation", "[QueryInterpretation]") {
+    constexpr string_view cExpectedSerialization{"logtype='hello', has_wildcard='0'"};
+
+    QueryInterpretation query_interpretation{"hello"};
+    QueryInterpretation empty_query_interpretation;
+    query_interpretation.append_query_interpretation(empty_query_interpretation);
+    REQUIRE(query_interpretation.serialize() == cExpectedSerialization);
+}
+
+/**
+ * @ingroup unit_tests_query_interpretation
  * @brief Appends a sequence of static and variable tokens and tests serialization.
  */
 TEST_CASE("append_tokens", "[QueryInterpretation]") {
