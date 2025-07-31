@@ -10,104 +10,83 @@ includes:
 
 tasks:
   build-debug:
-    cmds:
-      - task: "build"
+    vars:
+      BUILD_DIR: "{{.G_LOG_SURGEON_DEBUG_BUILD_DIR}}"
+    deps:
+      - task: "generate"
         vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
           BUILD_TYPE: "debug"
+    cmds:
+      - task: "utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
 
   build-release:
-    cmds:
-      - task: "build"
+    vars:
+      BUILD_DIR: "{{.G_LOG_SURGEON_RELEASE_BUILD_DIR}}"
+    deps:
+      - task: "generate"
         vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
           BUILD_TYPE: "release"
+    cmds:
+      - task: "utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
 
   clean-debug:
     cmds:
-      - task: "clean"
+      - task: "utils:cmake:clean"
         vars:
-          BUILD_TYPE: "debug"
+          BUILD_DIR: "{{.G_LOG_SURGEON_DEBUG_BUILD_DIR}}"
 
   clean-release:
     cmds:
-      - task: "clean"
+      - task: "utils:cmake:clean"
         vars:
-          BUILD_TYPE: "release"
+          BUILD_DIR: "{{.G_LOG_SURGEON_RELEASE_BUILD_DIR}}"
 
   install-debug:
     desc: >-
       install-debug INSTALL_PREFIX="<prefix path>": Install the debug build into <prefix path>.
     requires:
-      vars: ["INSTALL_PREFIX"]
+      vars:
+        - "INSTALL_PREFIX"
+    deps:
+      - "build-debug"
     cmds:
-      - task: "install"
+      - task: "utils:cmake:install"
         vars:
-          BUILD_TYPE: "debug"
+          BUILD_DIR: "{{.G_LOG_SURGEON_DEBUG_BUILD_DIR}}"
           INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
 
   install-release:
     desc: >-
       install-release INSTALL_PREFIX="<prefix path>": Install the release build into <prefix path>.
     requires:
-      vars: ["INSTALL_PREFIX"]
-    cmds:
-      - task: "install"
-        vars:
-          BUILD_TYPE: "release"
-          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
-
-  build:
-    internal: true
-    requires:
-      vars: ["BUILD_TYPE"]
+      vars:
+        - "INSTALL_PREFIX"
     deps:
-      - task: "generate"
-        vars:
-          BUILD_TYPE: "{{.BUILD_TYPE}}"
+      - "build-release"
     cmds:
-      - task: "utils:cmake:build"
+      - task: "utils:cmake:install"
         vars:
-          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
-
-  clean:
-    internal: true
-    requires:
-      vars: ["BUILD_TYPE"]
-    cmds:
-      - task: "utils:cmake:clean"
-        vars:
-          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
+          BUILD_DIR: "{{.G_LOG_SURGEON_RELEASE_BUILD_DIR}}"
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
 
   generate:
     internal: true
     requires:
-      vars: ["BUILD_TYPE"]
+      vars:
+        - "BUILD_DIR"
+        - "BUILD_TYPE"
     deps:
-      - "deps:all"
+      - "deps:install-all"
     cmds:
       - task: "utils:cmake:generate"
         vars:
-          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
+          BUILD_DIR: "{{.BUILD_DIR}}"
           EXTRA_ARGS:
             - "-DCMAKE_BUILD_TYPE={{.BUILD_TYPE}}"
           SOURCE_DIR: "{{.ROOT_DIR}}"
-
-  install:
-    internal: true
-    vars:
-      ABSOLUTE_INSTALL_PREFIX: >-
-        {{- if osIsAbs .INSTALL_PREFIX -}}
-          {{.INSTALL_PREFIX}}
-        {{- else -}}
-          {{.USER_WORKING_DIR}}/{{.INSTALL_PREFIX}}
-        {{- end}}
-    requires:
-      vars: ["BUILD_TYPE", "INSTALL_PREFIX"]
-    deps:
-      - task: "build"
-        vars:
-          BUILD_TYPE: "{{.BUILD_TYPE}}"
-    cmds:
-      - task: "utils:cmake:install"
-        vars:
-          BUILD_DIR: "{{.G_LOG_SURGEON_BUILD_DIR}}/{{.BUILD_TYPE}}"
-          INSTALL_PREFIX: "{{.ABSOLUTE_INSTALL_PREFIX}}"

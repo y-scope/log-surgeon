@@ -10,55 +10,49 @@ includes:
 
 tasks:
   build-debug:
-    cmds:
-      - task: "build"
-        vars:
-          BUILD_TYPE: "debug"
-
-  build-release:
-    cmds:
-      - task: "build"
-        vars:
-          BUILD_TYPE: "release"
-
-  clean-debug:
-    cmds:
-      - task: "clean"
-        vars:
-          BUILD_TYPE: "debug"
-
-  clean-release:
-    cmds:
-      - task: "clean"
-        vars:
-          BUILD_TYPE: "release"
-
-  build:
-    internal: true
-    requires:
-      vars: ["BUILD_TYPE"]
+    vars:
+      BUILD_DIR: "{{.G_EXAMPLES_DEBUG_BUILD_DIR}}"
     deps:
       - task: "generate"
         vars:
-          BUILD_TYPE: "{{.BUILD_TYPE}}"
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          BUILD_TYPE: "debug"
     cmds:
       - task: "utils:cmake:build"
         vars:
-          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/{{.BUILD_TYPE}}"
+          BUILD_DIR: "{{.BUILD_DIR}}"
 
-  clean:
-    internal: true
-    requires:
-      vars: ["BUILD_TYPE"]
+  build-release:
+    vars:
+      BUILD_DIR: "{{.G_EXAMPLES_RELEASE_BUILD_DIR}}"
+    deps:
+      - task: "generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          BUILD_TYPE: "release"
+    cmds:
+      - task: "utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+
+  clean-debug:
     cmds:
       - task: "utils:cmake:clean"
         vars:
-          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/{{.BUILD_TYPE}}"
+          BUILD_DIR: "{{.G_EXAMPLES_DEBUG_BUILD_DIR}}"
+
+  clean-release:
+    cmds:
+      - task: "utils:cmake:clean"
+        vars:
+          BUILD_DIR: "{{.G_EXAMPLES_RELEASE_BUILD_DIR}}"
 
   generate:
     internal: true
     requires:
-      vars: ["BUILD_TYPE"]
+      vars:
+        - "BUILD_DIR"
+        - "BUILD_TYPE"
     vars:
       LOG_SURGEON_INSTALL_PREFIX: >-
         {{.G_EXAMPLES_BUILD_DIR}}/deps/{{.G_CMAKE_PACKAGE_NAME}}/{{.BUILD_TYPE}}
@@ -69,7 +63,7 @@ tasks:
     cmds:
       - task: "utils:cmake:generate"
         vars:
-          BUILD_DIR: "{{.G_EXAMPLES_BUILD_DIR}}/{{.BUILD_TYPE}}"
+          BUILD_DIR: "{{.BUILD_DIR}}"
           EXTRA_ARGS:
             - "-DCMAKE_BUILD_TYPE={{.BUILD_TYPE}}"
             - "-D{{.G_CMAKE_PACKAGE_NAME}}_ROOT={{.LOG_SURGEON_INSTALL_PREFIX}}"
