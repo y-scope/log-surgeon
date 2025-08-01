@@ -91,7 +91,7 @@ tasks:
 
   check-cpp-static-log-surgeon:
     # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
-    aliases: ["fix-cpp-static"]
+    aliases: ["fix-cpp-static-log-surgeon"]
     vars:
       BUILD_DIR: "{{.G_LOG_SURGEON_DEBUG_BUILD_DIR}}"
     sources: *log_surgeon_sources
