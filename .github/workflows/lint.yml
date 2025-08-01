@@ -33,6 +33,17 @@ jobs:
       - name: "Install task"
         run: "npm install -g @go-task/cli"
 
+      - name: "Install uv"
+        shell: "bash"
+        run: |-
+          curl \
+            --fail \
+            --location \
+            --silent \
+            --show-error \
+            https://astral.sh/uv/0.8.4/install.sh \
+          | sh
+
       - if: "matrix.os == 'macos-15'"
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
