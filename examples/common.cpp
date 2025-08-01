@@ -14,7 +14,7 @@ using namespace log_surgeon;
 
 auto check_input(std::vector<std::string> const& args) -> int {
     int ret{0};
-    if (3 != args.size()) {
+    if (2 != args.size()) {
         ret = 1;
         cout << "Not enough arguments.\n";
     } else if (filesystem::path const f{args[0]}; false == filesystem::exists(f)) {
