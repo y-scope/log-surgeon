@@ -1,6 +1,6 @@
 #include "Token.hpp"
 
-#include <algorithm>>
+#include <algorithm>
 #include <string>
 #include <string_view>
 
