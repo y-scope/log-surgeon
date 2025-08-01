@@ -191,7 +191,7 @@ To report all errors run:
 task lint:check
 ```
 
-To fix cpp errors, and report yml errors, run:
+To fix cpp errors, and report yaml errors, run:
 
 ```shell
 task lint:fix
@@ -199,8 +199,7 @@ task lint:fix
 
 ## Providing feedback
 
-You can use GitHub issues to [report a bug](https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=bug&template=bug-report.yml)
-or [request a feature][feature-req].
+You can use GitHub issues to [report a bug][bug-report] or [request a feature][feature-req].
 
 Join us on [Zulip](https://yscope-clp.zulipchat.com/) to chat with developers
 and other community members.
@@ -216,10 +215,11 @@ The following are issues we're aware of and working on:
   it also be a part of the variable.
   * Support for submatch extraction will be coming in a future release.
 
+[bug-report]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=bug&template=bug-report.yaml
 [Catch2]: https://github.com/catchorg/Catch2/tree/devel
 [clang-tidy]: https://clang.llvm.org/extra/clang-tidy/
-[feature-req]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[feature-req]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=enhancement&template=feature-request.yaml
 [fmt]: https://github.com/fmtlib/fmt
 [GSL]: https://github.com/microsoft/GSL
-[lint]: https://github.com/y-scope/log-surgeon/blob/main/.github/workflows/lint.yml
+[lint]: https://github.com/y-scope/log-surgeon/blob/main/.github/workflows/lint.yaml
 [Task]: https://taskfile.dev/
