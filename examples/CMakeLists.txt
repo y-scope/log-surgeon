@@ -8,7 +8,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS
     FORCE
 )
 
-if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
     message(STATUS "No build type specified. Setting to '${default_build_type}'.")
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
@@ -27,16 +27,32 @@ message(STATUS "Found log_surgeon ${log_surgeon_VERSION}.")
 function(add_to_target target libraries)
     target_link_libraries(${target} ${libraries})
     target_compile_features(${target} PRIVATE cxx_std_20)
-    target_compile_options(${target} PRIVATE
-        $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
-        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
-        )
+    target_compile_options(
+        ${target}
+        PRIVATE
+            $<$<CXX_COMPILER_ID:MSVC>:/W4
+            /WX>
+            $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall
+            -Wextra
+            -Wpedantic
+            -Werror>
+    )
 endfunction()
 
-add_library(common OBJECT common.cpp common.hpp)
+add_library(
+    common
+    OBJECT
+    common.cpp
+    common.hpp
+)
 add_to_target(common log_surgeon::log_surgeon)
 
-list(APPEND libraries log_surgeon::log_surgeon common)
+list(
+    APPEND
+    libraries
+    log_surgeon::log_surgeon
+    common
+)
 
 add_executable(buffer-parser buffer-parser.cpp)
 add_to_target(buffer-parser "${libraries}")
