@@ -14,7 +14,7 @@
 using namespace std;
 using namespace log_surgeon;
 
-auto process_logs(string& schema_path, string const& input_path) -> void {
+auto process_logs(string const& schema_path, string const& input_path) -> void {
     BufferParser parser{schema_path};
     optional<uint32_t> loglevel_id{parser.get_variable_id("loglevel")};
     if (false == loglevel_id.has_value()) {
@@ -91,11 +91,10 @@ auto process_logs(string& schema_path, string const& input_path) -> void {
 }
 
 auto main(int argc, char* argv[]) -> int {
-    if (int err{check_input(argc, argv)}; 0 != err) {
+    std::vector<std::string> const args(argv + 1, argv + argc);
+    if (int const err{check_input(args)}; 0 != err) {
         return err;
     }
-    string schema_path{argv[1]};
-    string input_path{argv[2]};
-    process_logs(schema_path, input_path);
+    process_logs(args[0], args[1]);
     return 0;
 }

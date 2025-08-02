@@ -90,6 +90,7 @@ Requirements:
 * [fmt] >= 8.0.1
 * [GSL] >= 4.0.0
 * [Task] >= 3.38
+* [uv] >= 0.7.10
 
 To build and install the project to `$HOME/.local`:
 
@@ -153,45 +154,15 @@ is set to true and unit tests are built.
 Before submitting a PR, ensure you've run our linting tools and either fixed any violations or
 suppressed the warning.
 
-### Requirements
-
-We currently support running our linting tools on Linux and macOS. If you're developing on another
-OS, you can submit a [feature request][feature-req]. If you can't run the linting workflows
-locally, you can enable and run the [lint] workflow in your fork.
-
-To run the linting tools, besides commonly installed tools like `tar`, you'll need:
-
-* [clang-tidy]
-* `md5sum`
-* Python 3.8 or newer
-* python3-venv
-* [Task]
-
-### Setup
-
-```shell
-./tools/init.sh
-```
-
 ### Running the linters
 
-Currently, `clang-tidy` has to be run manually:
-
-```shell
-find src tests \
-    -type f \
-    \( -iname "*.cpp" -o -iname "*.hpp" \) \
-    -print0 | \
-        xargs -0 clang-tidy --config-file .clang-tidy -p build
-```
-
-To report all errors run:
+To report all errors, run:
 
 ```shell
 task lint:check
 ```
 
-To fix cpp errors, and report yaml errors, run:
+To automatically fix any supported format or linting errors, run:
 
 ```shell
 task lint:fix
@@ -217,9 +188,8 @@ The following are issues we're aware of and working on:
 
 [bug-report]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=bug&template=bug-report.yaml
 [Catch2]: https://github.com/catchorg/Catch2/tree/devel
-[clang-tidy]: https://clang.llvm.org/extra/clang-tidy/
 [feature-req]: https://github.com/y-scope/log-surgeon/issues/new?assignees=&labels=enhancement&template=feature-request.yaml
 [fmt]: https://github.com/fmtlib/fmt
 [GSL]: https://github.com/microsoft/GSL
-[lint]: https://github.com/y-scope/log-surgeon/blob/main/.github/workflows/lint.yaml
 [Task]: https://taskfile.dev/
+[uv]: https://docs.astral.sh/uv

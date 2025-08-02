@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.22.1)
 project(log-surgeon-examples)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS
+    ON
+    CACHE BOOL
+    "Enable/Disable output of compile commands during generation."
+    FORCE
+)
+
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
     message(STATUS "No build type specified. Setting to '${default_build_type}'.")
