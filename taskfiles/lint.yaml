@@ -17,7 +17,11 @@ includes:
 vars:
   # General linting variables
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
-  G_UTILS_CONFIGS_DIR: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs"
+
+  # Utils directories
+  G_UTILS_EXPORTS_DIR: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports"
+  G_UTILS_CONFIGS_DIR: "{{.G_UTILS_EXPORTS_DIR}}/lint-configs"
+  G_UTILS_YSTDLIB_PY_DIR: "{{.G_UTILS_EXPORTS_DIR}}/ystdlib-py"
 
   # Root paths for source files
   G_LOG_SURGEON_ROOT_PATHS:
@@ -267,17 +271,16 @@ tasks:
     requires:
       vars: ["FLAGS"]
     deps:
-      - "deps:all"
+      - "deps:install-all"
       - "venv"
     cmd: |-
       . "{{.G_LINT_VENV_DIR}}/bin/activate"
-      "{{.G_UTILS_SCRIPTS_DIR}}/find.py" \
+      uv run --project "{{.G_UTILS_YSTDLIB_PY_DIR}}" pyfind \
         "{{.ROOT_DIR}}" \
         --exclude "build/**/*" \
         --exclude "tools/**/*" \
-        --file-name "CMakeLists.txt" \
-        --file-name "*.cmake" \
-        --file-name "*.cmake.in" \
+        --filename "CMakeLists.txt" \
+        --filename "*.cmake" \
         | xargs gersemi {{.FLAGS}}
 
   venv:
