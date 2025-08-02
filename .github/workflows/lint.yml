@@ -17,7 +17,9 @@ jobs:
   lint:
     strategy:
       matrix:
-        os: ["macos-latest", "ubuntu-latest"]
+        os:
+          - "macos-15"
+          - "ubuntu-24.04"
     runs-on: "${{matrix.os}}"
     steps:
       - uses: "actions/checkout@v4"
@@ -31,9 +33,29 @@ jobs:
       - name: "Install task"
         run: "npm install -g @go-task/cli"
 
-      - if: "matrix.os == 'macos-latest'"
+      - name: "Install uv"
+        shell: "bash"
+        run: |-
+          curl \
+            --fail \
+            --location \
+            --silent \
+            --show-error \
+            https://astral.sh/uv/0.8.4/install.sh \
+          | sh
+
+      - if: "matrix.os == 'macos-15'"
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
+
+      # We use clang for linting so CMake doesn't generate compile_commands.json with any gcc
+      # specific flags that would confuse clang-tidy.
+      - if: "matrix.os == 'ubuntu-24.04'"
+        name: "Install clang."
+        run: |-
+          curl https://apt.llvm.org/llvm.sh | sudo bash -s -- 20
+          sudo ln -s /usr/bin/clang-20 /usr/local/bin/cc
+          sudo ln -s /usr/bin/clang++-20 /usr/local/bin/c++
 
       - name: "Run lint task"
         run: "task lint:check"

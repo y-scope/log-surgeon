@@ -1,24 +1,48 @@
 version: "3"
 
 includes:
-  build:
-    internal: true
-    taskfile: "./build.yaml"
   deps:
     internal: true
-    taskfile: "./deps.yaml"
+    taskfile: "deps.yaml"
+  examples:
+    internal: true
+    taskfile: "examples.yaml"
+  log-surgeon:
+    internal: true
+    taskfile: "log-surgeon.yaml"
   utils:
     internal: true
     taskfile: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:
+  # General linting variables
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
   G_UTILS_CONFIGS_DIR: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs"
+
+  # Root paths for source files
+  G_LOG_SURGEON_ROOT_PATHS:
+    - "{{.ROOT_DIR}}/src"
+    - "{{.ROOT_DIR}}/tests"
+  G_EXAMPLES_ROOT_PATHS:
+    - "{{.ROOT_DIR}}/examples"
+
+  # Anchors for `sources` fields
+  G_EXAMPLES_SOURCES: &examples_sources
+    - "{{.ROOT_DIR}}/.clang-tidy"
+    - "{{.ROOT_DIR}}/examples/.clang-format"
+    - "{{.ROOT_DIR}}/examples/**/*"
+    - "{{.TASKFILE}}"
+  G_LOG_SURGEON_SOURCES: &log_surgeon_sources
+    - "{{.ROOT_DIR}}/.clang-format"
+    - "{{.ROOT_DIR}}/.clang-tidy"
+    - "{{.ROOT_DIR}}/src/**/*"
+    - "{{.ROOT_DIR}}/tests/**/*"
+    - "{{.TASKFILE}}"
 
 tasks:
   check:
     cmds:
-      - task: "check-cpp-full"
+      - task: "check-cpp"
       - task: "check-yaml"
 
   check-cmake:
@@ -27,125 +51,128 @@ tasks:
         vars:
           FLAGS: "--check"
 
-  check-cpp-diff:
+  check-cpp:
     cmds:
-      - task: "check-cpp-format"
-      - task: "check-cpp-static-diff"
+      - task: "check-cpp-format-examples"
+      - task: "check-cpp-format-log-surgeon"
+      - task: "check-cpp-static-examples"
+      - task: "check-cpp-static-log-surgeon"
 
-  check-cpp-full:
+  check-cpp-format-examples:
     cmds:
-      - task: "check-cpp-format"
-      - task: "check-cpp-static-full"
-
-  check-cpp-format:
-    sources: &cpp_source_files
-      - "{{.ROOT_DIR}}/.clang-format"
-      - "{{.ROOT_DIR}}/.clang-tidy"
-      - "{{.ROOT_DIR}}/examples/**/*"
-      - "{{.ROOT_DIR}}/src/**/*"
-      - "{{.ROOT_DIR}}/tests/**/*"
-      - "{{.TASKFILE}}"
-    deps:
-      - "cpp-lint-configs"
-      - "venv"
-    cmds:
-      - task: "utils:cpp-lint:clang-format"
+      - task: "cpp-format-examples"
         vars:
           FLAGS: ["--dry-run"]
-          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.tpp"]
-          ROOT_PATHS: *cpp_source_files
-          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
-  check-cpp-static-diff:
-    # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
-    aliases: ["fix-cpp-static-diff"]
-    sources: *cpp_source_files
-    deps:
-      - task: "build:generate"
-        vars:
-          BUILD_TYPE: "debug"
-      - "cpp-lint-configs"
-      - "venv"
+  check-cpp-format-log-surgeon:
     cmds:
-      - task: "utils:cpp-lint:clang-tidy-diff"
+      - task: "cpp-format-log-surgeon"
         vars:
-          FLAGS:
-            - "--config-file '{{.G_UTILS_CONFIGS_DIR}}/.clang-tidy'"
-            - "-p '{{.G_LOG_SURGEON_BUILD_DIR}}/debug'"
-          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.tpp"]
-          OUTPUT_DIR: "{{.G_BUILD_DIR}}/lint-clang-tidy"
-          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
+          FLAGS: ["--dry-run"]
 
-  check-cpp-static-full:
+  check-cpp-static-examples:
     # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
-    aliases: ["fix-cpp-static-full"]
+    aliases: ["fix-cpp-static-examples"]
+    vars:
+      BUILD_DIR: "{{.G_EXAMPLES_DEBUG_BUILD_DIR}}"
+    sources: *examples_sources
     deps:
-      - task: "build:generate"
-        vars:
-          BUILD_TYPE: "debug"
       - "cpp-lint-configs"
+      - task: "examples:generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          BUILD_TYPE: "debug"
       - "venv"
     cmds:
       - task: "utils:cpp-lint:clang-tidy-find"
         vars:
           EXCLUDE_PATTERNS:
-            - "{{.ROOT_DIR}}/src/log_surgeon/Buffer.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/BufferParser.cpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/BufferParser.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/Constants.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/FileReader.cpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/FileReader.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/finite_automata/Dfa.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/finite_automata/DfaState.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/finite_automata/Nfa.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/finite_automata/RegexAST.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/finite_automata/RegisterOperation.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/finite_automata/UnicodeIntervalTree.tpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/Lalr1Parser.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/Lalr1Parser.tpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/Lexer.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/Lexer.tpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/LogEvent.cpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/LogEvent.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/LogParser.cpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/LogParser.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/LogParserOutputBuffer.cpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/Parser.tpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/parser_types.cpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/parser_types.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/ParserAst.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/ParserInputBuffer.cpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/ParserInputBuffer.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/Reader.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/ReaderParser.cpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/ReaderParser.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/Schema.cpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/SchemaParser.cpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/SchemaParser.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/Token.cpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/Token.hpp"
-            - "{{.ROOT_DIR}}/src/log_surgeon/utils.hpp"
-            - "{{.ROOT_DIR}}/tests/CMakeLists.txt"
-            - "{{.ROOT_DIR}}/tests/test-dfa.cpp"
-            - "{{.ROOT_DIR}}/tests/test-lexer.cpp"
-            - "{{.ROOT_DIR}}/tests/test-nfa.cpp"
+            - "buffer-parser.cpp"
+            - "intersect-test.cpp"
+            - "reader-parser.cpp"
           FLAGS:
             - "--config-file '{{.G_UTILS_CONFIGS_DIR}}/.clang-tidy'"
-            - "-p '{{.G_LOG_SURGEON_BUILD_DIR}}/debug'"
-          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.tpp"]
-          INCLUDE_PATTERNS:
-            - "{{.ROOT_DIR}}/examples/**/*"
-            - "{{.ROOT_DIR}}/src/**/*"
-            - "{{.ROOT_DIR}}/tests/**/*"
+            - "-p '{{.BUILD_DIR}}'"
           OUTPUT_DIR: "{{.G_BUILD_DIR}}/lint-clang-tidy"
-          ROOT_PATHS: ["{{.ROOT_DIR}}"]
+          ROOT_PATHS:
+            ref: ".G_EXAMPLES_ROOT_PATHS"
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
+
+  check-cpp-static-log-surgeon:
+    # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
+    aliases: ["fix-cpp-static-log-surgeon"]
+    vars:
+      BUILD_DIR: "{{.G_LOG_SURGEON_DEBUG_BUILD_DIR}}"
+    sources: *log_surgeon_sources
+    deps:
+      - "cpp-lint-configs"
+      - task: "log-surgeon:generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          BUILD_TYPE: "debug"
+      - "venv"
+    cmds:
+      - task: "utils:cpp-lint:clang-tidy-find"
+        vars:
+          EXCLUDE_PATTERNS:
+            - "log_surgeon/Buffer.hpp"
+            - "log_surgeon/BufferParser.cpp"
+            - "log_surgeon/BufferParser.hpp"
+            - "log_surgeon/Constants.hpp"
+            - "log_surgeon/FileReader.cpp"
+            - "log_surgeon/FileReader.hpp"
+            - "log_surgeon/finite_automata/Dfa.hpp"
+            - "log_surgeon/finite_automata/DfaState.hpp"
+            - "log_surgeon/finite_automata/Nfa.hpp"
+            - "log_surgeon/finite_automata/RegexAST.hpp"
+            - "log_surgeon/finite_automata/RegisterOperation.hpp"
+            - "log_surgeon/finite_automata/UnicodeIntervalTree.tpp"
+            - "log_surgeon/Lalr1Parser.hpp"
+            - "log_surgeon/Lalr1Parser.tpp"
+            - "log_surgeon/Lexer.hpp"
+            - "log_surgeon/Lexer.tpp"
+            - "log_surgeon/LogEvent.cpp"
+            - "log_surgeon/LogEvent.hpp"
+            - "log_surgeon/LogParser.cpp"
+            - "log_surgeon/LogParser.hpp"
+            - "log_surgeon/LogParserOutputBuffer.cpp"
+            - "log_surgeon/Parser.tpp"
+            - "log_surgeon/parser_types.cpp"
+            - "log_surgeon/parser_types.hpp"
+            - "log_surgeon/ParserAst.hpp"
+            - "log_surgeon/ParserInputBuffer.cpp"
+            - "log_surgeon/ParserInputBuffer.hpp"
+            - "log_surgeon/Reader.hpp"
+            - "log_surgeon/ReaderParser.cpp"
+            - "log_surgeon/ReaderParser.hpp"
+            - "log_surgeon/Schema.cpp"
+            - "log_surgeon/SchemaParser.cpp"
+            - "log_surgeon/SchemaParser.hpp"
+            - "log_surgeon/Token.cpp"
+            - "log_surgeon/Token.hpp"
+            - "log_surgeon/utils.hpp"
+            - "test-buffer-parser.cpp"
+            - "test-dfa.cpp"
+            - "test-lexer.cpp"
+            - "test-nfa.cpp"
+            - "test-regex-ast.cpp"
+            - "test-schema.cpp"
+          FLAGS:
+            - "--config-file '{{.G_UTILS_CONFIGS_DIR}}/.clang-tidy'"
+            - "-p '{{.BUILD_DIR}}'"
+          INCLUDE_FILENAME_PATTERNS:
+            - "*.cpp"
+            - "*.h"
+            - "*.hpp"
+            - "*.tpp"
+          OUTPUT_DIR: "{{.G_BUILD_DIR}}/lint-clang-tidy"
+          ROOT_PATHS:
+            ref: ".G_LOG_SURGEON_ROOT_PATHS"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
   check-yaml:
-    aliases:
-      - "fix-yaml"
-    deps:
-      - "venv"
+    aliases: ["fix-yaml"]
+    deps: ["venv"]
     cmds:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
@@ -161,7 +188,7 @@ tasks:
 
   fix:
     cmds:
-      - task: "fix-cpp-full"
+      - task: "fix-cpp"
       - task: "fix-yaml"
 
   fix-cmake:
@@ -170,32 +197,70 @@ tasks:
         vars:
           FLAGS: "--in-place"
 
-  fix-cpp-diff:
+  fix-cpp:
     cmds:
-      - task: "fix-cpp-format"
-      - task: "fix-cpp-static-diff"
+      - task: "fix-cpp-format-examples"
+      - task: "fix-cpp-format-log-surgeon"
+      - task: "fix-cpp-static-examples"
+      - task: "fix-cpp-static-log-surgeon"
 
-  fix-cpp-full:
+  fix-cpp-format-examples:
     cmds:
-      - task: "fix-cpp-format"
-      - task: "fix-cpp-static-full"
+      - task: "cpp-format-examples"
+        vars:
+          FLAGS: ["-i"]
 
-  fix-cpp-format:
-    sources: *cpp_source_files
+  fix-cpp-format-log-surgeon:
+    cmds:
+      - task: "cpp-format-log-surgeon"
+        vars:
+          FLAGS: ["-i"]
+
+  cpp-lint-configs:
+    internal: true
+    cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/symlink-cpp-lint-configs.sh"
+
+  cpp-format-examples:
+    internal: true
+    label: "{{.TASK}}:{{.FLAGS}}"
+    requires:
+      vars: ["FLAGS"]
+    sources: *examples_sources
     deps:
       - "cpp-lint-configs"
       - "venv"
     cmds:
       - task: "utils:cpp-lint:clang-format"
         vars:
-          FLAGS: ["-i"]
-          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.tpp"]
-          ROOT_PATHS: *cpp_source_files
+          FLAGS:
+            ref: ".FLAGS"
+          ROOT_PATHS:
+            ref: ".G_EXAMPLES_ROOT_PATHS"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
-  cpp-lint-configs:
+  cpp-format-log-surgeon:
     internal: true
-    cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/symlink-cpp-lint-configs.sh"
+    label: "{{.TASK}}:{{.FLAGS}}"
+    requires:
+      vars:
+        - "FLAGS"
+    sources: *log_surgeon_sources
+    deps:
+      - "cpp-lint-configs"
+      - "venv"
+    cmds:
+      - task: "utils:cpp-lint:clang-format"
+        vars:
+          FLAGS:
+            ref: ".FLAGS"
+          INCLUDE_FILENAME_PATTERNS:
+            - "*.cpp"
+            - "*.h"
+            - "*.hpp"
+            - "*.tpp"
+          ROOT_PATHS:
+            ref: ".G_LOG_SURGEON_ROOT_PATHS"
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
   gersemi:
     internal: true
@@ -221,9 +286,9 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
     sources:
+      - "{{.ROOT_DIR}}/lint-requirements.txt"
       - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
-      - "{{.ROOT_DIR}}/lint-requirements.txt"
     generates: ["{{.CHECKSUM_FILE}}"]
     run: "once"
     deps:

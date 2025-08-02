@@ -1,0 +1,92 @@
+version: "3"
+
+includes:
+  deps:
+    internal: true
+    taskfile: "deps.yaml"
+  utils:
+    internal: true
+    taskfile: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
+tasks:
+  build-debug:
+    vars:
+      BUILD_DIR: "{{.G_LOG_SURGEON_DEBUG_BUILD_DIR}}"
+    deps:
+      - task: "generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          BUILD_TYPE: "debug"
+    cmds:
+      - task: "utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+
+  build-release:
+    vars:
+      BUILD_DIR: "{{.G_LOG_SURGEON_RELEASE_BUILD_DIR}}"
+    deps:
+      - task: "generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          BUILD_TYPE: "release"
+    cmds:
+      - task: "utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+
+  clean-debug:
+    cmds:
+      - task: "utils:cmake:clean"
+        vars:
+          BUILD_DIR: "{{.G_LOG_SURGEON_DEBUG_BUILD_DIR}}"
+
+  clean-release:
+    cmds:
+      - task: "utils:cmake:clean"
+        vars:
+          BUILD_DIR: "{{.G_LOG_SURGEON_RELEASE_BUILD_DIR}}"
+
+  install-debug:
+    desc: >-
+      install-debug INSTALL_PREFIX="<prefix path>": Install the debug build into <prefix path>.
+    requires:
+      vars:
+        - "INSTALL_PREFIX"
+    deps:
+      - "build-debug"
+    cmds:
+      - task: "utils:cmake:install"
+        vars:
+          BUILD_DIR: "{{.G_LOG_SURGEON_DEBUG_BUILD_DIR}}"
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+
+  install-release:
+    desc: >-
+      install-release INSTALL_PREFIX="<prefix path>": Install the release build into <prefix path>.
+    requires:
+      vars:
+        - "INSTALL_PREFIX"
+    deps:
+      - "build-release"
+    cmds:
+      - task: "utils:cmake:install"
+        vars:
+          BUILD_DIR: "{{.G_LOG_SURGEON_RELEASE_BUILD_DIR}}"
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+
+  generate:
+    internal: true
+    requires:
+      vars:
+        - "BUILD_DIR"
+        - "BUILD_TYPE"
+    deps:
+      - "deps:install-all"
+    cmds:
+      - task: "utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          EXTRA_ARGS:
+            - "-DCMAKE_BUILD_TYPE={{.BUILD_TYPE}}"
+          SOURCE_DIR: "{{.ROOT_DIR}}"

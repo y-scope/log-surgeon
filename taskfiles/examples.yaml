@@ -1,0 +1,70 @@
+version: "3"
+
+includes:
+  log-surgeon:
+    internal: true
+    taskfile: "log-surgeon.yaml"
+  utils:
+    internal: true
+    taskfile: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
+tasks:
+  build-debug:
+    vars:
+      BUILD_DIR: "{{.G_EXAMPLES_DEBUG_BUILD_DIR}}"
+    deps:
+      - task: "generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          BUILD_TYPE: "debug"
+    cmds:
+      - task: "utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+
+  build-release:
+    vars:
+      BUILD_DIR: "{{.G_EXAMPLES_RELEASE_BUILD_DIR}}"
+    deps:
+      - task: "generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          BUILD_TYPE: "release"
+    cmds:
+      - task: "utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+
+  clean-debug:
+    cmds:
+      - task: "utils:cmake:clean"
+        vars:
+          BUILD_DIR: "{{.G_EXAMPLES_DEBUG_BUILD_DIR}}"
+
+  clean-release:
+    cmds:
+      - task: "utils:cmake:clean"
+        vars:
+          BUILD_DIR: "{{.G_EXAMPLES_RELEASE_BUILD_DIR}}"
+
+  generate:
+    internal: true
+    requires:
+      vars:
+        - "BUILD_DIR"
+        - "BUILD_TYPE"
+    vars:
+      LOG_SURGEON_INSTALL_PREFIX: >-
+        {{.G_EXAMPLES_BUILD_DIR}}/deps/{{.G_CMAKE_PACKAGE_NAME}}/{{.BUILD_TYPE}}
+    deps:
+      - task: "log-surgeon:install-{{.BUILD_TYPE}}"
+        vars:
+          INSTALL_PREFIX: "{{.LOG_SURGEON_INSTALL_PREFIX}}"
+    cmds:
+      - task: "utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          EXTRA_ARGS:
+            - "-DCMAKE_BUILD_TYPE={{.BUILD_TYPE}}"
+            - "-D{{.G_CMAKE_PACKAGE_NAME}}_ROOT={{.LOG_SURGEON_INSTALL_PREFIX}}"
+          SOURCE_DIR: "{{.ROOT_DIR}}/examples"
