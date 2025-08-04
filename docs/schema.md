@@ -17,7 +17,7 @@ There are three types of rules in a schema file:
 * [Variables](#variables): Defines patterns for capturing specific pieces of the log.
 * [Delimiters](#delimiters): Specifies the characters that separate tokens in the log.
 * [Timestamps](#timestamps): Identifies the boundary between log events. Timestamps are also treated
-as variables.
+  as variables.
 
 For documentation, the schema allows for user comments by ignoring any text preceded by `//`.
 
@@ -30,17 +30,17 @@ For documentation, the schema allows for user comments by ignoring any text prec
 ```
 
 * `variable-name` may contain any alphanumeric characters, but may not be the reserved names
-`delimiters` or `timestamp`.
+  `delimiters` or `timestamp`.
 * `variable-pattern` is a regular expression using the supported
-[syntax](#regular-expression-syntax).
+  [syntax](#regular-expression-syntax).
 
 Note that:
 
 * A schema file may contain zero or more variable rules.
 * Repeating the same variable name in another rule will `OR` the regular expressions (perform an
-alternation).
+  alternation).
 * If a token matches multiple patterns from multiple rules, the token will be assigned the name of
-each rule, in the same order that they appear in the schema file.
+  each rule, in the same order that they appear in the schema file.
 
 ### Delimiters
 
@@ -52,12 +52,12 @@ delimiters:<characters>
 
 * `delimiters` is a reserved name for this rule.
 * `characters` is a set of characters that should be treated as delimiters. These characters define
-the boundaries between tokens in the log.
+  the boundaries between tokens in the log.
 
 Note that:
 
 * A schema file must contain at least one `delimiters` rule. If multiple `delimiters` rules are
-specified, only the last one will be used.
+  specified, only the last one will be used.
 
 ### Timestamps
 
@@ -77,7 +77,7 @@ Note that:
   * It appears as the first token in the input, or
   * It appears after a newline character.
 * Until a timestamp is found, the parser will use a newline character to denote the start of a new
-log event.
+  log event.
 
 ## Example schema file
 
@@ -103,9 +103,9 @@ equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
   * `2023-04-19 12:32:08.064`
   * `[20230419-12:32:08]`
 * `int`, `float`, `hex`, `hasNumber`, and `equalsCapture` all match different user defined
-variables.
+  variables.
 * `equalsCapture` also contains the named capture group `equals`. This allows the user to extract
-the substring following the equals sign.
+  the substring following the equals sign.
 
 ## Regular Expression Syntax
 
