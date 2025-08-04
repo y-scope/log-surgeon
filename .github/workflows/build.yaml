@@ -31,8 +31,6 @@ jobs:
     strategy:
       matrix:
         os:
-          - "macos-13"
-          - "macos-14"
           - "macos-15"
           - "ubuntu-22.04"
           - "ubuntu-24.04"
@@ -50,7 +48,7 @@ jobs:
         run: "npm install -g @go-task/cli"
 
       - name: "Build and run unit tests"
-        run: "task test:${{matrix.build_type}}"
+        run: "task test:run-${{matrix.build_type}}"
 
       - name: "Print test log on failure"
         if: "failure()"
@@ -58,7 +56,7 @@ jobs:
 
       - name: "Build and run examples"
         run: |-
-          task build:examples-${{matrix.build_type}}
+          task examples:build-${{matrix.build_type}}
           ./build/examples/${{matrix.build_type}}/buffer-parser ./examples/schema.txt README.md
           ./build/examples/${{matrix.build_type}}/reader-parser ./examples/schema.txt README.md
           ./build/examples/${{matrix.build_type}}/intersect-test

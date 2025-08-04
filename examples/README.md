@@ -14,7 +14,7 @@ First, ensure you've built and installed the library by following
 [these steps][2]. Then run the following command:
 
 ```shell
-task build:examples-debug
+task examples:build-debug
 ```
 
 ## Running
