@@ -128,4 +128,7 @@ a{N,M}       Match 'a' between N and M times
 .            Match any *non-delimiter* character
 (abc)        Subexpression (concatenates abc)
 (?<name>abc) Named capture group (matches 'abc' and saves it as 'name')
+
+* Special characters include: ( ) * + , - . [ \ ] ^ { | } < > ?
+  - These must be escaped when used literally in patterns.
 ```
