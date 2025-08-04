@@ -2,11 +2,14 @@
 
 #include <cstdint>
 #include <string>
-#include <utility>
 #include <variant>
+#include <vector>
 
 #include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/query_parser/StaticQueryToken.hpp>
+#include <log_surgeon/query_parser/VariableQueryToken.hpp>
 
+#include <fmt/core.h>
 #include <fmt/format.h>
 
 using log_surgeon::lexers::ByteLexer;

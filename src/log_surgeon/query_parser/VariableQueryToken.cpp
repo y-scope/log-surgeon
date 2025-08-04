@@ -1,4 +1,4 @@
-#include <log_surgeon/query_parser/VariableQueryToken.hpp>
+#include "VariableQueryToken.hpp"
 
 namespace log_surgeon::query_parser {
 auto VariableQueryToken::operator<(VariableQueryToken const& rhs) const -> bool {

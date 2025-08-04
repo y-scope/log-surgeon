@@ -3,10 +3,7 @@
 
 #include <cstdint>
 #include <string>
-#include <string_view>
 #include <utility>
-
-#include <log_surgeon/Lexer.hpp>
 
 namespace log_surgeon::query_parser {
 /**

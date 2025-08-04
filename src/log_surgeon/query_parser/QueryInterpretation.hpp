@@ -3,12 +3,10 @@
 
 #include <cstdint>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
 
-#include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/query_parser/StaticQueryToken.hpp>
 #include <log_surgeon/query_parser/VariableQueryToken.hpp>
 
