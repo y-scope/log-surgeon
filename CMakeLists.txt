@@ -84,6 +84,9 @@ set(SOURCE_FILES
     src/log_surgeon/finite_automata/UnicodeIntervalTree.tpp
     src/log_surgeon/query_parser/QueryInterpretation.cpp
     src/log_surgeon/query_parser/QueryInterpretation.hpp
+    src/log_surgeon/query_parser/StaticQueryToken.hpp
+    src/log_surgeon/query_parser/VariableQueryToken.cpp
+    src/log_surgeon/query_parser/VariableQueryToken.hpp
     src/log_surgeon/Lalr1Parser.hpp
     src/log_surgeon/Lalr1Parser.tpp
     src/log_surgeon/Lexer.hpp
