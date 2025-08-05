@@ -97,7 +97,7 @@ hasNumber:.*\d.*
 equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
 ```
 
-* `delimiters: \t\r\n:,!;%` indicates that ` `, `\t`, `\r`, `\n`, `:`, `,`, `!`, `;`, and `%` are 
+* `delimiters: \t\r\n:,!;%` indicates that ` `, `\t`, `\r`, `\n`, `:`, `,`, `!`, `;`, and `%` are
   delimiters.
 * `timestamp` matches two different patterns:
   * `2023-04-19 12:32:08.064`
