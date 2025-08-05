@@ -115,7 +115,7 @@ expression, the rules are applied as they appear in this list, from top to botto
 ```txt
 REGEX RULE   DEFINITION
 ab           Match 'a' followed by 'b'
-a|b          Match a OR b
+a|b          Match 'a' OR 'b'
 [a-z]        Match any character in the brackets (e.g., any lowercase letter)
              - special characters must be escaped, even in brackets (e.g., [\.\(\\])
 [^a-zA-Z]    Match any character NOT in the brackets (e.g., non-alphabet character)
