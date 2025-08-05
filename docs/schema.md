@@ -113,22 +113,27 @@ The following regular expression rules are supported by the schema. When buildin
 expression, the rules are applied as they appear in this list, from top to bottom.
 
 ```txt
-REGEX RULE   DEFINITION
-ab           Match 'a' followed by 'b'
-a|b          Match 'a' OR 'b'
-[a-z]        Match any character in the brackets (e.g., any lowercase letter)
-             - special characters must be escaped, even in brackets (e.g., [\.\(\\])
-[^a-zA-Z]    Match any character NOT in the brackets (e.g., non-alphabet character)
-a*           Match 'a' 0 or more times
-a+           Match 'a' 1 or more times
-a{N}         Match 'a' exactly N times
-a{N,M}       Match 'a' between N and M times
-\d           Match any digit 0-9
-\s           Match any whitespace character (' ', '\r', '\t', '\v', or '\f')
-.            Match any *non-delimiter* character
-(abc)        Subexpression (concatenates abc)
-(?<name>abc) Named capture group (matches 'abc' and saves it as 'name')
+REGEX RULE       EXAMPLE       DEFINITION
+Concatenation    ab            Match two expressions in sequence (e.g., 'a'
+                                followed by 'b').
+Alternation      a|b           Match one of two expressions (e.g., 'a' or 'b').
+Range            [a-z]         Match any character within a specified range
+                                (e.g., any lowercase letter).
+Negated Range    [^a-zA-Z]     Match any character not within the specified
+                                range (e.g., any non-alphabet character).
+Kleene Star      a*            Match an expression zero or more times.
+Kleene Plus      a+            Match an expression one or more times.
+Repetition       a{N}          Match an expression exactly N times.
+Repetition Range a{N,M}        Match an expression between N and M times.
+Digit            \d            Match any digit (i.e., 0-9).
+Whitespace       \s            Match any whitespace character (i.e., ' ', \r,
+                                \t, \v, or \f).
+Wildcard         .             Match any non-delimiter character.
+Subexpression    (ab)          Match the expression in parentheses (e.g., ab).
+Named Capture    (?<var>[01]+) Match an expression and assign it a name (e.g.,
+                                capture binary as "var").
 
-* Special characters include: ( ) * + , - . [ \ ] ^ { | } < > ?
-  - These must be escaped when used literally in patterns.
+* Special characters include: ( ) * + - . [ \ ] ^ { | } < > ?
+  - Escape these with '\' when used literally (e.g., \., \(, \\).
+  - Special characters must be escaped even in ranges.
 ```
