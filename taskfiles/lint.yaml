@@ -268,8 +268,10 @@ tasks:
 
   gersemi:
     internal: true
+    label: "{{.TASK}}:{{.FLAGS}}"
     requires:
-      vars: ["FLAGS"]
+      vars:
+        - "FLAGS"
     deps:
       - "deps:install-all"
       - "venv"
