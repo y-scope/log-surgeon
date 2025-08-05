@@ -136,4 +136,8 @@ Named Capture    (?<var>[01]+) Match an expression and assign it a name (e.g.,
 * Special characters include: ( ) * + - . [ \ ] ^ { | } < > ?
   - Escape these with '\' when used literally (e.g., \., \(, \\).
   - Special characters must be escaped even in ranges.
+
+* For each regex rule, the expression(s) it contains can be formed by applying
+  any sequence of valid regex rules, including the rule itself, thus allowing
+  for recursive composition.
 ```
