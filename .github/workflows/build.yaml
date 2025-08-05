@@ -47,6 +47,17 @@ jobs:
         shell: "bash"
         run: "npm install -g @go-task/cli"
 
+      - name: "Install uv"
+        shell: "bash"
+        run: |-
+          curl \
+            --fail \
+            --location \
+            --silent \
+            --show-error \
+            https://astral.sh/uv/0.8.4/install.sh \
+          | sh
+
       - name: "Build and run unit tests"
         run: "task test:run-${{matrix.build_type}}"
 
