@@ -46,6 +46,7 @@ vars:
 tasks:
   check:
     cmds:
+      - task: "check-cmake"
       - task: "check-cpp"
       - task: "check-yaml"
 
@@ -192,6 +193,7 @@ tasks:
 
   fix:
     cmds:
+      - task: "fix-cmake"
       - task: "fix-cpp"
       - task: "fix-yaml"
 
