@@ -47,18 +47,22 @@ void QueryInterpretation::append_query_interpretation(QueryInterpretation& suffi
 }
 
 // Helper to ensure variant is strongly ordered.
-template <typename T> struct IsStronglyOrderedVariant;
+template <typename T>
+struct IsStronglyOrderedVariant;
 
-template <typename... Ts> struct IsStronglyOrderedVariant<variant<Ts...>> {
-    static constexpr bool cValue{(same_as<decltype(declval<Ts>() <=> declval<Ts>()),strong_ordering>
-        && ...)};
+template <typename... Ts>
+struct IsStronglyOrderedVariant<variant<Ts...>> {
+    static constexpr bool cValue{
+            (same_as<decltype(declval<Ts>() <=> declval<Ts>()), strong_ordering> && ...)
+    };
 };
 
 auto QueryInterpretation::operator<=>(QueryInterpretation const& rhs) const -> strong_ordering {
     // Make sure the variants types are strongly ordered.
     static_assert(
-        IsStronglyOrderedVariant<decltype(m_tokens)::value_type>::cValue,
-        "All variant types in `m_tokens` must have `operator<=>` returning `std::strong_ordering`."
+            IsStronglyOrderedVariant<decltype(m_tokens)::value_type>::cValue,
+            "All variant types in `m_tokens` must have `operator<=>` returning "
+            "`std::strong_ordering`."
     );
 
     // Can't return `<=>` directly as `variant` is weakly ordered regardless of its types.

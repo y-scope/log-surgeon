@@ -38,7 +38,6 @@ public:
      */
     auto operator<=>(VariableQueryToken const& rhs) const -> std::strong_ordering;
 
-
     [[nodiscard]] auto get_variable_type() const -> uint32_t { return m_variable_type; }
 
     [[nodiscard]] auto get_query_substring() const -> std::string const& {
