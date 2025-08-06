@@ -1,6 +1,7 @@
 #include "QueryInterpretation.hpp"
 
-#include <cstdint>
+#include <algorithm>
+#include <compare>
 #include <string>
 #include <variant>
 #include <vector>
@@ -13,8 +14,14 @@
 #include <fmt/format.h>
 
 using log_surgeon::lexers::ByteLexer;
+using std::declval;
+using std::lexicographical_compare_three_way;
+using std::same_as;
 using std::string;
+using std::strong_ordering;
+using std::variant;
 using std::vector;
+using std::weak_ordering;
 
 namespace log_surgeon::wildcard_query_parser {
 void QueryInterpretation::append_query_interpretation(QueryInterpretation& suffix) {
@@ -39,22 +46,30 @@ void QueryInterpretation::append_query_interpretation(QueryInterpretation& suffi
     }
 }
 
-auto QueryInterpretation::operator<(QueryInterpretation const& rhs) const -> bool {
-    if (m_tokens.size() < rhs.m_tokens.size()) {
-        return true;
+// Helper to ensure variant is strongly ordered.
+template <typename T> struct IsStronglyOrderedVariant;
+
+template <typename... Ts> struct IsStronglyOrderedVariant<variant<Ts...>> {
+    static constexpr bool cValue{(same_as<decltype(declval<Ts>() <=> declval<Ts>()),strong_ordering>
+        && ...)};
+};
+
+auto QueryInterpretation::operator<=>(QueryInterpretation const& rhs) const -> strong_ordering {
+    // Make sure the variants types are strongly ordered.
+    static_assert(
+        IsStronglyOrderedVariant<decltype(m_tokens)::value_type>::cValue,
+        "All variant types in `m_tokens` must have `operator<=>` returning `std::strong_ordering`."
+    );
+
+    // Can't return `<=>` directly as `variant` is weakly ordered regardless of its types.
+    auto const tokens_weak_cmp{m_tokens <=> rhs.m_tokens};
+    if (weak_ordering::less == tokens_weak_cmp) {
+        return strong_ordering::less;
     }
-    if (m_tokens.size() > rhs.m_tokens.size()) {
-        return false;
+    if (weak_ordering::greater == tokens_weak_cmp) {
+        return strong_ordering::greater;
     }
-    for (uint32_t i{0}; i < m_tokens.size(); ++i) {
-        if (m_tokens[i] < rhs.m_tokens[i]) {
-            return true;
-        }
-        if (m_tokens[i] > rhs.m_tokens[i]) {
-            return false;
-        }
-    }
-    return false;
+    return strong_ordering::equal;
 }
 
 auto QueryInterpretation::serialize() const -> string {

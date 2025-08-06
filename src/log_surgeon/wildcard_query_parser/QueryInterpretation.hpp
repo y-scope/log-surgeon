@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_QUERY_INTERPRETATION_HPP
 #define LOG_SURGEON_WILDCARD_QUERY_PARSER_QUERY_INTERPRETATION_HPP
 
+#include <compare>
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -33,19 +34,15 @@ public:
         append_variable_token(variable_type, std::move(query_substring), contains_wildcard);
     }
 
-    auto operator==(QueryInterpretation const& rhs) const -> bool = default;
-
     /**
-     * Lexicographical less-than comparison.
+     * Lexicographical three-way comparison operator.
      *
-     * Comparison is performed in the following order:
-     * 1. By number of tokens in the logtype (shorter logtypes are considered less).
-     * 2. By lexicographical ordering of individual tokens (based on their `<` and `>` operators).
+     * Compares `m_tokens` lexicographically using their three-way comparison.
      *
      * @param rhs The `QueryInterpretation` to compare against.
-     * @return true if this object is considered less than rhs, false otherwise.
+     * @return The relative ordering of `this` with respect to `rhs`.
      */
-    auto operator<(QueryInterpretation const& rhs) const -> bool;
+    auto operator<=>(QueryInterpretation const& rhs) const -> std::strong_ordering;
 
     auto clear() -> void { m_tokens.clear(); }
 
