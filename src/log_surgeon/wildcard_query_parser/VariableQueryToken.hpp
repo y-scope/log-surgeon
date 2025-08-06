@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_VARIABLE_QUERY_TOKEN_HPP
 #define LOG_SURGEON_WILDCARD_QUERY_PARSER_VARIABLE_QUERY_TOKEN_HPP
 
+#include <compare>
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -24,35 +25,19 @@ public:
               m_query_substring(std::move(query_substring)),
               m_has_wildcard(has_wildcard) {}
 
-    auto operator==(VariableQueryToken const& rhs) const -> bool = default;
-
-    auto operator!=(VariableQueryToken const& rhs) const -> bool = default;
-
     /**
-     * Lexicographical less-than comparison.
+     * Lexicographical three-way comparison operator.
      *
      * Compares member variables in the following order:
      * 1. `m_variable_type`
      * 2. `m_query_substring`
-     * 3. `m_has_wildcard` (`false` < `true`)
+     * 3. `m_has_wildcard` (with `false` considered less than `true`)
      *
      * @param rhs The `VariableQueryToken` to compare against.
-     * @return true if this object is considered less than rhs, false otherwise.
+     * @return The relative ordering of `this` with respect to `rhs`.
      */
-    auto operator<(VariableQueryToken const& rhs) const -> bool;
+    auto operator<=>(VariableQueryToken const& rhs) const -> std::strong_ordering;
 
-    /**
-     * Lexicographical greater-than comparison.
-     *
-     * Compares member variables in the following order:
-     * 1. `m_variable_type`
-     * 2. `m_query_substring`
-     * 3. `m_has_wildcard` (`true` > `false`)
-     *
-     * @param rhs The `VariableQueryToken` to compare against.
-     * @return true if this object is considered greater than rhs, false otherwise.
-     */
-    auto operator>(VariableQueryToken const& rhs) const -> bool;
 
     [[nodiscard]] auto get_variable_type() const -> uint32_t { return m_variable_type; }
 

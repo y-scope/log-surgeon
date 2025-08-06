@@ -1,41 +1,22 @@
 #include "VariableQueryToken.hpp"
 
-namespace log_surgeon::wildcard_query_parser {
-auto VariableQueryToken::operator<(VariableQueryToken const& rhs) const -> bool {
-    if (m_variable_type < rhs.m_variable_type) {
-        return true;
-    }
-    if (m_variable_type > rhs.m_variable_type) {
-        return false;
-    }
-    if (m_query_substring < rhs.m_query_substring) {
-        return true;
-    }
-    if (m_query_substring > rhs.m_query_substring) {
-        return false;
-    }
-    if (m_has_wildcard != rhs.m_has_wildcard) {
-        return rhs.m_has_wildcard;
-    }
-    return false;
-}
+#include <compare>
 
-auto VariableQueryToken::operator>(VariableQueryToken const& rhs) const -> bool {
-    if (m_variable_type > rhs.m_variable_type) {
-        return true;
+using std::strong_ordering;
+
+namespace log_surgeon::wildcard_query_parser {
+auto VariableQueryToken::operator<=>(VariableQueryToken const& rhs) const -> strong_ordering {
+    auto const variable_type_cmp{m_variable_type <=> rhs.m_variable_type};
+    if (std::strong_ordering::equal != variable_type_cmp) {
+        return variable_type_cmp;
     }
-    if (m_variable_type < rhs.m_variable_type) {
-        return false;
+
+    auto const query_substring_cmp{m_query_substring <=> rhs.m_query_substring};
+    if (std::strong_ordering::equal != query_substring_cmp) {
+        return query_substring_cmp;
     }
-    if (m_query_substring > rhs.m_query_substring) {
-        return true;
-    }
-    if (m_query_substring < rhs.m_query_substring) {
-        return false;
-    }
-    if (m_has_wildcard != rhs.m_has_wildcard) {
-        return m_has_wildcard;
-    }
-    return false;
+
+    // bool does not have a <=> operator, so we have to manual order it:
+    return static_cast<int>(m_has_wildcard) <=> static_cast<int>(rhs.m_has_wildcard);
 }
 }  // namespace log_surgeon::wildcard_query_parser
