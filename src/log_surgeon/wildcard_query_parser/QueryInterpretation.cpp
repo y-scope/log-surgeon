@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <compare>
+#include <concepts>
 #include <string>
 #include <variant>
 #include <vector>
@@ -15,7 +16,6 @@
 
 using log_surgeon::lexers::ByteLexer;
 using std::declval;
-using std::lexicographical_compare_three_way;
 using std::same_as;
 using std::string;
 using std::strong_ordering;
