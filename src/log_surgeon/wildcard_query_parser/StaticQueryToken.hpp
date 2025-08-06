@@ -1,10 +1,10 @@
-#ifndef LOG_SURGEON_QUERY_PARSER_STATIC_QUERY_TOKEN_HPP
-#define LOG_SURGEON_QUERY_PARSER_STATIC_QUERY_TOKEN_HPP
+#ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_STATIC_QUERY_TOKEN_HPP
+#define LOG_SURGEON_WILDCARD_QUERY_PARSER_STATIC_QUERY_TOKEN_HPP
 
 #include <string>
 #include <utility>
 
-namespace log_surgeon::query_parser {
+namespace log_surgeon::wildcard_query_parser {
 /**
  * Represents static-text in the query as a token.
  *
@@ -38,6 +38,6 @@ public:
 private:
     std::string m_query_substring;
 };
-}  // namespace log_surgeon::query_parser
+}  // namespace log_surgeon::wildcard_query_parser
 
-#endif  // LOG_SURGEON_QUERY_PARSER_STATIC_QUERY_TOKEN_HPP
+#endif  // LOG_SURGEON_WILDCARD_QUERY_PARSER_STATIC_QUERY_TOKEN_HPP

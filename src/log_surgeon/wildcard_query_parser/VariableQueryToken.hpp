@@ -1,11 +1,11 @@
-#ifndef LOG_SURGEON_QUERY_PARSER_VARIABLE_QUERY_TOKEN_HPP
-#define LOG_SURGEON_QUERY_PARSER_VARIABLE_QUERY_TOKEN_HPP
+#ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_VARIABLE_QUERY_TOKEN_HPP
+#define LOG_SURGEON_WILDCARD_QUERY_PARSER_VARIABLE_QUERY_TOKEN_HPP
 
 #include <cstdint>
 #include <string>
 #include <utility>
 
-namespace log_surgeon::query_parser {
+namespace log_surgeon::wildcard_query_parser {
 /**
  * Represents a variable in the query as a token.
  *
@@ -67,6 +67,6 @@ private:
     std::string m_query_substring;
     bool m_has_wildcard{false};
 };
-}  // namespace log_surgeon::query_parser
+}  // namespace log_surgeon::wildcard_query_parser
 
-#endif  // LOG_SURGEON_QUERY_PARSER_VARIABLE_QUERY_TOKEN_HPP
+#endif  // LOG_SURGEON_WILDCARD_QUERY_PARSER_VARIABLE_QUERY_TOKEN_HPP

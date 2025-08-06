@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <string_view>
 
-#include <log_surgeon/query_parser/QueryInterpretation.hpp>
+#include <log_surgeon/wildcard_query_parser/QueryInterpretation.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -12,7 +12,7 @@
  * These unit tests contain the `QueryInterpretation` tag.
  */
 
-using log_surgeon::query_parser::QueryInterpretation;
+using log_surgeon::wildcard_query_parser::QueryInterpretation;
 using std::string_view;
 
 /**

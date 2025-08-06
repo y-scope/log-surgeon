@@ -6,8 +6,8 @@
 #include <vector>
 
 #include <log_surgeon/Lexer.hpp>
-#include <log_surgeon/query_parser/StaticQueryToken.hpp>
-#include <log_surgeon/query_parser/VariableQueryToken.hpp>
+#include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
+#include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
 
 #include <fmt/core.h>
 #include <fmt/format.h>
@@ -16,7 +16,7 @@ using log_surgeon::lexers::ByteLexer;
 using std::string;
 using std::vector;
 
-namespace log_surgeon::query_parser {
+namespace log_surgeon::wildcard_query_parser {
 void QueryInterpretation::append_query_interpretation(QueryInterpretation& suffix) {
     if (suffix.m_tokens.empty()) {
         return;
@@ -80,4 +80,4 @@ auto QueryInterpretation::serialize() const -> string {
             fmt::join(has_wildcard_strings, "")
     );
 }
-}  // namespace log_surgeon::query_parser
+}  // namespace log_surgeon::wildcard_query_parser

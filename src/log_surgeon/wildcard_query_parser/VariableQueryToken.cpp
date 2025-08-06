@@ -1,6 +1,6 @@
 #include "VariableQueryToken.hpp"
 
-namespace log_surgeon::query_parser {
+namespace log_surgeon::wildcard_query_parser {
 auto VariableQueryToken::operator<(VariableQueryToken const& rhs) const -> bool {
     if (m_variable_type < rhs.m_variable_type) {
         return true;
@@ -38,4 +38,4 @@ auto VariableQueryToken::operator>(VariableQueryToken const& rhs) const -> bool 
     }
     return false;
 }
-}  // namespace log_surgeon::query_parser
+}  // namespace log_surgeon::wildcard_query_parser

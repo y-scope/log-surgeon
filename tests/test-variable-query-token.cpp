@@ -1,6 +1,6 @@
 #include <cstdint>
 
-#include <log_surgeon/query_parser/VariableQueryToken.hpp>
+#include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -11,7 +11,7 @@
  * These unit tests contain the `VariableQueryToken` tag.
  */
 
-using log_surgeon::query_parser::VariableQueryToken;
+using log_surgeon::wildcard_query_parser::VariableQueryToken;
 
 /**
  * @ingroup unit_tests_variable_query_token

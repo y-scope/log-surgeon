@@ -1,5 +1,5 @@
-#ifndef LOG_SURGEON_QUERY_PARSER_QUERY_INTERPRETATION_HPP
-#define LOG_SURGEON_QUERY_PARSER_QUERY_INTERPRETATION_HPP
+#ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_QUERY_INTERPRETATION_HPP
+#define LOG_SURGEON_WILDCARD_QUERY_PARSER_QUERY_INTERPRETATION_HPP
 
 #include <cstdint>
 #include <string>
@@ -7,10 +7,10 @@
 #include <variant>
 #include <vector>
 
-#include <log_surgeon/query_parser/StaticQueryToken.hpp>
-#include <log_surgeon/query_parser/VariableQueryToken.hpp>
+#include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
+#include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
 
-namespace log_surgeon::query_parser {
+namespace log_surgeon::wildcard_query_parser {
 /**
  * Represents a query as a sequence of static-text and variable tokens.
  *
@@ -101,6 +101,6 @@ public:
 private:
     std::vector<std::variant<StaticQueryToken, VariableQueryToken>> m_tokens;
 };
-}  // namespace log_surgeon::query_parser
+}  // namespace log_surgeon::wildcard_query_parser
 
-#endif  // LOG_SURGEON_QUERY_PARSER_QUERY_INTERPRETATION_HPP
+#endif  // LOG_SURGEON_WILDCARD_QUERY_PARSER_QUERY_INTERPRETATION_HPP

@@ -1,4 +1,4 @@
-#include <log_surgeon/query_parser/StaticQueryToken.hpp>
+#include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -9,7 +9,7 @@
  * These unit tests contain the `StaticQueryToken` tag.
  */
 
-using log_surgeon::query_parser::StaticQueryToken;
+using log_surgeon::wildcard_query_parser::StaticQueryToken;
 
 /**
  * @ingroup unit_tests_static_query_token
