@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_STATIC_QUERY_TOKEN_HPP
 #define LOG_SURGEON_WILDCARD_QUERY_PARSER_STATIC_QUERY_TOKEN_HPP
 
+#include <compare>
 #include <string>
 #include <utility>
 
@@ -15,17 +16,7 @@ public:
     explicit StaticQueryToken(std::string query_substring)
             : m_query_substring(std::move(query_substring)) {}
 
-    auto operator==(StaticQueryToken const& rhs) const -> bool = default;
-
-    auto operator!=(StaticQueryToken const& rhs) const -> bool = default;
-
-    auto operator<(StaticQueryToken const& rhs) const -> bool {
-        return m_query_substring < rhs.m_query_substring;
-    }
-
-    auto operator>(StaticQueryToken const& rhs) const -> bool {
-        return m_query_substring > rhs.m_query_substring;
-    }
+    auto operator<=>(StaticQueryToken const& rhs) const -> std::strong_ordering = default;
 
     auto append(StaticQueryToken const& rhs) -> void {
         m_query_substring += rhs.get_query_substring();
