@@ -1,6 +1,9 @@
 version: "3"
 
 includes:
+  deps:
+    internal: true
+    taskfile: "deps.yaml"
   examples:
     internal: true
     taskfile: "examples.yaml"
@@ -14,7 +17,11 @@ includes:
 vars:
   # General linting variables
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
-  G_UTILS_CONFIGS_DIR: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs"
+
+  # Utils directories
+  G_UTILS_EXPORTS_DIR: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports"
+  G_UTILS_CONFIGS_DIR: "{{.G_UTILS_EXPORTS_DIR}}/lint-configs"
+  G_UTILS_YSTDLIB_PY_DIR: "{{.G_UTILS_EXPORTS_DIR}}/ystdlib-py"
 
   # Root paths for source files
   G_LOG_SURGEON_ROOT_PATHS:
@@ -39,8 +46,15 @@ vars:
 tasks:
   check:
     cmds:
+      - task: "check-cmake"
       - task: "check-cpp"
       - task: "check-yaml"
+
+  check-cmake:
+    cmds:
+      - task: "gersemi"
+        vars:
+          FLAGS: "--check"
 
   check-cpp:
     cmds:
@@ -179,8 +193,15 @@ tasks:
 
   fix:
     cmds:
+      - task: "fix-cmake"
       - task: "fix-cpp"
       - task: "fix-yaml"
+
+  fix-cmake:
+    cmds:
+      - task: "gersemi"
+        vars:
+          FLAGS: "--in-place"
 
   fix-cpp:
     cmds:
@@ -246,6 +267,25 @@ tasks:
           ROOT_PATHS:
             ref: ".G_LOG_SURGEON_ROOT_PATHS"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
+
+  gersemi:
+    internal: true
+    label: "{{.TASK}}:{{.FLAGS}}"
+    requires:
+      vars:
+        - "FLAGS"
+    deps:
+      - "deps:install-all"
+      - "venv"
+    cmd: |-
+      . "{{.G_LINT_VENV_DIR}}/bin/activate"
+      uv run --project "{{.G_UTILS_YSTDLIB_PY_DIR}}" pyfind \
+        "{{.ROOT_DIR}}" \
+        --exclude "build/**/*" \
+        --exclude "tools/**/*" \
+        --filename "CMakeLists.txt" \
+        --filename "*.cmake" \
+        | xargs gersemi {{.FLAGS}}
 
   venv:
     internal: true
