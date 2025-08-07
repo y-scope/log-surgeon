@@ -24,7 +24,7 @@ TEST_CASE("three_way_and_derived_comparisons", "[StaticQueryToken]") {
     StaticQueryToken const empty_token{""};
     StaticQueryToken const token_abc{"abc"};
     StaticQueryToken const token_def{"def"};
-    StaticQueryToken const another_token_abc{"abc"};
+    StaticQueryToken const another_token_def{"def"};
 
     // empty_token
     test_equal(empty_token, empty_token);
@@ -35,10 +35,10 @@ TEST_CASE("three_way_and_derived_comparisons", "[StaticQueryToken]") {
     test_greater_than(token_abc, empty_token);
     test_equal(token_abc, token_abc);
     test_less_than(token_abc, token_def);
-    test_equal(token_abc, another_token_abc);
 
     // token_def
     test_greater_than(token_def, empty_token);
     test_greater_than(token_def, token_abc);
     test_equal(token_def, token_def);
+    test_equal(token_def, another_token_def);
 }
