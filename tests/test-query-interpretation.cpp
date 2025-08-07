@@ -185,8 +185,8 @@ TEST_CASE("comparison_operators", "[QueryInterpretation]") {
     ordered_interpretations.emplace_back(cHasNumId, "123", false);
 
     // <hasNumber>(abc*123)
-    QueryInterpretation const interpretation(cHasNumId, "abc*123", true);
-    QueryInterpretation const duplicate_interpretation(cHasNumId, "abc*123", true);
+    QueryInterpretation const interpretation{cHasNumId, "abc*123", true};
+    QueryInterpretation const duplicate_interpretation{cHasNumId, "abc*123", true};
 
     for (size_t i{0}; i < ordered_interpretations.size(); i++) {
         CAPTURE(i);
