@@ -1,4 +1,4 @@
-#include <compare>
+#include "comparison_test_utils.hpp"
 
 #include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
 
@@ -11,82 +11,10 @@
  * These unit tests contain the `StaticQueryToken` tag.
  */
 
+using log_surgeon::tests::test_equal;
+using log_surgeon::tests::test_greater_than;
+using log_surgeon::tests::test_less_than;
 using log_surgeon::wildcard_query_parser::StaticQueryToken;
-using std::strong_ordering;
-
-namespace {
-/**
- * Tests comparison operators when `lhs` == `rhs`.
- * @param lhs `StaticQueryToken` on the lhs of the operator.
- * @param rhs `StaticQueryToken` on the rhs of the operator.
- */
-auto test_equal(StaticQueryToken const& lhs, StaticQueryToken const& rhs) -> void;
-
-/**
- * Tests comparison operators when `lhs` > `rhs`.
- * @param lhs `StaticQueryToken` on the lhs of the operator.
- * @param rhs `StaticQueryToken` on the rhs of the operator.
- */
-auto test_greater_than(StaticQueryToken const& lhs, StaticQueryToken const& rhs) -> void;
-
-/**
- * Tests comparison operators when `lhs` < `rhs`.
- * @param lhs `StaticQueryToken` on the lhs of the operator.
- * @param rhs `StaticQueryToken` on the rhs of the operator.
- */
-auto test_less_than(StaticQueryToken const& lhs, StaticQueryToken const& rhs) -> void;
-
-auto test_equal(StaticQueryToken const& lhs, StaticQueryToken const& rhs) -> void {
-    REQUIRE((lhs <=> rhs) == strong_ordering::equal);
-    REQUIRE(lhs == rhs);
-    REQUIRE(lhs <= rhs);
-    REQUIRE(lhs >= rhs);
-    REQUIRE(rhs == lhs);
-    REQUIRE(rhs <= lhs);
-    REQUIRE(rhs >= lhs);
-
-    REQUIRE_FALSE(lhs != rhs);
-    REQUIRE_FALSE(lhs < rhs);
-    REQUIRE_FALSE(lhs > rhs);
-    REQUIRE_FALSE(rhs != lhs);
-    REQUIRE_FALSE(rhs < lhs);
-    REQUIRE_FALSE(rhs > lhs);
-}
-
-auto test_greater_than(StaticQueryToken const& lhs, StaticQueryToken const& rhs) -> void {
-    REQUIRE((lhs <=> rhs) == strong_ordering::greater);
-    REQUIRE(lhs != rhs);
-    REQUIRE(lhs >= rhs);
-    REQUIRE(lhs > rhs);
-    REQUIRE(rhs != lhs);
-    REQUIRE(rhs <= lhs);
-    REQUIRE(rhs < lhs);
-
-    REQUIRE_FALSE(lhs == rhs);
-    REQUIRE_FALSE(lhs <= rhs);
-    REQUIRE_FALSE(lhs < rhs);
-    REQUIRE_FALSE(rhs == lhs);
-    REQUIRE_FALSE(rhs >= lhs);
-    REQUIRE_FALSE(rhs > lhs);
-}
-
-auto test_less_than(StaticQueryToken const& lhs, StaticQueryToken const& rhs) -> void {
-    REQUIRE((lhs <=> rhs) == strong_ordering::less);
-    REQUIRE(lhs != rhs);
-    REQUIRE(lhs <= rhs);
-    REQUIRE(lhs < rhs);
-    REQUIRE(rhs != lhs);
-    REQUIRE(rhs >= lhs);
-    REQUIRE(rhs > lhs);
-
-    REQUIRE_FALSE(lhs == rhs);
-    REQUIRE_FALSE(lhs >= rhs);
-    REQUIRE_FALSE(lhs > rhs);
-    REQUIRE_FALSE(rhs == lhs);
-    REQUIRE_FALSE(rhs <= lhs);
-    REQUIRE_FALSE(rhs < lhs);
-}
-}  // namespace
 
 /**
  * @ingroup unit_tests_static_query_token
