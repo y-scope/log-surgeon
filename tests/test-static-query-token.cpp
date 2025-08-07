@@ -22,23 +22,23 @@ using log_surgeon::wildcard_query_parser::StaticQueryToken;
  */
 TEST_CASE("comparison_operators", "[StaticQueryToken]") {
     StaticQueryToken const empty_token{""};
-    StaticQueryToken const token_abc{"abc"};
-    StaticQueryToken const token_def{"def"};
-    StaticQueryToken const another_token_def{"def"};
+    StaticQueryToken const abc_token{"abc"};
+    StaticQueryToken const def_token{"def"};
+    StaticQueryToken const another_def_token{"def"};
 
     // empty_token
     test_equal(empty_token, empty_token);
-    test_less_than(empty_token, token_abc);
-    test_less_than(empty_token, token_def);
+    test_less_than(empty_token, abc_token);
+    test_less_than(empty_token, def_token);
 
-    // token_abc
-    test_greater_than(token_abc, empty_token);
-    test_equal(token_abc, token_abc);
-    test_less_than(token_abc, token_def);
+    // abc_token
+    test_greater_than(abc_token, empty_token);
+    test_equal(abc_token, abc_token);
+    test_less_than(abc_token, def_token);
 
-    // token_def
-    test_greater_than(token_def, empty_token);
-    test_greater_than(token_def, token_abc);
-    test_equal(token_def, token_def);
-    test_equal(token_def, another_token_def);
+    // def_token
+    test_greater_than(def_token, empty_token);
+    test_greater_than(def_token, abc_token);
+    test_equal(def_token, def_token);
+    test_equal(def_token, another_def_token);
 }
