@@ -2,6 +2,7 @@
 
 #include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include "comparison_test_utils.hpp"
@@ -27,46 +28,28 @@ TEST_CASE("comparison_operators", "[VariableQueryToken]") {
     constexpr uint32_t cIntId{2};
     constexpr uint32_t cHasNumId{7};
 
-    VariableQueryToken const empty_token{cEmptyId, "", false};
-    VariableQueryToken const int_123_token{cIntId, "123", false};
-    VariableQueryToken const int_456_token{cIntId, "456", false};
-    VariableQueryToken const has_number_123_token{cHasNumId, "123", false};
-    VariableQueryToken const has_number_user123_wildcard_token{cHasNumId, "user123*", true};
-    VariableQueryToken const another_has_number_user123_wildcard_token{cHasNumId, "user123*", true};
+    std::vector<VariableQueryToken> ordered_tokens{
+            {cEmptyId, "", false},
+            {cIntId, "123", false},
+            {cIntId, "456", false},
+            {cHasNumId, "123", false},
+            {cHasNumId, "user123*", true}
+    };
+    VariableQueryToken const token{cHasNumId, "abc*123", true};
+    VariableQueryToken const duplicate_token{cHasNumId, "abc*123", true};
 
-    // empty_token
-    test_equal(empty_token, empty_token);
-    test_less_than(empty_token, int_123_token);
-    test_less_than(empty_token, int_456_token);
-    test_less_than(empty_token, has_number_123_token);
-    test_less_than(empty_token, has_number_user123_wildcard_token);
-
-    // int_123_token
-    test_greater_than(int_123_token, empty_token);
-    test_equal(int_123_token, int_123_token);
-    test_less_than(int_123_token, int_456_token);
-    test_less_than(int_123_token, has_number_123_token);
-    test_less_than(int_123_token, has_number_user123_wildcard_token);
-
-    // int_456_token
-    test_greater_than(int_456_token, empty_token);
-    test_greater_than(int_456_token, int_123_token);
-    test_equal(int_456_token, int_456_token);
-    test_less_than(int_456_token, has_number_123_token);
-    test_less_than(int_456_token, has_number_user123_wildcard_token);
-
-    // has_number_123_token
-    test_greater_than(has_number_123_token, empty_token);
-    test_greater_than(has_number_123_token, int_123_token);
-    test_greater_than(has_number_123_token, int_456_token);
-    test_equal(has_number_123_token, has_number_123_token);
-    test_less_than(has_number_123_token, has_number_user123_wildcard_token);
-
-    // has_number_user123_wildcard_token
-    test_greater_than(has_number_user123_wildcard_token, empty_token);
-    test_greater_than(has_number_user123_wildcard_token, int_123_token);
-    test_greater_than(has_number_user123_wildcard_token, int_456_token);
-    test_greater_than(has_number_user123_wildcard_token, has_number_123_token);
-    test_equal(has_number_user123_wildcard_token, has_number_user123_wildcard_token);
-    test_equal(has_number_user123_wildcard_token, another_has_number_user123_wildcard_token);
+    for (size_t i{0}; i < ordered_tokens.size(); i++) {
+        CAPTURE(i);
+        for (size_t j{0}; j < ordered_tokens.size(); j++) {
+            CAPTURE(j);
+            if (i < j) {
+                test_less_than(ordered_tokens[i], ordered_tokens[j]);
+            } else if (i == j) {
+                test_equal(ordered_tokens[i], ordered_tokens[j]);
+            } else {
+                test_greater_than(ordered_tokens[i], ordered_tokens[j]);
+            }
+        }
+    }
+    test_equal(token, duplicate_token);
 }
