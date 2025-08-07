@@ -29,7 +29,7 @@ TEST_CASE("comparison_operators", "[VariableQueryToken]") {
     constexpr uint32_t cIntId{2};
     constexpr uint32_t cHasNumId{7};
 
-    std::vector<VariableQueryToken> ordered_tokens{
+    std::vector<VariableQueryToken> const ordered_tokens{
             {cEmptyId, "", false},
             {cIntId, "123", false},
             {cIntId, "456", false},
