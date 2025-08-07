@@ -1,9 +1,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
+#include <vector>
 
 #include <log_surgeon/wildcard_query_parser/QueryInterpretation.hpp>
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include "comparison_test_utils.hpp"
@@ -21,7 +23,6 @@ using std::string_view;
 using log_surgeon::tests::test_equal;
 using log_surgeon::tests::test_greater_than;
 using log_surgeon::tests::test_less_than;
-using log_surgeon::wildcard_query_parser::VariableQueryToken;
 
 /**
  * @ingroup unit_tests_query_interpretation
