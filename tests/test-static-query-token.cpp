@@ -1,5 +1,8 @@
+#include <vector>
+
 #include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include "comparison_test_utils.hpp"
@@ -21,24 +24,26 @@ using log_surgeon::wildcard_query_parser::StaticQueryToken;
  * @brief Tests `operator<=>` and all derived operators.
  */
 TEST_CASE("comparison_operators", "[StaticQueryToken]") {
-    StaticQueryToken const empty_token{""};
-    StaticQueryToken const abc_token{"abc"};
-    StaticQueryToken const def_token{"def"};
-    StaticQueryToken const another_def_token{"def"};
+    std::vector const ordered_tokens{
+            StaticQueryToken{""},
+            StaticQueryToken{"abc"},
+            StaticQueryToken{"def"}
+    };
+    StaticQueryToken const token{"ghi"};
+    StaticQueryToken const duplicate_token{"ghi"};
 
-    // empty_token
-    test_equal(empty_token, empty_token);
-    test_less_than(empty_token, abc_token);
-    test_less_than(empty_token, def_token);
-
-    // abc_token
-    test_greater_than(abc_token, empty_token);
-    test_equal(abc_token, abc_token);
-    test_less_than(abc_token, def_token);
-
-    // def_token
-    test_greater_than(def_token, empty_token);
-    test_greater_than(def_token, abc_token);
-    test_equal(def_token, def_token);
-    test_equal(def_token, another_def_token);
+    for (size_t i{0}; i < ordered_tokens.size(); i++) {
+        CAPTURE(i);
+        for (size_t j{0}; j < ordered_tokens.size(); j++) {
+            CAPTURE(j);
+            if (i < j) {
+                test_less_than(ordered_tokens[i], ordered_tokens[j]);
+            } else if (i == j) {
+                test_equal(ordered_tokens[i], ordered_tokens[j]);
+            } else {
+                test_greater_than(ordered_tokens[i], ordered_tokens[j]);
+            }
+        }
+    }
+    test_equal(token, duplicate_token);
 }
