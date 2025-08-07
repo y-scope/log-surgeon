@@ -28,45 +28,45 @@ TEST_CASE("comparison_operators", "[VariableQueryToken]") {
     constexpr uint32_t cHasNumId{7};
 
     VariableQueryToken const empty_token{cEmptyId, "", false};
-    VariableQueryToken const token_int_123{cIntId, "123", false};
-    VariableQueryToken const token_int_456{cIntId, "456", false};
-    VariableQueryToken const token_has_number_123{cHasNumId, "123", false};
-    VariableQueryToken const token_has_number_user123_wildcard{cHasNumId, "user123*", true};
-    VariableQueryToken const another_token_has_number_user123_wildcard{cHasNumId, "user123*", true};
+    VariableQueryToken const int_123_token{cIntId, "123", false};
+    VariableQueryToken const int_456_token{cIntId, "456", false};
+    VariableQueryToken const has_number_123_token{cHasNumId, "123", false};
+    VariableQueryToken const has_number_user123_wildcard_token{cHasNumId, "user123*", true};
+    VariableQueryToken const another_has_number_user123_wildcard_token{cHasNumId, "user123*", true};
 
     // empty_token
     test_equal(empty_token, empty_token);
-    test_less_than(empty_token, token_int_123);
-    test_less_than(empty_token, token_int_456);
-    test_less_than(empty_token, token_has_number_123);
-    test_less_than(empty_token, token_has_number_user123_wildcard);
+    test_less_than(empty_token, int_123_token);
+    test_less_than(empty_token, int_456_token);
+    test_less_than(empty_token, has_number_123_token);
+    test_less_than(empty_token, has_number_user123_wildcard_token);
 
-    // token_int_123
-    test_greater_than(token_int_123, empty_token);
-    test_equal(token_int_123, token_int_123);
-    test_less_than(token_int_123, token_int_456);
-    test_less_than(token_int_123, token_has_number_123);
-    test_less_than(token_int_123, token_has_number_user123_wildcard);
+    // int_123_token
+    test_greater_than(int_123_token, empty_token);
+    test_equal(int_123_token, int_123_token);
+    test_less_than(int_123_token, int_456_token);
+    test_less_than(int_123_token, has_number_123_token);
+    test_less_than(int_123_token, has_number_user123_wildcard_token);
 
-    // token_int_456
-    test_greater_than(token_int_456, empty_token);
-    test_greater_than(token_int_456, token_int_123);
-    test_equal(token_int_456, token_int_456);
-    test_less_than(token_int_456, token_has_number_123);
-    test_less_than(token_int_456, token_has_number_user123_wildcard);
+    // int_456_token
+    test_greater_than(int_456_token, empty_token);
+    test_greater_than(int_456_token, int_123_token);
+    test_equal(int_456_token, int_456_token);
+    test_less_than(int_456_token, has_number_123_token);
+    test_less_than(int_456_token, has_number_user123_wildcard_token);
 
-    // token_has_number_123
-    test_greater_than(token_has_number_123, empty_token);
-    test_greater_than(token_has_number_123, token_int_123);
-    test_greater_than(token_has_number_123, token_int_456);
-    test_equal(token_has_number_123, token_has_number_123);
-    test_less_than(token_has_number_123, token_has_number_user123_wildcard);
+    // has_number_123_token
+    test_greater_than(has_number_123_token, empty_token);
+    test_greater_than(has_number_123_token, int_123_token);
+    test_greater_than(has_number_123_token, int_456_token);
+    test_equal(has_number_123_token, has_number_123_token);
+    test_less_than(has_number_123_token, has_number_user123_wildcard_token);
 
-    // token_has_number_user123_wildcard
-    test_greater_than(token_has_number_user123_wildcard, empty_token);
-    test_greater_than(token_has_number_user123_wildcard, token_int_123);
-    test_greater_than(token_has_number_user123_wildcard, token_int_456);
-    test_greater_than(token_has_number_user123_wildcard, token_has_number_123);
-    test_equal(token_has_number_user123_wildcard, token_has_number_user123_wildcard);
-    test_equal(token_has_number_user123_wildcard, another_token_has_number_user123_wildcard);
+    // has_number_user123_wildcard_token
+    test_greater_than(has_number_user123_wildcard_token, empty_token);
+    test_greater_than(has_number_user123_wildcard_token, int_123_token);
+    test_greater_than(has_number_user123_wildcard_token, int_456_token);
+    test_greater_than(has_number_user123_wildcard_token, has_number_123_token);
+    test_equal(has_number_user123_wildcard_token, has_number_user123_wildcard_token);
+    test_equal(has_number_user123_wildcard_token, another_has_number_user123_wildcard_token);
 }
