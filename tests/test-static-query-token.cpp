@@ -18,9 +18,9 @@ using log_surgeon::wildcard_query_parser::StaticQueryToken;
 
 /**
  * @ingroup unit_tests_static_query_token
- * @brief Tests `operator<` and `operator>`.
+ * @brief Tests `operator<=>` and all derived operators.
  */
-TEST_CASE("three_way_and_derived_comparisons", "[StaticQueryToken]") {
+TEST_CASE("comparison_operators", "[StaticQueryToken]") {
     StaticQueryToken const empty_token{""};
     StaticQueryToken const token_abc{"abc"};
     StaticQueryToken const token_def{"def"};

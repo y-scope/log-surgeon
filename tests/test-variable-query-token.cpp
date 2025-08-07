@@ -20,7 +20,7 @@ using log_surgeon::wildcard_query_parser::VariableQueryToken;
 
 /**
  * @ingroup unit_tests_variable_query_token
- * @brief Tests `operator<` and `operator>`.
+ * @brief Tests `operator==`, `operator<=>`, and all derived operators.
  */
 TEST_CASE("comparison_operators", "[VariableQueryToken]") {
     constexpr uint32_t cEmptyId{0};
