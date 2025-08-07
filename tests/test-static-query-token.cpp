@@ -1,3 +1,5 @@
+#include <compare>
+
 #include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -10,36 +12,105 @@
  */
 
 using log_surgeon::wildcard_query_parser::StaticQueryToken;
+using std::strong_ordering;
+
+namespace {
+/**
+ * Tests comparison operators when `lhs` == `rhs`.
+ * @param lhs `StaticQueryToken` on the lhs of the operator.
+ * @param rhs `StaticQueryToken` on the rhs of the operator.
+ */
+auto test_equal(StaticQueryToken const& lhs, StaticQueryToken const& rhs) -> void;
+
+/**
+ * Tests comparison operators when `lhs` > `rhs`.
+ * @param lhs `StaticQueryToken` on the lhs of the operator.
+ * @param rhs `StaticQueryToken` on the rhs of the operator.
+ */
+auto test_greater_than(StaticQueryToken const& lhs, StaticQueryToken const& rhs) -> void;
+
+/**
+ * Tests comparison operators when `lhs` < `rhs`.
+ * @param lhs `StaticQueryToken` on the lhs of the operator.
+ * @param rhs `StaticQueryToken` on the rhs of the operator.
+ */
+auto test_less_than(StaticQueryToken const& lhs, StaticQueryToken const& rhs) -> void;
+
+auto test_equal(StaticQueryToken const& lhs, StaticQueryToken const& rhs) -> void {
+    REQUIRE((lhs <=> rhs) == strong_ordering::equal);
+    REQUIRE(lhs == rhs);
+    REQUIRE(lhs <= rhs);
+    REQUIRE(lhs >= rhs);
+    REQUIRE(rhs == lhs);
+    REQUIRE(rhs <= lhs);
+    REQUIRE(rhs >= lhs);
+
+    REQUIRE_FALSE(lhs != rhs);
+    REQUIRE_FALSE(lhs < rhs);
+    REQUIRE_FALSE(lhs > rhs);
+    REQUIRE_FALSE(rhs != lhs);
+    REQUIRE_FALSE(rhs < lhs);
+    REQUIRE_FALSE(rhs > lhs);
+}
+
+auto test_greater_than(StaticQueryToken const& lhs, StaticQueryToken const& rhs) -> void {
+    REQUIRE((lhs <=> rhs) == strong_ordering::greater);
+    REQUIRE(lhs != rhs);
+    REQUIRE(lhs >= rhs);
+    REQUIRE(lhs > rhs);
+    REQUIRE(rhs != lhs);
+    REQUIRE(rhs <= lhs);
+    REQUIRE(rhs < lhs);
+
+    REQUIRE_FALSE(lhs == rhs);
+    REQUIRE_FALSE(lhs <= rhs);
+    REQUIRE_FALSE(lhs < rhs);
+    REQUIRE_FALSE(rhs == lhs);
+    REQUIRE_FALSE(rhs >= lhs);
+    REQUIRE_FALSE(rhs > lhs);
+}
+
+auto test_less_than(StaticQueryToken const& lhs, StaticQueryToken const& rhs) -> void {
+    REQUIRE((lhs <=> rhs) == strong_ordering::less);
+    REQUIRE(lhs != rhs);
+    REQUIRE(lhs <= rhs);
+    REQUIRE(lhs < rhs);
+    REQUIRE(rhs != lhs);
+    REQUIRE(rhs >= lhs);
+    REQUIRE(rhs > lhs);
+
+    REQUIRE_FALSE(lhs == rhs);
+    REQUIRE_FALSE(lhs >= rhs);
+    REQUIRE_FALSE(lhs > rhs);
+    REQUIRE_FALSE(rhs == lhs);
+    REQUIRE_FALSE(rhs <= lhs);
+    REQUIRE_FALSE(rhs < lhs);
+}
+}  // namespace
 
 /**
  * @ingroup unit_tests_static_query_token
  * @brief Tests `operator<` and `operator>`.
  */
-TEST_CASE("comparison_operators", "[StaticQueryToken]") {
-    StaticQueryToken empty_token{""};
-    StaticQueryToken token_abc{"abc"};
-    StaticQueryToken token_def{"def"};
-    StaticQueryToken another_token_abc{"abc"};
+TEST_CASE("three_way_and_derived_comparisons", "[StaticQueryToken]") {
+    StaticQueryToken const empty_token{""};
+    StaticQueryToken const token_abc{"abc"};
+    StaticQueryToken const token_def{"def"};
+    StaticQueryToken const another_token_abc{"abc"};
 
-    SECTION("less_than_operator") {
-        REQUIRE(empty_token < token_abc);
-        REQUIRE(empty_token < token_def);
-        REQUIRE(token_abc < token_def);
-        REQUIRE_FALSE(token_abc < empty_token);
-        REQUIRE_FALSE(token_def < empty_token);
-        REQUIRE_FALSE(token_def < token_abc);
-        // False for same value
-        REQUIRE_FALSE(token_abc < another_token_abc);
-    }
+    // empty_token
+    test_equal(empty_token, empty_token);
+    test_less_than(empty_token, token_abc);
+    test_less_than(empty_token, token_def);
 
-    SECTION("greater_than_operator") {
-        REQUIRE(token_abc > empty_token);
-        REQUIRE(token_def > empty_token);
-        REQUIRE(token_def > token_abc);
-        REQUIRE_FALSE(empty_token > token_abc);
-        REQUIRE_FALSE(empty_token > token_def);
-        REQUIRE_FALSE(token_abc > token_def);
-        // False for same value
-        REQUIRE_FALSE(token_abc > another_token_abc);
-    }
+    // token_abc
+    test_greater_than(token_abc, empty_token);
+    test_equal(token_abc, token_abc);
+    test_less_than(token_abc, token_def);
+    test_equal(token_abc, another_token_abc);
+
+    // token_def
+    test_greater_than(token_def, empty_token);
+    test_greater_than(token_def, token_abc);
+    test_equal(token_def, token_def);
 }
