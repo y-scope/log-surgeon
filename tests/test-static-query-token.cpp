@@ -1,8 +1,8 @@
-#include "comparison_test_utils.hpp"
-
 #include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+
+#include "comparison_test_utils.hpp"
 
 /**
  * @defgroup unit_tests_static_query_token `StaticQueryToken` unit tests.

@@ -1,10 +1,10 @@
-#include "comparison_test_utils.hpp"
-
 #include <cstdint>
 
 #include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+
+#include "comparison_test_utils.hpp"
 
 /**
  * @defgroup unit_tests_variable_query_token `VariableQueryToken` unit tests.
