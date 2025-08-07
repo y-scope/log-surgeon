@@ -34,6 +34,11 @@ public:
         append_variable_token(variable_type, std::move(query_substring), contains_wildcard);
     }
 
+    // Must be defined if `operator<=>` is not defaulted.
+    auto operator==(QueryInterpretation const& rhs) const -> bool {
+        return (*this <=> rhs) == std::strong_ordering::equal;
+    }
+
     /**
      * Lexicographical three-way comparison operator.
      *
