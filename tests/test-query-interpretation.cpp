@@ -160,7 +160,7 @@ TEST_CASE("append_query_interpretation", "[QueryInterpretation]") {
  */
 TEST_CASE("comparison_operators", "[QueryInterpretation]") {
     constexpr uint32_t cIntId{2};
-    constexpr uint32_t cHasNumberId{7};
+    constexpr uint32_t cHasNumId{7};
 
     std::vector<QueryInterpretation> ordered_interpretations;
     // a
@@ -181,12 +181,12 @@ TEST_CASE("comparison_operators", "[QueryInterpretation]") {
     ordered_interpretations.emplace_back(cIntId, "1234", false);
     // <int>(456)
     ordered_interpretations.emplace_back(cIntId, "456", false);
-    // <cHasNumberId>(123)
-    ordered_interpretations.emplace_back(cHasNumberId, "123", false);
+    // <hasNumber>(123)
+    ordered_interpretations.emplace_back(cHasNumId, "123", false);
 
-    // <cHasNumberId>(abc*123)
-    QueryInterpretation const interpretation(cHasNumberId, "abc*123", true);
-    QueryInterpretation const duplicate_interpretation(cHasNumberId, "abc*123", true);
+    // <hasNumber>(abc*123)
+    QueryInterpretation const interpretation(cHasNumId, "abc*123", true);
+    QueryInterpretation const duplicate_interpretation(cHasNumId, "abc*123", true);
 
     for (size_t i{0}; i < ordered_interpretations.size(); i++) {
         CAPTURE(i);
