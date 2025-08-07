@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <vector>
 
 #include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
 
