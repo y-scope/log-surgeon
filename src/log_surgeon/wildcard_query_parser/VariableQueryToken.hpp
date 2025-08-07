@@ -25,6 +25,11 @@ public:
               m_query_substring(std::move(query_substring)),
               m_has_wildcard(has_wildcard) {}
 
+    // Must be defined if `operator<=>` is not defaulted.
+    auto operator==(VariableQueryToken const& rhs) const -> bool {
+        return (*this <=> rhs) == std::strong_ordering::equal;
+    }
+
     /**
      * Lexicographical three-way comparison operator.
      *
