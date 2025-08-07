@@ -1,9 +1,12 @@
+#include <cstddef>
 #include <cstdint>
 #include <string_view>
 
 #include <log_surgeon/wildcard_query_parser/QueryInterpretation.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+
+#include "comparison_test_utils.hpp"
 
 /**
  * @defgroup unit_tests_query_interpretation `QueryInterpretation` unit tests.
@@ -14,6 +17,11 @@
 
 using log_surgeon::wildcard_query_parser::QueryInterpretation;
 using std::string_view;
+
+using log_surgeon::tests::test_equal;
+using log_surgeon::tests::test_greater_than;
+using log_surgeon::tests::test_less_than;
+using log_surgeon::wildcard_query_parser::VariableQueryToken;
 
 /**
  * @ingroup unit_tests_query_interpretation
@@ -147,66 +155,50 @@ TEST_CASE("append_query_interpretation", "[QueryInterpretation]") {
 
 /**
  * @ingroup unit_tests_query_interpretation
- * @brief Tests `operator<` with various token types and orders.
+ * @brief Tests `operator==`, `operator<=>`, and all derived operators.
  */
-TEST_CASE("less_than_operator", "[QueryInterpretation]") {
-    constexpr uint32_t cFloatId{1};
+TEST_CASE("comparison_operators", "[QueryInterpretation]") {
     constexpr uint32_t cIntId{2};
     constexpr uint32_t cHasNumberId{7};
 
-    QueryInterpretation query_interpretation1;
-    QueryInterpretation query_interpretation2;
+    std::vector<QueryInterpretation> ordered_interpretations;
+    // a
+    ordered_interpretations.emplace_back("a");
+    // a<int>(123)
+    ordered_interpretations.emplace_back("a");
+    ordered_interpretations.back().append_variable_token(cIntId, "123", false);
+    // b
+    ordered_interpretations.emplace_back("b");
+    // <int>(123)
+    ordered_interpretations.emplace_back(cIntId, "123", false);
+    // <int>(123)a
+    ordered_interpretations.emplace_back(cIntId, "123", false);
+    ordered_interpretations.back().append_static_token("a");
+    // <int>(123*)
+    ordered_interpretations.emplace_back(cIntId, "123*", true);
+    // <int>(1234)
+    ordered_interpretations.emplace_back(cIntId, "1234", false);
+    // <int>(456)
+    ordered_interpretations.emplace_back(cIntId, "456", false);
+    // <cHasNumberId>(123)
+    ordered_interpretations.emplace_back(cHasNumberId, "123", false);
 
-    SECTION("different_length_logtype") {
-        query_interpretation1.append_static_token("a");
-        query_interpretation2.append_static_token("a");
-        query_interpretation2.append_variable_token(cFloatId, "1.1", false);
+    // <cHasNumberId>(abc*123)
+    QueryInterpretation const interpretation(cHasNumberId, "abc*123", true);
+    QueryInterpretation const duplicate_interpretation(cHasNumberId, "abc*123", true);
 
-        REQUIRE(query_interpretation1 < query_interpretation2);
-        REQUIRE_FALSE(query_interpretation2 < query_interpretation1);
+    for (size_t i{0}; i < ordered_interpretations.size(); i++) {
+        CAPTURE(i);
+        for (size_t j{0}; j < ordered_interpretations.size(); j++) {
+            CAPTURE(j);
+            if (i < j) {
+                test_less_than(ordered_interpretations[i], ordered_interpretations[j]);
+            } else if (i == j) {
+                test_equal(ordered_interpretations[i], ordered_interpretations[j]);
+            } else {
+                test_greater_than(ordered_interpretations[i], ordered_interpretations[j]);
+            }
+        }
     }
-
-    SECTION("different_static_content") {
-        query_interpretation1.append_static_token("a");
-        query_interpretation2.append_static_token("b");
-
-        REQUIRE(query_interpretation1 < query_interpretation2);
-        REQUIRE_FALSE(query_interpretation2 < query_interpretation1);
-    }
-
-    SECTION("different_var_types") {
-        query_interpretation1.append_variable_token(cIntId, "123", false);
-        query_interpretation2.append_variable_token(cHasNumberId, "123", false);
-
-        REQUIRE(query_interpretation1 < query_interpretation2);
-        REQUIRE_FALSE(query_interpretation2 < query_interpretation1);
-    }
-
-    SECTION("different_var_values") {
-        query_interpretation1.append_variable_token(cIntId, "123", false);
-        query_interpretation2.append_variable_token(cIntId, "456", false);
-
-        REQUIRE(query_interpretation1 < query_interpretation2);
-        REQUIRE_FALSE(query_interpretation2 < query_interpretation1);
-    }
-
-    SECTION("token_order") {
-        query_interpretation1.append_static_token("hello");
-        query_interpretation1.append_variable_token(cIntId, "123", false);
-        query_interpretation2.append_variable_token(cIntId, "123", false);
-        query_interpretation2.append_static_token("hello");
-
-        // `StaticQueryToken` is a lower index in the variant so is considered less than
-        // `VariableQueryToken`.
-        REQUIRE(query_interpretation1 < query_interpretation2);
-        REQUIRE_FALSE(query_interpretation2 < query_interpretation1);
-    }
-
-    SECTION("identical_tokens") {
-        query_interpretation1.append_variable_token(cIntId, "123", false);
-        query_interpretation2.append_variable_token(cIntId, "123", false);
-
-        REQUIRE_FALSE(query_interpretation1 < query_interpretation2);
-        REQUIRE_FALSE(query_interpretation2 < query_interpretation1);
-    }
+    test_equal(interpretation, duplicate_interpretation);
 }
