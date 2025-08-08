@@ -2,6 +2,7 @@
 #define LOG_SURGEON_TESTS_COMPARISON_TEST_UTILS_HPP
 
 #include <compare>
+#include <cstddef>
 #include <vector>
 
 #include <catch2/catch_message.hpp>

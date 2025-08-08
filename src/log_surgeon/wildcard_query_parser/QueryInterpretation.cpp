@@ -1,9 +1,9 @@
 #include "QueryInterpretation.hpp"
 
-#include <algorithm>
 #include <compare>
 #include <concepts>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
