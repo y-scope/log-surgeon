@@ -24,7 +24,6 @@ using std::vector;
 using std::weak_ordering;
 
 namespace log_surgeon::wildcard_query_parser {
-
 // Helper to ensure variant is strongly ordered.
 template <typename T>
 struct IsStronglyOrderedVariant;
