@@ -5,7 +5,6 @@
 
 #include <log_surgeon/wildcard_query_parser/QueryInterpretation.hpp>
 
-#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include "comparison_test_utils.hpp"
@@ -17,12 +16,10 @@
  * These unit tests contain the `QueryInterpretation` tag.
  */
 
+using log_surgeon::tests::pairwise_comparison_of_strictly_ascending_vector;
+using log_surgeon::tests::test_equal;
 using log_surgeon::wildcard_query_parser::QueryInterpretation;
 using std::string_view;
-
-using log_surgeon::tests::test_equal;
-using log_surgeon::tests::test_greater_than;
-using log_surgeon::tests::test_less_than;
 
 /**
  * @ingroup unit_tests_query_interpretation
@@ -188,18 +185,6 @@ TEST_CASE("comparison_operators", "[QueryInterpretation]") {
     QueryInterpretation const interpretation{cHasNumId, "abc*123", true};
     QueryInterpretation const duplicate_interpretation{cHasNumId, "abc*123", true};
 
-    for (size_t i{0}; i < ordered_interpretations.size(); i++) {
-        CAPTURE(i);
-        for (size_t j{0}; j < ordered_interpretations.size(); j++) {
-            CAPTURE(j);
-            if (i < j) {
-                test_less_than(ordered_interpretations[i], ordered_interpretations[j]);
-            } else if (i == j) {
-                test_equal(ordered_interpretations[i], ordered_interpretations[j]);
-            } else {
-                test_greater_than(ordered_interpretations[i], ordered_interpretations[j]);
-            }
-        }
-    }
+    pairwise_comparison_of_strictly_ascending_vector(ordered_interpretations);
     test_equal(interpretation, duplicate_interpretation);
 }

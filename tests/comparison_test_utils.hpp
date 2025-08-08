@@ -2,10 +2,10 @@
 #define LOG_SURGEON_TESTS_COMPARISON_TEST_UTILS_HPP
 
 #include <compare>
+#include <vector>
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
-
-using std::strong_ordering;
 
 namespace log_surgeon::tests {
 /**
@@ -32,9 +32,16 @@ auto test_greater_than(T const& lhs, T const& rhs) -> void;
 template <typename T>
 auto test_less_than(T const& lhs, T const& rhs) -> void;
 
+/**
+ * Tests operators `<=>`, `==`, `!=`, `<`, `<=`, `>`, `>=` for every pair of elements in the vector.
+ * @param ordered_vector Vector where elements are ordered to be strictly ascending.
+ */
+template <typename T>
+auto pairwise_comparison_of_strictly_ascending_vector(std::vector<T> const& ordered_vector) -> void;
+
 template <typename T>
 auto test_equal(T const& lhs, T const& rhs) -> void {
-    REQUIRE((lhs <=> rhs) == strong_ordering::equal);
+    REQUIRE((lhs <=> rhs) == std::strong_ordering::equal);
     REQUIRE(lhs == rhs);
     REQUIRE(lhs <= rhs);
     REQUIRE(lhs >= rhs);
@@ -52,7 +59,7 @@ auto test_equal(T const& lhs, T const& rhs) -> void {
 
 template <typename T>
 auto test_greater_than(T const& lhs, T const& rhs) -> void {
-    REQUIRE((lhs <=> rhs) == strong_ordering::greater);
+    REQUIRE((lhs <=> rhs) == std::strong_ordering::greater);
     REQUIRE(lhs != rhs);
     REQUIRE(lhs >= rhs);
     REQUIRE(lhs > rhs);
@@ -70,7 +77,7 @@ auto test_greater_than(T const& lhs, T const& rhs) -> void {
 
 template <typename T>
 auto test_less_than(T const& lhs, T const& rhs) -> void {
-    REQUIRE((lhs <=> rhs) == strong_ordering::less);
+    REQUIRE((lhs <=> rhs) == std::strong_ordering::less);
     REQUIRE(lhs != rhs);
     REQUIRE(lhs <= rhs);
     REQUIRE(lhs < rhs);
@@ -84,6 +91,24 @@ auto test_less_than(T const& lhs, T const& rhs) -> void {
     REQUIRE_FALSE(rhs == lhs);
     REQUIRE_FALSE(rhs <= lhs);
     REQUIRE_FALSE(rhs < lhs);
+}
+
+template <typename T>
+auto pairwise_comparison_of_strictly_ascending_vector(std::vector<T> const& ordered_vector)
+        -> void {
+    for (size_t i{0}; i < ordered_vector.size(); i++) {
+        CAPTURE(i);
+        for (size_t j{0}; j < ordered_vector.size(); j++) {
+            CAPTURE(j);
+            if (i < j) {
+                test_less_than(ordered_vector[i], ordered_vector[j]);
+            } else if (i == j) {
+                test_equal(ordered_vector[i], ordered_vector[j]);
+            } else {
+                test_greater_than(ordered_vector[i], ordered_vector[j]);
+            }
+        }
+    }
 }
 }  // namespace log_surgeon::tests
 
