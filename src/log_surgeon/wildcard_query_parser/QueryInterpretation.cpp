@@ -1,21 +1,17 @@
 #include "QueryInterpretation.hpp"
 
 #include <compare>
-#include <concepts>
 #include <string>
 #include <utility>
 #include <variant>
 #include <vector>
 
-#include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
 #include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
 
 #include <fmt/core.h>
 #include <fmt/format.h>
 
-using log_surgeon::lexers::ByteLexer;
-using std::same_as;
 using std::string;
 using std::strong_ordering;
 using std::vector;
