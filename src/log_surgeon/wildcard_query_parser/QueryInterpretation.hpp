@@ -2,6 +2,7 @@
 #define LOG_SURGEON_WILDCARD_QUERY_PARSER_QUERY_INTERPRETATION_HPP
 
 #include <compare>
+#include <concepts>
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -12,6 +13,23 @@
 #include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
 
 namespace log_surgeon::wildcard_query_parser {
+// Concepts and structs to ensure the `variant` used by `QueryInterpretation` is strongly ordered.
+template <typename T>
+concept StronglyOrdered = requires(T a, T b) {
+    {a <=> b} -> std::same_as<std::strong_ordering>;
+};
+
+template <typename... Ts>
+concept StronglyOrderedVariant = (StronglyOrdered<Ts> && ...);
+
+template <typename T>
+struct IsStronglyOrderedVariant;
+
+template <typename... Ts>
+struct IsStronglyOrderedVariant<std::variant<Ts...>> {
+    static constexpr bool cValue{StronglyOrderedVariant<Ts...>};
+};
+
 /**
  * Represents a query as a sequence of static-text and variable tokens.
  *
@@ -99,6 +117,11 @@ public:
 
 private:
     std::vector<std::variant<StaticQueryToken, VariableQueryToken>> m_tokens;
+    static_assert(
+            IsStronglyOrderedVariant<decltype(m_tokens)::value_type>::cValue,
+            "All variant types in `m_tokens` must have `operator<=>` returning "
+            "`std::strong_ordering`."
+    );
 };
 }  // namespace log_surgeon::wildcard_query_parser
 

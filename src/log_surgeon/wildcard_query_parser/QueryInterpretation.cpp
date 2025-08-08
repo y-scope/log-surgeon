@@ -15,35 +15,17 @@
 #include <fmt/format.h>
 
 using log_surgeon::lexers::ByteLexer;
-using std::declval;
 using std::same_as;
 using std::string;
 using std::strong_ordering;
-using std::variant;
 using std::vector;
 using std::weak_ordering;
 
 namespace log_surgeon::wildcard_query_parser {
-// Helper to ensure variant is strongly ordered.
-template <typename T>
-struct IsStronglyOrderedVariant;
-
-template <typename... Ts>
-struct IsStronglyOrderedVariant<variant<Ts...>> {
-    static constexpr bool cValue{
-            (same_as<decltype(declval<Ts>() <=> declval<Ts>()), strong_ordering> && ...)
-    };
-};
-
 auto QueryInterpretation::operator<=>(QueryInterpretation const& rhs) const -> strong_ordering {
-    // Make sure the variants types are strongly ordered.
-    static_assert(
-            IsStronglyOrderedVariant<decltype(m_tokens)::value_type>::cValue,
-            "All variant types in `m_tokens` must have `operator<=>` returning "
-            "`std::strong_ordering`."
-    );
-
-    // Can't return `<=>` directly as `variant` is weakly ordered regardless of its types.
+    // `<=>` for a `variant` returns a `weak_ordering`. However, we statically assert the types used
+    // in `m_tokens` have `<=>` which returns `strong_ordering`. Therefore, we can convert the
+    // result of `<=>` between two `m_tokens` from `weak_ordering` to `strong_ordering`.
     auto const tokens_weak_cmp{m_tokens <=> rhs.m_tokens};
     if (weak_ordering::less == tokens_weak_cmp) {
         return strong_ordering::less;
