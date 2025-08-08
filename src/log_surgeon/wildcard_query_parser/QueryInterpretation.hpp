@@ -71,12 +71,16 @@ public:
         }
 
         StaticQueryToken static_query_token(query_substring);
-        if (auto& prev_token = m_tokens.back();
-            false == m_tokens.empty() && std::holds_alternative<StaticQueryToken>(prev_token))
-        {
+        if (m_tokens.empty()) {
+            m_tokens.emplace_back(std::move(static_query_token));
+            return;
+        }
+
+        auto& prev_token = m_tokens.back();
+        if (std::holds_alternative<StaticQueryToken>(prev_token)) {
             std::get<StaticQueryToken>(prev_token).append(static_query_token);
         } else {
-            m_tokens.emplace_back(static_query_token);
+            m_tokens.emplace_back(std::move(static_query_token));
         }
     }
 
