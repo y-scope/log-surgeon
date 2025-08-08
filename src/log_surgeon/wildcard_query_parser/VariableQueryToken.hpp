@@ -10,7 +10,7 @@ namespace log_surgeon::wildcard_query_parser {
 /**
  * Represents a variable in the query as a token.
  *
- * Stores the raw log as a string with metadata specifying:
+ * Stores a substring from the query as a string with metadata specifying:
  * 1. The variable type.
  * 2. If the variable contains a wildcard.
  */
