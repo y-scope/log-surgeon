@@ -16,7 +16,9 @@ namespace log_surgeon::wildcard_query_parser {
 // Concepts and structs to ensure the `variant` used by `QueryInterpretation` is strongly ordered.
 template <typename T>
 concept StronglyOrdered = requires(T a, T b) {
-    {a <=> b} -> std::same_as<std::strong_ordering>;
+    {
+        a <=> b
+    } -> std::same_as<std::strong_ordering>;
 };
 
 template <typename... Ts>
