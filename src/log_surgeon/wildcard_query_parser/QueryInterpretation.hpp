@@ -65,6 +65,16 @@ public:
      */
     auto append_query_interpretation(QueryInterpretation& suffix) -> void;
 
+    /**
+     * Appends a static query substring to the current interpretation.
+     *
+     * If the input string is empty, the function returns immediately. Otherwise, it attempts to
+     * merge the new static substring into the last token if the last token is a
+     * `StaticQueryToken`. If merging is not possible, a new `StaticQueryToken` is created from the
+     * input substring and it is added as a new entry in the token vector.
+     * 
+     * @param query_substring The static portion of the query to append.
+     */
     auto append_static_token(std::string const& query_substring) -> void;
 
     auto append_variable_token(
