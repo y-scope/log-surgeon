@@ -113,7 +113,7 @@ public:
 private:
     std::vector<std::variant<StaticQueryToken, VariableQueryToken>> m_tokens;
     static_assert(
-            IsStronglyThreeWayComparable<decltype(m_tokens)::value_type>::cValue,
+            IsStronglyThreeWayComparableVariant<decltype(m_tokens)::value_type>::cValue,
             "All variant types in `m_tokens` must have `operator<=>` returning "
             "`std::strong_ordering`."
     );
