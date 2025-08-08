@@ -54,7 +54,7 @@ auto QueryInterpretation::operator<=>(QueryInterpretation const& rhs) const -> s
     return strong_ordering::equal;
 }
 
-void QueryInterpretation::append_query_interpretation(QueryInterpretation& suffix) {
+void QueryInterpretation::append_query_interpretation(QueryInterpretation const& suffix) {
     if (suffix.m_tokens.empty()) {
         return;
     }

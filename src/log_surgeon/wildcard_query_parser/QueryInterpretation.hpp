@@ -63,7 +63,7 @@ public:
      *
      * @param suffix The `QueryInterpretation` to append.
      */
-    auto append_query_interpretation(QueryInterpretation& suffix) -> void;
+    auto append_query_interpretation(QueryInterpretation const& suffix) -> void;
 
     /**
      * Appends a static query substring to the current interpretation.
