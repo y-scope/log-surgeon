@@ -26,7 +26,7 @@ using std::string_view;
  * @brief Creates an empty `QueryInterpretation` and tests serialization.
  */
 TEST_CASE("empty_query_interpretation", "[QueryInterpretation]") {
-    constexpr string_view cExpectedSerialization{"logtype='', has_wildcard=''"};
+    constexpr string_view cExpectedSerialization{"logtype='', contains_wildcard=''"};
 
     QueryInterpretation const query_interpretation;
     REQUIRE(query_interpretation.serialize() == cExpectedSerialization);
@@ -37,7 +37,7 @@ TEST_CASE("empty_query_interpretation", "[QueryInterpretation]") {
  * @brief Creates a `QueryInterpretation` with only static-text and tests serialization.
  */
 TEST_CASE("static_text_query_interpretation", "[QueryInterpretation]") {
-    constexpr string_view cExpectedSerialization{"logtype='Static text', has_wildcard='0'"};
+    constexpr string_view cExpectedSerialization{"logtype='Static text', contains_wildcard='0'"};
 
     QueryInterpretation const query_interpretation{"Static text"};
     REQUIRE(query_interpretation.serialize() == cExpectedSerialization);
@@ -49,7 +49,7 @@ TEST_CASE("static_text_query_interpretation", "[QueryInterpretation]") {
  */
 TEST_CASE("variable_query_interpretation", "[QueryInterpretation]") {
     constexpr uint32_t cHasNumberId{7};
-    constexpr string_view cExpectedSerialization{"logtype='<7>(var123)', has_wildcard='0'"};
+    constexpr string_view cExpectedSerialization{"logtype='<7>(var123)', contains_wildcard='0'"};
 
     QueryInterpretation const query_interpretation{cHasNumberId, "var123", false};
     REQUIRE(query_interpretation.serialize() == cExpectedSerialization);
@@ -61,7 +61,7 @@ TEST_CASE("variable_query_interpretation", "[QueryInterpretation]") {
  */
 TEST_CASE("wildcard_variable_query_interpretation", "[QueryInterpretation]") {
     constexpr uint32_t cFloatId{1};
-    constexpr string_view cExpectedSerialization{"logtype='<1>(123.123*)', has_wildcard='1'"};
+    constexpr string_view cExpectedSerialization{"logtype='<1>(123.123*)', contains_wildcard='1'"};
 
     QueryInterpretation const query_interpretation{cFloatId, "123.123*", true};
     REQUIRE(query_interpretation.serialize() == cExpectedSerialization);
@@ -72,7 +72,7 @@ TEST_CASE("wildcard_variable_query_interpretation", "[QueryInterpretation]") {
  * @brief Appends empty static-text to a `QueryInterpretation` and tests serialization.
  */
 TEST_CASE("append_empty_static_text", "[QueryInterpretation]") {
-    constexpr string_view cExpectedSerialization{"logtype='', has_wildcard=''"};
+    constexpr string_view cExpectedSerialization{"logtype='', contains_wildcard=''"};
 
     QueryInterpretation query_interpretation;
     query_interpretation.append_static_token("");
@@ -85,7 +85,7 @@ TEST_CASE("append_empty_static_text", "[QueryInterpretation]") {
  */
 TEST_CASE("append_empty_variable", "[QueryInterpretation]") {
     constexpr uint32_t cEmptyId{0};
-    constexpr string_view cExpectedSerialization{"logtype='<0>()', has_wildcard='0'"};
+    constexpr string_view cExpectedSerialization{"logtype='<0>()', contains_wildcard='0'"};
 
     QueryInterpretation query_interpretation;
     query_interpretation.append_variable_token(cEmptyId, "", false);
@@ -97,7 +97,7 @@ TEST_CASE("append_empty_variable", "[QueryInterpretation]") {
  * @brief Appends an empty `QueryInterpretation` to another and tests serialization.
  */
 TEST_CASE("append_empty_query_interpretation", "[QueryInterpretation]") {
-    constexpr string_view cExpectedSerialization{"logtype='hello', has_wildcard='0'"};
+    constexpr string_view cExpectedSerialization{"logtype='hello', contains_wildcard='0'"};
 
     QueryInterpretation query_interpretation{"hello"};
     QueryInterpretation empty_query_interpretation;
@@ -113,7 +113,7 @@ TEST_CASE("append_tokens", "[QueryInterpretation]") {
     constexpr uint32_t cFloatId{1};
     constexpr uint32_t cIntId{2};
     constexpr string_view cExpectedSerialization{
-            "logtype='start <2>(*123*) middle <1>(12.3) end', has_wildcard='01000'"
+            "logtype='start <2>(*123*) middle <1>(12.3) end', contains_wildcard='01000'"
     };
 
     QueryInterpretation query_interpretation;
@@ -130,7 +130,7 @@ TEST_CASE("append_tokens", "[QueryInterpretation]") {
  * @brief Tests whether adjacent static-text tokens are merged for canonicalization.
  */
 TEST_CASE("append_canonicalization", "[QueryInterpretation]") {
-    constexpr string_view cExpectedSerialization{"logtype='ab', has_wildcard='0'"};
+    constexpr string_view cExpectedSerialization{"logtype='ab', contains_wildcard='0'"};
 
     QueryInterpretation query_interpretation;
     query_interpretation.append_static_token("a");
@@ -143,7 +143,7 @@ TEST_CASE("append_canonicalization", "[QueryInterpretation]") {
  * @brief Appends a `QueryInterpretation` to another and tests serialization and canonicalization.
  */
 TEST_CASE("append_query_interpretation", "[QueryInterpretation]") {
-    constexpr string_view cExpectedSerialization{"logtype='foobar', has_wildcard='0'"};
+    constexpr string_view cExpectedSerialization{"logtype='foobar', contains_wildcard='0'"};
 
     QueryInterpretation prefix{"foo"};
     QueryInterpretation suffix{"bar"};

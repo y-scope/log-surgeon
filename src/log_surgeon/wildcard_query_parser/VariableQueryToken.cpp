@@ -17,6 +17,6 @@ auto VariableQueryToken::operator<=>(VariableQueryToken const& rhs) const -> str
     }
 
     // bool does not have a <=> operator, so we have to manual order it:
-    return static_cast<int>(m_has_wildcard) <=> static_cast<int>(rhs.m_has_wildcard);
+    return static_cast<int>(m_contains_wildcard) <=> static_cast<int>(rhs.m_contains_wildcard);
 }
 }  // namespace log_surgeon::wildcard_query_parser

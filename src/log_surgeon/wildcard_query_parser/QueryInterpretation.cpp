@@ -78,25 +78,25 @@ auto QueryInterpretation::operator<=>(QueryInterpretation const& rhs) const -> s
 
 auto QueryInterpretation::serialize() const -> string {
     vector<string> token_strings;
-    vector<string> has_wildcard_strings;
+    vector<string> contains_wildcard_strings;
 
     for (auto const& token : m_tokens) {
         if (std::holds_alternative<StaticQueryToken>(token)) {
             token_strings.emplace_back(std::get<StaticQueryToken>(token).get_query_substring());
-            has_wildcard_strings.emplace_back("0");
+            contains_wildcard_strings.emplace_back("0");
         } else {
             auto const& var = std::get<VariableQueryToken>(token);
             token_strings.emplace_back(
                     fmt::format("<{}>({})", var.get_variable_type(), var.get_query_substring())
             );
-            has_wildcard_strings.emplace_back(var.get_has_wildcard() ? "1" : "0");
+            contains_wildcard_strings.emplace_back(var.get_contains_wildcard() ? "1" : "0");
         }
     }
 
     return fmt::format(
-            "logtype='{}', has_wildcard='{}'",
+            "logtype='{}', contains_wildcard='{}'",
             fmt::join(token_strings, ""),
-            fmt::join(has_wildcard_strings, "")
+            fmt::join(contains_wildcard_strings, "")
     );
 }
 }  // namespace log_surgeon::wildcard_query_parser
