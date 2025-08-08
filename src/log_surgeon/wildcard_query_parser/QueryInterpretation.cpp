@@ -24,27 +24,6 @@ using std::vector;
 using std::weak_ordering;
 
 namespace log_surgeon::wildcard_query_parser {
-void QueryInterpretation::append_query_interpretation(QueryInterpretation& suffix) {
-    if (suffix.m_tokens.empty()) {
-        return;
-    }
-    if (m_tokens.empty()) {
-        m_tokens = suffix.m_tokens;
-        return;
-    }
-
-    auto& last_old_token = m_tokens.back();
-    auto const& first_new_token = suffix.m_tokens[0];
-    if (std::holds_alternative<StaticQueryToken>(last_old_token)
-        && std::holds_alternative<StaticQueryToken>(first_new_token))
-    {
-        std::get<StaticQueryToken>(last_old_token)
-                .append(std::get<StaticQueryToken>(first_new_token));
-        m_tokens.insert(m_tokens.end(), suffix.m_tokens.begin() + 1, suffix.m_tokens.end());
-    } else {
-        m_tokens.insert(m_tokens.end(), suffix.m_tokens.begin(), suffix.m_tokens.end());
-    }
-}
 
 // Helper to ensure variant is strongly ordered.
 template <typename T>
@@ -74,6 +53,28 @@ auto QueryInterpretation::operator<=>(QueryInterpretation const& rhs) const -> s
         return strong_ordering::greater;
     }
     return strong_ordering::equal;
+}
+
+void QueryInterpretation::append_query_interpretation(QueryInterpretation& suffix) {
+    if (suffix.m_tokens.empty()) {
+        return;
+    }
+    if (m_tokens.empty()) {
+        m_tokens = suffix.m_tokens;
+        return;
+    }
+
+    auto& last_old_token = m_tokens.back();
+    auto const& first_new_token = suffix.m_tokens[0];
+    if (std::holds_alternative<StaticQueryToken>(last_old_token)
+        && std::holds_alternative<StaticQueryToken>(first_new_token))
+    {
+        std::get<StaticQueryToken>(last_old_token)
+                .append(std::get<StaticQueryToken>(first_new_token));
+        m_tokens.insert(m_tokens.end(), suffix.m_tokens.begin() + 1, suffix.m_tokens.end());
+    } else {
+        m_tokens.insert(m_tokens.end(), suffix.m_tokens.begin(), suffix.m_tokens.end());
+    }
 }
 
 auto QueryInterpretation::serialize() const -> string {
