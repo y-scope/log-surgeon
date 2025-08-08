@@ -9,7 +9,7 @@ namespace log_surgeon::wildcard_query_parser {
 /**
  * Represents static-text in the query as a token.
  *
- * Stores a substring from the query as a string.
+ * Stores a substring from the query.
  */
 class StaticQueryToken {
 public:
