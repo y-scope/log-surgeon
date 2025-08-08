@@ -77,6 +77,25 @@ void QueryInterpretation::append_query_interpretation(QueryInterpretation& suffi
     }
 }
 
+auto QueryInterpretation::append_static_token(std::string const& query_substring) -> void {
+    if (query_substring.empty()) {
+        return;
+    }
+
+    StaticQueryToken static_query_token(query_substring);
+    if (m_tokens.empty()) {
+        m_tokens.emplace_back(std::move(static_query_token));
+        return;
+    }
+
+    auto& prev_token = m_tokens.back();
+    if (std::holds_alternative<StaticQueryToken>(prev_token)) {
+        std::get<StaticQueryToken>(prev_token).append(static_query_token);
+    } else {
+        m_tokens.emplace_back(std::move(static_query_token));
+    }
+}
+
 auto QueryInterpretation::serialize() const -> string {
     vector<string> token_strings;
     vector<string> contains_wildcard_strings;

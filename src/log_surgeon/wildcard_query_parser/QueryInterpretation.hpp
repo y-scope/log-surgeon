@@ -65,24 +65,7 @@ public:
      */
     auto append_query_interpretation(QueryInterpretation& suffix) -> void;
 
-    auto append_static_token(std::string const& query_substring) -> void {
-        if (query_substring.empty()) {
-            return;
-        }
-
-        StaticQueryToken static_query_token(query_substring);
-        if (m_tokens.empty()) {
-            m_tokens.emplace_back(std::move(static_query_token));
-            return;
-        }
-
-        auto& prev_token = m_tokens.back();
-        if (std::holds_alternative<StaticQueryToken>(prev_token)) {
-            std::get<StaticQueryToken>(prev_token).append(static_query_token);
-        } else {
-            m_tokens.emplace_back(std::move(static_query_token));
-        }
-    }
+    auto append_static_token(std::string const& query_substring) -> void;
 
     auto append_variable_token(
             uint32_t const variable_type,
