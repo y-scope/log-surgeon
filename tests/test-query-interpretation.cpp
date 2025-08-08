@@ -1,4 +1,3 @@
-#include <cstddef>
 #include <cstdint>
 #include <string_view>
 #include <vector>
@@ -100,7 +99,7 @@ TEST_CASE("append_empty_query_interpretation", "[QueryInterpretation]") {
     constexpr string_view cExpectedSerialization{"logtype='hello', contains_wildcard='0'"};
 
     QueryInterpretation query_interpretation{"hello"};
-    QueryInterpretation empty_query_interpretation;
+    QueryInterpretation const empty_query_interpretation;
     query_interpretation.append_query_interpretation(empty_query_interpretation);
     REQUIRE(query_interpretation.serialize() == cExpectedSerialization);
 }
@@ -146,7 +145,7 @@ TEST_CASE("append_query_interpretation", "[QueryInterpretation]") {
     constexpr string_view cExpectedSerialization{"logtype='foobar', contains_wildcard='0'"};
 
     QueryInterpretation prefix{"foo"};
-    QueryInterpretation suffix{"bar"};
+    QueryInterpretation const suffix{"bar"};
     prefix.append_query_interpretation(suffix);
     REQUIRE(prefix.serialize() == cExpectedSerialization);
 }
