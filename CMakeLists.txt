@@ -1,13 +1,15 @@
 cmake_minimum_required(VERSION 3.22.1)
 
-project(log_surgeon
+project(
+    log_surgeon
     VERSION 0.0.1
     DESCRIPTION "log-surgeon: A performant log parsing library"
     HOMEPAGE_URL https://github.com/y-scope/log-surgeon
-    LANGUAGES CXX
-    )
+    LANGUAGES
+        CXX
+)
 
-if (POLICY CMP0077)
+if(POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
 endif()
 
@@ -24,7 +26,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS
     FORCE
 )
 
-if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
     message(STATUS "No build type specified. Setting to '${default_build_type}'.")
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
@@ -117,7 +119,7 @@ set(SOURCE_FILES
     src/log_surgeon/Token.hpp
     src/log_surgeon/types.hpp
     src/log_surgeon/UniqueIdGenerator.hpp
-    )
+)
 
 set(LOG_SURGEON_INSTALL_CONFIG_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/log_surgeon)
 set(LOG_SURGEON_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
@@ -125,97 +127,112 @@ set(LOG_SURGEON_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 add_library(log_surgeon ${SOURCE_FILES})
 add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
 
-target_link_libraries(log_surgeon
+target_link_libraries(
+    log_surgeon
     PUBLIC
-    fmt::fmt
-    Microsoft.GSL::GSL
-    )
+        fmt::fmt
+        Microsoft.GSL::GSL
+)
 
-target_include_directories(log_surgeon
-        PUBLIC
+target_include_directories(
+    log_surgeon
+    PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-        PRIVATE
+    PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
-        )
+)
 
-target_compile_features(log_surgeon
-    PRIVATE cxx_std_20
-    )
+target_compile_features(log_surgeon PRIVATE cxx_std_20)
 
-target_compile_options(log_surgeon PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
-    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
-    )
+target_compile_options(
+    log_surgeon
+    PRIVATE
+        $<$<CXX_COMPILER_ID:MSVC>:/W4
+        /WX>
+        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall
+        -Wextra
+        -Wpedantic
+        -Werror>
+)
 
 # Disable -Wstringop-overflow to avoid a false positive in the following compiler versions.
 # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=117983
-if("GNU" STREQUAL "${CMAKE_CXX_COMPILER_ID}"
-    AND ((CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12
-         AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.5)
-         OR (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13
-             AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.4)
-         OR (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14
-             AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14.3)))
+if(
+    "GNU"
+        STREQUAL
+        "${CMAKE_CXX_COMPILER_ID}"
+    AND (
+        (
+            CMAKE_CXX_COMPILER_VERSION
+                VERSION_GREATER_EQUAL
+                12
+            AND CMAKE_CXX_COMPILER_VERSION
+                VERSION_LESS
+                12.5
+        )
+        OR (
+            CMAKE_CXX_COMPILER_VERSION
+                VERSION_GREATER_EQUAL
+                13
+            AND CMAKE_CXX_COMPILER_VERSION
+                VERSION_LESS
+                13.4
+        )
+        OR (
+            CMAKE_CXX_COMPILER_VERSION
+                VERSION_GREATER_EQUAL
+                14
+            AND CMAKE_CXX_COMPILER_VERSION
+                VERSION_LESS
+                14.3
+        )
+    )
+)
     target_compile_options(log_surgeon PRIVATE "-Wno-stringop-overflow")
 endif()
 
 # Make off_t 64-bit
-target_compile_definitions(log_surgeon
-    PRIVATE
-    _FILE_OFFSET_BITS=64
-    )
+target_compile_definitions(log_surgeon PRIVATE _FILE_OFFSET_BITS=64)
+
+install(TARGETS log_surgeon EXPORT log_surgeon-targets)
 
 install(
-    TARGETS
-    log_surgeon
-    EXPORT
-    log_surgeon-targets
-    )
-
-install(
-    EXPORT
-    log_surgeon-targets
-    NAMESPACE
-    log_surgeon::
-    DESTINATION
-    ${LOG_SURGEON_INSTALL_CONFIG_DIR}
-    )
+    EXPORT log_surgeon-targets
+    NAMESPACE log_surgeon::
+    DESTINATION ${LOG_SURGEON_INSTALL_CONFIG_DIR}
+)
 
 install(
     DIRECTORY
-    "${PROJECT_SOURCE_DIR}/src/log_surgeon"
-    DESTINATION
-    "${LOG_SURGEON_INSTALL_INCLUDE_DIR}"
+        "${PROJECT_SOURCE_DIR}/src/log_surgeon"
+    DESTINATION "${LOG_SURGEON_INSTALL_INCLUDE_DIR}"
     FILES_MATCHING
     PATTERN "*.h"
     PATTERN "*.hpp"
     PATTERN "*.tpp"
-    )
+)
 
 configure_package_config_file(
     ${CMAKE_CURRENT_LIST_DIR}/cmake/log_surgeon-config.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/log_surgeon-config.cmake
-    INSTALL_DESTINATION
-    ${LOG_SURGEON_INSTALL_CONFIG_DIR}
+    INSTALL_DESTINATION ${LOG_SURGEON_INSTALL_CONFIG_DIR}
     PATH_VARS
-    LOG_SURGEON_INSTALL_INCLUDE_DIR
-    )
+        LOG_SURGEON_INSTALL_INCLUDE_DIR
+)
 
 write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/log_surgeon-config-version.cmake
-    COMPATIBILITY
-    SameMajorVersion
-    )
+    COMPATIBILITY SameMajorVersion
+)
 
 install(
     FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/log_surgeon-config.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/log_surgeon-config-version.cmake
-    DESTINATION
-    ${LOG_SURGEON_INSTALL_CONFIG_DIR}
-    )
+        ${CMAKE_CURRENT_BINARY_DIR}/log_surgeon-config.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/log_surgeon-config-version.cmake
+    DESTINATION ${LOG_SURGEON_INSTALL_CONFIG_DIR}
+)
 
-if (log_surgeon_ENABLE_TESTS)
+if(log_surgeon_ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
