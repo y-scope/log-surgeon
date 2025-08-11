@@ -1,6 +1,10 @@
-#include <log_surgeon/query_parser/StaticQueryToken.hpp>
+#include <vector>
+
+#include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+
+#include "comparison_test_utils.hpp"
 
 /**
  * @defgroup unit_tests_static_query_token `StaticQueryToken` unit tests.
@@ -9,37 +13,23 @@
  * These unit tests contain the `StaticQueryToken` tag.
  */
 
-using log_surgeon::query_parser::StaticQueryToken;
+using log_surgeon::tests::pairwise_comparison_of_strictly_ascending_vector;
+using log_surgeon::tests::test_equal;
+using log_surgeon::wildcard_query_parser::StaticQueryToken;
 
 /**
  * @ingroup unit_tests_static_query_token
- * @brief Tests `operator<` and `operator>`.
+ * @brief Tests `operator<=>` and all derived operators.
  */
 TEST_CASE("comparison_operators", "[StaticQueryToken]") {
-    StaticQueryToken empty_token{""};
-    StaticQueryToken token_abc{"abc"};
-    StaticQueryToken token_def{"def"};
-    StaticQueryToken another_token_abc{"abc"};
+    std::vector<StaticQueryToken> const ordered_tokens{
+            StaticQueryToken{""},
+            StaticQueryToken{"abc"},
+            StaticQueryToken{"def"}
+    };
+    StaticQueryToken const token{"ghi"};
+    StaticQueryToken const duplicate_token{"ghi"};
 
-    SECTION("less_than_operator") {
-        REQUIRE(empty_token < token_abc);
-        REQUIRE(empty_token < token_def);
-        REQUIRE(token_abc < token_def);
-        REQUIRE_FALSE(token_abc < empty_token);
-        REQUIRE_FALSE(token_def < empty_token);
-        REQUIRE_FALSE(token_def < token_abc);
-        // False for same value
-        REQUIRE_FALSE(token_abc < another_token_abc);
-    }
-
-    SECTION("greater_than_operator") {
-        REQUIRE(token_abc > empty_token);
-        REQUIRE(token_def > empty_token);
-        REQUIRE(token_def > token_abc);
-        REQUIRE_FALSE(empty_token > token_abc);
-        REQUIRE_FALSE(empty_token > token_def);
-        REQUIRE_FALSE(token_abc > token_def);
-        // False for same value
-        REQUIRE_FALSE(token_abc > another_token_abc);
-    }
+    pairwise_comparison_of_strictly_ascending_vector(ordered_tokens);
+    test_equal(token, duplicate_token);
 }
