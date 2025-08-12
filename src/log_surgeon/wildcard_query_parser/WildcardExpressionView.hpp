@@ -23,15 +23,6 @@ namespace log_surgeon::wildcard_query_parser {
  */
 class WildcardExpressionView {
 public:
-    /**
-     * Creates a view of the range [`begin_idx`, `end_idx`) in the given wildcard expression.
-     *
-     * NOTE: To ensure validity, `end_idx` is limited to `wildcard_expression.length()`, and then
-     * `begin_idx` is limited to `end_idx`.
-     * @param expression
-     * @param begin_idx
-     * @param end_idx
-     */
     WildcardExpressionView(WildcardExpression const& expression, size_t begin_idx, size_t end_idx);
 
     /**
