@@ -35,6 +35,22 @@ public:
                && (m_chars[0].is_greedy_wildcard() || m_chars.back().is_greedy_wildcard());
     }
 
+    /**
+     * Checks whether the `WildcardExpressionView` is a well-formed subrange.
+     *
+     * A subrange is considered well-formed if:
+     * - It does not start immediately after an escaped character in the original expression.
+     * - It does not end on an escape character.
+     *
+     * This helps to avoid invalid substrings that are not consistent with the original intention
+     * of the WildcardExpression. For example take the search query "* \*text\* *":
+     * - The substring "*text" would incorrectly indicate a literal wildcard.
+     * - The substring "text\" would have no clear meaning.
+     *
+     * @return `true` if the substring is well-formed, `false` otherwise.
+     */
+    [[nodiscard]] auto is_well_formed() const -> bool;
+
     [[nodiscard]] auto generate_regex_string() const -> std::string;
 
     [[nodiscard]] auto get_string() const -> std::string_view { return m_search_string; }
