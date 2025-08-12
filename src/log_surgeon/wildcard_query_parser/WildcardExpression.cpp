@@ -15,11 +15,11 @@ WildcardExpression::WildcardExpression(std::string processed_search_string)
                 type = CharType::GreedyWildcard;
                 m_contains_wildcard = true;
             } else if ('?' == c) {
-                type = CharType::NonGreedyWildcard; 
+                type = CharType::NonGreedyWildcard;
                 m_contains_wildcard = true;
             } else if ('\\' == c) {
-                type = CharType::Escape; 
-            } 
+                type = CharType::Escape;
+            }
         }
         m_chars.emplace_back(c, type);
     }

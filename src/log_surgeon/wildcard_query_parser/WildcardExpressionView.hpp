@@ -32,11 +32,7 @@ public:
      * @param begin_idx
      * @param end_idx
      */
-    WildcardExpressionView(
-            WildcardExpression const& expression,
-            size_t begin_idx,
-            size_t end_idx
-    );
+    WildcardExpressionView(WildcardExpression const& expression, size_t begin_idx, size_t end_idx);
 
     /**
      * @return A copy of this view, but extended to include adjacent greedy wildcards.
@@ -49,10 +45,8 @@ public:
     }
 
     [[nodiscard]] auto generate_regex_string() const -> std::string;
-  
-    [[nodiscard]] auto get_string() const -> std::string_view {
-        return m_search_string;
-    }
+
+    [[nodiscard]] auto get_string() const -> std::string_view { return m_search_string; }
 
 private:
     [[nodiscard]] auto get_indicies() const -> std::pair<size_t, size_t> {
@@ -61,9 +55,9 @@ private:
         auto begin_idx{static_cast<size_t>(begin_ptr - full_chars.data())};
         return {begin_idx, begin_idx + m_chars.size()};
     }
-  
+
     WildcardExpression const* m_expression;
-    std::span<const WildcardCharacter> m_chars;
+    std::span<WildcardCharacter const> m_chars;
     std::string_view m_search_string;
 };
 }  // namespace log_surgeon::wildcard_query_parser

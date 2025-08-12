@@ -4,7 +4,12 @@
 #include <cstdint>
 
 namespace log_surgeon::wildcard_query_parser {
-enum class CharType : uint8_t {Normal, GreedyWildcard, NonGreedyWildcard, Escape};
+enum class CharType : uint8_t {
+    Normal,
+    GreedyWildcard,
+    NonGreedyWildcard,
+    Escape
+};
 
 class WildcardCharacter {
 public:
@@ -21,11 +26,11 @@ public:
     }
 
     [[nodiscard]] auto is_escape() const -> bool { return CharType::Escape == m_type; }
-    
+
 private:
     char m_value;
     CharType m_type;
 };
-}  // log_surgeon::wildcard_query_parser
+}  // namespace log_surgeon::wildcard_query_parser
 
 #endif  // LOG_SURGEON_QUERY_PARSER_WILDCARD_CHARACTER_HPP
