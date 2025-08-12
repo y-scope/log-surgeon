@@ -91,6 +91,8 @@ set(SOURCE_FILES
     src/log_surgeon/wildcard_query_parser/VariableQueryToken.hpp
     src/log_surgeon/wildcard_query_parser/WildcardExpression.cpp
     src/log_surgeon/wildcard_query_parser/WildcardExpression.hpp
+    src/log_surgeon/wildcard_query_parser/WildcardExpressionView.cpp
+    src/log_surgeon/wildcard_query_parser/WildcardExpressionView.hpp
     src/log_surgeon/Lalr1Parser.hpp
     src/log_surgeon/Lalr1Parser.tpp
     src/log_surgeon/Lexer.hpp

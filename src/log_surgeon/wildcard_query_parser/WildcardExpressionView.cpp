@@ -1,0 +1,61 @@
+#include "WildcardExpressionView.hpp"
+
+#include <algorithm>
+#include <cstddef>
+#include <span>
+#include <string>
+
+#include <log_surgeon/SchemaParser.hpp>
+
+using std::string;
+
+namespace log_surgeon::wildcard_query_parser {
+WildcardExpressionView::WildcardExpressionView(
+        WildcardExpression const& expression,
+        size_t begin_idx,
+        size_t end_idx
+)
+        : m_expression{&expression} {
+    std::span const full_span{m_expression->get_chars()};
+    end_idx = std::min(end_idx, full_span.size());
+    begin_idx = std::min(begin_idx, end_idx);
+    m_chars = full_span.subspan(begin_idx, end_idx - begin_idx);
+    std::string_view const full_view{m_expression->get_string()};
+    m_search_string = full_view.substr(begin_idx, end_idx - begin_idx);
+}
+
+auto WildcardExpressionView::extend_to_adjacent_greedy_wildcards() const -> WildcardExpressionView {
+    auto [begin_idx, end_idx]{get_indicies()};
+
+    std::span const full_span{m_expression->get_chars()};
+
+    if (begin_idx > 0 && full_span[begin_idx - 1].is_greedy_wildcard()) {
+        --begin_idx;
+    }
+    if (end_idx < full_span.size() && full_span[end_idx].is_greedy_wildcard()) {
+        ++end_idx;
+    }
+    return {*m_expression, begin_idx, end_idx};
+}
+
+auto WildcardExpressionView::generate_regex_string() const -> string {
+    string regex_string;
+    for (auto const& wildcard_char : m_chars) {
+        if (wildcard_char.is_escape()) {
+            continue;
+        }
+        auto const& value{wildcard_char.value()};
+        if (wildcard_char.is_greedy_wildcard()) {
+            regex_string += ".*";
+        } else if (wildcard_char.is_non_greedy_wildcard()) {
+            regex_string += ".";
+        } else if (SchemaParser::get_special_regex_characters().contains(value)) {
+            regex_string += "\\";
+            regex_string += value;
+        } else {
+            regex_string += value;
+        }
+    }
+    return regex_string;
+}
+}  // namespace log_surgeon::wildcard_query_parser
