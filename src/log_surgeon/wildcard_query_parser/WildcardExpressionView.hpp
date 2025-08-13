@@ -70,7 +70,7 @@ public:
     [[nodiscard]] auto get_string() const -> std::string_view { return m_search_string; }
 
 private:
-    [[nodiscard]] auto get_indicies() const -> std::pair<size_t, size_t> {
+    [[nodiscard]] auto get_indices() const -> std::pair<size_t, size_t> {
         auto const& full_chars{m_expression->get_chars()};
         auto const begin_ptr{m_chars.data()};
         auto begin_idx{static_cast<size_t>(begin_ptr - full_chars.data())};

@@ -27,7 +27,7 @@ WildcardExpressionView::WildcardExpressionView(
 }
 
 auto WildcardExpressionView::extend_to_adjacent_greedy_wildcards() const -> WildcardExpressionView {
-    auto [begin_idx, end_idx]{get_indicies()};
+    auto [begin_idx, end_idx]{get_indices()};
 
     std::span const full_span{m_expression->get_chars()};
 
@@ -45,7 +45,7 @@ auto WildcardExpressionView::is_well_formed() const -> bool {
         // Empty substring is trivially well-formed as it has no characters to violate requirements.
         return true;
     }
-    auto const [begin_idx, end_idx]{get_indicies()};
+    auto const [begin_idx, end_idx]{get_indices()};
     if (begin_idx > 0 && m_expression->get_chars()[begin_idx - 1].is_escape()) {
         // Substring starting immediately after an escape char is invalid.
         return false;
