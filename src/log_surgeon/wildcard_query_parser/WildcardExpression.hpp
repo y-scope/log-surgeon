@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include <log_surgeon/wildcard_query_parser/WIldcardCharacter.hpp>
+#include <log_surgeon/wildcard_query_parser/WildcardCharacter.hpp>
 
 namespace log_surgeon::wildcard_query_parser {
 /**
