@@ -59,6 +59,7 @@ auto WildcardExpressionView::is_well_formed() const -> bool {
 
 auto WildcardExpressionView::generate_regex_string() const -> std::pair<string, bool> {
     string regex_string;
+    regex_string.reserve(m_chars.size() * 2);
     bool regex_contains_wildcard{false};
 
     for (auto const& wildcard_char : m_chars) {
