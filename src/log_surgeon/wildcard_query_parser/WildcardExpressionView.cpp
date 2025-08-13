@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <span>
 #include <string>
-#include <string_viw>
+#include <string_view>
 #include <utility>
 
 #include <log_surgeon/SchemaParser.hpp>
