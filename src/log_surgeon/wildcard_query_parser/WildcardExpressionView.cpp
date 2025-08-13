@@ -8,6 +8,7 @@
 #include <utility>
 
 #include <log_surgeon/SchemaParser.hpp>
+#include <log_surgeon/wildcard_query_parser/WildcardExpression.hpp>
 
 using std::string;
 

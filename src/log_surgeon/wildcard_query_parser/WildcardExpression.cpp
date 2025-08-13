@@ -3,6 +3,8 @@
 #include <string>
 #include <utility>
 
+#include <log_surgeon/wildcard_query_parser/WildcardCharacter.hpp>
+
 namespace log_surgeon::wildcard_query_parser {
 WildcardExpression::WildcardExpression(std::string processed_search_string)
         : m_processed_search_string(std::move(processed_search_string)) {

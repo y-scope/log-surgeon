@@ -7,6 +7,7 @@
 #include <string_view>
 #include <utility>
 
+#include <log_surgeon/wildcard_query_parser/WildcardCharacter.hpp>
 #include <log_surgeon/wildcard_query_parser/WildcardExpression.hpp>
 
 namespace log_surgeon::wildcard_query_parser {
@@ -72,7 +73,7 @@ public:
 private:
     [[nodiscard]] auto get_indices() const -> std::pair<size_t, size_t> {
         auto const& full_chars{m_expression->get_chars()};
-        auto const begin_ptr{m_chars.data()};
+        auto const* begin_ptr{m_chars.data()};
         auto begin_idx{static_cast<size_t>(begin_ptr - full_chars.data())};
         return {begin_idx, begin_idx + m_chars.size()};
     }
