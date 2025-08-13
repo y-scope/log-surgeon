@@ -13,10 +13,8 @@ WildcardExpression::WildcardExpression(std::string processed_search_string)
         if (m_chars.empty() || false == m_chars.back().is_escape()) {
             if ('*' == c) {
                 type = CharType::GreedyWildcard;
-                m_contains_wildcard = true;
             } else if ('?' == c) {
                 type = CharType::NonGreedyWildcard;
-                m_contains_wildcard = true;
             } else if ('\\' == c) {
                 type = CharType::Escape;
             }

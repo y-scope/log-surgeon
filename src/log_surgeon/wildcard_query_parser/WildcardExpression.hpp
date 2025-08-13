@@ -27,7 +27,6 @@ public:
     }
 
 private:
-    bool m_contains_wildcard;
     std::vector<WildcardCharacter> m_chars;
     std::string m_processed_search_string;
 };

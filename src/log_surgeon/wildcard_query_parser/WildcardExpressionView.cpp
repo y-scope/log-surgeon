@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <span>
 #include <string>
+#include <utility>
 
 #include <log_surgeon/SchemaParser.hpp>
 
@@ -55,8 +56,10 @@ auto WildcardExpressionView::is_well_formed() const -> bool {
     return true;
 }
 
-auto WildcardExpressionView::generate_regex_string() const -> string {
+auto WildcardExpressionView::generate_regex_string() const -> std::pair<string, bool> {
     string regex_string;
+    bool regex_contains_wildcard{false};
+
     for (auto const& wildcard_char : m_chars) {
         if (wildcard_char.is_escape()) {
             continue;
@@ -64,8 +67,10 @@ auto WildcardExpressionView::generate_regex_string() const -> string {
         auto const& value{wildcard_char.value()};
         if (wildcard_char.is_greedy_wildcard()) {
             regex_string += ".*";
+            regex_contains_wildcard = true;
         } else if (wildcard_char.is_non_greedy_wildcard()) {
             regex_string += ".";
+            regex_contains_wildcard = true;
         } else if (SchemaParser::get_special_regex_characters().contains(value)) {
             regex_string += "\\";
             regex_string += value;
@@ -73,6 +78,6 @@ auto WildcardExpressionView::generate_regex_string() const -> string {
             regex_string += value;
         }
     }
-    return regex_string;
+    return {regex_string, regex_contains_wildcard};
 }
 }  // namespace log_surgeon::wildcard_query_parser

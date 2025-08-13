@@ -5,6 +5,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include <log_surgeon/wildcard_query_parser/WildcardExpression.hpp>
 
@@ -51,7 +52,20 @@ public:
      */
     [[nodiscard]] auto is_well_formed() const -> bool;
 
-    [[nodiscard]] auto generate_regex_string() const -> std::string;
+    /**
+     * Builds a regex string representing this view.
+     *
+     * Converts:
+     * - Greedy wildcards (`*`) -> `.*`.
+     * - Non-greedy wildcards (`?`) -> `.`.
+     * - Escaped wildcards (`\*`, `\?`) -> literal (`*`, `?`).
+     * - Regex special characters (e.g., `.`) -> escaped literal (e.g., `\.`).
+     *
+     * @return a pair containing:
+     * - `std::string` storing the regex string.
+     * - `bool` indicating whether the regex string contains any wildcards.
+     */
+    [[nodiscard]] auto generate_regex_string() const -> std::pair<std::string, bool>;
 
     [[nodiscard]] auto get_string() const -> std::string_view { return m_search_string; }
 
