@@ -56,11 +56,10 @@ public:
     /**
      * Builds a regex string representing this view.
      *
-     * Converts:
-     * - Greedy wildcards (`*`) -> `.*`.
-     * - Non-greedy wildcards (`?`) -> `.`.
-     * - Escaped wildcards (`\*`, `\?`) -> literal (`*`, `?`).
-     * - Regex special characters (e.g., `.`) -> escaped literal (e.g., `\.`).
+     * Transformations:
+     * - Greedy wildcard (`*`) -> `.*`.
+     * - Non-greedy wildcard (`?`) -> `.`.
+     * - All other characters preserved literally, escaping (with `\`) as needed for regex syntax.
      *
      * @return a pair containing:
      * - `std::string` storing the regex string.
