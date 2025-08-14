@@ -16,6 +16,7 @@ target_sources(
         test-static-query-token.cpp
         test-variable-query-token.cpp
         test-wildcard-expression.cpp
+        test-wildcard-expression-view.cpp
 )
 
 target_link_libraries(

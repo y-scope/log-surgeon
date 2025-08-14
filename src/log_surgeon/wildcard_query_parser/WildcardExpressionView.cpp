@@ -27,18 +27,22 @@ WildcardExpressionView::WildcardExpressionView(
     m_search_string = full_view.substr(begin_idx, end_idx - begin_idx);
 }
 
-auto WildcardExpressionView::extend_to_adjacent_greedy_wildcards() const -> WildcardExpressionView {
+auto WildcardExpressionView::extend_to_adjacent_greedy_wildcards() const -> std::pair<bool, WildcardExpressionView> {
     auto [begin_idx, end_idx]{get_indices()};
+    bool is_extended{false};
 
     std::span const full_span{m_expression->get_chars()};
 
     if (begin_idx > 0 && full_span[begin_idx - 1].is_greedy_wildcard()) {
         --begin_idx;
+        is_extended = true;
     }
     if (end_idx < full_span.size() && full_span[end_idx].is_greedy_wildcard()) {
         ++end_idx;
+        is_extended = true;
     }
-    return {*m_expression, begin_idx, end_idx};
+    WildcardExpressionView wildcard_expression_view{*m_expression, begin_idx, end_idx};
+    return {is_extended, wildcard_expression_view};
 }
 
 auto WildcardExpressionView::is_well_formed() const -> bool {

@@ -28,9 +28,12 @@ public:
     WildcardExpressionView(WildcardExpression const& expression, size_t begin_idx, size_t end_idx);
 
     /**
-     * @return A copy of this view, but extended to include adjacent greedy wildcards.
+     * Tries to extends the view to include adjacent greedy wildcards from the original expression.
+     * @return A pair containing:
+     * - True if there exists adjacent greedy wildcards in the original expression, false otherwise.
+     * - A copy of this view, with any greedy wildcard extensions that could be made.
      */
-    [[nodiscard]] auto extend_to_adjacent_greedy_wildcards() const -> WildcardExpressionView;
+    [[nodiscard]] auto extend_to_adjacent_greedy_wildcards() const -> std::pair<bool, WildcardExpressionView>;
 
     [[nodiscard]] auto starts_or_ends_with_greedy_wildcard() const -> bool {
         return false == m_chars.empty()

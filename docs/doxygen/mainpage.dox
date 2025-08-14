@@ -22,4 +22,5 @@
  * - @ref unit_tests_static_query_token "Static Query Token"
  * - @ref unit_tests_variable_query_token "Variable Query Token"
  * - @ref unit_tests_wildcard_expression "Wildcard Expression"
+ * - @ref unit_tests_wildcard_expression_view "Wildcard Expression View"
  */
