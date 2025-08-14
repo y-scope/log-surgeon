@@ -60,15 +60,15 @@ auto WildcardExpressionView::generate_regex_string() const -> std::pair<string, 
     regex_string.reserve(m_chars.size() * 2);
     bool regex_contains_wildcard{false};
 
-    for (auto const& wildcard_char : m_chars) {
-        if (wildcard_char.is_escape()) {
+    for (auto const& expression_char : m_chars) {
+        if (expression_char.is_escape()) {
             continue;
         }
-        auto const& value{wildcard_char.value()};
-        if (wildcard_char.is_greedy_wildcard()) {
+        auto const& value{expression_char.value()};
+        if (expression_char.is_greedy_wildcard()) {
             regex_string += ".*";
             regex_contains_wildcard = true;
-        } else if (wildcard_char.is_non_greedy_wildcard()) {
+        } else if (expression_char.is_non_greedy_wildcard()) {
             regex_string += ".";
             regex_contains_wildcard = true;
         } else if (SchemaParser::get_special_regex_characters().contains(value)) {

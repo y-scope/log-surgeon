@@ -1,10 +1,10 @@
-#ifndef LOG_SURGEON_QUERY_PARSER_WILDCARD_CHARACTER_HPP
-#define LOG_SURGEON_QUERY_PARSER_WILDCARD_CHARACTER_HPP
+#ifndef LOG_SURGEON_QUERY_PARSER_EXPRESSION_CHARACTER_HPP
+#define LOG_SURGEON_QUERY_PARSER_EXPRESSION_CHARACTER_HPP
 
 #include <cstdint>
 
 namespace log_surgeon::wildcard_query_parser {
-class WildcardCharacter {
+class ExpressionCharacter {
 public:
     enum class Type : uint8_t {
         Normal,
@@ -13,7 +13,7 @@ public:
         Escape
     };
 
-    WildcardCharacter(char const value, Type const type) : m_value{value}, m_type{type} {}
+    ExpressionCharacter(char const value, Type const type) : m_value{value}, m_type{type} {}
 
     [[nodiscard]] auto value() const -> char { return m_value; }
 
@@ -31,4 +31,4 @@ private:
 };
 }  // namespace log_surgeon::wildcard_query_parser
 
-#endif  // LOG_SURGEON_QUERY_PARSER_WILDCARD_CHARACTER_HPP
+#endif  // LOG_SURGEON_QUERY_PARSER_EXPRESSION_CHARACTER_HPP

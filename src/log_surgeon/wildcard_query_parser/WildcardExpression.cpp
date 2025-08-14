@@ -3,21 +3,21 @@
 #include <string>
 #include <utility>
 
-#include <log_surgeon/wildcard_query_parser/WildcardCharacter.hpp>
+#include <log_surgeon/wildcard_query_parser/ExpressionCharacter.hpp>
 
 namespace log_surgeon::wildcard_query_parser {
 WildcardExpression::WildcardExpression(std::string search_string)
         : m_search_string(std::move(search_string)) {
     m_chars.reserve(m_search_string.size());
     for (auto const c : m_search_string) {
-        auto type{WildcardCharacter::Type::Normal};
+        auto type{ExpressionCharacter::Type::Normal};
         if (m_chars.empty() || false == m_chars.back().is_escape()) {
             if ('*' == c) {
-                type = WildcardCharacter::Type::GreedyWildcard;
+                type = ExpressionCharacter::Type::GreedyWildcard;
             } else if ('?' == c) {
-                type = WildcardCharacter::Type::NonGreedyWildcard;
+                type = ExpressionCharacter::Type::NonGreedyWildcard;
             } else if ('\\' == c) {
-                type = WildcardCharacter::Type::Escape;
+                type = ExpressionCharacter::Type::Escape;
             }
         }
         m_chars.emplace_back(c, type);

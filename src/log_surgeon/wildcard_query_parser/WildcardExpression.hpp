@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include <log_surgeon/wildcard_query_parser/WildcardCharacter.hpp>
+#include <log_surgeon/wildcard_query_parser/ExpressionCharacter.hpp>
 
 namespace log_surgeon::wildcard_query_parser {
 /**
@@ -18,14 +18,14 @@ class WildcardExpression {
 public:
     explicit WildcardExpression(std::string search_string);
 
-    [[nodiscard]] auto get_chars() const -> std::vector<WildcardCharacter> const& {
+    [[nodiscard]] auto get_chars() const -> std::vector<ExpressionCharacter> const& {
         return m_chars;
     }
 
     [[nodiscard]] auto get_search_string() const -> std::string const& { return m_search_string; }
 
 private:
-    std::vector<WildcardCharacter> m_chars;
+    std::vector<ExpressionCharacter> m_chars;
     std::string m_search_string;
 };
 }  // namespace log_surgeon::wildcard_query_parser

@@ -7,7 +7,7 @@
 #include <string_view>
 #include <utility>
 
-#include <log_surgeon/wildcard_query_parser/WildcardCharacter.hpp>
+#include <log_surgeon/wildcard_query_parser/ExpressionCharacter.hpp>
 #include <log_surgeon/wildcard_query_parser/WildcardExpression.hpp>
 
 namespace log_surgeon::wildcard_query_parser {
@@ -80,7 +80,7 @@ private:
     }
 
     WildcardExpression const* m_expression;
-    std::span<WildcardCharacter const> m_chars;
+    std::span<ExpressionCharacter const> m_chars;
     std::string_view m_search_string;
 };
 }  // namespace log_surgeon::wildcard_query_parser

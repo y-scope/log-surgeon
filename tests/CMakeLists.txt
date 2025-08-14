@@ -6,6 +6,7 @@ target_sources(
         test-buffer-parser.cpp
         test-capture.cpp
         test-dfa.cpp
+        test-expression-character.cpp
         test-nfa.cpp
         test-prefix-tree.cpp
         test-query-interpretation.cpp
@@ -14,7 +15,6 @@ target_sources(
         test-schema.cpp
         test-static-query-token.cpp
         test-variable-query-token.cpp
-        test-wildcard-character.cpp
         test-wildcard-expression.cpp
 )
 
