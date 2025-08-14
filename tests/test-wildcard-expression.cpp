@@ -37,7 +37,9 @@ TEST_CASE("normal_character_wildcard_expression", "[WildcardExpression]") {
     auto const& expression_chars{expression.get_chars()};
     REQUIRE(input.size() == expression_chars.size());
 
-    for (auto const& expression_char : expression_chars) {
+    for (size_t i{0}; i < expression_chars.size(); i++) {
+        auto const& expression_char{expression_chars[i]};
+        REQUIRE(input[i] == expression_char.value());
         REQUIRE_FALSE(expression_char.is_greedy_wildcard());
         REQUIRE_FALSE(expression_char.is_non_greedy_wildcard());
         REQUIRE_FALSE(expression_char.is_escape());
