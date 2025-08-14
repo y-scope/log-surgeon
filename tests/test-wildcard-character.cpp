@@ -2,7 +2,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-
 /**
  * @defgroup unit_tests_wildcard_character `WildcardCharacter` unit tests.
  * @brief Unit tests for `WildcardCharacter` to verify storage and type predicate methods.
@@ -17,11 +16,11 @@ using log_surgeon::wildcard_query_parser::WildcardCharacter;
  * @brief Tests a `WildcardCharacter` that stores a normal character.
  */
 TEST_CASE("normal", "[WildcardCharacter]") {
-  WildcardCharacter const wildcard_character{'a', WildcardCharacter::Type::Normal};
-  REQUIRE('a' == wildcard_character.value());
-  REQUIRE_FALSE(wildcard_character.is_greedy_wildcard());
-  REQUIRE_FALSE(wildcard_character.is_non_greedy_wildcard());
-  REQUIRE_FALSE(wildcard_character.is_escape());
+    WildcardCharacter const wildcard_character{'a', WildcardCharacter::Type::Normal};
+    REQUIRE('a' == wildcard_character.value());
+    REQUIRE_FALSE(wildcard_character.is_greedy_wildcard());
+    REQUIRE_FALSE(wildcard_character.is_non_greedy_wildcard());
+    REQUIRE_FALSE(wildcard_character.is_escape());
 }
 
 /**
