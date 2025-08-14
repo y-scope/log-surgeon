@@ -22,9 +22,7 @@ public:
         return m_chars;
     }
 
-    [[nodiscard]] auto get_search_string() const -> std::string const& {
-        return m_search_string;
-    }
+    [[nodiscard]] auto get_search_string() const -> std::string const& { return m_search_string; }
 
 private:
     std::vector<WildcardCharacter> m_chars;

@@ -17,9 +17,7 @@ public:
 
     [[nodiscard]] auto value() const -> char { return m_value; }
 
-    [[nodiscard]] auto is_greedy_wildcard() const -> bool {
-        return Type::GreedyWildcard == m_type;
-    }
+    [[nodiscard]] auto is_greedy_wildcard() const -> bool { return Type::GreedyWildcard == m_type; }
 
     [[nodiscard]] auto is_non_greedy_wildcard() const -> bool {
         return Type::NonGreedyWildcard == m_type;
