@@ -16,19 +16,19 @@ namespace log_surgeon::wildcard_query_parser {
  */
 class WildcardExpression {
 public:
-    explicit WildcardExpression(std::string processed_search_string);
+    explicit WildcardExpression(std::string search_string);
 
     [[nodiscard]] auto get_chars() const -> std::vector<WildcardCharacter> const& {
         return m_chars;
     }
 
     [[nodiscard]] auto get_string() const -> std::string const& {
-        return m_processed_search_string;
+        return m_search_string;
     }
 
 private:
     std::vector<WildcardCharacter> m_chars;
-    std::string m_processed_search_string;
+    std::string m_search_string;
 };
 }  // namespace log_surgeon::wildcard_query_parser
 
