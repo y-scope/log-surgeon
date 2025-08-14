@@ -69,7 +69,7 @@ public:
      */
     [[nodiscard]] auto generate_regex_string() const -> std::pair<std::string, bool>;
 
-    [[nodiscard]] auto get_string() const -> std::string_view { return m_search_string; }
+    [[nodiscard]] auto get_search_string() const -> std::string_view { return m_search_string; }
 
 private:
     [[nodiscard]] auto get_indices() const -> std::pair<size_t, size_t> {

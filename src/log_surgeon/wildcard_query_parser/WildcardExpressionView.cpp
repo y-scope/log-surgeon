@@ -23,7 +23,7 @@ WildcardExpressionView::WildcardExpressionView(
     end_idx = std::min(end_idx, full_span.size());
     begin_idx = std::min(begin_idx, end_idx);
     m_chars = full_span.subspan(begin_idx, end_idx - begin_idx);
-    std::string_view const full_view{m_expression->get_string()};
+    std::string_view const full_view{m_expression->get_search_string()};
     m_search_string = full_view.substr(begin_idx, end_idx - begin_idx);
 }
 
