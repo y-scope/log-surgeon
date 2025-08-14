@@ -40,7 +40,10 @@ TEST_CASE("greedy_wildcard_expression_character", "[ExpressionCharacter]") {
  * @brief Tests a `ExpressionCharacter` that stores a non-greedy wildcard.
  */
 TEST_CASE("non_greedy_wildcard_expression_character", "[ExpressionCharacter]") {
-    ExpressionCharacter const expression_character{'?', ExpressionCharacter::Type::NonGreedyWildcard};
+    ExpressionCharacter const expression_character{
+            '?',
+            ExpressionCharacter::Type::NonGreedyWildcard
+    };
     REQUIRE('?' == expression_character.value());
     REQUIRE_FALSE(expression_character.is_greedy_wildcard());
     REQUIRE(expression_character.is_non_greedy_wildcard());
