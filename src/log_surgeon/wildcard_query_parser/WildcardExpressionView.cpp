@@ -43,16 +43,13 @@ auto WildcardExpressionView::extend_to_adjacent_greedy_wildcards() const -> Wild
 
 auto WildcardExpressionView::is_well_formed() const -> bool {
     if (m_chars.empty()) {
-        // Empty substring is trivially well-formed as it has no characters to violate requirements.
         return true;
     }
     auto const [begin_idx, end_idx]{get_indices()};
     if (begin_idx > 0 && m_expression->get_chars()[begin_idx - 1].is_escape()) {
-        // Substring starting immediately after an escape char is invalid.
         return false;
     }
     if (m_chars.back().is_escape()) {
-        // Substring ending on an escape char is invalid.
         return false;
     }
     return true;
