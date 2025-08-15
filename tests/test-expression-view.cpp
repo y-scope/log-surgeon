@@ -281,3 +281,63 @@ TEST_CASE("extend_expression_view_to_adjacent_greedy_wildcards", "[ExpressionVie
         REQUIRE(expected_extended_string == extended_view.get_search_string());
     }
 }
+
+/**
+ * @ingroup unit_tests_expression_view
+ * @brief Tests generating regex strings from `ExpressionView`.
+ */
+TEST_CASE("extend_expression_view_to_regex_string", "[ExpressionView]") {
+    SECTION("normal_case") {
+        string const input{R"(a*b?c\*d\?e\\f)"};
+        string const expected_regex_string{R"(a.*b.c\*d\?e\\f)"};
+        Expression const expression{input};
+        ExpressionView const view{expression, 0, input.size()};
+
+        auto const[regex_string, contains_wildcard]{view.generate_regex_string()};
+        REQUIRE(expected_regex_string == regex_string);
+        REQUIRE(contains_wildcard);
+    }
+
+    SECTION("single_greedy_wildcard") {
+        string const input{"*"};
+        string const expected_regex_string{".*"};
+        Expression const expression{input};
+        ExpressionView const view{expression, 0, input.size()};
+
+        auto const[regex_string, contains_wildcard]{view.generate_regex_string()};
+        REQUIRE(expected_regex_string == regex_string);
+        REQUIRE(contains_wildcard);
+    }
+
+    SECTION("single_non_greedy_wildcard") {
+        string const input{"?"};
+        string const expected_regex_string{"."};
+        Expression const expression{input};
+        ExpressionView const view{expression, 0, input.size()};
+
+        auto const[regex_string, contains_wildcard]{view.generate_regex_string()};
+        REQUIRE(expected_regex_string == regex_string);
+        REQUIRE(contains_wildcard);
+    }
+
+    SECTION("consecutive_wildcards") {
+        string const input{"**??"};
+        string const expected_regex_string{".*.*.."};
+        Expression const expression{input};
+        ExpressionView const view{expression, 0, input.size()};
+
+        auto const[regex_string, contains_wildcard]{view.generate_regex_string()};
+        REQUIRE(expected_regex_string == regex_string);
+        REQUIRE(contains_wildcard);
+    }
+
+    SECTION("empty_subrange") {
+        string const input{"abc"};
+        Expression const expression{input};
+        ExpressionView const view{expression, 0, 0};
+
+        auto const[regex_string, contains_wildcard]{view.generate_regex_string()};
+        REQUIRE(regex_string.empty());
+        REQUIRE_FALSE(contains_wildcard);
+    }
+}
