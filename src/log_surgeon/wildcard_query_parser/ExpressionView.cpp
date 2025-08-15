@@ -38,7 +38,7 @@ auto ExpressionView::extend_to_adjacent_greedy_wildcards() const
         ++end_idx;
         is_extended = true;
     }
-    ExpressionView wildcard_expression_view{*m_expression, begin_idx, end_idx};
+    ExpressionView const wildcard_expression_view{*m_expression, begin_idx, end_idx};
     return {is_extended, wildcard_expression_view};
 }
 

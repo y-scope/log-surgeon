@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <string>
 
 #include <log_surgeon/wildcard_query_parser/Expression.hpp>

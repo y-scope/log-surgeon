@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <string>
 
 #include <log_surgeon/wildcard_query_parser/Expression.hpp>
@@ -123,8 +124,8 @@ TEST_CASE("escape_subrange_expression_view", "[ExpressionView]") {
  */
 TEST_CASE("well_formed_expression_view", "[ExpressionView]") {
     string const input{R"(a\*b\?c)"};
-    size_t escape_pos1{1};
-    size_t escape_pos2{4};
+    constexpr size_t cEscapePos1{1};
+    constexpr size_t cEscapePos2{4};
 
     Expression const expression{input};
     for (size_t start_pos{0}; start_pos < input.size(); ++start_pos) {
@@ -132,9 +133,9 @@ TEST_CASE("well_formed_expression_view", "[ExpressionView]") {
             ExpressionView const view{expression, start_pos, end_pos};
             CAPTURE(start_pos);
             CAPTURE(end_pos);
-            if (start_pos == escape_pos1 + 1 || start_pos == escape_pos2 + 1) {
+            if (start_pos == cEscapePos1 + 1 || start_pos == cEscapePos2 + 1) {
                 REQUIRE_FALSE(view.is_well_formed());
-            } else if (end_pos == escape_pos1 + 1 || end_pos == escape_pos2 + 1) {
+            } else if (end_pos == cEscapePos1 + 1 || end_pos == cEscapePos2 + 1) {
                 REQUIRE_FALSE(view.is_well_formed());
             } else {
                 REQUIRE(view.is_well_formed());
