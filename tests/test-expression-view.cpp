@@ -177,3 +177,53 @@ TEST_CASE("expression_view_starting_or_ending_with_greedy_wildcard", "[Expressio
         REQUIRE_FALSE(view.starts_or_ends_with_greedy_wildcard());
     }
 }
+
+/**
+ * @ingroup unit_tests_expression_view
+ * @brief Tests extending `ExpressionView` to include adjacent greedy wildcards.
+ */
+TEST_CASE("extend_expression_view_to_adjacent_greedy_wildcards", "[ExpressionView]") {
+    SECTION("prefix_greedy_wildcard") {
+        string const input{"*abc?"};
+        string const expected_extended_string{"*abc"};
+
+        Expression const expression{input};
+        ExpressionView const view{expression, 1, input.size()-1};
+        auto const [is_extended, extended_view]{view.extend_to_adjacent_greedy_wildcards()};
+        REQUIRE(is_extended);
+        REQUIRE(expected_extended_string == extended_view.get_search_string());
+    }
+
+    SECTION("suffix_greedy_wildcard") {
+        string const input{"?abc*"};
+        string const expected_extended_string{"abc*"};
+
+        Expression const expression{input};
+        ExpressionView const view{expression, 1, input.size()-1};
+        auto const [is_extended, extended_view]{view.extend_to_adjacent_greedy_wildcards()};
+        REQUIRE(is_extended);
+        REQUIRE(expected_extended_string == extended_view.get_search_string());
+    }
+
+    SECTION("suffix_and_prefix_greedy_wildcard") {
+        string const input{"*a?c*"};
+        string const expected_extended_string{"*a?c*"};
+
+        Expression const expression{input};
+        ExpressionView const view{expression, 1, input.size()-1};
+        auto const [is_extended, extended_view]{view.extend_to_adjacent_greedy_wildcards()};
+        REQUIRE(is_extended);
+        REQUIRE(expected_extended_string == extended_view.get_search_string());
+    }
+
+    SECTION("no_extension") {
+        string const input{"?a*c?"};
+        string const expected_extended_string{"a*c"};
+
+        Expression const expression{input};
+        ExpressionView const view{expression, 1, input.size()-1};
+        auto const [is_extended, extended_view]{view.extend_to_adjacent_greedy_wildcards()};
+        REQUIRE_FALSE(is_extended);
+        REQUIRE(expected_extended_string == extended_view.get_search_string());
+    }
+}
