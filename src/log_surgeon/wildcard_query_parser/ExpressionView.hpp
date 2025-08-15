@@ -28,7 +28,7 @@ public:
     ExpressionView(Expression const& expression, size_t begin_idx, size_t end_idx);
 
     /**
-     * Tries to extends the view to include adjacent greedy wildcards from the original expression.
+     * Tries to extend the view to include adjacent greedy wildcards from the original expression.
      * @return A pair containing:
      * - True if there exists adjacent greedy wildcards in the original expression, false otherwise.
      * - A copy of this view, with any greedy wildcard extensions that could be made.
