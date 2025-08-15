@@ -143,3 +143,37 @@ TEST_CASE("well_formed_expression_view", "[ExpressionView]") {
         }
     }
 }
+
+/**
+ * @ingroup unit_tests_expression_view
+ * @brief Tests `ExpressionView`s for flanking greedy wildcards.
+ */
+TEST_CASE("expression_view_starting_or_ending_with_greedy_wildcard", "[ExpressionView]") {
+    SECTION("starts_with_greedy_wildcard") {
+        string const input{"*abc"};
+        Expression const expression{input};
+        ExpressionView const view{expression, 0, input.size()};
+        REQUIRE(view.starts_or_ends_with_greedy_wildcard());
+    }
+
+    SECTION("ends_with_greedy_wildcard") {
+        string const input{"abc*"};
+        Expression const expression{input};
+        ExpressionView const view{expression, 0, input.size()};
+        REQUIRE(view.starts_or_ends_with_greedy_wildcard());
+    }
+
+    SECTION("starts_and_ends_with_greedy_wildcard") {
+        string const input{"*abc*"};
+        Expression const expression{input};
+        ExpressionView const view{expression, 0, input.size()};
+        REQUIRE(view.starts_or_ends_with_greedy_wildcard());
+    }
+
+    SECTION("no_flanking_greedy_wildcard") {
+        string const input{"a*b"};
+        Expression const expression{input};
+        ExpressionView const view{expression, 0, input.size()};
+        REQUIRE_FALSE(view.starts_or_ends_with_greedy_wildcard());
+    }
+}
