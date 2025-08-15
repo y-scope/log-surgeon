@@ -286,7 +286,7 @@ TEST_CASE("extend_expression_view_to_adjacent_greedy_wildcards", "[ExpressionVie
  * @ingroup unit_tests_expression_view
  * @brief Tests generating regex strings from `ExpressionView`.
  */
-TEST_CASE("extend_expression_view_to_regex_string", "[ExpressionView]") {
+TEST_CASE("generate_expression_view_regex_string", "[ExpressionView]") {
     SECTION("normal_case") {
         string const input{R"(a*b?c\*d\?e\\f)"};
         string const expected_regex_string{R"(a.*b.c\*d\?e\\f)"};
