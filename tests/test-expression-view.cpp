@@ -120,6 +120,60 @@ TEST_CASE("escape_subrange_expression_view", "[ExpressionView]") {
 
 /**
  * @ingroup unit_tests_expression_view
+ * @brief Tests bound snapping during `ExpressionView`construction.
+ *
+ * Negative casted values test wrap-around behavior.
+ */
+TEST_CASE("expression_view_bound_snapping", "[ExpressionView]") {
+    string const input{"abcdefg"};
+    Expression const expression{input};
+    auto constexpr cNegativeValue{-5};
+    auto constexpr cLargeValue{1000};
+    auto constexpr cMiddlePos{4};
+
+    SECTION("start_after_end") {
+        ExpressionView const view{expression, cMiddlePos, cMiddlePos - 1};
+        REQUIRE(view.get_search_string().empty());
+    }
+
+    SECTION("start_equal_end") {
+        ExpressionView const view{expression, cMiddlePos, cMiddlePos};
+        REQUIRE(view.get_search_string().empty());
+    }
+
+    SECTION("start_beyond_size") {
+        ExpressionView const view{expression, cLargeValue, input.size()};
+        REQUIRE(view.get_search_string().empty());
+    }
+
+    SECTION("end_beyond_size") {
+        ExpressionView const view{expression, 0, cLargeValue};
+        REQUIRE(input == view.get_search_string());
+    }
+
+    SECTION("start_before_zero") {
+        ExpressionView const view{expression, static_cast<size_t>(cNegativeValue), input.size()};
+        REQUIRE(view.get_search_string().empty());
+    }
+
+    SECTION("end_before_zero") {
+        ExpressionView const view{expression, 0, static_cast<size_t>(cNegativeValue)};
+        REQUIRE(input == view.get_search_string());
+    }
+
+    SECTION("start_before_zero_and_end_beyond_size") {
+        ExpressionView const view{expression, static_cast<size_t>(cNegativeValue), cLargeValue};
+        REQUIRE(view.get_search_string().empty());
+    }
+
+    SECTION("start_beyond_size_and_end_before_zero") {
+        ExpressionView const view{expression, cLargeValue, static_cast<size_t>(cNegativeValue)};
+        REQUIRE(view.get_search_string().empty());
+    }
+}
+
+/**
+ * @ingroup unit_tests_expression_view
  * @brief Tests `ExpressionView`s for well-formedness.
  */
 TEST_CASE("well_formed_expression_view", "[ExpressionView]") {
