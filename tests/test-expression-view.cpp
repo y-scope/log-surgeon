@@ -47,7 +47,7 @@ TEST_CASE("full_expression_view", "[ExpressionView]") {
     string const input{"abc"};
 
     Expression const expression{input};
-    ExpressionView const view{expression, 0, 3};
+    ExpressionView const view{expression, 0, input.size()};
 
     REQUIRE(view.is_well_formed());
     REQUIRE(input == view.get_search_string());
