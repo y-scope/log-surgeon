@@ -9,7 +9,8 @@
 
 /**
  * @defgroup unit_tests_expression_view `ExpressionView` unit tests.
- * @brief Unit tests for `ExpressionView` to ... .
+ * @brief Unit tests for `ExpressionView` to verify construction, bounds clamping,
+ * well-formedness, extension to adjacent wildcards, and regex generation.
 
  * These unit tests contain the `ExpressionView` tag.
  */

@@ -7,7 +7,7 @@
 
 /**
  * @defgroup unit_tests_expression `Expression` unit tests.
- * @brief Unit tests for `Expression` to verify storage and type predicate methods.
+ * @brief Unit tests for `Expression` to verify search string parsing during construction.
 
  * These unit tests contain the `Expression` tag.
  */
