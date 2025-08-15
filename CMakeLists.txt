@@ -84,14 +84,14 @@ set(SOURCE_FILES
     src/log_surgeon/finite_automata/TagOperation.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.tpp
+    src/log_surgeon/wildcard_query_parser/Expression.cpp
+    src/log_surgeon/wildcard_query_parser/Expression.hpp
     src/log_surgeon/wildcard_query_parser/ExpressionCharacter.hpp
     src/log_surgeon/wildcard_query_parser/QueryInterpretation.cpp
     src/log_surgeon/wildcard_query_parser/QueryInterpretation.hpp
     src/log_surgeon/wildcard_query_parser/StaticQueryToken.hpp
     src/log_surgeon/wildcard_query_parser/VariableQueryToken.cpp
     src/log_surgeon/wildcard_query_parser/VariableQueryToken.hpp
-    src/log_surgeon/wildcard_query_parser/WildcardExpression.cpp
-    src/log_surgeon/wildcard_query_parser/WildcardExpression.hpp
     src/log_surgeon/wildcard_query_parser/WildcardExpressionView.cpp
     src/log_surgeon/wildcard_query_parser/WildcardExpressionView.hpp
     src/log_surgeon/Lalr1Parser.hpp

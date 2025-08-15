@@ -1,37 +1,37 @@
 #include <string>
 
-#include <log_surgeon/wildcard_query_parser/WildcardExpression.hpp>
+#include <log_surgeon/wildcard_query_parser/Expression.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
 /**
- * @defgroup unit_tests_wildcard_expression `WildcardExpression` unit tests.
- * @brief Unit tests for `WildcardExpression` to verify storage and type predicate methods.
+ * @defgroup unit_tests_expression `Expression` unit tests.
+ * @brief Unit tests for `Expression` to verify storage and type predicate methods.
 
- * These unit tests contain the `WildcardExpression` tag.
+ * These unit tests contain the `Expression` tag.
  */
 
-using log_surgeon::wildcard_query_parser::WildcardExpression;
+using log_surgeon::wildcard_query_parser::Expression;
 using std::string;
 
 /**
- * @ingroup unit_tests_wildcard_expression
- * @brief Tests an empty `WildcardExpression`.
+ * @ingroup unit_tests_expression
+ * @brief Tests an empty `Expression`.
  */
-TEST_CASE("empty_wildcard_expression", "[WildcardExpression]") {
-    WildcardExpression const expression{""};
+TEST_CASE("empty_expression", "[Expression]") {
+    Expression const expression{""};
     REQUIRE(expression.get_search_string().empty());
     REQUIRE(expression.get_chars().empty());
 }
 
 /**
- * @ingroup unit_tests_wildcard_expression
- * @brief Tests a `WildcardExpression` with only normal characters.
+ * @ingroup unit_tests_expression
+ * @brief Tests a `Expression` with only normal characters.
  */
-TEST_CASE("normal_character_wildcard_expression", "[WildcardExpression]") {
+TEST_CASE("normal_character_expression", "[Expression]") {
     string const input{"abc"};
 
-    WildcardExpression const expression{input};
+    Expression const expression{input};
     REQUIRE(input == expression.get_search_string());
 
     auto const& expression_chars{expression.get_chars()};
@@ -47,13 +47,13 @@ TEST_CASE("normal_character_wildcard_expression", "[WildcardExpression]") {
 }
 
 /**
- * @ingroup unit_tests_wildcard_expression
- * @brief Tests a `WildcardExpression` with mixed normal and wildcard characters.
+ * @ingroup unit_tests_expression
+ * @brief Tests a `Expression` with mixed normal and wildcard characters.
  */
-TEST_CASE("normal_and_wildcard_character_wildcard_expression", "[WildcardExpression]") {
+TEST_CASE("normal_and_wildcard_character_expression", "[Expression]") {
     string const input{"a*b?c"};
 
-    WildcardExpression const expression{input};
+    Expression const expression{input};
     REQUIRE(input == expression.get_search_string());
 
     auto const& expression_chars{expression.get_chars()};
@@ -79,16 +79,16 @@ TEST_CASE("normal_and_wildcard_character_wildcard_expression", "[WildcardExpress
 }
 
 /**
- * @ingroup unit_tests_wildcard_expression
- * @brief Tests a `WildcardExpression` with mixed normal and escape characters.
+ * @ingroup unit_tests_expression
+ * @brief Tests a `Expression` with mixed normal and escape characters.
  */
-TEST_CASE("normal_and_escape_character_wildcard_expression", "[WildcardExpression]") {
+TEST_CASE("normal_and_escape_character_expression", "[Expression]") {
     string const input{R"(a\*b\?c\\)"};
     constexpr size_t cFirstEscapePos{1};
     constexpr size_t cSecondEscapePos{4};
     constexpr size_t cLastEscapePos{7};
 
-    WildcardExpression const expression{input};
+    Expression const expression{input};
     REQUIRE(input == expression.get_search_string());
 
     auto const& expression_chars{expression.get_chars()};

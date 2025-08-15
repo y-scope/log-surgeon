@@ -8,13 +8,13 @@
 #include <utility>
 
 #include <log_surgeon/SchemaParser.hpp>
-#include <log_surgeon/wildcard_query_parser/WildcardExpression.hpp>
+#include <log_surgeon/wildcard_query_parser/Expression.hpp>
 
 using std::string;
 
 namespace log_surgeon::wildcard_query_parser {
 WildcardExpressionView::WildcardExpressionView(
-        WildcardExpression const& expression,
+        Expression const& expression,
         size_t begin_idx,
         size_t end_idx
 )

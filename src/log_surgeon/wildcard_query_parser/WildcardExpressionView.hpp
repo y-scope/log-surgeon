@@ -8,11 +8,11 @@
 #include <utility>
 
 #include <log_surgeon/wildcard_query_parser/ExpressionCharacter.hpp>
-#include <log_surgeon/wildcard_query_parser/WildcardExpression.hpp>
+#include <log_surgeon/wildcard_query_parser/Expression.hpp>
 
 namespace log_surgeon::wildcard_query_parser {
 /**
- * A lightweight, non-owning view into a contiguous subrange of a WildcardExpression.
+ * A lightweight, non-owning view into a contiguous subrange of an `Expression`.
  *
  * This class provides a span to the underlying character vector and a view into the corresponding
  * search string. It ensures that these are always valid by clamping the provided indices to the
@@ -25,7 +25,7 @@ namespace log_surgeon::wildcard_query_parser {
  */
 class WildcardExpressionView {
 public:
-    WildcardExpressionView(WildcardExpression const& expression, size_t begin_idx, size_t end_idx);
+    WildcardExpressionView(Expression const& expression, size_t begin_idx, size_t end_idx);
 
     /**
      * Tries to extends the view to include adjacent greedy wildcards from the original expression.
@@ -50,7 +50,7 @@ public:
      * By these rules, an empty substring is always well-formed.
      *
      * These constraints ensure well-formed substrings are consistent with the original intention of
-     * the WildcardExpression. For example, given the search query "* \*text\* *":
+     * the `Expression`. For example, given the search query "* \*text\* *":
      * - The substring "*text" is not well-formed, as it incorrectly indicates a literal wildcard.
      * - The substring "text\" is not well-formed, as a single `\` has no clear meaning.
      *
@@ -82,7 +82,7 @@ private:
         return {begin_idx, begin_idx + m_chars.size()};
     }
 
-    WildcardExpression const* m_expression;
+    Expression const* m_expression;
     std::span<ExpressionCharacter const> m_chars;
     std::string_view m_search_string;
 };

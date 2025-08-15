@@ -1,5 +1,5 @@
-#ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_WILDCARD_EXPRESSION_HPP
-#define LOG_SURGEON_WILDCARD_QUERY_PARSER_WILDCARD_EXPRESSION_HPP
+#ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_HPP
+#define LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_HPP
 
 #include <string>
 #include <vector>
@@ -14,9 +14,9 @@ namespace log_surgeon::wildcard_query_parser {
  *
  * To match a literal '*' or '?', the expression should escape it with a backslash (`\`).
  */
-class WildcardExpression {
+class Expression {
 public:
-    explicit WildcardExpression(std::string search_string);
+    explicit Expression(std::string search_string);
 
     [[nodiscard]] auto get_chars() const -> std::vector<ExpressionCharacter> const& {
         return m_chars;
@@ -30,4 +30,4 @@ private:
 };
 }  // namespace log_surgeon::wildcard_query_parser
 
-#endif  // LOG_SURGEON_WILDCARD_QUERY_PARSER_WILDCARD_EXPRESSION_HPP
+#endif  // LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_HPP

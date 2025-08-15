@@ -1,4 +1,4 @@
-#include <log_surgeon/wildcard_query_parser/WildcardExpression.hpp>
+#include <log_surgeon/wildcard_query_parser/Expression.hpp>
 #include <log_surgeon/wildcard_query_parser/WildcardExpressionView.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -10,7 +10,7 @@
  * These unit tests contain the `WildcardExpressionView` tag.
  */
 
-using log_surgeon::wildcard_query_parser::WildcardExpression;
+using log_surgeon::wildcard_query_parser::Expression;
 using log_surgeon::wildcard_query_parser::WildcardExpressionView;
 
 /**
@@ -18,7 +18,7 @@ using log_surgeon::wildcard_query_parser::WildcardExpressionView;
  * @brief Tests an empty `WildcardExpressionView`.
  */
 TEST_CASE("empty_wildcard_expression_view", "[WildcardExpressionView]") {
-    WildcardExpression const expression{""};
+    Expression const expression{""};
     WildcardExpressionView const view{expression, 0, 0};
 
     REQUIRE(view.is_well_formed());
