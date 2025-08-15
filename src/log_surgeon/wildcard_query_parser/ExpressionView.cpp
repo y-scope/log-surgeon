@@ -13,11 +13,7 @@
 using std::string;
 
 namespace log_surgeon::wildcard_query_parser {
-ExpressionView::ExpressionView(
-        Expression const& expression,
-        size_t begin_idx,
-        size_t end_idx
-)
+ExpressionView::ExpressionView(Expression const& expression, size_t begin_idx, size_t end_idx)
         : m_expression{&expression} {
     std::span const full_span{m_expression->get_chars()};
     end_idx = std::min(end_idx, full_span.size());
@@ -27,7 +23,8 @@ ExpressionView::ExpressionView(
     m_search_string = full_view.substr(begin_idx, end_idx - begin_idx);
 }
 
-auto ExpressionView::extend_to_adjacent_greedy_wildcards() const -> std::pair<bool, ExpressionView> {
+auto ExpressionView::extend_to_adjacent_greedy_wildcards() const
+        -> std::pair<bool, ExpressionView> {
     auto [begin_idx, end_idx]{get_indices()};
     bool is_extended{false};
 

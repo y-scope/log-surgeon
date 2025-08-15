@@ -6,8 +6,7 @@
 #include <log_surgeon/wildcard_query_parser/ExpressionCharacter.hpp>
 
 namespace log_surgeon::wildcard_query_parser {
-Expression::Expression(std::string search_string)
-        : m_search_string(std::move(search_string)) {
+Expression::Expression(std::string search_string) : m_search_string(std::move(search_string)) {
     m_chars.reserve(m_search_string.size());
     for (auto const c : m_search_string) {
         auto type{ExpressionCharacter::Type::Normal};

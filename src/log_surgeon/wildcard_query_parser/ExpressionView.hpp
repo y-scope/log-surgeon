@@ -7,8 +7,8 @@
 #include <string_view>
 #include <utility>
 
-#include <log_surgeon/wildcard_query_parser/ExpressionCharacter.hpp>
 #include <log_surgeon/wildcard_query_parser/Expression.hpp>
+#include <log_surgeon/wildcard_query_parser/ExpressionCharacter.hpp>
 
 namespace log_surgeon::wildcard_query_parser {
 /**
@@ -33,7 +33,8 @@ public:
      * - True if there exists adjacent greedy wildcards in the original expression, false otherwise.
      * - A copy of this view, with any greedy wildcard extensions that could be made.
      */
-    [[nodiscard]] auto extend_to_adjacent_greedy_wildcards() const -> std::pair<bool, ExpressionView>;
+    [[nodiscard]] auto extend_to_adjacent_greedy_wildcards() const
+            -> std::pair<bool, ExpressionView>;
 
     [[nodiscard]] auto starts_or_ends_with_greedy_wildcard() const -> bool {
         return false == m_chars.empty()
