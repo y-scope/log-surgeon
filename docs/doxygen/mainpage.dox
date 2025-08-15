@@ -12,6 +12,9 @@
  *
  * - @ref unit_tests_capture "Capture"
  * - @ref unit_tests_dfa "DFA"
+ * - @ref unit_tests_expression "Expression"
+ * - @ref unit_tests_expression_character "Expression Character"
+ * - @ref unit_tests_expression_view "Expression View"
  * - @ref unit_tests_nfa "NFA"
  * - @ref unit_tests_prefix_tree "Prefix tree"
  * - @ref unit_tests_query_interpretation "Query Interpretation"
