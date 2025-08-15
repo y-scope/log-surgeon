@@ -64,16 +64,16 @@ TEST_CASE("normal_and_wildcard_character_expression", "[Expression]") {
         auto const& expression_char{expression_chars[i]};
         REQUIRE(input[i] == expression_char.value());
         if ('*' == input[i]) {
-            REQUIRE_FALSE(expression_char.is_greedy_wildcard());
-            REQUIRE_FALSE(expression_char.is_non_greedy_wildcard());
-            REQUIRE_FALSE(expression_char.is_escape());
-        } else if ('?' == input[i]) {
             REQUIRE(expression_char.is_greedy_wildcard());
             REQUIRE_FALSE(expression_char.is_non_greedy_wildcard());
             REQUIRE_FALSE(expression_char.is_escape());
-        } else {
+        } else if ('?' == input[i]) {
             REQUIRE_FALSE(expression_char.is_greedy_wildcard());
             REQUIRE(expression_char.is_non_greedy_wildcard());
+            REQUIRE_FALSE(expression_char.is_escape());
+        } else {
+            REQUIRE_FALSE(expression_char.is_greedy_wildcard());
+            REQUIRE_FALSE(expression_char.is_non_greedy_wildcard());
             REQUIRE_FALSE(expression_char.is_escape());
         }
     }
