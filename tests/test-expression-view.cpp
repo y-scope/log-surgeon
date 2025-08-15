@@ -127,9 +127,9 @@ TEST_CASE("escape_subrange_expression_view", "[ExpressionView]") {
 TEST_CASE("expression_view_bound_clamping", "[ExpressionView]") {
     string const input{"abcdefg"};
     Expression const expression{input};
-    auto constexpr cNegativeValue{-5};
-    auto constexpr cLargeValue{1000};
-    auto constexpr cMiddlePos{4};
+    constexpr auto cNegativeValue{-5};
+    constexpr auto cLargeValue{1000};
+    constexpr auto cMiddlePos{4};
 
     SECTION("start_after_end") {
         ExpressionView const view{expression, cMiddlePos, cMiddlePos - 1};
@@ -293,7 +293,7 @@ TEST_CASE("extend_expression_view_to_regex_string", "[ExpressionView]") {
         Expression const expression{input};
         ExpressionView const view{expression, 0, input.size()};
 
-        auto const[regex_string, contains_wildcard]{view.generate_regex_string()};
+        auto const [regex_string, contains_wildcard]{view.generate_regex_string()};
         REQUIRE(expected_regex_string == regex_string);
         REQUIRE(contains_wildcard);
     }
@@ -304,7 +304,7 @@ TEST_CASE("extend_expression_view_to_regex_string", "[ExpressionView]") {
         Expression const expression{input};
         ExpressionView const view{expression, 0, input.size()};
 
-        auto const[regex_string, contains_wildcard]{view.generate_regex_string()};
+        auto const [regex_string, contains_wildcard]{view.generate_regex_string()};
         REQUIRE(expected_regex_string == regex_string);
         REQUIRE(contains_wildcard);
     }
@@ -315,7 +315,7 @@ TEST_CASE("extend_expression_view_to_regex_string", "[ExpressionView]") {
         Expression const expression{input};
         ExpressionView const view{expression, 0, input.size()};
 
-        auto const[regex_string, contains_wildcard]{view.generate_regex_string()};
+        auto const [regex_string, contains_wildcard]{view.generate_regex_string()};
         REQUIRE(expected_regex_string == regex_string);
         REQUIRE(contains_wildcard);
     }
@@ -326,7 +326,7 @@ TEST_CASE("extend_expression_view_to_regex_string", "[ExpressionView]") {
         Expression const expression{input};
         ExpressionView const view{expression, 0, input.size()};
 
-        auto const[regex_string, contains_wildcard]{view.generate_regex_string()};
+        auto const [regex_string, contains_wildcard]{view.generate_regex_string()};
         REQUIRE(expected_regex_string == regex_string);
         REQUIRE(contains_wildcard);
     }
@@ -336,7 +336,7 @@ TEST_CASE("extend_expression_view_to_regex_string", "[ExpressionView]") {
         Expression const expression{input};
         ExpressionView const view{expression, 0, 0};
 
-        auto const[regex_string, contains_wildcard]{view.generate_regex_string()};
+        auto const [regex_string, contains_wildcard]{view.generate_regex_string()};
         REQUIRE(regex_string.empty());
         REQUIRE_FALSE(contains_wildcard);
     }
