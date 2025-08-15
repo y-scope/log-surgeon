@@ -1,4 +1,4 @@
-#include "WildcardExpressionView.hpp"
+#include "ExpressionView.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -13,7 +13,7 @@
 using std::string;
 
 namespace log_surgeon::wildcard_query_parser {
-WildcardExpressionView::WildcardExpressionView(
+ExpressionView::ExpressionView(
         Expression const& expression,
         size_t begin_idx,
         size_t end_idx
@@ -27,7 +27,7 @@ WildcardExpressionView::WildcardExpressionView(
     m_search_string = full_view.substr(begin_idx, end_idx - begin_idx);
 }
 
-auto WildcardExpressionView::extend_to_adjacent_greedy_wildcards() const -> std::pair<bool, WildcardExpressionView> {
+auto ExpressionView::extend_to_adjacent_greedy_wildcards() const -> std::pair<bool, ExpressionView> {
     auto [begin_idx, end_idx]{get_indices()};
     bool is_extended{false};
 
@@ -41,11 +41,11 @@ auto WildcardExpressionView::extend_to_adjacent_greedy_wildcards() const -> std:
         ++end_idx;
         is_extended = true;
     }
-    WildcardExpressionView wildcard_expression_view{*m_expression, begin_idx, end_idx};
+    ExpressionView wildcard_expression_view{*m_expression, begin_idx, end_idx};
     return {is_extended, wildcard_expression_view};
 }
 
-auto WildcardExpressionView::is_well_formed() const -> bool {
+auto ExpressionView::is_well_formed() const -> bool {
     if (m_chars.empty()) {
         return true;
     }
@@ -59,7 +59,7 @@ auto WildcardExpressionView::is_well_formed() const -> bool {
     return true;
 }
 
-auto WildcardExpressionView::generate_regex_string() const -> std::pair<string, bool> {
+auto ExpressionView::generate_regex_string() const -> std::pair<string, bool> {
     string regex_string;
     regex_string.reserve(m_chars.size() * 2);
     bool regex_contains_wildcard{false};

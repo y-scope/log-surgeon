@@ -14,6 +14,7 @@
  * - @ref unit_tests_dfa "DFA"
  * - @ref unit_tests_expression "Expression"
  * - @ref unit_tests_expression_character "Expression Character"
+ * - @ref unit_tests_expression_view "Expression View"
  * - @ref unit_tests_nfa "NFA"
  * - @ref unit_tests_prefix_tree "Prefix tree"
  * - @ref unit_tests_query_interpretation "Query Interpretation"
@@ -22,5 +23,4 @@
  * - @ref unit_tests_schema "Schema"
  * - @ref unit_tests_static_query_token "Static Query Token"
  * - @ref unit_tests_variable_query_token "Variable Query Token"
- * - @ref unit_tests_wildcard_expression_view "Wildcard Expression View"
  */

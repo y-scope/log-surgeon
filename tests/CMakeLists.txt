@@ -8,6 +8,7 @@ target_sources(
         test-dfa.cpp
         test-expression.cpp
         test-expression-character.cpp
+        test-expression-view.cpp
         test-nfa.cpp
         test-prefix-tree.cpp
         test-query-interpretation.cpp
@@ -16,7 +17,6 @@ target_sources(
         test-schema.cpp
         test-static-query-token.cpp
         test-variable-query-token.cpp
-        test-wildcard-expression-view.cpp
 )
 
 target_link_libraries(

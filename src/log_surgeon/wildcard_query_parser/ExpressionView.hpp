@@ -1,5 +1,5 @@
-#ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_WILDCARD_EXPRESSION_VIEW_HPP
-#define LOG_SURGEON_WILDCARD_QUERY_PARSER_WILDCARD_EXPRESSION_VIEW_HPP
+#ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_VIEW_HPP
+#define LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_VIEW_HPP
 
 #include <cstddef>
 #include <span>
@@ -23,9 +23,9 @@ namespace log_surgeon::wildcard_query_parser {
  * - Checking if the view starts or ends with a greedy wildcard.
  * - Extending the view to include adjacent greedy wildcards.
  */
-class WildcardExpressionView {
+class ExpressionView {
 public:
-    WildcardExpressionView(Expression const& expression, size_t begin_idx, size_t end_idx);
+    ExpressionView(Expression const& expression, size_t begin_idx, size_t end_idx);
 
     /**
      * Tries to extends the view to include adjacent greedy wildcards from the original expression.
@@ -33,7 +33,7 @@ public:
      * - True if there exists adjacent greedy wildcards in the original expression, false otherwise.
      * - A copy of this view, with any greedy wildcard extensions that could be made.
      */
-    [[nodiscard]] auto extend_to_adjacent_greedy_wildcards() const -> std::pair<bool, WildcardExpressionView>;
+    [[nodiscard]] auto extend_to_adjacent_greedy_wildcards() const -> std::pair<bool, ExpressionView>;
 
     [[nodiscard]] auto starts_or_ends_with_greedy_wildcard() const -> bool {
         return false == m_chars.empty()
@@ -41,7 +41,7 @@ public:
     }
 
     /**
-     * Checks whether this `WildcardExpressionView` represents a well-formed subrange.
+     * Checks whether this `ExpressionView` represents a well-formed subrange.
      *
      * A subrange is well-formed if:
      * - It does not start immediately after an escaped character in the original expression.
@@ -88,4 +88,4 @@ private:
 };
 }  // namespace log_surgeon::wildcard_query_parser
 
-#endif  // LOG_SURGEON_WILDCARD_QUERY_PARSER_WILDCARD_EXPRESSION_VIEW_HPP
+#endif  // LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_VIEW_HPP
