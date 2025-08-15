@@ -27,7 +27,7 @@ TEST_CASE("empty_expression", "[Expression]") {
 
 /**
  * @ingroup unit_tests_expression
- * @brief Tests a `Expression` with only normal characters.
+ * @brief Tests an `Expression` with only normal characters.
  */
 TEST_CASE("normal_character_expression", "[Expression]") {
     string const input{"abc"};
@@ -49,7 +49,7 @@ TEST_CASE("normal_character_expression", "[Expression]") {
 
 /**
  * @ingroup unit_tests_expression
- * @brief Tests a `Expression` with mixed normal and wildcard characters.
+ * @brief Tests an `Expression` with mixed normal and wildcard characters.
  */
 TEST_CASE("normal_and_wildcard_character_expression", "[Expression]") {
     string const input{"a*b?c"};
@@ -81,7 +81,7 @@ TEST_CASE("normal_and_wildcard_character_expression", "[Expression]") {
 
 /**
  * @ingroup unit_tests_expression
- * @brief Tests a `Expression` with mixed normal and escape characters.
+ * @brief Tests an `Expression` with mixed normal and escape characters.
  */
 TEST_CASE("normal_and_escape_character_expression", "[Expression]") {
     string const input{R"(a\*b\?c\\)"};

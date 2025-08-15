@@ -13,7 +13,7 @@ using log_surgeon::wildcard_query_parser::ExpressionCharacter;
 
 /**
  * @ingroup unit_tests_expression_character
- * @brief Tests a `ExpressionCharacter` that stores a normal character.
+ * @brief Tests an `ExpressionCharacter` that stores a normal character.
  */
 TEST_CASE("normal_expression_character", "[ExpressionCharacter]") {
     ExpressionCharacter const expression_character{'a', ExpressionCharacter::Type::Normal};
@@ -25,7 +25,7 @@ TEST_CASE("normal_expression_character", "[ExpressionCharacter]") {
 
 /**
  * @ingroup unit_tests_expression_character
- * @brief Tests a `ExpressionCharacter` that stores a greedy wildcard.
+ * @brief Tests an `ExpressionCharacter` that stores a greedy wildcard.
  */
 TEST_CASE("greedy_wildcard_expression_character", "[ExpressionCharacter]") {
     ExpressionCharacter const expression_character{'*', ExpressionCharacter::Type::GreedyWildcard};
@@ -37,7 +37,7 @@ TEST_CASE("greedy_wildcard_expression_character", "[ExpressionCharacter]") {
 
 /**
  * @ingroup unit_tests_expression_character
- * @brief Tests a `ExpressionCharacter` that stores a non-greedy wildcard.
+ * @brief Tests an `ExpressionCharacter` that stores a non-greedy wildcard.
  */
 TEST_CASE("non_greedy_wildcard_expression_character", "[ExpressionCharacter]") {
     ExpressionCharacter const expression_character{
@@ -52,7 +52,7 @@ TEST_CASE("non_greedy_wildcard_expression_character", "[ExpressionCharacter]") {
 
 /**
  * @ingroup unit_tests_expression_character
- * @brief Tests a `ExpressionCharacter` that stores an escape.
+ * @brief Tests an `ExpressionCharacter` that stores an escape.
  */
 TEST_CASE("escape_expression_character", "[ExpressionCharacter]") {
     ExpressionCharacter const expression_character{'\\', ExpressionCharacter::Type::Escape};
