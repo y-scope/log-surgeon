@@ -68,8 +68,8 @@ TEST_CASE("full_expression_view", "[ExpressionView]") {
 TEST_CASE("wildcard_subrange_expression_view", "[ExpressionView]") {
     string const input{"a*b?c"};
 
-    size_t constexpr cBeginPos{1};
-    size_t constexpr cEndPos{4};
+    constexpr size_t cBeginPos{1};
+    constexpr size_t cEndPos{4};
     string const expected_search_string{"*b?"};
     string const expected_regex_string{".*b."};
 
@@ -96,8 +96,8 @@ TEST_CASE("wildcard_subrange_expression_view", "[ExpressionView]") {
 TEST_CASE("escape_subrange_expression_view", "[ExpressionView]") {
     string const input{R"(a\*b\?c)"};
 
-    size_t constexpr cBeginPos{1};
-    size_t constexpr cEndPos{6};
+    constexpr size_t cBeginPos{1};
+    constexpr size_t cEndPos{6};
     string const expected_search_string{R"(\*b\?)"};
     string const expected_regex_string{R"(\*b\?)"};
 
