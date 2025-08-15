@@ -120,11 +120,11 @@ TEST_CASE("escape_subrange_expression_view", "[ExpressionView]") {
 
 /**
  * @ingroup unit_tests_expression_view
- * @brief Tests bound snapping during `ExpressionView`construction.
+ * @brief Tests bound clamping during `ExpressionView`construction.
  *
  * Negative casted values test wrap-around behavior.
  */
-TEST_CASE("expression_view_bound_snapping", "[ExpressionView]") {
+TEST_CASE("expression_view_bound_clamping", "[ExpressionView]") {
     string const input{"abcdefg"};
     Expression const expression{input};
     auto constexpr cNegativeValue{-5};
