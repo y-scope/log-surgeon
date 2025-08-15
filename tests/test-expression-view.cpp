@@ -341,4 +341,15 @@ TEST_CASE("generate_expression_view_regex_string", "[ExpressionView]") {
         REQUIRE(regex_string.empty());
         REQUIRE_FALSE(contains_wildcard);
     }
+
+    SECTION("escape_regex_meta_characters") {
+        string const input{R"(.+^()[]{}|\*\?\\)"};
+        string const expected_regex_string{R"(\.\+\^\(\)\[\]\{\}\|\*\?\\)"};
+        Expression const expression{input};
+        ExpressionView const view{expression, 0, input.size()};
+
+        auto const [regex_string, contains_wildcard]{view.generate_regex_string()};
+        REQUIRE(expected_regex_string == regex_string);
+        REQUIRE_FALSE(contains_wildcard);
+    }
 }
