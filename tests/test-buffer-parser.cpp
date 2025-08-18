@@ -853,3 +853,79 @@ TEST_CASE("multi_line_with_delimited_vars", "[BufferParser]") {
 
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
 }
+
+/**
+ * @ingroup test_buffer_parser_capture
+ * @brief Tests a multi-capture rule.
+ *
+ * This test verifies that a multi-capture rule correctly identifies the location of each capture
+ * group. It tests that `BufferParser` correctly flattens the logtype, as well as stores the full
+ * tree correctly.
+ *
+ * ### Schema Definition
+ * @code
+ * delimiters: \n\r\[:,
+ * header:(?<timestamp>\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}) (?<PID>\d{4}) (?<TID>\d{4})
+ * ... (?<LogLevel>I|D|E|W)
+ * @endcode
+ *
+ * ### Input Example
+ * @code
+ * "1999-12-12T01:02:03.456 1234 5678 I MyService A=TEXT B=1.1"
+ * @endcode
+ *
+ * ### Expected Logtype
+ * @code
+ * "<timestamp> <PID> <TID> <LogLevel> MyService A=TEXT B=1.1"
+ * @endcode
+ *
+ * ### Expected Tokenization
+ * @code
+ * "1999-12-12T01:02:03.456 1234 5678 I" -> "header"
+ * " MyService" -> uncaught string
+ * " A=TEXT" -> uncaught string
+ * " B=1.1" -> uncaught string
+ * @endcode
+ */
+TEST_CASE("multi_capture", "[BufferParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cTime{R"((?<timestamp>\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}))"};
+    constexpr string_view cPid{R"((?<PID>\d{4}))"};
+    constexpr string_view cTid{R"((?<TID>\d{4}))"};
+    constexpr string_view cLevel{R"((?<LogLevel>I|D|E|W))"};
+    constexpr string_view cInput{"1999-12-12T01:02:03.456 1234 5678 I MyService A=TEXT B=1.1"};
+
+    string const header_capture_rule{
+        "header:" + string(cTime) + " " + string(cPid) + " " + string(cTid) + " " + string(cLevel)
+    };
+    ExpectedEvent const expected_event1{
+            .m_logtype{"<timestamp> <PID> <TID> <LogLevel> MyService A=TEXT B=1.1"},
+            .m_timestamp_raw{""},
+            .m_tokens{
+                {
+                    {
+                        "1999-12-12T01:02:03.456 1234 5678 I",
+                        "header",
+                        {
+                            {
+                                {"timestamp", {{0}, {23}}},
+                                {"PID", {{24}, {28}}},
+                                {"TID", {{29}, {33}}},
+                                {"LogLevel", {{34}, {35}}}
+                            }
+                        }
+                    },
+                    {" MyService"},
+                    {" A=TEXT"},
+                    {" B=1.1", "", {}}
+                }
+            }
+    };
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(header_capture_rule, -1);
+    BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
+
+    parse_and_validate(buffer_parser, cInput, {expected_event1});
+}
