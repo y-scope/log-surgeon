@@ -909,8 +909,8 @@ TEST_CASE("multi_capture", "[BufferParser]") {
                         {"PID", {{24}, {28}}},
                         {"TID", {{29}, {33}}},
                         {"LogLevel", {{34}, {35}}}}}},
-                     {" MyService"},
-                     {" A=TEXT"},
+                     {" MyService", "", {}},
+                     {" A=TEXT", "", {}},
                      {" B=1.1", "", {}}}
             }
     };
