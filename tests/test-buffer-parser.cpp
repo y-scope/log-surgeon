@@ -895,10 +895,7 @@ TEST_CASE("multi_capture", "[BufferParser]") {
     constexpr string_view cLogLevel{R"((?<LogLevel>I|D|E|W))"};
     constexpr string_view cInput{"1999-12-12T01:02:03.456 1234 5678 I MyService A=TEXT B=1.1"};
 
-    string const header_capture_rule{
-            "header:" + string(cTime) + " " + string(cPid) + " " + string(cTid) + " "
-            + string(cLogLevel)
-    };
+    string const header_rule{fmt::format("header:{} {} {} {}", cTime, cPid, cTid, cLogLevel)};
     ExpectedEvent const expected_event1{
             .m_logtype{"<timestamp> <PID> <TID> <LogLevel> MyService A=TEXT B=1.1"},
             .m_timestamp_raw{""},
@@ -917,7 +914,7 @@ TEST_CASE("multi_capture", "[BufferParser]") {
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
-    schema.add_variable(header_capture_rule, -1);
+    schema.add_variable(header_rule, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
     parse_and_validate(buffer_parser, cInput, {expected_event1});
