@@ -892,33 +892,26 @@ TEST_CASE("multi_capture", "[BufferParser]") {
     constexpr string_view cTime{R"((?<timestamp>\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}))"};
     constexpr string_view cPid{R"((?<PID>\d{4}))"};
     constexpr string_view cTid{R"((?<TID>\d{4}))"};
-    constexpr string_view cLevel{R"((?<LogLevel>I|D|E|W))"};
+    constexpr string_view cLogLevel{R"((?<LogLevel>I|D|E|W))"};
     constexpr string_view cInput{"1999-12-12T01:02:03.456 1234 5678 I MyService A=TEXT B=1.1"};
 
     string const header_capture_rule{
-        "header:" + string(cTime) + " " + string(cPid) + " " + string(cTid) + " " + string(cLevel)
+            "header:" + string(cTime) + " " + string(cPid) + " " + string(cTid) + " "
+            + string(cLogLevel)
     };
     ExpectedEvent const expected_event1{
             .m_logtype{"<timestamp> <PID> <TID> <LogLevel> MyService A=TEXT B=1.1"},
             .m_timestamp_raw{""},
             .m_tokens{
-                {
-                    {
-                        "1999-12-12T01:02:03.456 1234 5678 I",
-                        "header",
-                        {
-                            {
-                                {"timestamp", {{0}, {23}}},
-                                {"PID", {{24}, {28}}},
-                                {"TID", {{29}, {33}}},
-                                {"LogLevel", {{34}, {35}}}
-                            }
-                        }
-                    },
-                    {" MyService"},
-                    {" A=TEXT"},
-                    {" B=1.1", "", {}}
-                }
+                    {{"1999-12-12T01:02:03.456 1234 5678 I",
+                      "header",
+                      {{{"timestamp", {{0}, {23}}},
+                        {"PID", {{24}, {28}}},
+                        {"TID", {{29}, {33}}},
+                        {"LogLevel", {{34}, {35}}}}}},
+                     {" MyService"},
+                     {" A=TEXT"},
+                     {" B=1.1", "", {}}}
             }
     };
 
