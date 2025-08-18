@@ -965,7 +965,16 @@ TEST_CASE("multi_capture_two", "[BufferParser]") {
     constexpr string_view cInput{"Jan 01 02:03:04 ip-999-99-99-99 ku[1234]: E5678 02:03:04.5678"
                                  "    1111 Y failed"};
 
-    string const header_rule{fmt::format(R"(header:{} ip\-{} ku\[{}\]: {}{} {}    {})", cTime, cIp, cPid, cLogLevel, cLid, cLTime, cTid)};
+    string const header_rule{fmt::format(
+            R"(header:{} ip\-{} ku\[{}\]: {}{} {}    {})",
+            cTime,
+            cIp,
+            cPid,
+            cLogLevel,
+            cLid,
+            cLTime,
+            cTid
+    )};
     ExpectedEvent const expected_event1{
             .m_logtype{"<timestamp> ip-<IP> ku[<PID>]: <LogLevel><LID> <LTime>    <TID> Y failed"},
             .m_timestamp_raw{""},
