@@ -938,7 +938,7 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
  *
  * ### Input Example
  * @code
- * "Jan 01 02:03:04 ip-999-99-99-99 ku[1234]: E5678 02:03:04.5678    1111 Y Failed"
+ * "Jan 01 02:03:04 ip-999-99-99-99 ku[1234]: E5678 02:03:04.5678    1111 Y failed"
  * @endcode
  *
  * ### Expected Logtype
@@ -950,7 +950,7 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
  * @code
  * "Jan 01 02:03:04 ip-999-99-99-99 ku[1234]: E5678 02:03:04.5678    1111" -> "header"
  * " Y" -> uncaught string
- * " Failed" -> uncaught string
+ * " failed" -> uncaught string
  * @endcode
  */
 TEST_CASE("multi_capture_two", "[BufferParser]") {
