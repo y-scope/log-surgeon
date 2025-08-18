@@ -865,8 +865,8 @@ TEST_CASE("multi_line_with_delimited_vars", "[BufferParser]") {
  * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
- * header:(?<timestamp>\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}) (?<PID>\d{4}) (?<TID>\d{4})
- * ... (?<LogLevel>I|D|E|W)
+ * header:(?<timestamp>\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}) (?<PID>\d{4}) (?<TID>\d{4}) \
+ *        (?<LogLevel>I|D|E|W)
  * @endcode
  *
  * ### Input Example
