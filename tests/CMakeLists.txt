@@ -6,6 +6,9 @@ target_sources(
         test-buffer-parser.cpp
         test-capture.cpp
         test-dfa.cpp
+        test-expression.cpp
+        test-expression-character.cpp
+        test-expression-view.cpp
         test-nfa.cpp
         test-prefix-tree.cpp
         test-query-interpretation.cpp
