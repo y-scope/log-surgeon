@@ -28,17 +28,16 @@ using ByteLexicalRule = log_surgeon::LexicalRule<ByteNfaState>;
 using ByteNfa = log_surgeon::finite_automata::Nfa<ByteNfaState>;
 
 namespace log_surgeon::wildcard_query_parser {
-
 Query::Query(string const& query_string) {
     Expression const expression(query_string);
     bool prev_is_escape{false};
     string unhandled_wildcard_sequence;
     bool unhandled_wildcard_sequence_contains_greedy_wildcard{false};
-    for(auto c : expression.get_chars()) {
-        if(false == unhandled_wildcard_sequence.empty() && false == c.is_greedy_wildcard() &&
+    for (auto c : expression.get_chars()) {
+        if (false == unhandled_wildcard_sequence.empty() && false == c.is_greedy_wildcard() &&
           false == c.is_non_greedy_wildcard()) {
             if (unhandled_wildcard_sequence_contains_greedy_wildcard) {
-               m_query_string.push_back('*');
+                m_query_string.push_back('*');
             } else {
                 m_query_string += unhandled_wildcard_sequence;
             }
@@ -46,13 +45,13 @@ Query::Query(string const& query_string) {
             unhandled_wildcard_sequence_contains_greedy_wildcard = false;
         }
 
-        if(prev_is_escape) {
+        if (prev_is_escape) {
             m_query_string.push_back(c.value());
             prev_is_escape = false;
-        } else if(c.is_escape()) {
+        } else if (c.is_escape()) {
             prev_is_escape = true;
             m_query_string.push_back(c.value());
-        } else if(c.is_greedy_wildcard()) {
+        } else if (c.is_greedy_wildcard()) {
             unhandled_wildcard_sequence.push_back(c.value());
             unhandled_wildcard_sequence_contains_greedy_wildcard = true;
         } else if (c.is_non_greedy_wildcard()) {
@@ -70,7 +69,8 @@ Query::Query(string const& query_string) {
     }
 }
 
-auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const -> std::set<QueryInterpretation> {
+auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const
+        -> std::set<QueryInterpretation> {
     Expression const expression{m_query_string};
     vector<set<QueryInterpretation>> query_interpretations(expression.length());
 
@@ -81,20 +81,18 @@ auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const ->
                 continue;
             }
 
-            auto const extended_view{
-                expression_view.extend_to_adjacent_greedy_wildcards().second
-            };
+            auto const extended_view{expression_view.extend_to_adjacent_greedy_wildcards().second};
             auto const single_token_interpretations{
-                get_all_single_token_interpretations(extended_view, lexer)
+                    get_all_single_token_interpretations(extended_view, lexer)
             };
-            if(single_token_interpretations.empty()) {
+            if (single_token_interpretations.empty()) {
                 continue;
             }
 
             if (begin_idx == 0) {
                 query_interpretations[end_idx - 1].insert(
-                    std::make_move_iterator(single_token_interpretations.begin()),
-                    std::make_move_iterator(single_token_interpretations.end())
+                        std::make_move_iterator(single_token_interpretations.begin()),
+                        std::make_move_iterator(single_token_interpretations.end())
                 );
             } else {
                 for (auto const& prefix : query_interpretations[begin_idx - 1]) {
@@ -110,7 +108,10 @@ auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const ->
     return query_interpretations.back();
 }
 
-auto Query::get_all_single_token_interpretations(ExpressionView const& expression_view, ByteLexer const& lexer) -> std::vector<QueryInterpretation> {
+auto Query::get_all_single_token_interpretations(
+        ExpressionView const& expression_view,
+        ByteLexer const& lexer
+) -> std::vector<QueryInterpretation> {
     vector<QueryInterpretation> interpretations;
 
     if (false == expression_view.is_well_formed()) {
@@ -145,7 +146,8 @@ auto Query::get_all_single_token_interpretations(ExpressionView const& expressio
     return interpretations;
 }
 
-auto Query::get_matching_variable_types(string const& regex_string, ByteLexer const& lexer) -> set<uint32_t> {
+auto Query::get_matching_variable_types(string const& regex_string, ByteLexer const& lexer)
+        -> set<uint32_t> {
     NonTerminal::m_next_children_start = 0;
 
     Schema schema;

@@ -61,7 +61,7 @@ public:
      * @return true when both preceding and succeeding boundaries qualify; false otherwise.
      */
     [[nodiscard]] auto is_surrounded_by_delims_or_wildcards(
-        std::array<bool, cSizeOfByte> const& delim_table
+            std::array<bool, cSizeOfByte> const& delim_table
     ) const -> bool;
 
     /**

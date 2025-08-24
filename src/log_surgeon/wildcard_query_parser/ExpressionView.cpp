@@ -44,7 +44,9 @@ auto ExpressionView::extend_to_adjacent_greedy_wildcards() const
     return {is_extended, wildcard_expression_view};
 }
 
-[[nodiscard]] auto ExpressionView::is_surrounded_by_delims_or_wildcards(std::array<bool, cSizeOfByte> const& delim_table) const -> bool {
+[[nodiscard]] auto ExpressionView::is_surrounded_by_delims_or_wildcards(
+        std::array<bool, cSizeOfByte> const& delim_table
+) const -> bool {
     auto const [begin_idx, end_idx]{get_indices()};
 
     bool has_preceding{false};
@@ -60,7 +62,7 @@ auto ExpressionView::extend_to_adjacent_greedy_wildcards() const
         has_succeeding = true;
     } else {
         auto const& succeeding_char{m_expression->get_chars()[end_idx]};
-        if(succeeding_char.is_escape()) {
+        if (succeeding_char.is_escape()) {
             auto const& logical_succeeding_char{m_expression->get_chars()[end_idx + 1]};
             has_succeeding = logical_succeeding_char.is_delim_or_wildcard(delim_table);
         } else {

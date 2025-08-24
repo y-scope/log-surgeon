@@ -30,7 +30,8 @@ public:
         return delim_table[m_value];
     }
 
-    [[nodiscard]] auto is_delim_or_wildcard(std::array<bool, cSizeOfByte> const& delim_table) const -> bool {
+    [[nodiscard]] auto is_delim_or_wildcard(std::array<bool, cSizeOfByte> const& delim_table) const
+            -> bool {
         return is_greedy_wildcard() || is_non_greedy_wildcard() || is_delim(delim_table);
     }
 
