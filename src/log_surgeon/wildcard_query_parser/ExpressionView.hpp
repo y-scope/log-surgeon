@@ -42,6 +42,29 @@ public:
     }
 
     /**
+     * Checks whether the view is surrounded by delimiters or wildcards.
+     *
+     * An expression is considered surrounded if both its left and right boundary satisfy certain
+     * requirements.
+     *
+     * Left boundary:
+     * - The view is at the start of the expression, or
+     * - The character immediately left of the view is a delimiter or wildcard.
+     *
+     * Right boundary:
+     * - The view is at the end of the expression, or
+     * - The character immediately right of the view is a delimiter or wildcard, or
+     * - The character immediately right of the view is an escape character and the character to its
+     * immediate right is a delimiter or wildcard.
+     *
+     * @param delim_table Table indicating for each character whether or not it is a delimiter.
+     * @return true when both preceding and succeeding boundaries qualify; false otherwise.
+     */
+    [[nodiscard]] auto is_surrounded_by_delims_or_wildcards(
+        std::array<bool, cSizeOfByte> const& delim_table
+    ) const -> bool;
+
+    /**
      * Checks whether this `ExpressionView` represents a well-formed subrange.
      *
      * A subrange is well-formed if:
