@@ -7,7 +7,6 @@
 #include <vector>
 
 #include <log_surgeon/Lexer.hpp>
-#include <log_surgeon/Schema.hpp>
 #include <log_surgeon/wildcard_query_parser/ExpressionView.hpp>
 #include <log_surgeon/wildcard_query_parser/QueryInterpretation.hpp>
 

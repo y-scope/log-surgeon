@@ -1,8 +1,11 @@
 #include "Query.hpp"
 
+#include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <log_surgeon/finite_automata/Dfa.hpp>
@@ -11,7 +14,9 @@
 #include <log_surgeon/finite_automata/NfaState.hpp>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/LexicalRule.hpp>
+#include <log_surgeon/parser_types.hpp>
 #include <log_surgeon/Schema.hpp>
+#include <log_surgeon/SchemaParser.hpp>
 #include <log_surgeon/wildcard_query_parser/Expression.hpp>
 #include <log_surgeon/wildcard_query_parser/ExpressionView.hpp>
 #include <log_surgeon/wildcard_query_parser/QueryInterpretation.hpp>
@@ -77,7 +82,7 @@ auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const
 
     for (size_t end_idx = 1; end_idx <= expression.length(); ++end_idx) {
         for (size_t begin_idx = 0; begin_idx < end_idx; ++begin_idx) {
-            ExpressionView expression_view{expression, begin_idx, end_idx};
+            ExpressionView const expression_view{expression, begin_idx, end_idx};
             if (expression_view.starts_or_ends_with_greedy_wildcard()) {
                 continue;
             }
@@ -97,7 +102,7 @@ auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const
                 );
             } else {
                 for (auto const& prefix : query_interpretations[begin_idx - 1]) {
-                    for (auto& suffix : single_token_interpretations) {
+                    for (auto const& suffix : single_token_interpretations) {
                         QueryInterpretation combined{prefix};
                         combined.append_query_interpretation(suffix);
                         query_interpretations[end_idx - 1].insert(std::move(combined));

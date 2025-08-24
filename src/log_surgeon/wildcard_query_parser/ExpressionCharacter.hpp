@@ -27,7 +27,7 @@ public:
     }
 
     [[nodiscard]] auto is_delim(std::array<bool, cSizeOfByte> const& delim_table) const -> bool {
-        return delim_table[m_value];
+        return delim_table.at(m_value);
     }
 
     [[nodiscard]] auto is_delim_or_wildcard(std::array<bool, cSizeOfByte> const& delim_table) const

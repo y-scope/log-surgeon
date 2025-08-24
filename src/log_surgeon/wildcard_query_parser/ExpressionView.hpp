@@ -1,12 +1,14 @@
 #ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_VIEW_HPP
 #define LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_VIEW_HPP
 
+#include <array>
 #include <cstddef>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/wildcard_query_parser/Expression.hpp>
 #include <log_surgeon/wildcard_query_parser/ExpressionCharacter.hpp>
 
