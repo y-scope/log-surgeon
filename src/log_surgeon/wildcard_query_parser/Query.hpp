@@ -21,7 +21,8 @@ public:
      * interpretations of the query string belong to this set):
      *
      * 1. Interpret each substring [a,b) as a single token (1-length interpretation).
-     *    - Denote T(a,b) to be the set of all valid single-token interpretations of substring [a,b).
+     *    - Denote T(a,b) to be the set of all valid single-token interpretations of substring
+     *      [a,b).
      *
      *    - Substrings adjacent to greedy wildcards must be interpreted as if they include them.
      *      - Example: query "a*b" is equivalent to "a***b". For a lexer with a `hasNum` variable
@@ -34,7 +35,8 @@ public:
      *        are captured.
      *      - Note: isolated greedy wildcard (`*`) are never extended as the `Query` collapses
      *        repeated greedy wildcards.
-     *      - Note: non-greedy wildcards (`?`) are not extended as "a?b" is not equivalent to "a??b".
+     *      - Note: non-greedy wildcards (`?`) are not extended as "a?b" is not equivalent to
+     *        "a??b".
      *
      *    - Substrings that begin or end with a wildcard are skipped as they are redundant.
      *      - Example: in "a*b", substring (0,1] extends to "a*", therefore substring (0,2] "a*" is
@@ -73,7 +75,8 @@ public:
 
 private:
     /**
-     * Generates all single-token interpretations for a given expression view matching a given lexer.
+     * Generates all single-token interpretations for a given expression view matching a given
+     * lexer.
      *
      * A single-token interpretation can be one of:
      * - A static token (literal text).
@@ -92,7 +95,8 @@ private:
      * - Else, if the substring contains a wildcard:
      *   - The interpretations include a static token, plus a variable token for each matching type.
      * - Else:
-     *   - The only interpretation is the variable token corresponding to the highest priority match.
+     *   - The only interpretation is the variable token corresponding to the highest priority
+     *     match.
      *
      * @param expression_view The view of the substring to interpret.
      * @param lexer The lexer used to determine variable types and delimiters.
