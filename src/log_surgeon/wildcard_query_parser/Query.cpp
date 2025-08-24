@@ -35,7 +35,8 @@ Query::Query(string const& query_string) {
     bool unhandled_wildcard_sequence_contains_greedy_wildcard{false};
     for (auto c : expression.get_chars()) {
         if (false == unhandled_wildcard_sequence.empty() && false == c.is_greedy_wildcard()
-            && false == c.is_non_greedy_wildcard()) {
+            && false == c.is_non_greedy_wildcard())
+        {
             if (unhandled_wildcard_sequence_contains_greedy_wildcard) {
                 m_query_string.push_back('*');
             } else {
