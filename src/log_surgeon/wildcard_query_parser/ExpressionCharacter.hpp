@@ -16,9 +16,11 @@ public:
         Escape
     };
 
-    ExpressionCharacter(char const value, Type const type) : m_value{value}, m_type{type} {}
+    ExpressionCharacter(unsigned char const value, Type const type)
+            : m_value{value},
+              m_type{type} {}
 
-    [[nodiscard]] auto value() const -> char { return m_value; }
+    [[nodiscard]] auto value() const -> unsigned char { return m_value; }
 
     [[nodiscard]] auto is_greedy_wildcard() const -> bool { return Type::GreedyWildcard == m_type; }
 
@@ -42,7 +44,7 @@ public:
     [[nodiscard]] auto is_escape() const -> bool { return Type::Escape == m_type; }
 
 private:
-    char m_value;
+    unsigned char m_value;
     Type m_type;
 };
 }  // namespace log_surgeon::wildcard_query_parser
