@@ -83,13 +83,13 @@ private:
      * A single-token interpretation can be one of:
      * - A static token (literal text).
      * - A variable token (e.g., int, float, hasNumber) as defined by the lexer's schema. Each
-     * unique variable types is considered a distinct interpretation.
+     * unique variable type is considered a distinct interpretation.
      *
      * Rules:
      * - If the substring is malformed (has hanging escape characters):
      *   - There are no valid interpretations.
      * - Else if the substring:
-     *   - Is an isolated greedy wildcard, `*, or
+     *   - Is an isolated greedy wildcard, "*", or
      *   - Is not surrounded by delimiters or wildcards (lexer won't consider it a variable), or
      *   - Does not match any variable.
      * - Then:
@@ -102,7 +102,7 @@ private:
      *
      * @param expression_view The view of the substring to interpret.
      * @param lexer The lexer used to determine variable types and delimiters.
-     * @return A vector of `Queryinterpretation` objects representing all valid single-token
+     * @return A vector of `QueryInterpretation` objects representing all valid single-token
      * interpretations for the given substring.
      */
     [[nodiscard]] static auto get_all_single_token_interpretations(
