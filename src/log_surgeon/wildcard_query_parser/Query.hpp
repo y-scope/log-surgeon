@@ -37,7 +37,7 @@ public:
      *      - Note: non-greedy wildcards (`?`) are not extended as "a?b" is not equivalent to
      *        "a??b".
      *
-     *    - Substrings that begin or end with a wildcard are skipped as they are redundant.
+     *    - Substrings that begin or end with a greedy wildcard are skipped as they are redundant.
      *      - Example: in "a*b", substring (0,1] extends to "a*", therefore substring (0,2] "a*" is
      *        redundant. In other words, a decomposition like "a*" + "b"  is a subset of the more
      *        general "a*" + "*" + "*b".  However, an isolated "*" must not be skipped as it is not
