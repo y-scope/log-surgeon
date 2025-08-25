@@ -12,7 +12,7 @@
 
 /**
  * @defgroup unit_tests_query `Query` unit tests.
- * @brief Unit tests for `Query` construction, mutation, and comparison.
+ * @brief Unit tests for `Query` construction and interpretation.
 
  * These unit tests contain the `Query` tag.
  */
