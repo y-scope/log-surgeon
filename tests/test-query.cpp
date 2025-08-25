@@ -43,7 +43,7 @@ auto test_query(
 /**
  * Initializes a `ByteLexer` with delimiters "\n\r\[:" and variable "myVar:userID=(?<uid>123)".
  *
- * @result The initialized `ByteLexer`.
+ * @return The initialized `ByteLexer`.
  */
 auto make_test_lexer() -> ByteLexer;
 
