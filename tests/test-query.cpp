@@ -1,7 +1,7 @@
 #include <set>
 #include <string>
 #include <string_view>
-#include <vector>
+#include <utility>
 
 #include <log_surgeon/BufferParser.hpp>
 #include <log_surgeon/Schema.hpp>
@@ -20,7 +20,6 @@
 using std::set;
 using std::string;
 using std::string_view;
-using std::vector;
 
 using log_surgeon::BufferParser;
 using log_surgeon::Schema;
@@ -84,11 +83,11 @@ auto make_test_buffer() -> BufferParser {
  * @brief Creates and tests an empty `Query`.
  */
 TEST_CASE("empty_query", "[Query]") {
-    constexpr string_view raw_query_string{""};
-    constexpr string_view processed_query_string{""};
+    constexpr string_view cRawQueryString;
+    constexpr string_view cProcessedQueryString;
     set<string> const expected_serialized_interpretations;
 
-    test_query(raw_query_string, processed_query_string, expected_serialized_interpretations);
+    test_query(cRawQueryString, cProcessedQueryString, expected_serialized_interpretations);
 }
 
 /**
@@ -96,9 +95,9 @@ TEST_CASE("empty_query", "[Query]") {
  * @brief Creates and tests a greedy wildcard `Query`.
  */
 TEST_CASE("greedy_wildcard_query", "[Query]") {
-    constexpr string_view raw_query_string{"*"};
-    constexpr string_view processed_query_string{"*"};
+    constexpr string_view cRawQueryString{"*"};
+    constexpr string_view cProcessedQueryString{"*"};
     set<string> const expected_serialized_interpretations{"logtype='*', contains_wildcard='0'"};
 
-    test_query(raw_query_string, processed_query_string, expected_serialized_interpretations);
+    test_query(cRawQueryString, cProcessedQueryString, expected_serialized_interpretations);
 }
