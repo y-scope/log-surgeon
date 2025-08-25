@@ -56,7 +56,7 @@ auto ExpressionView::extend_to_adjacent_greedy_wildcards() const
         auto const& preceding_char{m_expression->get_chars()[begin_idx - 1]};
         auto const& first_char{m_chars[0]};
         has_left_boundary = preceding_char.is_delim_or_wildcard(delim_table)
-                || first_char.is_greedy_wildcard();
+                            || first_char.is_greedy_wildcard();
     }
 
     bool has_right_boundary{false};

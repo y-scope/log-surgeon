@@ -86,7 +86,8 @@ auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const
         for (size_t begin_idx = 0; begin_idx < end_idx; ++begin_idx) {
             ExpressionView const expression_view{expression, begin_idx, end_idx};
             if ("*" != expression_view.get_search_string()
-                && expression_view.starts_or_ends_with_greedy_wildcard()) {
+                && expression_view.starts_or_ends_with_greedy_wildcard())
+            {
                 continue;
             }
 
