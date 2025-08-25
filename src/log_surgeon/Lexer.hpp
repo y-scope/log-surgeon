@@ -152,6 +152,10 @@ public:
 
     [[nodiscard]] auto get_has_delimiters() const -> bool const& { return m_has_delimiters; }
 
+    [[nodiscard]] auto get_delim_table() const -> std::array<bool, cSizeOfByte> const& {
+        return m_is_delimiter;
+    }
+
     [[nodiscard]] auto is_delimiter(uint8_t byte) const -> bool const& {
         return m_is_delimiter[byte];
     }

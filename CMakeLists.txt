@@ -89,6 +89,8 @@ set(SOURCE_FILES
     src/log_surgeon/wildcard_query_parser/ExpressionCharacter.hpp
     src/log_surgeon/wildcard_query_parser/ExpressionView.cpp
     src/log_surgeon/wildcard_query_parser/ExpressionView.hpp
+    src/log_surgeon/wildcard_query_parser/Query.cpp
+    src/log_surgeon/wildcard_query_parser/Query.hpp
     src/log_surgeon/wildcard_query_parser/QueryInterpretation.cpp
     src/log_surgeon/wildcard_query_parser/QueryInterpretation.hpp
     src/log_surgeon/wildcard_query_parser/StaticQueryToken.hpp

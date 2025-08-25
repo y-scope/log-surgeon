@@ -11,6 +11,7 @@ target_sources(
         test-expression-view.cpp
         test-nfa.cpp
         test-prefix-tree.cpp
+        test-query.cpp
         test-query-interpretation.cpp
         test-regex-ast.cpp
         test-register-handler.cpp
