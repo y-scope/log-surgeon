@@ -28,7 +28,7 @@ using std::string_view;
 namespace {
 /**
  * Creates a query from the given query string and tests that its processed query string and
- * interpretations matche the expeced values.
+ * interpretations match the expeced values.
  *
  * @param raw_query_string The search query.
  * @param expected_processed_query_string The processed search query.
