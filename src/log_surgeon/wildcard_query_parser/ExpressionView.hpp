@@ -51,10 +51,12 @@ public:
      *
      * Left boundary:
      * - The view is at the start of the expression, or
+     * - The first character is a greedy wildcard, or
      * - The character immediately left of the view is a delimiter or wildcard.
      *
      * Right boundary:
      * - The view is at the end of the expression, or
+     * - The last character is a greedy wildcard, or
      * - The character immediately right of the view is a delimiter or wildcard, or
      * - The character immediately right of the view is an escape character and the character to its
      * immediate right is a delimiter or wildcard.

@@ -49,28 +49,32 @@ auto ExpressionView::extend_to_adjacent_greedy_wildcards() const
 ) const -> bool {
     auto const [begin_idx, end_idx]{get_indices()};
 
-    bool has_preceding{false};
+    bool has_left_boundary{false};
     if (0 == begin_idx) {
-        has_preceding = true;
+        has_left_boundary = true;
     } else {
         auto const& preceding_char{m_expression->get_chars()[begin_idx - 1]};
-        has_preceding = preceding_char.is_delim_or_wildcard(delim_table);
+        auto const& first_char{m_chars[0]};
+        has_left_boundary = preceding_char.is_delim_or_wildcard(delim_table)
+                || first_char.is_greedy_wildcard();
     }
 
-    bool has_succeeding{false};
+    bool has_right_boundary{false};
     if (m_expression->length() == end_idx) {
-        has_succeeding = true;
+        has_right_boundary = true;
     } else {
         auto const& succeeding_char{m_expression->get_chars()[end_idx]};
         if (succeeding_char.is_escape()) {
             auto const& logical_succeeding_char{m_expression->get_chars()[end_idx + 1]};
-            has_succeeding = logical_succeeding_char.is_delim_or_wildcard(delim_table);
+            has_right_boundary = logical_succeeding_char.is_delim_or_wildcard(delim_table);
         } else {
-            has_succeeding = succeeding_char.is_delim_or_wildcard(delim_table);
+            has_right_boundary = succeeding_char.is_delim_or_wildcard(delim_table);
         }
+        auto const& last_char{m_chars.back()};
+        has_right_boundary = has_right_boundary || last_char.is_greedy_wildcard();
     }
 
-    return has_preceding && has_succeeding;
+    return has_left_boundary && has_right_boundary;
 }
 
 auto ExpressionView::is_well_formed() const -> bool {

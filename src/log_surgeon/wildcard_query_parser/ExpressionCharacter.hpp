@@ -26,13 +26,17 @@ public:
         return Type::NonGreedyWildcard == m_type;
     }
 
+    [[nodiscard]] auto is_wildcard() const -> bool {
+        return Type::GreedyWildcard == m_type || Type::NonGreedyWildcard == m_type;
+    }
+
     [[nodiscard]] auto is_delim(std::array<bool, cSizeOfByte> const& delim_table) const -> bool {
         return delim_table.at(m_value);
     }
 
     [[nodiscard]] auto is_delim_or_wildcard(std::array<bool, cSizeOfByte> const& delim_table) const
             -> bool {
-        return is_greedy_wildcard() || is_non_greedy_wildcard() || is_delim(delim_table);
+        return is_delim(delim_table) || is_wildcard();
     }
 
     [[nodiscard]] auto is_escape() const -> bool { return Type::Escape == m_type; }

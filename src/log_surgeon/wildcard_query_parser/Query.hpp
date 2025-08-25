@@ -25,7 +25,7 @@ public:
      *
      *    - Substrings adjacent to greedy wildcards must be interpreted as if they include them.
      *      - Example: query "a*b" is equivalent to "a***b". For a lexer with a `hasNum` variable
-     *        type ("\w*\d*\w*"), without extensions, the only interpretations would be:
+     *        type ("\w*\d+\w*"), without extensions, the only interpretations would be:
      *          {<static>(a*b)},
      *          {<hasNum>(a*) <static>(b)},
      *          {<static>(a) <hasNum>(*b)}.
@@ -40,7 +40,8 @@ public:
      *    - Substrings that begin or end with a wildcard are skipped as they are redundant.
      *      - Example: in "a*b", substring (0,1] extends to "a*", therefore substring (0,2] "a*" is
      *        redundant. In other words, a decomposition like "a*" + "b"  is a subset of the more
-     *        general "a*" + "*" + "*b".
+     *        general "a*" + "*" + "*b".  However, an isolated "*" must not be skipped as it is not
+     *        captured by any other substring extension.
      *
      * 2. Let I(a) be the set of all multi-length interpretations of substring [0,a).
      *    - We can compute I(a) recursively using previously computed sets:
@@ -71,6 +72,10 @@ public:
      */
     [[nodiscard]] auto get_all_multi_token_interpretations(lexers::ByteLexer const& lexer) const
             -> std::set<QueryInterpretation>;
+
+    [[nodiscard]] auto get_processed_query_string() const -> std::string {
+        return m_query_string;
+    }
 
 private:
     /**

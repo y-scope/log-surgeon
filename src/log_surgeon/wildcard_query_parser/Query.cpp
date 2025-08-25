@@ -39,9 +39,7 @@ Query::Query(string const& query_string) {
     string unhandled_wildcard_sequence;
     bool unhandled_wildcard_sequence_contains_greedy_wildcard{false};
     for (auto c : expression.get_chars()) {
-        if (false == unhandled_wildcard_sequence.empty() && false == c.is_greedy_wildcard()
-            && false == c.is_non_greedy_wildcard())
-        {
+        if (false == unhandled_wildcard_sequence.empty() && false == c.is_wildcard()) {
             if (unhandled_wildcard_sequence_contains_greedy_wildcard) {
                 m_query_string.push_back('*');
             } else {
@@ -80,10 +78,15 @@ auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const
     Expression const expression{m_query_string};
     vector<set<QueryInterpretation>> query_interpretations(expression.length());
 
+    if (m_query_string.empty()) {
+        return {};
+    }
+
     for (size_t end_idx = 1; end_idx <= expression.length(); ++end_idx) {
         for (size_t begin_idx = 0; begin_idx < end_idx; ++begin_idx) {
             ExpressionView const expression_view{expression, begin_idx, end_idx};
-            if (expression_view.starts_or_ends_with_greedy_wildcard()) {
+            if ("*" != expression_view.get_search_string()
+                && expression_view.starts_or_ends_with_greedy_wildcard()) {
                 continue;
             }
 
