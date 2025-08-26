@@ -53,7 +53,7 @@ auto test_query(
         string_view const expected_processed_query_string,
         set<string> const& expected_serialized_interpretations
 ) -> void {
-    auto const& lexer{make_test_lexer()};
+    auto const lexer{make_test_lexer()};
 
     Query const query{string(raw_query_string)};
     REQUIRE(expected_processed_query_string == query.get_processed_query_string());
