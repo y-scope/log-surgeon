@@ -12,6 +12,7 @@
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 namespace log_surgeon::finite_automata {
 /**

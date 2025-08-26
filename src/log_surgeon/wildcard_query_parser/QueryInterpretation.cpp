@@ -9,8 +9,8 @@
 #include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
 #include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
 
-#include <fmt/core.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 using std::string;
 using std::strong_ordering;
