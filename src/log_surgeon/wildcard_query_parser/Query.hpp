@@ -29,11 +29,11 @@ public:
      *          {<static>(a*b)},
      *          {<hasNum>(a*) <static>(b)},
      *          {<static>(a) <hasNum>(*b)}.
-     *        However, a string like "a1 abc 1b" is also matched by "a*b", and  requires the
+     *        However, a string like "a1 abc 1b" is also matched by "a*b", and requires the
      *        interpretation {<hasNum>(a*) <static>(*) <hasNum>(*b)}. Extension ensures such cases
      *        are captured.
-     *      - Note: isolated greedy wildcard (`*`) are never extended as the `Query` collapses
-     *        repeated greedy wildcards.
+     *      - Note: isolated greedy wildcards (`*`) are never extended as the `Query` collapses
+     *        repeated greedy wildcards during preprocessing.
      *      - Note: non-greedy wildcards (`?`) are not extended as "a?b" is not equivalent to
      *        "a??b".
      *
