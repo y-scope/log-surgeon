@@ -16,11 +16,9 @@ public:
         Escape
     };
 
-    ExpressionCharacter(unsigned char const value, Type const type)
-            : m_value{value},
-              m_type{type} {}
+    ExpressionCharacter(char const value, Type const type) : m_value{value}, m_type{type} {}
 
-    [[nodiscard]] auto value() const -> unsigned char { return m_value; }
+    [[nodiscard]] auto value() const -> char { return m_value; }
 
     [[nodiscard]] auto is_greedy_wildcard() const -> bool { return Type::GreedyWildcard == m_type; }
 
@@ -33,7 +31,7 @@ public:
     }
 
     [[nodiscard]] auto is_delim(std::array<bool, cSizeOfByte> const& delim_table) const -> bool {
-        return delim_table.at(m_value);
+        return delim_table.at(static_cast<uint8_t>(m_value));
     }
 
     [[nodiscard]] auto is_delim_or_wildcard(std::array<bool, cSizeOfByte> const& delim_table) const
@@ -44,7 +42,7 @@ public:
     [[nodiscard]] auto is_escape() const -> bool { return Type::Escape == m_type; }
 
 private:
-    unsigned char m_value;
+    char m_value;
     Type m_type;
 };
 }  // namespace log_surgeon::wildcard_query_parser
