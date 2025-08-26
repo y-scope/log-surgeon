@@ -56,9 +56,8 @@ public:
      *      and suffix interpretations from T(i,a).
      *
      * 3. Use dynamic programming to compute I(n) efficiently:
-     *    - Instead of generating all possible combinations naively (O(2^n * k^n)), we store only
-     *      unique interpretations, reducing complexity to roughly O(k^n), where k is the number of
-     *      unique token types.
+     *    - Instead of generating all possible combinations naively, we store only unique
+     *      interpretations by recurisvely building up the combinations as shown below.
      *    - Compute I(n) iteratively in increasing order of substring length:
      *      - Compute T(0,1), then I(1)
      *      - Compute T(0,2), T(1,2), then I(2)
