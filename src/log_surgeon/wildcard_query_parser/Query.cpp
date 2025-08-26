@@ -34,7 +34,9 @@ using ByteNfa = log_surgeon::finite_automata::Nfa<ByteNfaState>;
 
 namespace log_surgeon::wildcard_query_parser {
 Query::Query(string const& query_string) {
+    m_query_string.reserve(query_string.size());
     Expression const expression(query_string);
+
     bool prev_is_escape{false};
     string unhandled_wildcard_sequence;
     bool unhandled_wildcard_sequence_contains_greedy_wildcard{false};
