@@ -72,7 +72,9 @@ public:
     [[nodiscard]] auto get_all_multi_token_interpretations(lexers::ByteLexer const& lexer) const
             -> std::set<QueryInterpretation>;
 
-    [[nodiscard]] auto get_processed_query_string() const -> std::string { return m_query_string; }
+    [[nodiscard]] auto get_processed_query_string() const -> std::string const& {
+        return m_query_string;
+    }
 
 private:
     /**
