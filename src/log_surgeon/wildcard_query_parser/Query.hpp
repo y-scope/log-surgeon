@@ -57,7 +57,7 @@ public:
      *
      * 3. Use dynamic programming to compute I(n) efficiently:
      *    - Instead of generating all possible combinations naively, we store only unique
-     *      interpretations by recurisvely building up the combinations as shown below.
+     *      interpretations by recursively building up the combinations as shown below.
      *    - Compute I(n) iteratively in increasing order of substring length:
      *      - Compute T(0,1), then I(1)
      *      - Compute T(0,2), T(1,2), then I(2)
