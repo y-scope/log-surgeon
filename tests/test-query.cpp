@@ -41,7 +41,8 @@ auto test_query(
 ) -> void;
 
 /**
- * Initializes a `ByteLexer` with delimiters "\n\r\[:" and variable "myVar:userID=(?<uid>123)".
+ * Initializes a `ByteLexer` with delimiters "\n\r\[:" and variable
+ * "hasNumber:[A-Za-z]*\d+[A-Za-z]*".
  *
  * @return The initialized `ByteLexer`.
  */
