@@ -18,6 +18,7 @@
 #include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
+#include <fmt/format.h>
 #include <fmt/ranges.h>
 
 namespace log_surgeon::finite_automata {

@@ -14,7 +14,7 @@
 #include <log_surgeon/types.hpp>
 
 #include <catch2/catch_test_macros.hpp>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 using log_surgeon::BufferParser;
 using log_surgeon::capture_id_t;
