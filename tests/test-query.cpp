@@ -120,12 +120,12 @@ TEST_CASE("repeated_greedy_wildcard_query", "[Query]") {
     constexpr string_view cRawQueryString{"a**b"};
     constexpr string_view cProcessedQueryString{"a*b"};
     set<string> const expected_serialized_interpretations{
-            {"logtype='a*b', contains_wildcard='0'"},
-            {"logtype='a***b', contains_wildcard='0'"},
-            {"logtype='<0>(a*)**b', contains_wildcard='10'"},
-            {"logtype='<0>(a*)*<0>(*b)', contains_wildcard='101'"},
-            {"logtype='<0>(a*b)', contains_wildcard='1'"},
-            {"logtype='a**<0>(*b)', contains_wildcard='01'"}
+            "logtype='a*b', contains_wildcard='0'",
+            "logtype='a***b', contains_wildcard='0'",
+            "logtype='<0>(a*)**b', contains_wildcard='10'",
+            "logtype='<0>(a*)*<0>(*b)', contains_wildcard='101'",
+            "logtype='<0>(a*b)', contains_wildcard='1'",
+            "logtype='a**<0>(*b)', contains_wildcard='01'"
     };
 
     test_query(cRawQueryString, cProcessedQueryString, expected_serialized_interpretations);
@@ -139,12 +139,12 @@ TEST_CASE("short_wildcard_sequence_query", "[Query]") {
     constexpr string_view cRawQueryString{"a?*b"};
     constexpr string_view cProcessedQueryString{"a*b"};
     set<string> const expected_serialized_interpretations{
-            {"logtype='a*b', contains_wildcard='0'"},
-            {"logtype='a***b', contains_wildcard='0'"},
-            {"logtype='<0>(a*)**b', contains_wildcard='10'"},
-            {"logtype='<0>(a*)*<0>(*b)', contains_wildcard='101'"},
-            {"logtype='<0>(a*b)', contains_wildcard='1'"},
-            {"logtype='a**<0>(*b)', contains_wildcard='01'"}
+            "logtype='a*b', contains_wildcard='0'",
+            "logtype='a***b', contains_wildcard='0'",
+            "logtype='<0>(a*)**b', contains_wildcard='10'",
+            "logtype='<0>(a*)*<0>(*b)', contains_wildcard='101'",
+            "logtype='<0>(a*b)', contains_wildcard='1'",
+            "logtype='a**<0>(*b)', contains_wildcard='01'"
     };
 
     test_query(cRawQueryString, cProcessedQueryString, expected_serialized_interpretations);
@@ -158,12 +158,12 @@ TEST_CASE("long_mixed_wildcard_sequence_query", "[Query]") {
     constexpr string_view cRawQueryString{"a?*?*?*?b"};
     constexpr string_view cProcessedQueryString{"a*b"};
     set<string> const expected_serialized_interpretations{
-            {"logtype='a*b', contains_wildcard='0'"},
-            {"logtype='a***b', contains_wildcard='0'"},
-            {"logtype='<0>(a*)**b', contains_wildcard='10'"},
-            {"logtype='<0>(a*)*<0>(*b)', contains_wildcard='101'"},
-            {"logtype='<0>(a*b)', contains_wildcard='1'"},
-            {"logtype='a**<0>(*b)', contains_wildcard='01'"}
+            "logtype='a*b', contains_wildcard='0'",
+            "logtype='a***b', contains_wildcard='0'",
+            "logtype='<0>(a*)**b', contains_wildcard='10'",
+            "logtype='<0>(a*)*<0>(*b)', contains_wildcard='101'",
+            "logtype='<0>(a*b)', contains_wildcard='1'",
+            "logtype='a**<0>(*b)', contains_wildcard='01'"
     };
 
     test_query(cRawQueryString, cProcessedQueryString, expected_serialized_interpretations);
@@ -177,54 +177,54 @@ TEST_CASE("long_non_greedy_wildcard_sequence_query", "[Query]") {
     constexpr string_view cRawQueryString{"a????b"};
     constexpr string_view cProcessedQueryString{"a????b"};
     set<string> const expected_serialized_interpretations{
-            {R"(logtype='a????b', contains_wildcard='0')"},
+            R"(logtype='a????b', contains_wildcard='0')",
 
-            {R"(logtype='<0>(a?)???b', contains_wildcard='10')"},
-            {R"(logtype='<0>(a??)??b', contains_wildcard='10')"},
-            {R"(logtype='<0>(a???)?b', contains_wildcard='10')"},
-            {R"(logtype='<0>(a????b)', contains_wildcard='1')"},
+            R"(logtype='<0>(a?)???b', contains_wildcard='10')",
+            R"(logtype='<0>(a??)??b', contains_wildcard='10')",
+            R"(logtype='<0>(a???)?b', contains_wildcard='10')",
+            R"(logtype='<0>(a????b)', contains_wildcard='1')",
 
-            {R"(logtype='a?<0>(?)??b', contains_wildcard='010')"},
-            {R"(logtype='a?<0>(??)?b', contains_wildcard='010')"},
-            {R"(logtype='a?<0>(???b)', contains_wildcard='01')"},
-            {R"(logtype='a?<0>(?)?<0>(?b)', contains_wildcard='0101')"},
+            R"(logtype='a?<0>(?)??b', contains_wildcard='010')",
+            R"(logtype='a?<0>(??)?b', contains_wildcard='010')",
+            R"(logtype='a?<0>(???b)', contains_wildcard='01')",
+            R"(logtype='a?<0>(?)?<0>(?b)', contains_wildcard='0101')",
 
-            {R"(logtype='a??<0>(?)?b', contains_wildcard='010')"},
-            {R"(logtype='a??<0>(??b)', contains_wildcard='01')"},
+            R"(logtype='a??<0>(?)?b', contains_wildcard='010')",
+            R"(logtype='a??<0>(??b)', contains_wildcard='01')",
 
-            {R"(logtype='a???<0>(?b)', contains_wildcard='01')"},
+            R"(logtype='a???<0>(?b)', contains_wildcard='01')",
 
-            {R"(logtype='<0>(a?)?<0>(?)?b', contains_wildcard='1010')"},
-            {R"(logtype='<0>(a?)?<0>(??b)', contains_wildcard='101')"},
-            {R"(logtype='<0>(a?)??<0>(?b)', contains_wildcard='101')"},
+            R"(logtype='<0>(a?)?<0>(?)?b', contains_wildcard='1010')",
+            R"(logtype='<0>(a?)?<0>(??b)', contains_wildcard='101')",
+            R"(logtype='<0>(a?)??<0>(?b)', contains_wildcard='101')",
 
-            {R"(logtype='<0>(a??)?<0>(?b)', contains_wildcard='101')"},
+            R"(logtype='<0>(a??)?<0>(?b)', contains_wildcard='101')",
 
             // Double dipping on delimiters
-            {R"(logtype='<0>(a?)<0>(?)??b', contains_wildcard='110')"},
-            {R"(logtype='<0>(a?)<0>(??)?b', contains_wildcard='110')"},
-            {R"(logtype='<0>(a?)<0>(???b)', contains_wildcard='11')"},
-            {R"(logtype='<0>(a?)<0>(?)?<0>(?b)', contains_wildcard='1101')"},
-            {R"(logtype='<0>(a?)?<0>(?)<0>(?b)', contains_wildcard='1011')"},
+            R"(logtype='<0>(a?)<0>(?)??b', contains_wildcard='110')",
+            R"(logtype='<0>(a?)<0>(??)?b', contains_wildcard='110')",
+            R"(logtype='<0>(a?)<0>(???b)', contains_wildcard='11')",
+            R"(logtype='<0>(a?)<0>(?)?<0>(?b)', contains_wildcard='1101')",
+            R"(logtype='<0>(a?)?<0>(?)<0>(?b)', contains_wildcard='1011')",
 
-            {R"(logtype='<0>(a??)<0>(?)?b', contains_wildcard='110')"},
-            {R"(logtype='<0>(a??)<0>(??b)', contains_wildcard='11')"},
+            R"(logtype='<0>(a??)<0>(?)?b', contains_wildcard='110')",
+            R"(logtype='<0>(a??)<0>(??b)', contains_wildcard='11')",
 
-            {R"(logtype='<0>(a???)<0>(?b)', contains_wildcard='11')"},
+            R"(logtype='<0>(a???)<0>(?b)', contains_wildcard='11')",
 
-            {R"(logtype='a?<0>(?)<0>(?)?b', contains_wildcard='0110')"},
-            {R"(logtype='a?<0>(?)<0>(??b)', contains_wildcard='011')"},
+            R"(logtype='a?<0>(?)<0>(?)?b', contains_wildcard='0110')",
+            R"(logtype='a?<0>(?)<0>(??b)', contains_wildcard='011')",
 
-            {R"(logtype='a?<0>(??)<0>(?b)', contains_wildcard='011')"},
-            {R"(logtype='a??<0>(?)<0>(?b)', contains_wildcard='011')"},
+            R"(logtype='a?<0>(??)<0>(?b)', contains_wildcard='011')",
+            R"(logtype='a??<0>(?)<0>(?b)', contains_wildcard='011')",
 
-            {R"(logtype='<0>(a?)<0>(?)<0>(?)?b', contains_wildcard='1110')"},
-            {R"(logtype='<0>(a?)<0>(?)<0>(??b)', contains_wildcard='111')"},
-            {R"(logtype='<0>(a?)<0>(??)<0>(?b)', contains_wildcard='111')"},
-            {R"(logtype='<0>(a??)<0>(?)<0>(?b)', contains_wildcard='111')"},
-            {R"(logtype='a?<0>(?)<0>(?)<0>(?b)', contains_wildcard='0111')"},
+            R"(logtype='<0>(a?)<0>(?)<0>(?)?b', contains_wildcard='1110')",
+            R"(logtype='<0>(a?)<0>(?)<0>(??b)', contains_wildcard='111')",
+            R"(logtype='<0>(a?)<0>(??)<0>(?b)', contains_wildcard='111')",
+            R"(logtype='<0>(a??)<0>(?)<0>(?b)', contains_wildcard='111')",
+            R"(logtype='a?<0>(?)<0>(?)<0>(?b)', contains_wildcard='0111')",
 
-            {R"(logtype='<0>(a?)<0>(?)<0>(?)<0>(?b)', contains_wildcard='1111')"}
+            R"(logtype='<0>(a?)<0>(?)<0>(?)<0>(?b)', contains_wildcard='1111')"
     };
 
     test_query(cRawQueryString, cProcessedQueryString, expected_serialized_interpretations);
