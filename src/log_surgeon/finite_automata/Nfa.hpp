@@ -20,8 +20,8 @@
 #include <log_surgeon/types.hpp>
 #include <log_surgeon/UniqueIdGenerator.hpp>
 
-#include <fmt/core.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 namespace log_surgeon::finite_automata {
 /**

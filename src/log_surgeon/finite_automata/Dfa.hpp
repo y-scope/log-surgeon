@@ -25,8 +25,8 @@
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/Token.hpp>
 
-#include <fmt/core.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 namespace log_surgeon::finite_automata {
 /**
