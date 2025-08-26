@@ -77,6 +77,9 @@ auto make_test_lexer() -> ByteLexer {
     lexer.m_id_symbol[0] = "hasNumber";
 
     auto const schema_ast = schema.release_schema_ast_ptr();
+    REQUIRE(nullptr != schema_ast);
+    REQUIRE(1 == schema_ast->m_schema_vars.size());
+    REQUIRE(nullptr != schema_ast->m_schema_vars[0]);
     auto& capture_rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
     lexer.add_rule(lexer.m_symbol_id["hasNumber"], std::move(capture_rule_ast.m_regex_ptr));
 
