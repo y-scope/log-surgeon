@@ -55,7 +55,7 @@ auto ExpressionView::is_surrounded_by_delims_or_wildcards(
     } else {
         auto const& preceding_char{m_expression->get_chars()[begin_idx - 1]};
         has_left_boundary = preceding_char.is_delim_or_wildcard(delim_table)
-                            || false == m_chars.empty() && m_chars[0].is_greedy_wildcard();
+                            || (false == m_chars.empty() && m_chars.front().is_greedy_wildcard());
     }
 
     bool has_right_boundary{false};
@@ -70,7 +70,7 @@ auto ExpressionView::is_surrounded_by_delims_or_wildcards(
             has_right_boundary = succeeding_char.is_delim_or_wildcard(delim_table);
         }
         has_right_boundary = has_right_boundary
-                             || false == m_chars.empty() && m_chars.back().is_greedy_wildcard();
+                             || (false == m_chars.empty() && m_chars.back().is_greedy_wildcard());
     }
 
     return has_left_boundary && has_right_boundary;
