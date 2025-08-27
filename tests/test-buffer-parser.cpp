@@ -896,7 +896,7 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
     constexpr string_view cInput{"1999-12-12T01:02:03.456 1234 5678 I MyService A=TEXT B=1.1"};
 
     string const header_rule{fmt::format("header:{} {} {} {}", cTime, cPid, cTid, cLogLevel)};
-    ExpectedEvent const expected_event1{
+    ExpectedEvent const expected_event{
             .m_logtype{"<timestamp> <PID> <TID> <LogLevel> MyService A=TEXT B=1.1"},
             .m_timestamp_raw{""},
             .m_tokens{
@@ -917,7 +917,7 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
     schema.add_variable(header_rule, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
-    parse_and_validate(buffer_parser, cInput, {expected_event1});
+    parse_and_validate(buffer_parser, cInput, {expected_event});
 }
 
 /**
@@ -975,7 +975,7 @@ TEST_CASE("multi_capture_two", "[BufferParser]") {
             cLTime,
             cTid
     )};
-    ExpectedEvent const expected_event1{
+    ExpectedEvent const expected_event{
             .m_logtype{"<timestamp> ip-<IP> ku[<PID>]: <LogLevel><LID> <LTime>    <TID> Y failed"},
             .m_timestamp_raw{""},
             .m_tokens{
@@ -998,5 +998,5 @@ TEST_CASE("multi_capture_two", "[BufferParser]") {
     schema.add_variable(header_rule, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
-    parse_and_validate(buffer_parser, cInput, {expected_event1});
+    parse_and_validate(buffer_parser, cInput, {expected_event});
 }
