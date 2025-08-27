@@ -20,8 +20,8 @@
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 #include <log_surgeon/types.hpp>
 
-#include <fmt/core.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 namespace log_surgeon::finite_automata {
 template <StateType state_type>

@@ -46,8 +46,7 @@ if(BUILD_TESTING AND log_surgeon_BUILD_TESTING)
     set(log_surgeon_ENABLE_TESTS ON)
 endif()
 
-# Use <fmt/*.h> as <format> is unsupported in gcc-10.
-find_package(fmt 8.0.1 REQUIRED)
+find_package(fmt 11.2.0 REQUIRED)
 message(STATUS "Found fmt ${fmt_VERSION}.")
 
 find_package(Microsoft.GSL 4.0.0 REQUIRED)
