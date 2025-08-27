@@ -856,7 +856,7 @@ TEST_CASE("multi_line_with_delimited_vars", "[BufferParser]") {
 
 /**
  * @ingroup test_buffer_parser_capture
- * @brief Tests a multi-capture rule.
+ * @brief Tests a multi-capture rule parsing an Android log.
  *
  * This test verifies that a multi-capture rule correctly identifies the location of each capture
  * group. It tests that `BufferParser` correctly flattens the logtype, as well as stores the full
@@ -922,7 +922,7 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
 
 /**
  * @ingroup test_buffer_parser_capture
- * @brief Tests a multi-capture rule.
+ * @brief Tests a multi-capture rule parsing a Kubernetes log.
  *
  * This test also verifies that a multi-capture rule correctly identifies the location of each
  * capture group. It tests that `BufferParser` correctly flattens the logtype, as well as stores the
