@@ -235,9 +235,9 @@ TEST_CASE("long_non_greedy_wildcard_sequence_query", "[Query]") {
  * @brief Creates and tests a query with an escaped '*' character.
  */
 TEST_CASE("escaped_star_query", "[Query]") {
-    constexpr string_view cRawQueryString{"*"};
-    constexpr string_view cProcessedQueryString{"*"};
-    set<string> const expected_serialized_interpretations{"logtype='*', contains_wildcard='0'"};
+    constexpr string_view cRawQueryString{R"(a\*b)"};
+    constexpr string_view cProcessedQueryString{R"(a\*b)"};
+    set<string> const expected_serialized_interpretations{R"(logtype='a\*b', contains_wildcard='0')"};
 
     test_query(cRawQueryString, cProcessedQueryString, expected_serialized_interpretations);
 }
