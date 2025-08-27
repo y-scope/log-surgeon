@@ -931,8 +931,8 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
  * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
- * header:(?<timestamp>[A-Za-z]{3} \d{2} \d{2}:\d{2}:\d{2}) ip-(?<IP>\d{3}\-\d{2}\-\d{2}\-\d{2}) \
- *        ku[(?<PID>\d{4})]: (?<LogLevel>I|D|E|W)(?<LID>\d{4}) \
+ * header:(?<timestamp>[A-Za-z]{3} \d{2} \d{2}:\d{2}:\d{2}) ip\-(?<IP>\d{3}\-\d{2}\-\d{2}\-\d{2}) \
+ *        ku\[(?<PID>\d{4})\]: (?<LogLevel>I|D|E|W)(?<LID>\d{4}) \
  *        (?<LTime>\d{2}:\d{2}:\d{2}\.\d{4})    (?<TID>\d{4})
  * @endcode
  *
