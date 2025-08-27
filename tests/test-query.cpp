@@ -237,7 +237,9 @@ TEST_CASE("long_non_greedy_wildcard_sequence_query", "[Query]") {
 TEST_CASE("escaped_star_query", "[Query]") {
     constexpr string_view cRawQueryString{R"(a\*b)"};
     constexpr string_view cProcessedQueryString{R"(a\*b)"};
-    set<string> const expected_serialized_interpretations{R"(logtype='a\*b', contains_wildcard='0')"};
+    set<string> const expected_serialized_interpretations{
+            R"(logtype='a\*b', contains_wildcard='0')"
+    };
 
     test_query(cRawQueryString, cProcessedQueryString, expected_serialized_interpretations);
 }
