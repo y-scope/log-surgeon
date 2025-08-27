@@ -57,8 +57,8 @@ tasks:
             - "-DFMT_TEST=OFF"
           CMAKE_PACKAGE_NAME: "fmt"
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
-          TAR_SHA256: "b06ca3130158c625848f3fb7418f235155a4d389b2abc3a6245fb01cb0eb1e01"
-          TAR_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/8.0.1.tar.gz"
+          TAR_SHA256: "bc23066d87ab3168f27cef3e97d545fa63314f5c79df5ea444d41d56f962c6af"
+          TAR_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/11.2.0.tar.gz"
           WORK_DIR: "{{.G_DEPS_DIR}}"
 
   install-microsoft.gsl:

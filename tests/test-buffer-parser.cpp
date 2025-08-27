@@ -14,7 +14,7 @@
 #include <log_surgeon/types.hpp>
 
 #include <catch2/catch_test_macros.hpp>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 using log_surgeon::BufferParser;
 using log_surgeon::capture_id_t;
@@ -856,7 +856,7 @@ TEST_CASE("multi_line_with_delimited_vars", "[BufferParser]") {
 
 /**
  * @ingroup test_buffer_parser_capture
- * @brief Tests a multi-capture rule.
+ * @brief Tests a multi-capture rule parsing an Android log.
  *
  * This test verifies that a multi-capture rule correctly identifies the location of each capture
  * group. It tests that `BufferParser` correctly flattens the logtype, as well as stores the full
@@ -896,7 +896,7 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
     constexpr string_view cInput{"1999-12-12T01:02:03.456 1234 5678 I MyService A=TEXT B=1.1"};
 
     string const header_rule{fmt::format("header:{} {} {} {}", cTime, cPid, cTid, cLogLevel)};
-    ExpectedEvent const expected_event1{
+    ExpectedEvent const expected_event{
             .m_logtype{"<timestamp> <PID> <TID> <LogLevel> MyService A=TEXT B=1.1"},
             .m_timestamp_raw{""},
             .m_tokens{
@@ -917,12 +917,12 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
     schema.add_variable(header_rule, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
-    parse_and_validate(buffer_parser, cInput, {expected_event1});
+    parse_and_validate(buffer_parser, cInput, {expected_event});
 }
 
 /**
  * @ingroup test_buffer_parser_capture
- * @brief Tests a multi-capture rule.
+ * @brief Tests a multi-capture rule parsing a Kubernetes log.
  *
  * This test also verifies that a multi-capture rule correctly identifies the location of each
  * capture group. It tests that `BufferParser` correctly flattens the logtype, as well as stores the
@@ -931,8 +931,8 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
  * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
- * header:(?<timestamp>[A-Za-z]{3} \d{2} \d{2}:\d{2}:\d{2}) ip-(?<IP>\d{3}\-\d{2}\-\d{2}\-\d{2}) \
- *        ku[(?<PID>\d{4})]: (?<LogLevel>I|D|E|W)(?<LID>\d{4}) \
+ * header:(?<timestamp>[A-Za-z]{3} \d{2} \d{2}:\d{2}:\d{2}) ip\-(?<IP>\d{3}\-\d{2}\-\d{2}\-\d{2}) \
+ *        ku\[(?<PID>\d{4})\]: (?<LogLevel>I|D|E|W)(?<LID>\d{4}) \
  *        (?<LTime>\d{2}:\d{2}:\d{2}\.\d{4})    (?<TID>\d{4})
  * @endcode
  *
@@ -975,7 +975,7 @@ TEST_CASE("multi_capture_two", "[BufferParser]") {
             cLTime,
             cTid
     )};
-    ExpectedEvent const expected_event1{
+    ExpectedEvent const expected_event{
             .m_logtype{"<timestamp> ip-<IP> ku[<PID>]: <LogLevel><LID> <LTime>    <TID> Y failed"},
             .m_timestamp_raw{""},
             .m_tokens{
@@ -998,5 +998,5 @@ TEST_CASE("multi_capture_two", "[BufferParser]") {
     schema.add_variable(header_rule, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
-    parse_and_validate(buffer_parser, cInput, {expected_event1});
+    parse_and_validate(buffer_parser, cInput, {expected_event});
 }

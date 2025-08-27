@@ -6,7 +6,6 @@
 #include <log_surgeon/SchemaParser.hpp>
 
 #include <catch2/catch_test_macros.hpp>
-#include <fmt/core.h>
 
 /**
  * @defgroup unit_tests_schema Schema unit tests.
