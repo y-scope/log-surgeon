@@ -853,3 +853,150 @@ TEST_CASE("multi_line_with_delimited_vars", "[BufferParser]") {
 
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
 }
+
+/**
+ * @ingroup test_buffer_parser_capture
+ * @brief Tests a multi-capture rule parsing an Android log.
+ *
+ * This test verifies that a multi-capture rule correctly identifies the location of each capture
+ * group. It tests that `BufferParser` correctly flattens the logtype, as well as stores the full
+ * tree correctly.
+ *
+ * ### Schema Definition
+ * @code
+ * delimiters: \n\r\[:,
+ * header:(?<timestamp>\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}) (?<PID>\d{4}) (?<TID>\d{4}) \
+ *        (?<LogLevel>I|D|E|W)
+ * @endcode
+ *
+ * ### Input Example
+ * @code
+ * "1999-12-12T01:02:03.456 1234 5678 I MyService A=TEXT B=1.1"
+ * @endcode
+ *
+ * ### Expected Logtype
+ * @code
+ * "<timestamp> <PID> <TID> <LogLevel> MyService A=TEXT B=1.1"
+ * @endcode
+ *
+ * ### Expected Tokenization
+ * @code
+ * "1999-12-12T01:02:03.456 1234 5678 I" -> "header"
+ * " MyService" -> uncaught string
+ * " A=TEXT" -> uncaught string
+ * " B=1.1" -> uncaught string
+ * @endcode
+ */
+TEST_CASE("multi_capture_one", "[BufferParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cTime{R"((?<timestamp>\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}))"};
+    constexpr string_view cPid{R"((?<PID>\d{4}))"};
+    constexpr string_view cTid{R"((?<TID>\d{4}))"};
+    constexpr string_view cLogLevel{R"((?<LogLevel>I|D|E|W))"};
+    constexpr string_view cInput{"1999-12-12T01:02:03.456 1234 5678 I MyService A=TEXT B=1.1"};
+
+    string const header_rule{fmt::format("header:{} {} {} {}", cTime, cPid, cTid, cLogLevel)};
+    ExpectedEvent const expected_event{
+            .m_logtype{"<timestamp> <PID> <TID> <LogLevel> MyService A=TEXT B=1.1"},
+            .m_timestamp_raw{""},
+            .m_tokens{
+                    {{"1999-12-12T01:02:03.456 1234 5678 I",
+                      "header",
+                      {{{"timestamp", {{0}, {23}}},
+                        {"PID", {{24}, {28}}},
+                        {"TID", {{29}, {33}}},
+                        {"LogLevel", {{34}, {35}}}}}},
+                     {" MyService", "", {}},
+                     {" A=TEXT", "", {}},
+                     {" B=1.1", "", {}}}
+            }
+    };
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(header_rule, -1);
+    BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
+
+    parse_and_validate(buffer_parser, cInput, {expected_event});
+}
+
+/**
+ * @ingroup test_buffer_parser_capture
+ * @brief Tests a multi-capture rule parsing a Kubernetes log.
+ *
+ * This test also verifies that a multi-capture rule correctly identifies the location of each
+ * capture group. It tests that `BufferParser` correctly flattens the logtype, as well as stores the
+ * full tree correctly.
+ *
+ * ### Schema Definition
+ * @code
+ * delimiters: \n\r\[:,
+ * header:(?<timestamp>[A-Za-z]{3} \d{2} \d{2}:\d{2}:\d{2}) ip\-(?<IP>\d{3}\-\d{2}\-\d{2}\-\d{2}) \
+ *        ku\[(?<PID>\d{4})\]: (?<LogLevel>I|D|E|W)(?<LID>\d{4}) \
+ *        (?<LTime>\d{2}:\d{2}:\d{2}\.\d{4})    (?<TID>\d{4})
+ * @endcode
+ *
+ * ### Input Example
+ * @code
+ * "Jan 01 02:03:04 ip-999-99-99-99 ku[1234]: E5678 02:03:04.5678    1111 Y failed"
+ * @endcode
+ *
+ * ### Expected Logtype
+ * @code
+ * "<timestamp> ip-<IP> ku[<PID>]: <LogLevel><LID> <LTime>    <TID> Y failed"
+ * @endcode
+ *
+ * ### Expected Tokenization
+ * @code
+ * "Jan 01 02:03:04 ip-999-99-99-99 ku[1234]: E5678 02:03:04.5678    1111" -> "header"
+ * " Y" -> uncaught string
+ * " failed" -> uncaught string
+ * @endcode
+ */
+TEST_CASE("multi_capture_two", "[BufferParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cTime{R"((?<timestamp>[A-Za-z]{3} \d{2} \d{2}:\d{2}:\d{2}))"};
+    constexpr string_view cIp{R"((?<IP>\d{3}\-\d{2}\-\d{2}\-\d{2}))"};
+    constexpr string_view cPid{R"((?<PID>\d{4}))"};
+    constexpr string_view cLogLevel{R"((?<LogLevel>I|D|E|W))"};
+    constexpr string_view cLid{R"((?<LID>\d{4}))"};
+    constexpr string_view cLTime{R"((?<LTime>\d{2}:\d{2}:\d{2}\.\d{4}))"};
+    constexpr string_view cTid{R"((?<TID>\d{4}))"};
+    constexpr string_view cInput{"Jan 01 02:03:04 ip-999-99-99-99 ku[1234]: E5678 02:03:04.5678"
+                                 "    1111 Y failed"};
+
+    string const header_rule{fmt::format(
+            R"(header:{} ip\-{} ku\[{}\]: {}{} {}    {})",
+            cTime,
+            cIp,
+            cPid,
+            cLogLevel,
+            cLid,
+            cLTime,
+            cTid
+    )};
+    ExpectedEvent const expected_event{
+            .m_logtype{"<timestamp> ip-<IP> ku[<PID>]: <LogLevel><LID> <LTime>    <TID> Y failed"},
+            .m_timestamp_raw{""},
+            .m_tokens{
+                    {{"Jan 01 02:03:04 ip-999-99-99-99 ku[1234]: E5678 02:03:04.5678    1111",
+                      "header",
+                      {{{"timestamp", {{0}, {15}}},
+                        {"IP", {{19}, {31}}},
+                        {"PID", {{35}, {39}}},
+                        {"LogLevel", {{42}, {43}}},
+                        {"LID", {{43}, {47}}},
+                        {"LTime", {{48}, {61}}},
+                        {"TID", {{65}, {69}}}}}},
+                     {" Y", "", {}},
+                     {" failed", "", {}}}
+            }
+    };
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(header_rule, -1);
+    BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
+
+    parse_and_validate(buffer_parser, cInput, {expected_event});
+}
