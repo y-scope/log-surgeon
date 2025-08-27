@@ -34,7 +34,7 @@ using ByteNfa = log_surgeon::finite_automata::Nfa<ByteNfaState>;
 
 namespace log_surgeon::wildcard_query_parser {
 Query::Query(string const& query_string) {
-    m_query_string.reserve(query_string.size());
+    m_processed_query_string.reserve(query_string.size());
     Expression const expression(query_string);
 
     bool prev_is_escape{false};
@@ -43,44 +43,44 @@ Query::Query(string const& query_string) {
     for (auto c : expression.get_chars()) {
         if (false == unhandled_wildcard_sequence.empty() && false == c.is_wildcard()) {
             if (unhandled_wildcard_sequence_contains_greedy_wildcard) {
-                m_query_string.push_back('*');
+                m_processed_query_string.push_back('*');
             } else {
-                m_query_string += unhandled_wildcard_sequence;
+                m_processed_query_string += unhandled_wildcard_sequence;
             }
             unhandled_wildcard_sequence.clear();
             unhandled_wildcard_sequence_contains_greedy_wildcard = false;
         }
 
         if (prev_is_escape) {
-            m_query_string.push_back(c.value());
+            m_processed_query_string.push_back(c.value());
             prev_is_escape = false;
         } else if (c.is_escape()) {
             prev_is_escape = true;
-            m_query_string.push_back(c.value());
+            m_processed_query_string.push_back(c.value());
         } else if (c.is_greedy_wildcard()) {
             unhandled_wildcard_sequence.push_back(c.value());
             unhandled_wildcard_sequence_contains_greedy_wildcard = true;
         } else if (c.is_non_greedy_wildcard()) {
             unhandled_wildcard_sequence.push_back(c.value());
         } else {
-            m_query_string.push_back(c.value());
+            m_processed_query_string.push_back(c.value());
         }
     }
     if (false == unhandled_wildcard_sequence.empty()) {
         if (unhandled_wildcard_sequence_contains_greedy_wildcard) {
-            m_query_string.push_back('*');
+            m_processed_query_string.push_back('*');
         } else {
-            m_query_string += unhandled_wildcard_sequence;
+            m_processed_query_string += unhandled_wildcard_sequence;
         }
     }
 }
 
 auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const
         -> std::set<QueryInterpretation> {
-    Expression const expression{m_query_string};
+    Expression const expression{m_processed_query_string};
     vector<set<QueryInterpretation>> query_interpretations(expression.length());
 
-    if (m_query_string.empty()) {
+    if (m_processed_query_string.empty()) {
         return {};
     }
 

@@ -73,7 +73,7 @@ public:
             -> std::set<QueryInterpretation>;
 
     [[nodiscard]] auto get_processed_query_string() const -> std::string const& {
-        return m_query_string;
+        return m_processed_query_string;
     }
 
 private:
@@ -125,7 +125,7 @@ private:
     get_matching_variable_types(std::string const& regex_string, lexers::ByteLexer const& lexer)
             -> std::set<uint32_t>;
 
-    std::string m_query_string;
+    std::string m_processed_query_string;
 };
 }  // namespace log_surgeon::wildcard_query_parser
 
