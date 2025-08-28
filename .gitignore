@@ -1,2 +1,4 @@
+.clang-format
+.clang-tidy
 .task/
 build/
