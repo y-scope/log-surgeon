@@ -29,9 +29,7 @@ auto ReaderParser::parse_next_event() -> ErrorCode {
         LogParser::ParsingAction parsing_action{LogParser::ParsingAction::None};
         ErrorCode parse_error = m_log_parser.parse_and_generate_metadata(parsing_action);
         if (ErrorCode::Success == parse_error) {
-            if (LogParser::ParsingAction::CompressAndFinish == parsing_action) {
-                m_done = true;
-            }
+            if (LogParser::ParsingAction::CompressAndFinish == parsing_action) { m_done = true; }
             break;
         }
         if (ErrorCode::BufferOutOfBounds == parse_error) {

@@ -6,11 +6,11 @@
 #include <variant>
 #include <vector>
 
-#include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
-#include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
-
 #include <fmt/format.h>
 #include <fmt/ranges.h>
+
+#include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
+#include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
 
 using std::string;
 using std::strong_ordering;
@@ -23,19 +23,13 @@ auto QueryInterpretation::operator<=>(QueryInterpretation const& rhs) const -> s
     // in `m_tokens` have `<=>` which returns `strong_ordering`. Therefore, we can convert the
     // result of `<=>` between two `m_tokens` from `weak_ordering` to `strong_ordering`.
     auto const tokens_weak_cmp{m_tokens <=> rhs.m_tokens};
-    if (weak_ordering::less == tokens_weak_cmp) {
-        return strong_ordering::less;
-    }
-    if (weak_ordering::greater == tokens_weak_cmp) {
-        return strong_ordering::greater;
-    }
+    if (weak_ordering::less == tokens_weak_cmp) { return strong_ordering::less; }
+    if (weak_ordering::greater == tokens_weak_cmp) { return strong_ordering::greater; }
     return strong_ordering::equal;
 }
 
 void QueryInterpretation::append_query_interpretation(QueryInterpretation const& suffix) {
-    if (suffix.m_tokens.empty()) {
-        return;
-    }
+    if (suffix.m_tokens.empty()) { return; }
     if (m_tokens.empty()) {
         m_tokens = suffix.m_tokens;
         return;
@@ -55,9 +49,7 @@ void QueryInterpretation::append_query_interpretation(QueryInterpretation const&
 }
 
 auto QueryInterpretation::append_static_token(std::string const& query_substring) -> void {
-    if (query_substring.empty()) {
-        return;
-    }
+    if (query_substring.empty()) { return; }
 
     StaticQueryToken static_query_token(query_substring);
     if (m_tokens.empty()) {

@@ -14,15 +14,15 @@
 #include <utility>
 #include <vector>
 
-#include <log_surgeon/Constants.hpp>
-#include <log_surgeon/finite_automata/Capture.hpp>
-#include <log_surgeon/finite_automata/TagOperation.hpp>
-#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
-
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <fmt/xchar.h>
 #include <gsl/pointers>
+
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/Capture.hpp>
+#include <log_surgeon/finite_automata/TagOperation.hpp>
+#include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 
 namespace log_surgeon::finite_automata {
 template <typename TypedNfaState>
@@ -158,9 +158,7 @@ protected:
     auto operator=(RegexAST&& rhs) noexcept -> RegexAST& = delete;
 
     [[nodiscard]] auto serialize_negative_captures() const -> std::u32string {
-        if (m_negative_captures.empty()) {
-            return U"";
-        }
+        if (m_negative_captures.empty()) { return U""; }
 
         auto const transformed_negative_captures{
                 m_negative_captures | std::ranges::views::transform([](Capture const* capture) {
@@ -289,9 +287,7 @@ public:
      */
     auto set_possible_inputs_to_true(std::array<bool, cSizeOfUnicode>& is_possible_input) const
             -> void override {
-        for (uint32_t const i : m_digits) {
-            is_possible_input.at('0' + i) = true;
-        }
+        for (uint32_t const i : m_digits) { is_possible_input.at('0' + i) = true; }
     }
 
     /**
@@ -361,21 +357,15 @@ public:
             -> void override {
         if (!m_negate) {
             for (auto const& [begin, end] : m_ranges) {
-                for (uint32_t i = begin; i <= end; i++) {
-                    is_possible_input.at(i) = true;
-                }
+                for (uint32_t i = begin; i <= end; i++) { is_possible_input.at(i) = true; }
             }
         } else {
             std::vector<char> inputs(cSizeOfUnicode, 1);
             for (auto const& [begin, end] : m_ranges) {
-                for (uint32_t i = begin; i <= end; i++) {
-                    inputs[i] = 0;
-                }
+                for (uint32_t i = begin; i <= end; i++) { inputs[i] = 0; }
             }
             for (uint32_t i = 0; i < inputs.size(); i++) {
-                if (inputs[i] != 0) {
-                    is_possible_input.at(i) = true;
-                }
+                if (inputs[i] != 0) { is_possible_input.at(i) = true; }
             }
         }
     }
@@ -386,12 +376,8 @@ public:
      * @param delimiters
      */
     auto remove_delimiters_from_wildcard(std::vector<uint32_t>& delimiters) -> void override {
-        if (!m_is_wildcard) {
-            return;
-        }
-        if (delimiters.empty()) {
-            return;
-        }
+        if (!m_is_wildcard) { return; }
+        if (delimiters.empty()) { return; }
         m_ranges.clear();
         std::ranges::sort(delimiters);
         if (delimiters[0] != 0) {
@@ -668,9 +654,7 @@ public:
         if (nullptr == m_capture_regex_ast) {
             throw std::invalid_argument("Group regex AST cannot be null");
         }
-        if (nullptr == m_capture) {
-            throw std::invalid_argument("Capture cannot be null");
-        }
+        if (nullptr == m_capture) { throw std::invalid_argument("Capture cannot be null"); }
 
         RegexAST<TypedNfaState>::set_subtree_positive_captures(
                 m_capture_regex_ast->get_subtree_positive_captures()
@@ -1059,9 +1043,7 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(
 template <typename TypedNfaState>
 RegexASTGroup<TypedNfaState>::RegexASTGroup(std::vector<uint32_t> const& literals)
         : m_negate(false) {
-    for (uint32_t literal : literals) {
-        m_ranges.emplace_back(literal, literal);
-    }
+    for (uint32_t literal : literals) { m_ranges.emplace_back(literal, literal); }
 }
 
 template <typename TypedNfaState>
@@ -1073,9 +1055,7 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(uint32_t min, uint32_t max) : m_nega
 template <typename TypedNfaState>
 auto RegexASTGroup<TypedNfaState>::merge(std::vector<Range> const& ranges) -> std::vector<Range> {
     std::vector<Range> merged_ranges;
-    if (ranges.empty()) {
-        return merged_ranges;
-    }
+    if (ranges.empty()) { return merged_ranges; }
     Range cur = ranges[0];
     for (size_t i = 1; i < ranges.size(); i++) {
         auto const& range = ranges[i];
@@ -1097,14 +1077,10 @@ auto RegexASTGroup<TypedNfaState>::complement(std::vector<Range> const& ranges)
     std::vector<Range> complemented;
     uint32_t low = 0;
     for (auto const& [begin, end] : ranges) {
-        if (begin > 0) {
-            complemented.emplace_back(low, begin - 1);
-        }
+        if (begin > 0) { complemented.emplace_back(low, begin - 1); }
         low = end + 1;
     }
-    if (low > 0) {
-        complemented.emplace_back(low, cUnicodeMax);
-    }
+    if (low > 0) { complemented.emplace_back(low, cUnicodeMax); }
     return complemented;
 }
 
@@ -1119,9 +1095,7 @@ void RegexASTGroup<TypedNfaState>::add_to_nfa(
     auto merged_ranges = m_ranges;
     std::sort(merged_ranges.begin(), merged_ranges.end());
     merged_ranges = merge(merged_ranges);
-    if (m_negate) {
-        merged_ranges = complement(merged_ranges);
-    }
+    if (m_negate) { merged_ranges = complement(merged_ranges); }
     for (auto const& [begin, end] : merged_ranges) {
         nfa->get_root()->add_interval(Interval(begin, end), end_state);
     }

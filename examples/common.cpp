@@ -24,9 +24,7 @@ auto check_input(std::vector<std::string> const& args) -> int {
         ret = 3;
         cout << "Input file does not exist.\n";
     }
-    if (0 != ret) {
-        cout << "usage: <path to schema file> <path to input log file>\n";
-    }
+    if (0 != ret) { cout << "usage: <path to schema file> <path to input log file>\n"; }
     return ret;
 }
 

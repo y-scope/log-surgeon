@@ -16,9 +16,7 @@ using namespace log_surgeon;
 auto process_logs(string const& schema_path, string const& input_path) -> void {
     ReaderParser parser{schema_path};
     optional<uint32_t> loglevel_id{parser.get_variable_id("loglevel")};
-    if (false == loglevel_id.has_value()) {
-        throw runtime_error("No 'loglevel' in schema.");
-    }
+    if (false == loglevel_id.has_value()) { throw runtime_error("No 'loglevel' in schema."); }
 
     ifstream infs{input_path, ios::binary | ios::in};
     if (!infs.is_open()) {
@@ -29,9 +27,7 @@ auto process_logs(string const& schema_path, string const& input_path) -> void {
     Reader reader{[&](char* buf, size_t count, size_t& read_to) -> ErrorCode {
         infs.read(buf, count);
         read_to = infs.gcount();
-        if (0 == read_to && infs.eof()) {
-            return ErrorCode::EndOfFile;
-        }
+        if (0 == read_to && infs.eof()) { return ErrorCode::EndOfFile; }
         return ErrorCode::Success;
     }};
     parser.reset_and_set_reader(reader);
@@ -48,22 +44,16 @@ auto process_logs(string const& schema_path, string const& input_path) -> void {
         cout << "log: " << event.to_string() << endl;
         print_timestamp_loglevel(event, *loglevel_id);
         cout << "logtype: " << event.get_logtype() << endl;
-        if (event.is_multiline()) {
-            multiline_logs.emplace_back(event);
-        }
+        if (event.is_multiline()) { multiline_logs.emplace_back(event); }
     }
 
     cout << endl << "# Printing multiline logs:" << endl;
-    for (auto const& log : multiline_logs) {
-        cout << log.to_string() << endl;
-    }
+    for (auto const& log : multiline_logs) { cout << log.to_string() << endl; }
 }
 
 auto main(int argc, char* argv[]) -> int {
     std::vector<std::string> const args(argv + 1, argv + argc);
-    if (int const err{check_input(args)}; 0 != err) {
-        return err;
-    }
+    if (int const err{check_input(args)}; 0 != err) { return err; }
     process_logs(args[0], args[1]);
     return 0;
 }

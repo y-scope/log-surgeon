@@ -12,6 +12,9 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
@@ -19,9 +22,6 @@
 #include <log_surgeon/LexicalRule.hpp>
 #include <log_surgeon/types.hpp>
 #include <log_surgeon/UniqueIdGenerator.hpp>
-
-#include <fmt/format.h>
-#include <fmt/ranges.h>
 
 namespace log_surgeon::finite_automata {
 /**
@@ -129,9 +129,7 @@ private:
 template <typename TypedNfaState>
 Nfa<TypedNfaState>::Nfa(std::vector<LexicalRule<TypedNfaState>> const& rules) {
     m_root = new_state();
-    for (auto const& rule : rules) {
-        rule.add_to_nfa(this);
-    }
+    for (auto const& rule : rules) { rule.add_to_nfa(this); }
 }
 
 template <typename TypedNfaState>
@@ -225,9 +223,7 @@ auto Nfa<TypedNfaState>::get_bfs_traversal_order() const -> std::vector<TypedNfa
 
     auto add_to_queue_and_visited
             = [&state_queue, &visited_states](TypedNfaState const* dest_state) {
-                  if (visited_states.insert(dest_state).second) {
-                      state_queue.push(dest_state);
-                  }
+                  if (visited_states.insert(dest_state).second) { state_queue.push(dest_state); }
               };
 
     add_to_queue_and_visited(m_root);
@@ -253,16 +249,12 @@ auto Nfa<TypedNfaState>::serialize() const -> std::optional<std::string> {
     auto const traversal_order = get_bfs_traversal_order();
 
     std::unordered_map<TypedNfaState const*, uint32_t> state_ids;
-    for (auto const* state : traversal_order) {
-        state_ids.emplace(state, state_ids.size());
-    }
+    for (auto const* state : traversal_order) { state_ids.emplace(state, state_ids.size()); }
 
     std::vector<std::string> serialized_states;
     for (auto const* state : traversal_order) {
         auto const optional_serialized_state{state->serialize(state_ids)};
-        if (false == optional_serialized_state.has_value()) {
-            return std::nullopt;
-        }
+        if (false == optional_serialized_state.has_value()) { return std::nullopt; }
         serialized_states.emplace_back(optional_serialized_state.value());
     }
     return fmt::format("{}\n", fmt::join(serialized_states, "\n"));

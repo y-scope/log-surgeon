@@ -5,9 +5,9 @@
 #include <optional>
 #include <string>
 
-#include <log_surgeon/types.hpp>
-
 #include <fmt/format.h>
+
+#include <log_surgeon/types.hpp>
 
 namespace log_surgeon::finite_automata {
 /**
@@ -61,9 +61,7 @@ public:
     [[nodiscard]] auto serialize() const -> std::optional<std::string> {
         switch (m_type) {
             case Type::Copy:
-                if (false == m_copy_reg_id.has_value()) {
-                    return std::nullopt;
-                }
+                if (false == m_copy_reg_id.has_value()) { return std::nullopt; }
                 return fmt::format("{}{}{}", m_reg_id, "c", m_copy_reg_id.value());
             case Type::Set:
                 return fmt::format("{}{}", m_reg_id, "p");

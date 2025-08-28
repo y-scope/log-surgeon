@@ -39,9 +39,7 @@ public:
      * @return ErrorCode forwarded from read.
      */
     auto read_if_safe(Reader& reader) -> ErrorCode {
-        if (read_is_safe()) {
-            return read(reader);
-        }
+        if (read_is_safe()) { return read(reader); }
         return ErrorCode::Success;
     }
 

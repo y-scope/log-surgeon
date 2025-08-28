@@ -323,9 +323,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
                         unvisited_states.pop();
                         visited_states.insert(current_state);
                         for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
-                            if (m_is_delimiter[byte]) {
-                                continue;
-                            }
+                            if (m_is_delimiter[byte]) { continue; }
                             auto const& optional_wildcard_transition{
                                     current_state->get_transition(byte)
                             };
@@ -366,9 +364,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::increase_buffer_capacity(ParserInputBu
     bool flipped_static_buffer{false};
     input_buffer.increase_capacity(old_storage_size, flipped_static_buffer);
     if (old_storage_size < input_buffer.storage().size()) {
-        if (flipped_static_buffer) {
-            flip_states(old_storage_size);
-        }
+        if (flipped_static_buffer) { flip_states(old_storage_size); }
         if (0 == m_last_match_pos) {
             m_last_match_pos = old_storage_size;
             m_start_pos = old_storage_size;
@@ -407,12 +403,8 @@ template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::set_delimiters(std::vector<uint32_t> const& delimiters) {
     assert(!delimiters.empty());
     m_has_delimiters = true;
-    for (auto& i : m_is_delimiter) {
-        i = false;
-    }
-    for (auto delimiter : delimiters) {
-        m_is_delimiter[delimiter] = true;
-    }
+    for (auto& i : m_is_delimiter) { i = false; }
+    for (auto delimiter : delimiters) { m_is_delimiter[delimiter] = true; }
     m_is_delimiter[utf8::cCharStartOfFile] = true;
 }
 
@@ -428,9 +420,7 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lexer<TypedNfaState, TypedDfaState>::get_highest_priority_rule(rule_id_t const rule_id)
         -> finite_automata::RegexAST<TypedNfaState>* {
     for (auto const& rule : m_rules) {
-        if (rule.get_variable_id() == rule_id) {
-            return rule.get_regex();
-        }
+        if (rule.get_variable_id() == rule_id) { return rule.get_regex(); }
     }
     return nullptr;
 }

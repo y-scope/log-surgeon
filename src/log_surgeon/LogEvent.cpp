@@ -21,26 +21,20 @@ auto LogEventView::deep_copy() const -> LogEvent {
 }
 
 auto LogEventView::reset() -> void {
-    for (std::vector<Token*>& log_var_occ : m_log_var_occurrences) {
-        log_var_occ.clear();
-    }
+    for (std::vector<Token*>& log_var_occ : m_log_var_occurrences) { log_var_occ.clear(); }
     m_log_output_buffer->reset();
     m_multiline = false;
 }
 
 [[nodiscard]] auto LogEventView::get_timestamp() const -> Token* {
-    if (m_log_output_buffer->has_timestamp()) {
-        return &m_log_output_buffer->get_mutable_token(0);
-    }
+    if (m_log_output_buffer->has_timestamp()) { return &m_log_output_buffer->get_mutable_token(0); }
     return nullptr;
 }
 
 [[nodiscard]] auto LogEventView::to_string() const -> std::string {
     std::string raw_log;
     uint32_t start = 0;
-    if (false == m_log_output_buffer->has_timestamp()) {
-        start = 1;
-    }
+    if (false == m_log_output_buffer->has_timestamp()) { start = 1; }
     for (uint32_t i = start; i < m_log_output_buffer->pos(); i++) {
         auto& token = m_log_output_buffer->get_mutable_token(i);
         raw_log += token.to_string_view();
@@ -98,17 +92,13 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
     m_log_output_buffer->set_has_timestamp(src.m_log_output_buffer->has_timestamp());
     m_log_output_buffer->set_has_delimiters(src.m_log_output_buffer->has_delimiters());
     uint32_t start = 0;
-    if (nullptr == src.get_timestamp()) {
-        start = 1;
-    }
+    if (nullptr == src.get_timestamp()) { start = 1; }
     uint32_t buffer_size{0};
     for (uint32_t i = start; i < src.get_log_output_buffer()->pos(); i++) {
         Token const& token = src.get_log_output_buffer()->get_token(i);
         buffer_size += token.get_length();
     }
-    if (0 >= buffer_size) {
-        throw std::runtime_error("token buffer_size <= 0");
-    }
+    if (0 >= buffer_size) { throw std::runtime_error("token buffer_size <= 0"); }
     m_buffer.resize(buffer_size);
     uint32_t curr_pos = 0;
     for (uint32_t i = start; i < src.get_log_output_buffer()->pos(); i++) {

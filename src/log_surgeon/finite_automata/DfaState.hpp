@@ -12,14 +12,14 @@
 #include <unordered_map>
 #include <vector>
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/DfaTransition.hpp>
 #include <log_surgeon/finite_automata/RegisterOperation.hpp>
 #include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
-
-#include <fmt/format.h>
-#include <fmt/ranges.h>
 
 namespace log_surgeon::finite_automata {
 template <StateType state_type>
@@ -118,13 +118,9 @@ auto DfaState<state_type>::serialize(
 
     std::vector<std::string> transition_strings;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
-        if (false == m_bytes_transition[idx].has_value()) {
-            continue;
-        }
+        if (false == m_bytes_transition[idx].has_value()) { continue; }
         auto const optional_byte_transition_string{m_bytes_transition[idx]->serialize(state_ids)};
-        if (false == optional_byte_transition_string.has_value()) {
-            return std::nullopt;
-        }
+        if (false == optional_byte_transition_string.has_value()) { return std::nullopt; }
         transition_strings.emplace_back(
                 fmt::format("{}{}", static_cast<char>(idx), optional_byte_transition_string.value())
         );

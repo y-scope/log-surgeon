@@ -32,9 +32,7 @@ public:
      * whether `m_state2` in lhs has a lower address than in rhs.
      */
     auto operator<(DfaStatePair const& rhs) const -> bool {
-        if (m_state1 == rhs.m_state1) {
-            return m_state2 < rhs.m_state2;
-        }
+        if (m_state1 == rhs.m_state1) { return m_state2 < rhs.m_state2; }
         return m_state1 < rhs.m_state1;
     }
 
