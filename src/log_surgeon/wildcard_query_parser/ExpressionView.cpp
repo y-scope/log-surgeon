@@ -44,7 +44,7 @@ auto ExpressionView::extend_to_adjacent_greedy_wildcards() const
     return {is_extended, wildcard_expression_view};
 }
 
-auto ExpressionView::is_surrounded_by_delims_or_wildcards(
+auto ExpressionView::is_surrounded_by_delims(
         std::array<bool, cSizeOfByte> const& delim_table
 ) const -> bool {
     auto const [begin_idx, end_idx]{get_indices()};
