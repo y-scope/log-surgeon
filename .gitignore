@@ -1,4 +1,4 @@
-# Linting config files sym linked from dev-utils
+# Linting config files symlinked from dev-utils
 /.clang-format
 /.clang-tidy
 
