@@ -23,7 +23,8 @@
 #include <log_surgeon/utils.hpp>
 
 using ParserValueRegex = log_surgeon::ParserValue<std::unique_ptr<
-        log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::ByteNfaState>>>;
+        log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::ByteNfaState>
+>>;
 using RegexASTByte
         = log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTGroupByte
@@ -32,8 +33,8 @@ using RegexASTIntegerByte
         = log_surgeon::finite_automata::RegexASTInteger<log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTLiteralByte
         = log_surgeon::finite_automata::RegexASTLiteral<log_surgeon::finite_automata::ByteNfaState>;
-using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultiplication<
-        log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTMultiplicationByte = log_surgeon::finite_automata::
+        RegexASTMultiplication<log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTOrByte
         = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTCatByte
@@ -80,7 +81,9 @@ auto SchemaParser::try_schema_file(string const& schema_file_path) -> unique_ptr
     SchemaParser sp;
     Reader reader{[&](char* buf, size_t count, size_t& read_to) -> ErrorCode {
         schema_reader.read(buf, count, read_to);
-        if (read_to == 0) { return ErrorCode::EndOfFile; }
+        if (read_to == 0) {
+            return ErrorCode::EndOfFile;
+        }
         return ErrorCode::Success;
     }};
     unique_ptr<SchemaAST> schema_ast = sp.generate_schema_ast(reader);
@@ -96,8 +99,12 @@ auto SchemaParser::try_schema_string(string_view const schema_string) -> unique_
             count = schema_string.length() - unparsed_string_pos;
         }
         read_to = count;
-        if (read_to == 0) { return ErrorCode::EndOfFile; }
-        for (uint32_t i = 0; i < count; i++) { buf[i] = schema_string[unparsed_string_pos + i]; }
+        if (read_to == 0) {
+            return ErrorCode::EndOfFile;
+        }
+        for (uint32_t i = 0; i < count; i++) {
+            buf[i] = schema_string[unparsed_string_pos + i];
+        }
         unparsed_string_pos += count;
         return ErrorCode::Success;
     }};

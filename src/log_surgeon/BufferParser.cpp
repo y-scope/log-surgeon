@@ -37,7 +37,9 @@ BufferParser::parse_next_event(char* buf, size_t size, size_t& offset, bool fini
         reset();
         return error_code;
     }
-    if (LogParser::ParsingAction::CompressAndFinish == parsing_action) { m_done = true; }
+    if (LogParser::ParsingAction::CompressAndFinish == parsing_action) {
+        m_done = true;
+    }
     offset = m_log_parser.get_input_pos();
     return ErrorCode::Success;
 }

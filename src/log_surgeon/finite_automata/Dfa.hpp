@@ -341,7 +341,9 @@ auto Dfa<TypedDfaState, TypedNfaState>::try_get_mapping(
         ConfigurationSet const& lhs,
         ConfigurationSet const& rhs
 ) -> std::optional<std::unordered_map<reg_id_t, reg_id_t>> {
-    if (lhs.size() != rhs.size()) { return std::nullopt; }
+    if (lhs.size() != rhs.size()) {
+        return std::nullopt;
+    }
     std::unordered_map<reg_id_t, reg_id_t> reg_map_lhs_to_rhs;
     std::unordered_map<reg_id_t, reg_id_t> reg_map_rhs_to_lhs;
     for (auto const& config_lhs : lhs) {
@@ -354,7 +356,9 @@ auto Dfa<TypedDfaState, TypedNfaState>::try_get_mapping(
             }
             for (auto const [tag_id, lhs_reg_id] : config_lhs.get_tag_id_to_reg_ids()) {
                 // If the NFA state sets the tag then the current register is irrelevent
-                if (config_lhs.get_tag_lookahead(tag_id).has_value()) { continue; }
+                if (config_lhs.get_tag_lookahead(tag_id).has_value()) {
+                    continue;
+                }
                 auto const rhs_reg_id{config_rhs.get_tag_id_to_reg_ids().at(tag_id)};
                 if (false == reg_map_lhs_to_rhs.contains(lhs_reg_id)
                     && false == reg_map_rhs_to_lhs.contains(rhs_reg_id))
@@ -372,7 +376,9 @@ auto Dfa<TypedDfaState, TypedNfaState>::try_get_mapping(
             found = true;
             break;
         }
-        if (false == found) { return std::nullopt; }
+        if (false == found) {
+            return std::nullopt;
+        }
     }
     return reg_map_lhs_to_rhs;
 }
@@ -386,7 +392,9 @@ auto Dfa<TypedDfaState, TypedNfaState>::create_or_get_dfa_state(
     if (false == dfa_states.contains(config_set)) {
         for (auto const& [config_set_in_map, dfa_state] : dfa_states) {
             auto const optional_reg_map{try_get_mapping(config_set, config_set_in_map)};
-            if (optional_reg_map.has_value()) { return {dfa_state, optional_reg_map}; }
+            if (optional_reg_map.has_value()) {
+                return {dfa_state, optional_reg_map};
+            }
         }
         dfa_states.insert({config_set, new_state(config_set, m_tag_id_to_final_reg_id)});
         unexplored_sets.push(config_set);
@@ -481,7 +489,9 @@ auto Dfa<TypedDfaState, TypedNfaState>::reassign_transition_reg_ops(
         std::vector<RegisterOperation>& reg_ops
 ) -> void {
     for (auto const [old_reg_id, new_reg_id] : reg_map) {
-        if (old_reg_id == new_reg_id) { continue; }
+        if (old_reg_id == new_reg_id) {
+            continue;
+        }
         bool is_existing_reg_op_mapping{false};
         for (auto& reg_op : reg_ops) {
             if (reg_op.get_reg_id() == old_reg_id) {
@@ -564,7 +574,9 @@ auto Dfa<TypedDfaState, TypedNfaState>::get_bfs_traversal_order() const
 
     auto try_add_to_queue_and_visited
             = [&state_queue, &visited_states](TypedDfaState const* dest_state) {
-                  if (visited_states.insert(dest_state).second) { state_queue.push(dest_state); }
+                  if (visited_states.insert(dest_state).second) {
+                      state_queue.push(dest_state);
+                  }
               };
 
     try_add_to_queue_and_visited(get_root());
@@ -590,12 +602,16 @@ auto Dfa<TypedDfaState, TypedNfaState>::serialize() const -> std::optional<std::
 
     std::unordered_map<TypedDfaState const*, uint32_t> state_ids;
     state_ids.reserve(traversal_order.size());
-    for (auto const* state : traversal_order) { state_ids.emplace(state, state_ids.size()); }
+    for (auto const* state : traversal_order) {
+        state_ids.emplace(state, state_ids.size());
+    }
 
     std::vector<std::string> serialized_states;
     for (auto const* state : traversal_order) {
         auto const optional_serialized_state{state->serialize(state_ids)};
-        if (false == optional_serialized_state.has_value()) { return std::nullopt; }
+        if (false == optional_serialized_state.has_value()) {
+            return std::nullopt;
+        }
         serialized_states.emplace_back(optional_serialized_state.value());
     }
     return fmt::format("{}\n", fmt::join(serialized_states, "\n"));

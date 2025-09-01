@@ -39,14 +39,20 @@ LogParser::LogParser(std::unique_ptr<SchemaAST> schema_ast) {
 
 auto LogParser::set_delimiters(unique_ptr<ParserAST> const& delimiters) -> void {
     auto* delimiters_ptr = dynamic_cast<DelimiterStringAST*>(delimiters.get());
-    if (delimiters_ptr != nullptr) { m_lexer.set_delimiters(delimiters_ptr->m_delimiters); }
+    if (delimiters_ptr != nullptr) {
+        m_lexer.set_delimiters(delimiters_ptr->m_delimiters);
+    }
 }
 
 auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
-    for (auto const& delimiters : schema_ast->m_delimiters) { set_delimiters(delimiters); }
+    for (auto const& delimiters : schema_ast->m_delimiters) {
+        set_delimiters(delimiters);
+    }
     vector<uint32_t> delimiters;
     for (uint32_t i = 0; i < cSizeOfByte; i++) {
-        if (m_lexer.is_delimiter(i)) { delimiters.push_back(i); }
+        if (m_lexer.is_delimiter(i)) {
+            delimiters.push_back(i);
+        }
     }
 
     // Required to have delimiters
@@ -111,7 +117,9 @@ auto LogParser::reset() -> void {
 
 auto LogParser::parse_and_generate_metadata(LogParser::ParsingAction& parsing_action) -> ErrorCode {
     ErrorCode error_code = parse(parsing_action);
-    if (ErrorCode::Success == error_code) { generate_log_event_view_metadata(); }
+    if (ErrorCode::Success == error_code) {
+        generate_log_event_view_metadata();
+    }
     return error_code;
 }
 
@@ -124,7 +132,9 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
             next_token = m_start_of_log_message;
         } else {
             auto [err, optional_next_token] = get_next_symbol();
-            if (ErrorCode::Success != err) { return err; }
+            if (ErrorCode::Success != err) {
+                return err;
+            }
             next_token = optional_next_token.value();
             if (false == output_buffer->has_timestamp()
                 && next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenNewlineTimestamp)
@@ -174,7 +184,9 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
 
     while (true) {
         auto [err, optional_next_token] = get_next_symbol();
-        if (ErrorCode::Success != err) { return err; }
+        if (ErrorCode::Success != err) {
+            return err;
+        }
         Token next_token{optional_next_token.value()};
         output_buffer->set_curr_token(next_token);
         auto token_type = next_token.m_type_ids_ptr->at(0);
@@ -237,12 +249,16 @@ auto LogParser::get_next_symbol() -> std::pair<ErrorCode, std::optional<Token>> 
 
 auto LogParser::generate_log_event_view_metadata() -> void {
     uint32_t start = 0;
-    if (false == m_log_event_view->m_log_output_buffer->has_timestamp()) { start = 1; }
+    if (false == m_log_event_view->m_log_output_buffer->has_timestamp()) {
+        start = 1;
+    }
     uint32_t first_newline_pos{0};
     for (uint32_t i = start; i < m_log_event_view->m_log_output_buffer->pos(); i++) {
         Token* token = &m_log_event_view->m_log_output_buffer->get_mutable_token(i);
         m_log_event_view->add_token(token->m_type_ids_ptr->at(0), token);
-        if (token->get_delimiter() == "\n" && first_newline_pos == 0) { first_newline_pos = i; }
+        if (token->get_delimiter() == "\n" && first_newline_pos == 0) {
+            first_newline_pos = i;
+        }
     }
     // To be a multiline log there must be at least one token between the
     // newline token and the last token in the output buffer.

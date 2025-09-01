@@ -59,12 +59,16 @@ template <StateType state_type>
 auto DfaTransition<state_type>::serialize(
         std::unordered_map<DfaState<state_type> const*, uint32_t> const& state_ids
 ) const -> std::optional<std::string> {
-    if (false == state_ids.contains(m_dest_state)) { return std::nullopt; }
+    if (false == state_ids.contains(m_dest_state)) {
+        return std::nullopt;
+    }
 
     std::vector<std::string> transformed_ops;
     for (auto const& reg_op : m_reg_ops) {
         auto const optional_serialized_op{reg_op.serialize()};
-        if (false == optional_serialized_op.has_value()) { return std::nullopt; }
+        if (false == optional_serialized_op.has_value()) {
+            return std::nullopt;
+        }
         transformed_ops.emplace_back(optional_serialized_op.value());
     }
 

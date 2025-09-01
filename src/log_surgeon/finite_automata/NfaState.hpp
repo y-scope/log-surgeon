@@ -78,7 +78,9 @@ public:
     ) -> void {
         std::vector<TagOperation> tag_ops;
         tag_ops.reserve(tag_ids.size());
-        for (auto const tag_id : tag_ids) { tag_ops.emplace_back(tag_id, op_type, multi_valued); }
+        for (auto const tag_id : tag_ids) {
+            tag_ops.emplace_back(tag_id, op_type, multi_valued);
+        }
         m_spontaneous_transitions.emplace_back(std::move(tag_ops), dest_state);
     }
 
@@ -137,11 +139,15 @@ template <StateType state_type>
 auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state) -> void {
     if (interval.first < cSizeOfByte) {
         uint32_t const bound = std::min(interval.second, cSizeOfByte - 1);
-        for (uint32_t i = interval.first; i <= bound; i++) { add_byte_transition(i, dest_state); }
+        for (uint32_t i = interval.first; i <= bound; i++) {
+            add_byte_transition(i, dest_state);
+        }
         interval.first = bound + 1;
     }
     if constexpr (StateType::Utf8 == state_type) {
-        if (interval.second < cSizeOfByte) { return; }
+        if (interval.second < cSizeOfByte) {
+            return;
+        }
         std::unique_ptr<std::vector<typename Tree::Data>> overlaps
                 = m_tree_transitions.pop(interval);
         for (typename Tree::Data const& data : *overlaps) {
@@ -196,7 +202,9 @@ auto NfaState<state_type>::serialize(
     std::vector<std::string> serialized_spontaneous_transitions;
     for (auto const& spontaneous_transition : m_spontaneous_transitions) {
         auto const optional_serialized_transition{spontaneous_transition.serialize(state_ids)};
-        if (false == optional_serialized_transition.has_value()) { return std::nullopt; }
+        if (false == optional_serialized_transition.has_value()) {
+            return std::nullopt;
+        }
         serialized_spontaneous_transitions.emplace_back(optional_serialized_transition.value());
     }
 

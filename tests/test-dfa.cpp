@@ -46,7 +46,9 @@ auto test_dfa(std::vector<string> const& var_schemas, string const& expected_ser
 auto test_dfa(std::vector<string> const& var_schemas, string const& expected_serialized_dfa)
         -> void {
     Schema schema;
-    for (auto const& var_schema : var_schemas) { schema.add_variable(var_schema, -1); }
+    for (auto const& var_schema : var_schemas) {
+        schema.add_variable(var_schema, -1);
+    }
     auto const schema_ast = schema.release_schema_ast_ptr();
     vector<ByteLexicalRule> rules;
     for (size_t i{0}; i < var_schemas.size(); i++) {

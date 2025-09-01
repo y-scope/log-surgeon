@@ -32,15 +32,21 @@ auto UnicodeIntervalTree<T>::Node::insert(std::unique_ptr<Node> node, Interval i
 template <typename T>
 auto UnicodeIntervalTree<T>::all() const -> std::vector<Data> {
     std::vector<Data> results;
-    if (m_root != nullptr) { m_root->all(&results); }
+    if (m_root != nullptr) {
+        m_root->all(&results);
+    }
     return results;
 }
 
 template <typename T>
 auto UnicodeIntervalTree<T>::Node::all(std::vector<Data>* results) -> void {
-    if (m_left != nullptr) { m_left->all(results); }
+    if (m_left != nullptr) {
+        m_left->all(results);
+    }
     results->push_back(Data(m_interval, m_value));
-    if (m_right != nullptr) { m_right->all(results); }
+    if (m_right != nullptr) {
+        m_right->all(results);
+    }
 }
 
 template <typename T>
@@ -52,10 +58,18 @@ auto UnicodeIntervalTree<T>::find(Interval interval) -> std::unique_ptr<std::vec
 
 template <class T>
 auto UnicodeIntervalTree<T>::Node::find(Interval interval, std::vector<Data>* results) -> void {
-    if (!overlaps_recursive(interval)) { return; }
-    if (m_left != nullptr) { m_left->find(interval, results); }
-    if (overlaps(interval)) { results->push_back(Data(m_interval, m_value)); }
-    if (m_right != nullptr) { m_right->find(interval, results); }
+    if (!overlaps_recursive(interval)) {
+        return;
+    }
+    if (m_left != nullptr) {
+        m_left->find(interval, results);
+    }
+    if (overlaps(interval)) {
+        results->push_back(Data(m_interval, m_value));
+    }
+    if (m_right != nullptr) {
+        m_right->find(interval, results);
+    }
 }
 
 template <class T>
@@ -64,7 +78,9 @@ auto UnicodeIntervalTree<T>::pop(Interval interval) -> std::unique_ptr<std::vect
     while (true) {
         std::unique_ptr<Node> n;
         m_root = Node::pop(std::move(m_root), interval, &n);
-        if (n == nullptr) { break; }
+        if (n == nullptr) {
+            break;
+        }
         results->push_back(Data(n->get_interval(), n->get_value()));
     }
     return results;
@@ -76,8 +92,12 @@ auto UnicodeIntervalTree<T>::Node::pop(
         Interval interval,
         std::unique_ptr<Node>* ret
 ) -> std::unique_ptr<Node> {
-    if (node == nullptr) { return nullptr; }
-    if (!node->overlaps_recursive(interval)) { return node; }
+    if (node == nullptr) {
+        return nullptr;
+    }
+    if (!node->overlaps_recursive(interval)) {
+        return node;
+    }
     node->m_left = Node::pop(std::move(node->m_left), interval, ret);
     if (ret->get() != nullptr) {
         node->update();
@@ -85,9 +105,15 @@ auto UnicodeIntervalTree<T>::Node::pop(
     }
     assert(node->overlaps(interval));
     ret->reset(node.release());
-    if (((*ret)->m_left == nullptr) && ((*ret)->m_right == nullptr)) { return nullptr; }
-    if ((*ret)->m_left == nullptr) { return std::move((*ret)->m_right); }
-    if ((*ret)->m_right == nullptr) { return std::move((*ret)->m_left); }
+    if (((*ret)->m_left == nullptr) && ((*ret)->m_right == nullptr)) {
+        return nullptr;
+    }
+    if ((*ret)->m_left == nullptr) {
+        return std::move((*ret)->m_right);
+    }
+    if ((*ret)->m_right == nullptr) {
+        return std::move((*ret)->m_left);
+    }
     std::unique_ptr<Node> replacement;
     std::unique_ptr<Node> sub_tree = Node::pop_min(std::move((*ret)->m_right), &replacement);
     replacement->m_left = std::move((*ret)->m_left);
@@ -140,10 +166,14 @@ auto UnicodeIntervalTree<T>::Node::balance_factor() -> int {
 template <class T>
 auto UnicodeIntervalTree<T>::Node::balance(std::unique_ptr<Node> node) -> std::unique_ptr<Node> {
     auto const factor = node->balance_factor();
-    if (factor * factor <= 1) { return node; }
+    if (factor * factor <= 1) {
+        return node;
+    }
     auto const sub_factor
             = (factor < 0) ? node->m_left->balance_factor() : node->m_right->balance_factor();
-    if (factor * sub_factor > 0) { return Node::rotate(std::move(node), factor); }
+    if (factor * sub_factor > 0) {
+        return Node::rotate(std::move(node), factor);
+    }
     if (factor == 2) {
         node->m_right = Node::rotate(std::move(node->m_right), sub_factor);
     } else {
@@ -155,8 +185,12 @@ auto UnicodeIntervalTree<T>::Node::balance(std::unique_ptr<Node> node) -> std::u
 template <class T>
 auto UnicodeIntervalTree<T>::Node::rotate(std::unique_ptr<Node> node, int factor)
         -> std::unique_ptr<Node> {
-    if (factor < 0) { return Node::rotate_cw(std::move(node)); }
-    if (factor > 0) { return Node::rotate_ccw(std::move(node)); }
+    if (factor < 0) {
+        return Node::rotate_cw(std::move(node));
+    }
+    if (factor > 0) {
+        return Node::rotate_ccw(std::move(node));
+    }
     return node;
 }
 

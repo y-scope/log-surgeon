@@ -96,7 +96,9 @@ auto parse_and_validate(
         }
 
         uint32_t event_offset{0};
-        if (nullptr == event.get_timestamp()) { event_offset = 1; }
+        if (nullptr == event.get_timestamp()) {
+            event_offset = 1;
+        }
 
         REQUIRE(expected_tokens.size() == event.get_log_output_buffer()->pos() - event_offset);
         for (size_t i{0}; i < expected_tokens.size(); ++i) {
@@ -122,14 +124,18 @@ auto parse_and_validate(
                 auto optional_capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
                 REQUIRE(optional_capture_ids.has_value());
 
-                if (false == optional_capture_ids.has_value()) { return; }
+                if (false == optional_capture_ids.has_value()) {
+                    return;
+                }
 
                 for (auto const capture_id : optional_capture_ids.value()) {
                     auto const capture_name{lexer.m_id_symbol.at(capture_id)};
                     REQUIRE(expected_captures.contains(capture_name));
                     auto optional_reg_ids{lexer.get_reg_ids_from_capture_id(capture_id)};
                     REQUIRE(optional_reg_ids.has_value());
-                    if (false == optional_reg_ids.has_value()) { return; }
+                    if (false == optional_reg_ids.has_value()) {
+                        return;
+                    }
                     auto const [start_reg_id, end_reg_id]{optional_reg_ids.value()};
                     auto const actual_start_positions{
                             token.get_reversed_reg_positions(start_reg_id)
@@ -149,7 +155,9 @@ auto parse_and_validate(
 
 auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> string {
     string serialized_map;
-    for (auto const& [id, symbol] : map) { serialized_map += fmt::format("{}->{},", id, symbol); }
+    for (auto const& [id, symbol] : map) {
+        serialized_map += fmt::format("{}->{},", id, symbol);
+    }
     return serialized_map;
 }
 }  // namespace

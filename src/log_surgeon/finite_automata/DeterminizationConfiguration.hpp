@@ -75,7 +75,9 @@ public:
         if (m_tag_id_to_reg_ids != rhs.m_tag_id_to_reg_ids) {
             return m_tag_id_to_reg_ids < rhs.m_tag_id_to_reg_ids;
         }
-        if (m_history != rhs.m_history) { return m_history < rhs.m_history; }
+        if (m_history != rhs.m_history) {
+            return m_history < rhs.m_history;
+        }
         return m_lookahead < rhs.m_lookahead;
     }
 
@@ -131,7 +133,9 @@ public:
 
     [[nodiscard]] auto get_tag_history(tag_id_t const tag_id) const -> std::optional<TagOperation> {
         for (auto const tag_op : m_history) {
-            if (tag_op.get_tag_id() == tag_id) { return std::make_optional<TagOperation>(tag_op); }
+            if (tag_op.get_tag_id() == tag_id) {
+                return std::make_optional<TagOperation>(tag_op);
+            }
         }
         return std::nullopt;
     }
@@ -141,7 +145,9 @@ public:
     [[nodiscard]] auto get_tag_lookahead(tag_id_t const tag_id) const
             -> std::optional<TagOperation> {
         for (auto const tag_op : m_lookahead) {
-            if (tag_op.get_tag_id() == tag_id) { return std::make_optional<TagOperation>(tag_op); }
+            if (tag_op.get_tag_id() == tag_id) {
+                return std::make_optional<TagOperation>(tag_op);
+            }
         }
         return std::nullopt;
     }

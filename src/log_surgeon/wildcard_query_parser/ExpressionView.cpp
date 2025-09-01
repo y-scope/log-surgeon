@@ -43,10 +43,16 @@ auto ExpressionView::extend_to_adjacent_greedy_wildcards() const
 }
 
 auto ExpressionView::is_well_formed() const -> bool {
-    if (m_chars.empty()) { return true; }
+    if (m_chars.empty()) {
+        return true;
+    }
     auto const [begin_idx, end_idx]{get_indices()};
-    if (begin_idx > 0 && m_expression->get_chars()[begin_idx - 1].is_escape()) { return false; }
-    if (m_chars.back().is_escape()) { return false; }
+    if (begin_idx > 0 && m_expression->get_chars()[begin_idx - 1].is_escape()) {
+        return false;
+    }
+    if (m_chars.back().is_escape()) {
+        return false;
+    }
     return true;
 }
 
@@ -56,7 +62,9 @@ auto ExpressionView::generate_regex_string() const -> std::pair<string, bool> {
     bool regex_contains_wildcard{false};
 
     for (auto const& expression_char : m_chars) {
-        if (expression_char.is_escape()) { continue; }
+        if (expression_char.is_escape()) {
+            continue;
+        }
         auto const& value{expression_char.value()};
         if (expression_char.is_greedy_wildcard()) {
             regex_string += ".*";

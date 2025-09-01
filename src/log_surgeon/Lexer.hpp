@@ -198,7 +198,9 @@ public:
     [[nodiscard]] auto get_reg_id_from_tag_id(tag_id_t const tag_id) const
             -> std::optional<reg_id_t> {
         auto const& tag_id_to_final_reg_id{m_dfa->get_tag_id_to_final_reg_id()};
-        if (tag_id_to_final_reg_id.contains(tag_id)) { return tag_id_to_final_reg_id.at(tag_id); }
+        if (tag_id_to_final_reg_id.contains(tag_id)) {
+            return tag_id_to_final_reg_id.at(tag_id);
+        }
         return std::nullopt;
     }
 
@@ -211,14 +213,20 @@ public:
     [[nodiscard]] auto get_reg_ids_from_capture_id(capture_id_t const capture_id) const
             -> std::optional<std::pair<reg_id_t, reg_id_t>> {
         auto const optional_tag_id_pair{get_tag_id_pair_from_capture_id(capture_id)};
-        if (false == optional_tag_id_pair.has_value()) { return std::nullopt; }
+        if (false == optional_tag_id_pair.has_value()) {
+            return std::nullopt;
+        }
         auto const [start_tag_id, end_tag_id]{optional_tag_id_pair.value()};
 
         auto const optional_start_reg_id{get_reg_id_from_tag_id(start_tag_id)};
-        if (false == optional_start_reg_id.has_value()) { return std::nullopt; }
+        if (false == optional_start_reg_id.has_value()) {
+            return std::nullopt;
+        }
 
         auto const optional_end_reg_id{get_reg_id_from_tag_id(end_tag_id)};
-        if (false == optional_end_reg_id.has_value()) { return std::nullopt; }
+        if (false == optional_end_reg_id.has_value()) {
+            return std::nullopt;
+        }
 
         return std::make_pair(optional_start_reg_id.value(), optional_end_reg_id.value());
     }
