@@ -45,8 +45,8 @@ public:
      *      - Example: in "a*b", substring [0,1) extends to "a*", therefore substring [0,2) "a*" is
      *        redundant. This avoids producing interpretation {<hasNum>(a*)b}, which is a subset of
      *        {<hasNum>(a*)*b}.
-     *      - Note: The length >= 2 requirement avoids skipping 1-length greedy substrings ("*")
-     *        as they are never redundant (i.e., no 0-length substring exists to extend).
+     *      - Note: The length >= 2 requirement avoids skipping 1-length greedy substrings ("*") as
+     *        they are never redundant (i.e., no 0-length substring exists to extend).
      *
      * 2. Let I(a) be the set of all multi-length interpretations of substring [0,a).
      *    - Let T(a,b) to be the set of all valid single-token interpretations of substring [a,b).
