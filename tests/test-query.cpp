@@ -267,10 +267,10 @@ TEST_CASE("long_non_greedy_wildcard_sequence_query", "[Query]") {
     };
 
     test_query(
-          cRawQueryString,
-          cProcessedQueryString,
-          schema_rules,
-          expected_serialized_interpretations
+            cRawQueryString,
+            cProcessedQueryString,
+            schema_rules,
+            expected_serialized_interpretations
     );
 }
 
@@ -335,10 +335,7 @@ TEST_CASE("non_wildcard_multi_variable_query", "[Query]") {
     constexpr string_view cProcessedQueryString{"abc123 123"};
 
     SECTION("int_priority") {
-        vector<string> const schema_rules{
-                {R"(int:(\d+))"},
-                {R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}
-        };
+        vector<string> const schema_rules{{R"(int:(\d+))"}, {R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
         set<string> const expected_serialized_interpretations{
                 R"(logtype='abc123 123', contains_wildcard='0')",
                 R"(logtype='abc123 <0>(123)', contains_wildcard='00')",
@@ -355,10 +352,7 @@ TEST_CASE("non_wildcard_multi_variable_query", "[Query]") {
     }
 
     SECTION("has_number_priority") {
-        vector<string> const schema_rules{
-                {R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"},
-                {R"(int:(\d+))"}
-        };
+        vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}, {R"(int:(\d+))"}};
         set<string> const expected_serialized_interpretations{
                 R"(logtype='abc123 123', contains_wildcard='0')",
                 R"(logtype='abc123 <0>(123)', contains_wildcard='00')",
@@ -388,10 +382,7 @@ TEST_CASE("wildcard_multi_variable_query", "[Query]") {
     constexpr string_view cRawQueryString{"abc123* *123"};
     constexpr string_view cProcessedQueryString{"abc123* *123"};
 
-    vector<string> const schema_rules{
-            {R"(int:(\d+))"},
-            {R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}
-    };
+    vector<string> const schema_rules{{R"(int:(\d+))"}, {R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
     set<string> const expected_serialized_interpretations{
             R"(logtype='abc123* *123', contains_wildcard='0')",
             R"(logtype='abc123*** *123', contains_wildcard='0')",
