@@ -20,9 +20,6 @@ public:
      * interpretations of the query string belong to this set):
      *
      * 1. Interpret each substring [a,b) as a single token (1-length interpretation).
-     *    - Denote T(a,b) to be the set of all valid single-token interpretations of substring
-     *      [a,b).
-     *
      *    - Substrings adjacent to greedy wildcards must be interpreted as if they include them.
      *      - Example: query "a*b" is equivalent to "a***b". For a lexer with a `hasNum` variable
      *        type ("\w*\d+\w*"), without extensions, the only interpretations would be:
@@ -44,13 +41,14 @@ public:
      *        captured by any other substring extension.
      *
      * 2. Let I(a) be the set of all multi-length interpretations of substring [0,a).
-     *    - We can compute I(a) recursively using previously computed sets:
+     *    - Let T(a,b) to be the set of all valid single-token interpretations of substring [a,b).
+     *    - We can then compute I(a) recursively:
      *
-     *      I(a) = T(0,a)
-     *             U (I(1) x T(1,a))
-     *             U (I(2) x T(2,a))
-     *             ...
-     *             U (I(a-1) x T(a-1,a))
+     *        I(a) = T(0,a)
+     *               U (I(1) x T(1,a))
+     *               U (I(2) x T(2,a))
+     *               ...
+     *               U (I(a-1) x T(a-1,a))
      *
      *      where x denotes the cross product: all combinations of prefix interpretations from I(i)
      *      and suffix interpretations from T(i,a).
