@@ -77,13 +77,12 @@ Query::Query(string const& query_string) {
 
 auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const
         -> std::set<QueryInterpretation> {
-    Expression const expression{m_processed_query_string};
-    vector<set<QueryInterpretation>> query_interpretations(expression.length());
-
     if (m_processed_query_string.empty()) {
         return {};
     }
 
+    Expression const expression{m_processed_query_string};
+    vector<set<QueryInterpretation>> query_interpretations(expression.length());
     for (size_t end_idx = 1; end_idx <= expression.length(); ++end_idx) {
         for (size_t begin_idx = 0; begin_idx < end_idx; ++begin_idx) {
             ExpressionView const expression_view{expression, begin_idx, end_idx};
