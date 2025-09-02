@@ -20,25 +20,33 @@ public:
      * interpretations of the query string belong to this set):
      *
      * 1. Interpret each substring [a,b) as a single token (1-length interpretation).
-     *    - Substrings adjacent to greedy wildcards must be interpreted as if they include them.
-     *      - Example: query "a*b" is equivalent to "a***b". For a lexer with a `hasNum` variable
-     *        type ("\w*\d+\w*"), without extensions, the only interpretations would be:
-     *          {<static>(a*b)},
-     *          {<hasNum>(a*) <static>(b)},
-     *          {<static>(a) <hasNum>(*b)}.
-     *        However, a string like "a1 abc 1b" is also matched by "a*b", and requires the
-     *        interpretation {<hasNum>(a*) <static>(*) <hasNum>(*b)}. Extension ensures such cases
-     *        are captured.
-     *      - Note: isolated greedy wildcards (`*`) are never extended as the `Query` collapses
-     *        repeated greedy wildcards during preprocessing.
-     *      - Note: non-greedy wildcards (`?`) are not extended as "a?b" is not equivalent to
-     *        "a??b".
-     *
-     *    - Substrings that begin or end with a greedy wildcard are skipped as they are redundant.
+     *    - Substrings adjacent to greedy wildcards must be interpreted as if they include them. To
+     *      implement this, we extend all substrings to include adjacent wildcards.
+     *      - Example: consider query "a*b" and variable type `hasNum` ("\w*\d+\w*"):
+     *        - Without extension:
+     *          - "a" -> static-text
+     *          - "b" -> static-text
+     *          - "a*" -> <hasNum>(a*)
+     *          - "*b" -> <hasNum>(*b)
+     *        - Multi-token interpretations (via step 2 below):
+     *          - {a*b},
+     *          - {<hasNum>(a*)b},
+     *          - {a<hasNum>(*b)}.
+     *        - None of these match a string like "a1 c 1b", which has interpretation
+     *          {<hasNum>(a1) c <hasNum>(1b)}. By interpreting "a" as "a*" and "b" as "*b", the '*'
+     *          is preserved allowing for interpretation {<hasNum>(a*)*<hasNum>(*b)}, which matches
+     *          {<hasNum>(a1) c <hasNum>(1b)}.
+     *    - Special cases:
+     *      - Single-character greedy wildcards ("*") are not extended as they have no adjacent
+     *        greedy wildcards (repeated wildcards are collapsed during preprocessing).
+     *      - Substrings are not extended to non-greedy wildcards (`?`) as "a?b" =/= "a??b".
+     *    - Substrings of length >= 2 that begin or end with a greedy wildcard are skipped as they
+     *      are redundant.
      *      - Example: in "a*b", substring [0,1) extends to "a*", therefore substring [0,2) "a*" is
-     *        redundant. In other words, a decomposition like "a*" + "b"  is a subset of the more
-     *        general "a*" + "*" + "*b".  However, an isolated "*" must not be skipped as it is not
-     *        captured by any other substring extension.
+     *        redundant. This avoids producing interpretation {<hasNum>(a*)b}, which is a subset of
+     *        {<hasNum>(a*)*b}.
+     *      - Note: The length >= 2 requirement avoids skipping 1-length greedy substrings ("*")
+     *        as they are never redundant (i.e., no 0-length substring exists to extend).
      *
      * 2. Let I(a) be the set of all multi-length interpretations of substring [0,a).
      *    - Let T(a,b) to be the set of all valid single-token interpretations of substring [a,b).
