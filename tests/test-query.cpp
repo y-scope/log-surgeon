@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <set>
 #include <string>
 #include <string_view>
@@ -77,10 +78,8 @@ auto make_test_lexer(vector<string> const& schema_rules) -> ByteLexer {
     lexer.set_delimiters({' '});
 
     Schema schema;
-    size_t symbol_id{0};
     for (auto const& schema_rule : schema_rules) {
         schema.add_variable(schema_rule, -1);
-        ++symbol_id;
     }
 
     auto const schema_ast = schema.release_schema_ast_ptr();
