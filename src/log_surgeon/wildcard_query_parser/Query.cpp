@@ -168,12 +168,9 @@ auto Query::get_matching_variable_types(string const& regex_string, ByteLexer co
     auto& rule_ast = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[0]);
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(rule_ast.m_regex_ptr));
-    // TODO: Optimize NFA creation.
     ByteNfa const nfa{rules};
-    // TODO: Optimize DFA creation.
     ByteDfa const dfa{nfa};
 
-    // TODO: Could optimize to use a forward/reverse lexer in a lot of cases.
     auto var_types = lexer.get_dfa()->get_intersect(&dfa);
     return var_types;
 }
