@@ -61,7 +61,7 @@ public:
      * - The last character is a greedy wildcard, or
      * - Immediately right of the view is a delimiter or wildcard, or
      * - Immediately right of the view is an escape character and the character to its
-     * immediate right is a delimiter or wildcard.
+     *   immediate right is a delimiter.
      *
      * @param delim_table Table indicating for each character whether or not it is a delimiter.
      * @return true when both left and right boundaries qualify; false otherwise.
