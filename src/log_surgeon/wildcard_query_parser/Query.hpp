@@ -93,9 +93,9 @@ private:
      *   - Is an isolated greedy wildcard, "*", or
      *   - Is not surrounded by delimiters or wildcards (lexer won't consider it a variable), or
      *   - Does not match any variable.
-     * - Then:
-     *   - The only interpretation is a static token.
-     * - Else, if the substring contains a wildcard:
+     *   - Then:
+     *     - The only interpretation is a static token.
+     * - Else if the substring contains a wildcard:
      *   - The interpretations include a static token, plus a variable token for each matching type.
      * - Else:
      *   - The only interpretation is the variable token corresponding to the highest priority
