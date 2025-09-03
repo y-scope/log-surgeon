@@ -299,7 +299,7 @@ TEST_CASE("escaped_star_query", "[Query]") {
  * @ingroup unit_tests_query
  * @brief Creates and tests a query with an escaped '*' character.
  *
- * NOTE: This has a static-text case as strings "1", "2', and "3" in isolation aren't surrounded by
+ * NOTE: This has a static-text case as strings "1", "2", and "3" in isolation aren't surrounded by
  * delimiters. These tokens then build up the interpretation "123". Although additional
  * interpretations don't impact correctness, they may impact performance. We can optimize these out,
  * but it'll make the code messy. Instead, we should eventually remove the explicit tracking of
@@ -328,7 +328,7 @@ TEST_CASE("int_query", "[Query]") {
  *
  * This test ensures that each non-wildcard token is assigned to the highest priority variable.
  *
- * NOTE: Similar to the above `int_query` test there are unneeded intepretations due to aggresively
+ * NOTE: Similar to the above `int_query` test there are unneeded interpretations due to aggresively
  * generating static-text tokens.
  */
 TEST_CASE("non_wildcard_multi_variable_query", "[Query]") {
@@ -376,7 +376,7 @@ TEST_CASE("non_wildcard_multi_variable_query", "[Query]") {
  *
  * This test ensures that each greedy wildcard token is identified as all correct token types.
  *
- * NOTE: Similar to the above `int_query` test there are unneeded intepretations due to aggresively
+ * NOTE: Similar to the above `int_query` test there are unneeded interpretations due to aggresively
  * generating static-text tokens. This same issue causes interpretations with redundant wildcards.
  */
 TEST_CASE("wildcard_multi_variable_query", "[Query]") {
