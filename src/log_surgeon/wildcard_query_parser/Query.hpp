@@ -47,8 +47,8 @@ public:
      *      - Note: The length >= 2 requirement avoids skipping 1-length greedy substrings ("*") as
      *        they are never redundant (i.e., no 0-length substring exists to extend).
      *
-     * 2. Let I(a) be the set of all k-length interpretations of substring [0,a), where 1 <= k < a.
-     *    - Let T(a,b) to be the set of all valid single-token interpretations of substring [a,b).
+     * 2. Let I(a) be the set of all k-token interpretations of substring [0,a), where 1 <= k < a.
+     *    - Let T(a,b) be the set of all valid single-token interpretations of substring [a,b).
      *    - We can then compute I(a) recursively:
      *
      *        I(a) = T(0,a)
