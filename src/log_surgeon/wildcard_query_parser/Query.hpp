@@ -16,8 +16,7 @@ public:
     explicit Query(std::string const& query_string);
 
     /**
-     * Generates all k-length interpretations of the n-length query string, where k is the number of
-     * tokens in the intepretation, n is the number of characters in the query, and 1 <= k < n.
+     * Generates all k-token interpretations of the n-character query string, where 1 <= k < n.
      *
      * 1. Interpret each substring [a,b) as a single token (k=1).
      *    - Substrings adjacent to greedy wildcards must be interpreted as if they include them. To
