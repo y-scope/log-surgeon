@@ -16,10 +16,10 @@ public:
     explicit Query(std::string const& query_string);
 
     /**
-     * Generates all multi-token interpretations of the n-length query string (single-token
-     * interpretations of the query string belong to this set):
+     * Generates all k-length interpretations of the n-length query string, where k is the number of
+     * tokens in the intepretation, n is the number of characters in the query, and 1 <= k < n.
      *
-     * 1. Interpret each substring [a,b) as a single token (1-length interpretation).
+     * 1. Interpret each substring [a,b) as a single token (k=1).
      *    - Substrings adjacent to greedy wildcards must be interpreted as if they include them. To
      *      implement this, we extend all substrings to include adjacent wildcards.
      *      - Example: consider query "a*b" and variable type `hasNum` ("\w*\d+\w*"):
@@ -48,7 +48,7 @@ public:
      *      - Note: The length >= 2 requirement avoids skipping 1-length greedy substrings ("*") as
      *        they are never redundant (i.e., no 0-length substring exists to extend).
      *
-     * 2. Let I(a) be the set of all multi-length interpretations of substring [0,a).
+     * 2. Let I(a) be the set of all k-length interpretations of substring [0,a), where 1 <= k < a.
      *    - Let T(a,b) to be the set of all valid single-token interpretations of substring [a,b).
      *    - We can then compute I(a) recursively:
      *
