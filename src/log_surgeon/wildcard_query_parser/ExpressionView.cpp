@@ -63,8 +63,10 @@ auto ExpressionView::is_surrounded_by_delims(std::array<bool, cSizeOfByte> const
     } else {
         auto const& succeeding_char{m_expression->get_chars()[end_idx]};
         if (succeeding_char.is_escape()) {
-            auto const& logical_succeeding_char{m_expression->get_chars()[end_idx + 1]};
-            has_right_boundary = logical_succeeding_char.is_delim(delim_table);
+            if (m_expression->length() > end_idx + 1) {
+                auto const& logical_succeeding_char{m_expression->get_chars()[end_idx + 1]};
+                has_right_boundary = logical_succeeding_char.is_delim(delim_table);
+            }
         } else {
             has_right_boundary = succeeding_char.is_delim_or_wildcard(delim_table);
         }
