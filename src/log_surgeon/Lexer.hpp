@@ -256,6 +256,7 @@ private:
     std::array<bool, cSizeOfByte> m_is_first_char_of_a_variable{false};
     std::vector<LexicalRule<TypedNfaState>> m_rules;
     uint32_t m_line{0};
+    // `m_has_delimiters` is cached for performance
     bool m_has_delimiters{false};
     std::unique_ptr<finite_automata::Dfa<TypedDfaState, TypedNfaState>> m_dfa;
     std::optional<uint32_t> m_first_delimiter_pos{std::nullopt};
