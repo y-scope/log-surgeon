@@ -20,7 +20,7 @@ public:
      *
      * 1. Interpret each substring [a,b) as a single token (k=1).
      *    - Substrings adjacent to greedy wildcards must be interpreted as if they include them. To
-     *      implement this, we extend all substrings to include adjacent wildcards.
+     *      implement this, we extend all substrings to include adjacent greedy wildcards.
      *      - Example: consider query "a*b" and variable type `hasNum` ("\w*\d+\w*"):
      *        - Without extension:
      *          - "a" -> static-text
