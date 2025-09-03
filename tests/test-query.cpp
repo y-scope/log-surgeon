@@ -87,8 +87,9 @@ auto make_test_lexer(vector<string> const& schema_rules) -> ByteLexer {
     REQUIRE(schema_rules.size() == schema_ast->m_schema_vars.size());
     for (size_t i{0}; i < schema_ast->m_schema_vars.size(); ++i) {
         REQUIRE(nullptr != schema_ast->m_schema_vars[i]);
-        auto& capture_rule_ast{dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars[i])};
-        lexer.add_rule(i, std::move(capture_rule_ast.m_regex_ptr));
+        auto* capture_rule_ast{dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars[i].get())};
+        REQUIRE(nullptr != capture_rule_ast);
+        lexer.add_rule(i, std::move(capture_rule_ast->m_regex_ptr));
     }
 
     lexer.generate();
