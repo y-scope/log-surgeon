@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_HPP
 #define LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_HPP
 
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -23,6 +24,8 @@ public:
     }
 
     [[nodiscard]] auto get_search_string() const -> std::string const& { return m_search_string; }
+
+    [[nodiscard]] auto length() const -> size_t { return m_search_string.size(); }
 
 private:
     std::vector<ExpressionCharacter> m_chars;

@@ -1,12 +1,14 @@
 #include "ExpressionView.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 #include <log_surgeon/wildcard_query_parser/Expression.hpp>
 
@@ -40,6 +42,39 @@ auto ExpressionView::extend_to_adjacent_greedy_wildcards() const
     }
     ExpressionView const wildcard_expression_view{*m_expression, begin_idx, end_idx};
     return {is_extended, wildcard_expression_view};
+}
+
+auto ExpressionView::is_surrounded_by_delims(std::array<bool, cSizeOfByte> const& delim_table) const
+        -> bool {
+    auto const [begin_idx, end_idx]{get_indices()};
+
+    bool has_left_boundary{false};
+    if (0 == begin_idx) {
+        has_left_boundary = true;
+    } else {
+        auto const& preceding_char{m_expression->get_chars()[begin_idx - 1]};
+        has_left_boundary = preceding_char.is_delim_or_wildcard(delim_table)
+                            || (false == m_chars.empty() && m_chars.front().is_greedy_wildcard());
+    }
+
+    bool has_right_boundary{false};
+    if (m_expression->length() == end_idx) {
+        has_right_boundary = true;
+    } else {
+        auto const& succeeding_char{m_expression->get_chars()[end_idx]};
+        if (succeeding_char.is_escape()) {
+            if (m_expression->length() > end_idx + 1) {
+                auto const& logical_succeeding_char{m_expression->get_chars()[end_idx + 1]};
+                has_right_boundary = logical_succeeding_char.is_delim(delim_table);
+            }
+        } else {
+            has_right_boundary = succeeding_char.is_delim_or_wildcard(delim_table);
+        }
+        has_right_boundary = has_right_boundary
+                             || (false == m_chars.empty() && m_chars.back().is_greedy_wildcard());
+    }
+
+    return has_left_boundary && has_right_boundary;
 }
 
 auto ExpressionView::is_well_formed() const -> bool {

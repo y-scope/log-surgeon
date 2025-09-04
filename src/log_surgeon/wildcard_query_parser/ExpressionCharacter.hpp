@@ -1,7 +1,10 @@
 #ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_CHARACTER_HPP
 #define LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_CHARACTER_HPP
 
+#include <array>
 #include <cstdint>
+
+#include <log_surgeon/Constants.hpp>
 
 namespace log_surgeon::wildcard_query_parser {
 class ExpressionCharacter {
@@ -21,6 +24,19 @@ public:
 
     [[nodiscard]] auto is_non_greedy_wildcard() const -> bool {
         return Type::NonGreedyWildcard == m_type;
+    }
+
+    [[nodiscard]] auto is_wildcard() const -> bool {
+        return Type::GreedyWildcard == m_type || Type::NonGreedyWildcard == m_type;
+    }
+
+    [[nodiscard]] auto is_delim(std::array<bool, cSizeOfByte> const& delim_table) const -> bool {
+        return delim_table.at(static_cast<uint8_t>(m_value));
+    }
+
+    [[nodiscard]] auto is_delim_or_wildcard(std::array<bool, cSizeOfByte> const& delim_table) const
+            -> bool {
+        return is_delim(delim_table) || is_wildcard();
     }
 
     [[nodiscard]] auto is_escape() const -> bool { return Type::Escape == m_type; }

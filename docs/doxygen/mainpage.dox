@@ -17,6 +17,7 @@
  * - @ref unit_tests_expression_view "Expression View"
  * - @ref unit_tests_nfa "NFA"
  * - @ref unit_tests_prefix_tree "Prefix tree"
+ * - @ref unit_tests_query "Query"
  * - @ref unit_tests_query_interpretation "Query Interpretation"
  * - @ref unit_tests_regex_ast "Regex AST"
  * - @ref unit_tests_register_handler "Register handler"

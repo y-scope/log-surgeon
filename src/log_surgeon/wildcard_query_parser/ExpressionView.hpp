@@ -1,12 +1,14 @@
 #ifndef LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_VIEW_HPP
 #define LOG_SURGEON_WILDCARD_QUERY_PARSER_EXPRESSION_VIEW_HPP
 
+#include <array>
 #include <cstddef>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/wildcard_query_parser/Expression.hpp>
 #include <log_surgeon/wildcard_query_parser/ExpressionCharacter.hpp>
 
@@ -40,6 +42,33 @@ public:
         return false == m_chars.empty()
                && (m_chars[0].is_greedy_wildcard() || m_chars.back().is_greedy_wildcard());
     }
+
+    /**
+     * Checks whether the view is surrounded by delimiters. The start and end of an expression are
+     * always considered a delimiter. A greedy wildcard may represent a string that includes a
+     * flanking delimiter.
+     *
+     * A view is considered bounded if both its left and right boundary satisfy certain
+     * requirements.
+     *
+     * Left boundary:
+     * - The view is at the start of the expression, or
+     * - The first character is a greedy wildcard (if non-empty), or
+     * - Immediately left of the view is a delimiter or wildcard.
+     *
+     * Right boundary:
+     * - The view is at the end of the expression, or
+     * - The last character is a greedy wildcard (if non-empty), or
+     * - Immediately right of the view is a delimiter or wildcard, or
+     * - Immediately right of the view is an escape character and the character to its
+     *   immediate right is a delimiter.
+     *
+     * @param delim_table Table indicating for each character whether or not it is a delimiter.
+     * @return true when both left and right boundaries qualify; false otherwise.
+     */
+    [[nodiscard]] auto is_surrounded_by_delims(
+            std::array<bool, cSizeOfByte> const& delim_table
+    ) const -> bool;
 
     /**
      * Checks whether this `ExpressionView` represents a well-formed subrange.
