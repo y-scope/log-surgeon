@@ -23,7 +23,8 @@
 #include <log_surgeon/utils.hpp>
 
 using ParserValueRegex = log_surgeon::ParserValue<std::unique_ptr<
-        log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::ByteNfaState>>>;
+        log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::ByteNfaState>
+>>;
 using RegexASTByte
         = log_surgeon::finite_automata::RegexAST<log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTGroupByte
@@ -32,8 +33,8 @@ using RegexASTIntegerByte
         = log_surgeon::finite_automata::RegexASTInteger<log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTLiteralByte
         = log_surgeon::finite_automata::RegexASTLiteral<log_surgeon::finite_automata::ByteNfaState>;
-using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultiplication<
-        log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTMultiplicationByte = log_surgeon::finite_automata::
+        RegexASTMultiplication<log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTOrByte
         = log_surgeon::finite_automata::RegexASTOr<log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTCatByte
