@@ -46,10 +46,11 @@ public:
     /**
      * Checks whether the view may be surrounded by delimiters (before and after):
      * - A greedy wildcard is considered a delimiter if it surrounds the view or if it is the first
-     *   or last character of the view. This is due to the fact that a flanking delimiter can
-     *   contain a surrounding delimiter.
+     *   or last character of the view. Rationale: a greedy wildcard can subsume a surrounding
+     *   delimiter.
+     * - A non-greedy wildcard is considered a delimiter. Non-greedy wildcards that are the first
+     *   or last character of the view do not themselves satisfy the boundary condition.
      * - The start and end of an expression are considered delimiters.
-     * - A non-greedy wildcard is considered a delimiter.
      * - Any delimiter in the lexer is considered a delimiter.
      *
      * Based on the above, a view is considered bounded if both its left and right boundary satisfy
