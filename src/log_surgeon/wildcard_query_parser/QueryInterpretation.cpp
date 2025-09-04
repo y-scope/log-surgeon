@@ -6,11 +6,11 @@
 #include <variant>
 #include <vector>
 
-#include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
-#include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
-
 #include <fmt/format.h>
 #include <fmt/ranges.h>
+
+#include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
+#include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
 
 using std::string;
 using std::strong_ordering;

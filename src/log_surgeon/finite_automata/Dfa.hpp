@@ -16,6 +16,9 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/DeterminizationConfiguration.hpp>
 #include <log_surgeon/finite_automata/DfaStatePair.hpp>
@@ -24,9 +27,6 @@
 #include <log_surgeon/finite_automata/RegisterOperation.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/Token.hpp>
-
-#include <fmt/format.h>
-#include <fmt/ranges.h>
 
 namespace log_surgeon::finite_automata {
 /**

@@ -5,9 +5,9 @@
 #include <optional>
 #include <string>
 
-#include <log_surgeon/types.hpp>
-
 #include <fmt/format.h>
+
+#include <log_surgeon/types.hpp>
 
 namespace log_surgeon::finite_automata {
 /**
