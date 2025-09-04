@@ -108,7 +108,7 @@ auto Query::get_all_single_token_interpretations(
         interpretations.emplace_back("*");
         return interpretations;
     }
-    if (false == expression_view.is_surrounded_by_delims(lexer.get_delim_table())) {
+    if (false == expression_view.represents_delimited_content(lexer.get_delim_table())) {
         interpretations.emplace_back(string{expression_view.get_search_string()});
         return interpretations;
     }
