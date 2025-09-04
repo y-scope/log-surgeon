@@ -44,12 +44,17 @@ public:
     }
 
     /**
-     * Checks whether the view is surrounded by delimiters. The start and end of an expression are
-     * always considered a delimiter. A greedy wildcard may represent a string that includes a
-     * flanking delimiter.
+     * Checks whether the view may be surrounded by delimiters (before and after):
+     * - A greedy wildcard is considered a delimiter if it surrounds the view or if it is the first
+     *   or last character of the view. Rationale: a greedy wildcard can subsume a surrounding
+     *   delimiter.
+     * - A non-greedy wildcard is considered a delimiter. Non-greedy wildcards that are the first
+     *   or last character of the view do not themselves satisfy the boundary condition.
+     * - The start and end of an expression are considered delimiters.
+     * - Any delimiter in the lexer is considered a delimiter.
      *
-     * A view is considered bounded if both its left and right boundary satisfy certain
-     * requirements.
+     * Based on the above, a view is considered bounded if both its left and right boundary satisfy
+     * certain requirements.
      *
      * Left boundary:
      * - The view is at the start of the expression, or
@@ -66,7 +71,7 @@ public:
      * @param delim_table Table indicating for each character whether or not it is a delimiter.
      * @return true when both left and right boundaries qualify; false otherwise.
      */
-    [[nodiscard]] auto is_surrounded_by_delims(
+    [[nodiscard]] auto represents_delimited_content(
             std::array<bool, cSizeOfByte> const& delim_table
     ) const -> bool;
 

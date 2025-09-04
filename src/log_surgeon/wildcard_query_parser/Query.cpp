@@ -37,41 +37,17 @@ Query::Query(string const& query_string) {
     m_processed_query_string.reserve(query_string.size());
     Expression const expression(query_string);
 
-    bool prev_is_escape{false};
-    string unhandled_wildcard_sequence;
-    bool unhandled_wildcard_sequence_contains_greedy_wildcard{false};
-    for (auto c : expression.get_chars()) {
-        if (false == unhandled_wildcard_sequence.empty() && false == c.is_wildcard()) {
-            if (unhandled_wildcard_sequence_contains_greedy_wildcard) {
-                m_processed_query_string.push_back('*');
-            } else {
-                m_processed_query_string += unhandled_wildcard_sequence;
+    bool prev_is_greedy_wildcard{false};
+    for (auto const& c : expression.get_chars()) {
+        if (c.is_greedy_wildcard()) {
+            if (false == prev_is_greedy_wildcard) {
+                m_processed_query_string.push_back(c.value());
             }
-            unhandled_wildcard_sequence.clear();
-            unhandled_wildcard_sequence_contains_greedy_wildcard = false;
+            prev_is_greedy_wildcard = true;
+            continue;
         }
-
-        if (prev_is_escape) {
-            m_processed_query_string.push_back(c.value());
-            prev_is_escape = false;
-        } else if (c.is_escape()) {
-            prev_is_escape = true;
-            m_processed_query_string.push_back(c.value());
-        } else if (c.is_greedy_wildcard()) {
-            unhandled_wildcard_sequence.push_back(c.value());
-            unhandled_wildcard_sequence_contains_greedy_wildcard = true;
-        } else if (c.is_non_greedy_wildcard()) {
-            unhandled_wildcard_sequence.push_back(c.value());
-        } else {
-            m_processed_query_string.push_back(c.value());
-        }
-    }
-    if (false == unhandled_wildcard_sequence.empty()) {
-        if (unhandled_wildcard_sequence_contains_greedy_wildcard) {
-            m_processed_query_string.push_back('*');
-        } else {
-            m_processed_query_string += unhandled_wildcard_sequence;
-        }
+        m_processed_query_string.push_back(c.value());
+        prev_is_greedy_wildcard = false;
     }
 }
 
@@ -132,7 +108,7 @@ auto Query::get_all_single_token_interpretations(
         interpretations.emplace_back("*");
         return interpretations;
     }
-    if (false == expression_view.is_surrounded_by_delims(lexer.get_delim_table())) {
+    if (false == expression_view.represents_delimited_content(lexer.get_delim_table())) {
         interpretations.emplace_back(string{expression_view.get_search_string()});
         return interpretations;
     }
