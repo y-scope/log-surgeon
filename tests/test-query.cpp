@@ -272,6 +272,26 @@ TEST_CASE("escaped_star_query", "[Query]") {
 
 /**
  * @ingroup unit_tests_query
+ * @brief Creates and tests a query with an escaped '?' character.
+ */
+TEST_CASE("escaped_question_mark_query", "[Query]") {
+    constexpr string_view cRawQueryString{R"(a\?b)"};
+    constexpr string_view cProcessedQueryString{R"(a\?b)"};
+    vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
+    set<string> const expected_serialized_interpretations{
+            R"(logtype='a\?b', contains_wildcard='0')"
+    };
+
+    test_query(
+            cRawQueryString,
+            cProcessedQueryString,
+            schema_rules,
+            expected_serialized_interpretations
+    );
+}
+
+/**
+ * @ingroup unit_tests_query
  * @brief Creates and tests a query with an escaped '*' character.
  *
  * NOTE: This has a static-text case as strings "1", "2", and "3" in isolation aren't surrounded by
