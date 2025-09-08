@@ -162,7 +162,7 @@ TEST_CASE("repeated_greedy_wildcard_query", "[Query]") {
  * @ingroup unit_tests_query
  * @brief Creates and tests a query with a non-greedy wildcard followed by a greedy wildcard.
  */
-TEST_CASE("short_wildcard_sequence_query", "[Query]") {
+TEST_CASE("mixed_wildcard_query", "[Query]") {
     constexpr string_view cRawQueryString{"a?*b"};
     constexpr string_view cProcessedQueryString{"a?*b"};
     vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
@@ -187,7 +187,7 @@ TEST_CASE("short_wildcard_sequence_query", "[Query]") {
  * @ingroup unit_tests_query
  * @brief Creates and tests a query with a long non-greedy wildcard sequence.
  */
-TEST_CASE("long_non_greedy_wildcard_sequence_query", "[Query]") {
+TEST_CASE("repeated_non_greedy_wildcard_query", "[Query]") {
     constexpr string_view cRawQueryString{"a????b"};
     constexpr string_view cProcessedQueryString{"a????b"};
     vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
@@ -292,7 +292,7 @@ TEST_CASE("escaped_question_mark_query", "[Query]") {
 
 /**
  * @ingroup unit_tests_query
- * @brief Creates and tests a query with an escaped '*' character.
+ * @brief Creates and tests a numeric-only query.
  *
  * NOTE: This has a static-text case as strings "1", "2", and "3" in isolation aren't surrounded by
  * delimiters. These tokens then build up the interpretation "123". Although additional
