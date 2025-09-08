@@ -292,7 +292,7 @@ TEST_CASE("escaped_question_mark_query", "[Query]") {
 
 /**
  * @ingroup unit_tests_query
- * @brief Creates and tests a query with an escaped '*' character.
+ * @brief Creates and tests a numeric-only query.
  *
  * NOTE: This has a static-text case as strings "1", "2", and "3" in isolation aren't surrounded by
  * delimiters. These tokens then build up the interpretation "123". Although additional
