@@ -19,8 +19,9 @@ public:
      * Generates all k-token interpretations of the n-character query string, where 1 <= k <= n.
      *
      * 1. Interpret each substring [a,b) as a single token (k=1).
-     *    - Substrings adjacent to greedy wildcards must be interpreted as if they include them. To
-     *      implement this, we extend all substrings to include adjacent greedy wildcards.
+     *    - Substrings adjacent to greedy wildcards (`*`) must be interpreted as if they include
+     *      them. To implement this, `get_all_single_token_interpretations` extends all substrings
+     *      to include adjacent greedy wildcards.
      *      - Example: consider query "a*b" and variable type `hasNum` ("\w*\d+\w*"):
      *        - Without extension:
      *          - "a" -> static-text
@@ -33,12 +34,10 @@ public:
      *          - {a<hasNum>(*b)}.
      *        - None of these match a string like "a1 c 1b", which has interpretation
      *          {<hasNum>(a1) c <hasNum>(1b)}. By interpreting "a" as "a*" and "b" as "*b", the '*'
-     *          is preserved allowing for interpretation {<hasNum>(a*)*<hasNum>(*b)}, which matches
+     *          is preserved, allowing for interpretation {<hasNum>(a*)*<hasNum>(*b)}, which matches
      *          {<hasNum>(a1) c <hasNum>(1b)}.
-     *    - Special cases:
-     *      - Single-character greedy wildcards ("*") are not extended as they have no adjacent
-     *        greedy wildcards (repeated wildcards are collapsed during preprocessing).
-     *      - Substrings are not extended to non-greedy wildcards (`?`) as "a?b" =/= "a??b".
+     *      - Note: the extension only applies to greedy wildcards, not non-greedy wildcards (`?`),
+     *        as "a?b" != "a??b".
      *    - Substrings of length >= 2 that begin or end with a greedy wildcard are skipped as they
      *      are redundant.
      *      - Example: in "a*b", substring [0,1) extends to "a*", therefore substring [0,2) "a*" is
@@ -83,36 +82,43 @@ public:
 
 private:
     /**
-     * Generates all single-token interpretations for a given expression view matching a given
+     * Generates all single-token interpretations for a given expression view using the provided
      * lexer.
      *
-     * A single-token interpretation can be one of:
-     * - A static token (literal text).
+     * Adjacent greedy wildcards are treated as part of the view when applicable. This extended
+     * treatment is referred to as the "extended view". This behavior ensures correctness in the
+     * multi-token interpretation algorithm; see `get_all_multi_token_interpretations` for a
+     * detailed explanation.
+     *
+     * A single-token interpretation can be either:
+     * - A static token (literal text), or
      * - A variable token (e.g., int, float, hasNumber) as defined by the lexer's schema. Each
-     * unique variable type is considered a distinct interpretation.
+     *   matching variable type produces a unique interpretation.
      *
      * Rules:
-     * - If the substring is malformed (has hanging escape characters):
-     *   - There are no valid interpretations.
-     * - Else if the substring:
-     *   - Is an isolated greedy wildcard, "*", or
-     *   - Is not surrounded by delimiters or wildcards (lexer won't consider it a variable), or
-     *   - Does not match any variable.
-     *   - Then:
-     *     - The only interpretation is a static token.
-     * - Else if the substring contains a wildcard:
-     *   - The interpretations include a static token, plus a variable token for each matching type.
+     * - If the original view is malformed (e.g., has dangling escape characters):
+     *   - No valid interpretations are returned.
+     * - Else, if the original view is an isolated greedy wildcard "*":
+     *   - The only interpretation is a static token for "*".
+     * - Else, if the original view is not surrounded by delimiters or wildcards (cannot form a
+     *   variable):
+     *   - The only interpretation is a static token for the extended view.
+     * - Else, if the extended view does not match any variable type:
+     *   - The only interpretation is a static token for the extended view.
+     * - Else, if the extended view contains a wildcard:
+     *   - The interpretations include a static token for the extended view, plus a variable token
+     *     for each type matching the extended view.
      * - Else:
-     *   - The only interpretation is the variable token corresponding to the highest priority
-     *     match.
+     *   - The only interpretation is a variable token corresponding to the highest-priority
+     *     variable type that matches the extended view.
      *
-     * @param expression_view The view of the substring to interpret.
+     * @param original_view The view to interpret.
      * @param lexer The lexer used to determine variable types and delimiters.
      * @return A vector of `QueryInterpretation` objects representing all valid single-token
-     * interpretations for the given substring.
+     * interpretations for the given view.
      */
     [[nodiscard]] static auto get_all_single_token_interpretations(
-            ExpressionView const& expression_view,
+            ExpressionView const& original_view,
             lexers::ByteLexer const& lexer
     ) -> std::vector<QueryInterpretation>;
 
