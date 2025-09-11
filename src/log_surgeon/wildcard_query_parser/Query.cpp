@@ -101,7 +101,6 @@ auto Query::get_all_single_token_interpretations(
     vector<QueryInterpretation> interpretations;
     auto const extended_view{original_view.extend_to_adjacent_greedy_wildcards().second};
 
-
     if (false == original_view.is_well_formed()) {
         return interpretations;
     }
