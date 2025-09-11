@@ -138,7 +138,7 @@ TEST_CASE("greedy_wildcard_query", "[Query]") {
  * @brief Creates and tests a query with repeated greedy wildcards.
  */
 TEST_CASE("repeated_greedy_wildcard_query", "[Query]") {
-    constexpr string_view cRawQueryString{"a**b"};
+    constexpr string_view cRawQueryString{"a*****b"};
     constexpr string_view cProcessedQueryString{"a*b"};
     vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
     set<string> const expected_serialized_interpretations{
@@ -162,42 +162,17 @@ TEST_CASE("repeated_greedy_wildcard_query", "[Query]") {
  * @ingroup unit_tests_query
  * @brief Creates and tests a query with a non-greedy wildcard followed by a greedy wildcard.
  */
-TEST_CASE("short_wildcard_sequence_query", "[Query]") {
+TEST_CASE("mixed_wildcard_query", "[Query]") {
     constexpr string_view cRawQueryString{"a?*b"};
-    constexpr string_view cProcessedQueryString{"a*b"};
+    constexpr string_view cProcessedQueryString{"a?*b"};
     vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
     set<string> const expected_serialized_interpretations{
-            "logtype='a*b', contains_wildcard='0'",
-            "logtype='a***b', contains_wildcard='0'",
-            "logtype='<0>(a*)**b', contains_wildcard='10'",
-            "logtype='<0>(a*)*<0>(*b)', contains_wildcard='101'",
-            "logtype='<0>(a*b)', contains_wildcard='1'",
-            "logtype='a**<0>(*b)', contains_wildcard='01'"
-    };
-
-    test_query(
-            cRawQueryString,
-            cProcessedQueryString,
-            schema_rules,
-            expected_serialized_interpretations
-    );
-}
-
-/**
- * @ingroup unit_tests_query
- * @brief Creates and tests a query with a long mixed wildcard sequence.
- */
-TEST_CASE("long_mixed_wildcard_sequence_query", "[Query]") {
-    constexpr string_view cRawQueryString{"a?*?*?*?b"};
-    constexpr string_view cProcessedQueryString{"a*b"};
-    vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
-    set<string> const expected_serialized_interpretations{
-            "logtype='a*b', contains_wildcard='0'",
-            "logtype='a***b', contains_wildcard='0'",
-            "logtype='<0>(a*)**b', contains_wildcard='10'",
-            "logtype='<0>(a*)*<0>(*b)', contains_wildcard='101'",
-            "logtype='<0>(a*b)', contains_wildcard='1'",
-            "logtype='a**<0>(*b)', contains_wildcard='01'"
+            "logtype='a?*b', contains_wildcard='0'",
+            "logtype='a?***b', contains_wildcard='0'",
+            "logtype='<0>(a?*)**b', contains_wildcard='10'",
+            "logtype='<0>(a?*)*<0>(*b)', contains_wildcard='101'",
+            "logtype='<0>(a?*b)', contains_wildcard='1'",
+            "logtype='a?**<0>(*b)', contains_wildcard='01'"
     };
 
     test_query(
@@ -212,7 +187,7 @@ TEST_CASE("long_mixed_wildcard_sequence_query", "[Query]") {
  * @ingroup unit_tests_query
  * @brief Creates and tests a query with a long non-greedy wildcard sequence.
  */
-TEST_CASE("long_non_greedy_wildcard_sequence_query", "[Query]") {
+TEST_CASE("repeated_non_greedy_wildcard_query", "[Query]") {
     constexpr string_view cRawQueryString{"a????b"};
     constexpr string_view cProcessedQueryString{"a????b"};
     vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
@@ -285,6 +260,26 @@ TEST_CASE("escaped_star_query", "[Query]") {
     vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
     set<string> const expected_serialized_interpretations{
             R"(logtype='a\*b', contains_wildcard='0')"
+    };
+
+    test_query(
+            cRawQueryString,
+            cProcessedQueryString,
+            schema_rules,
+            expected_serialized_interpretations
+    );
+}
+
+/**
+ * @ingroup unit_tests_query
+ * @brief Creates and tests a query with an escaped '?' character.
+ */
+TEST_CASE("escaped_question_mark_query", "[Query]") {
+    constexpr string_view cRawQueryString{R"(a\?b)"};
+    constexpr string_view cProcessedQueryString{R"(a\?b)"};
+    vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
+    set<string> const expected_serialized_interpretations{
+            R"(logtype='a\?b', contains_wildcard='0')"
     };
 
     test_query(
