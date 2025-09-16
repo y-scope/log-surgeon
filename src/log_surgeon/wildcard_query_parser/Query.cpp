@@ -68,9 +68,8 @@ auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const
                 continue;
             }
 
-            auto const extended_view{expression_view.extend_to_adjacent_greedy_wildcards().second};
             auto const single_token_interpretations{
-                    get_all_single_token_interpretations(extended_view, lexer)
+                    get_all_single_token_interpretations(expression_view, lexer)
             };
             if (single_token_interpretations.empty()) {
                 continue;
@@ -96,34 +95,35 @@ auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const
 }
 
 auto Query::get_all_single_token_interpretations(
-        ExpressionView const& expression_view,
+        ExpressionView const& original_view,
         ByteLexer const& lexer
 ) -> std::vector<QueryInterpretation> {
     vector<QueryInterpretation> interpretations;
+    auto const extended_view{original_view.extend_to_adjacent_greedy_wildcards().second};
 
-    if (false == expression_view.is_well_formed()) {
+    if (false == original_view.is_well_formed()) {
         return interpretations;
     }
-    if ("*" == expression_view.get_search_string()) {
+    if ("*" == original_view.get_search_string()) {
         interpretations.emplace_back("*");
         return interpretations;
     }
-    if (false == expression_view.is_surrounded_by_delims(lexer.get_delim_table())) {
-        interpretations.emplace_back(string{expression_view.get_search_string()});
+    if (false == original_view.is_surrounded_by_delims_or_wildcards(lexer.get_delim_table())) {
+        interpretations.emplace_back(string{extended_view.get_search_string()});
         return interpretations;
     }
 
-    auto const [regex_string, contains_wildcard]{expression_view.generate_regex_string()};
+    auto const [regex_string, contains_wildcard]{extended_view.generate_regex_string()};
 
     auto const matching_var_type_ids{get_matching_variable_types(regex_string, lexer)};
     if (matching_var_type_ids.empty() || contains_wildcard) {
-        interpretations.emplace_back(string{expression_view.get_search_string()});
+        interpretations.emplace_back(string{extended_view.get_search_string()});
     }
 
     for (auto const variable_type_id : matching_var_type_ids) {
         interpretations.emplace_back(
                 variable_type_id,
-                string{expression_view.get_search_string()},
+                string{extended_view.get_search_string()},
                 contains_wildcard
         );
         if (false == contains_wildcard) {

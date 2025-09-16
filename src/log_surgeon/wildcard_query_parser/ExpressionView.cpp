@@ -44,8 +44,9 @@ auto ExpressionView::extend_to_adjacent_greedy_wildcards() const
     return {is_extended, wildcard_expression_view};
 }
 
-auto ExpressionView::is_surrounded_by_delims(std::array<bool, cSizeOfByte> const& delim_table) const
-        -> bool {
+auto ExpressionView::is_surrounded_by_delims_or_wildcards(
+        std::array<bool, cSizeOfByte> const& delim_table
+) const -> bool {
     auto const [begin_idx, end_idx]{get_indices()};
 
     bool has_left_boundary{false};
@@ -53,8 +54,7 @@ auto ExpressionView::is_surrounded_by_delims(std::array<bool, cSizeOfByte> const
         has_left_boundary = true;
     } else {
         auto const& preceding_char{m_expression->get_chars()[begin_idx - 1]};
-        has_left_boundary = preceding_char.is_delim_or_wildcard(delim_table)
-                            || (false == m_chars.empty() && m_chars.front().is_greedy_wildcard());
+        has_left_boundary = preceding_char.is_delim_or_wildcard(delim_table);
     }
 
     bool has_right_boundary{false};
@@ -70,8 +70,6 @@ auto ExpressionView::is_surrounded_by_delims(std::array<bool, cSizeOfByte> const
         } else {
             has_right_boundary = succeeding_char.is_delim_or_wildcard(delim_table);
         }
-        has_right_boundary = has_right_boundary
-                             || (false == m_chars.empty() && m_chars.back().is_greedy_wildcard());
     }
 
     return has_left_boundary && has_right_boundary;
