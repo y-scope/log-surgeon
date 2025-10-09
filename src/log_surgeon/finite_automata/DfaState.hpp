@@ -12,14 +12,14 @@
 #include <unordered_map>
 #include <vector>
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/DfaTransition.hpp>
 #include <log_surgeon/finite_automata/RegisterOperation.hpp>
 #include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
-
-#include <fmt/core.h>
-#include <fmt/format.h>
 
 namespace log_surgeon::finite_automata {
 template <StateType state_type>

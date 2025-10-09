@@ -1,2 +1,7 @@
+# Linting config files symlinked from dev-utils
+/.clang-format
+/.clang-tidy
+
+# Build related directories
 .task/
 build/

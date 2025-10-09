@@ -6,7 +6,6 @@
 #include <log_surgeon/SchemaParser.hpp>
 
 #include <catch2/catch_test_macros.hpp>
-#include <fmt/core.h>
 
 /**
  * @defgroup unit_tests_schema Schema unit tests.
@@ -28,8 +27,8 @@ using RegexASTGroupByte
         = log_surgeon::finite_automata::RegexASTGroup<log_surgeon::finite_automata::ByteNfaState>;
 using RegexASTLiteralByte
         = log_surgeon::finite_automata::RegexASTLiteral<log_surgeon::finite_automata::ByteNfaState>;
-using RegexASTMultiplicationByte = log_surgeon::finite_automata::RegexASTMultiplication<
-        log_surgeon::finite_automata::ByteNfaState>;
+using RegexASTMultiplicationByte = log_surgeon::finite_automata::
+        RegexASTMultiplication<log_surgeon::finite_automata::ByteNfaState>;
 
 /**
  * @ingroup unit_tests_schema

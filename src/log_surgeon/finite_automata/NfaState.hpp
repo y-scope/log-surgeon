@@ -13,15 +13,15 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/NfaSpontaneousTransition.hpp>
 #include <log_surgeon/finite_automata/StateType.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 #include <log_surgeon/types.hpp>
-
-#include <fmt/core.h>
-#include <fmt/format.h>
 
 namespace log_surgeon::finite_automata {
 template <StateType state_type>

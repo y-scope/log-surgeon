@@ -14,15 +14,15 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+#include <fmt/xchar.h>
+#include <gsl/pointers>
+
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
-
-#include <fmt/core.h>
-#include <fmt/ranges.h>
-#include <fmt/xchar.h>
-#include <gsl/pointers>
 
 namespace log_surgeon::finite_automata {
 template <typename TypedNfaState>

@@ -152,6 +152,10 @@ public:
 
     [[nodiscard]] auto get_has_delimiters() const -> bool const& { return m_has_delimiters; }
 
+    [[nodiscard]] auto get_delim_table() const -> std::array<bool, cSizeOfByte> const& {
+        return m_is_delimiter;
+    }
+
     [[nodiscard]] auto is_delimiter(uint8_t byte) const -> bool const& {
         return m_is_delimiter[byte];
     }
@@ -252,7 +256,10 @@ private:
     std::array<bool, cSizeOfByte> m_is_first_char_of_a_variable{false};
     std::vector<LexicalRule<TypedNfaState>> m_rules;
     uint32_t m_line{0};
+
+    // For performance, `m_has_delimiters` caches whether any element in `m_is_delimiter` is true.
     bool m_has_delimiters{false};
+
     std::unique_ptr<finite_automata::Dfa<TypedDfaState, TypedNfaState>> m_dfa;
     std::optional<uint32_t> m_first_delimiter_pos{std::nullopt};
     bool m_asked_for_more_data{false};

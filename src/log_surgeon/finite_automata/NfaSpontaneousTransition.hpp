@@ -9,9 +9,10 @@
 #include <utility>
 #include <vector>
 
-#include <log_surgeon/finite_automata/TagOperation.hpp>
-
 #include <fmt/format.h>
+#include <fmt/ranges.h>
+
+#include <log_surgeon/finite_automata/TagOperation.hpp>
 
 namespace log_surgeon::finite_automata {
 /**
