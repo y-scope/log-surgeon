@@ -4,8 +4,8 @@ A schema file defines the **delimiters** and **variable patterns** (regular expr
 `log-surgeon` uses to parse log events. Delimiters conceptually divide the input into *tokens*,
 where each token is either a variable (matched by a pattern) or **static text**. Variable tokens may
 include delimiters and are treated as a single token. Static-text always begins and ends with a
-delimiter. This structure enables `log-surgeon` to extract variables from otherwise unstructured log
-events.
+delimiter (or the start/end of the log event). This structure enables `log-surgeon` to extract
+variables from otherwise unstructured log events.
 
 ## Schema syntax
 
