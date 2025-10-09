@@ -115,23 +115,23 @@ expression, the rules are applied as they appear in this list, from top to botto
 ```txt
 REGEX RULE       EXAMPLE       DEFINITION
 Concatenation    ab            Match two expressions in sequence (e.g., 'a'
-                                followed by 'b').
+                                 followed by 'b').
 Alternation      a|b           Match one of two expressions (e.g., 'a' or 'b').
 Range            [a-z]         Match any character within a specified range
-                                (e.g., any lowercase letter).
+                                 (e.g., any lowercase letter).
 Negated Range    [^a-zA-Z]     Match any character not within the specified
-                                range (e.g., any non-alphabet character).
+                                 range (e.g., any non-alphabet character).
 Kleene Star      a*            Match an expression zero or more times.
 Kleene Plus      a+            Match an expression one or more times.
 Repetition       a{N}          Match an expression exactly N times.
 Repetition Range a{N,M}        Match an expression between N and M times.
 Digit            \d            Match any digit (i.e., 0-9).
 Whitespace       \s            Match any whitespace character (i.e., ' ', \r,
-                                \t, \v, or \f).
+                                 \t, \v, or \f).
 Wildcard         .             Match any non-delimiter character.
 Subexpression    (ab)          Match the expression in parentheses (e.g., ab).
 Named Capture    (?<var>[01]+) Match an expression and assign it a name (e.g.,
-                                capture binary as "var").
+                                 capture a binary string as "var").
 
 * Special characters include: ( ) * + - . [ \ ] ^ { | } < > ?
   - Escape these with '\' when used literally (e.g., \., \(, \\).
@@ -140,4 +140,5 @@ Named Capture    (?<var>[01]+) Match an expression and assign it a name (e.g.,
 * For each regex rule, the expression(s) it contains can be formed by applying
   any sequence of valid regex rules, including the rule itself, thus allowing
   for recursive composition.
+  - Note: Recursive capture groups are currently untested.
 ```
