@@ -1,5 +1,6 @@
 #include "LogEvent.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -67,25 +68,33 @@ auto LogEventView::get_logtype() const -> std::string {
                 };
                 optional_capture_ids.has_value())
             {
+                auto capture_view{token_view};
                 auto const& capture_ids{optional_capture_ids.value()};
-                std::vector<std::pair<reg_id_t, reg_id_t>> register_pairs;
                 for (auto const capture_id : capture_ids) {
                     auto const& optional_reg_id_pair{
                             m_log_parser.m_lexer.get_reg_ids_from_capture_id(capture_id)
                     };
-                    if (optional_reg_id_pair.has_value()) {
-                        register_pairs.push_back(optional_reg_id_pair.value());
+                    if (false == optional_reg_id_pair.has_value()) {
+                        continue;
+                    }
+                    auto const start_positions{
+                            capture_view.get_reversed_reg_positions(optional_reg_id_pair->first)
+                    };
+                    auto const end_positions{
+                            capture_view.get_reversed_reg_positions(optional_reg_id_pair->second)
+                    };
+
+                    auto capture_name{m_log_parser.get_id_symbol(capture_id)};
+                    for (uint32_t i{0};
+                         i < 1 && i < start_positions.size() && i < end_positions.size();
+                         i++)
+                    {
+                        capture_view.m_end_pos = start_positions.at(i);
+                        logtype.append(capture_view.to_string_view());
+                        logtype.append("<" + capture_name + ">");
+                        capture_view.m_start_pos = end_positions.at(i);
                     }
                 }
-                auto const tag_formatter = [&](capture_id_t id) -> std::string {
-                    return "<" + m_log_parser.get_id_symbol(id) + ">";
-                };
-                token_view.append_context_to_logtype(
-                        register_pairs,
-                        capture_ids,
-                        tag_formatter,
-                        logtype
-                );
             } else {
                 logtype += "<" + m_log_parser.get_id_symbol(rule_id) + ">";
             }
