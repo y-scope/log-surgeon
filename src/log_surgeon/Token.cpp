@@ -63,17 +63,17 @@ void Token::append_context_to_logtype(
     std::sort(
             variable_positions.begin(),
             variable_positions.end(),
-            [](auto const& a, auto const& b) { return a.m_start_pos < b.m_start_pos; }
+            [](auto const& a, auto const& b) -> bool { return a.m_start_pos < b.m_start_pos; }
     );
     variable_positions.push_back({m_end_pos, m_end_pos, 0});
 
-    uint32_t prev{m_start_pos};
+    size_t prev{m_start_pos};
     for (auto const& variable_position : variable_positions) {
         if (prev <= variable_position.m_start_pos) {
-            logtype.append(m_buffer + prev, variable_position.m_start_pos - prev);
+            logtype.append(m_buffer, prev, variable_position.m_start_pos - prev);
         } else {
-            logtype.append(m_buffer + prev, m_buffer + m_buffer_size);
-            logtype.append(m_buffer, m_buffer + variable_position.m_start_pos);
+            logtype.append(m_buffer, prev, m_buffer_size - prev);
+            logtype.append(m_buffer, 0, variable_position.m_start_pos);
         }
         // Skip adding tags for zero-length captures
         if (variable_position.m_start_pos != variable_position.m_end_pos) {
