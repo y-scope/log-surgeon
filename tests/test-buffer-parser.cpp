@@ -894,20 +894,23 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
     constexpr string_view cTid{R"((?<TID>\d{4}))"};
     constexpr string_view cLogLevel{R"((?<LogLevel>I|D|E|W))"};
     constexpr string_view cInput{"1999-12-12T01:02:03.456 1234 5678 I MyService A=TEXT B=1.1"};
-
     string const header_rule{fmt::format("header:{} {} {} {}", cTime, cPid, cTid, cLogLevel)};
+    string const inside_capture_rule{
+            fmt::format("key_capture:[a-zA-Z]+ (?<key>[a-zA-Z]+)=[a-zA-Z]+")
+    };
     ExpectedEvent const expected_event{
-            .m_logtype{"<timestamp> <PID> <TID> <LogLevel> MyService A=TEXT B=1.1"},
+            .m_logtype{"<timestamp> <PID> <TID> <LogLevel> MyService <key>=TEXT B=1.1"},
             .m_timestamp_raw{""},
             .m_tokens{
                     {{"1999-12-12T01:02:03.456 1234 5678 I",
                       "header",
-                      {{{"timestamp", {{0}, {23}}},
-                        {"PID", {{24}, {28}}},
-                        {"TID", {{29}, {33}}},
-                        {"LogLevel", {{34}, {35}}}}}},
-                     {" MyService", "", {}},
-                     {" A=TEXT", "", {}},
+                      {{{"timestamp", {.m_start_positions{0}, .m_end_positions{23}}},
+                        {"PID", {.m_start_positions{24}, .m_end_positions{28}}},
+                        {"TID", {.m_start_positions{29}, .m_end_positions{33}}},
+                        {"LogLevel", {.m_start_positions{34}, .m_end_positions{35}}}}}},
+                     {" MyService A=TEXT",
+                      "key_capture",
+                      {{"key", {.m_start_positions{46}, .m_end_positions{47}}}}},
                      {" B=1.1", "", {}}}
             }
     };
@@ -915,6 +918,7 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
     schema.add_variable(header_rule, -1);
+    schema.add_variable(inside_capture_rule, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
     parse_and_validate(buffer_parser, cInput, {expected_event});

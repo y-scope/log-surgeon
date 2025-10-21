@@ -92,6 +92,8 @@ auto LogEventView::get_logtype() const -> std::string {
                         capture_view.m_start_pos = end_positions[0];
                     }
                 }
+                capture_view.m_end_pos = token_view.m_end_pos;
+                logtype.append(capture_view.to_string_view());
             } else {
                 logtype += "<" + m_log_parser.get_id_symbol(rule_id) + ">";
             }
