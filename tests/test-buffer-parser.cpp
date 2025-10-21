@@ -380,7 +380,7 @@ TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
     constexpr string_view cInput{"2012-12-12 12:12:12.123 123 123.123 abc userID=123 text user123 "
                                  "\n2012-12-12 12:12:12.123"};
     ExpectedEvent const expected_event1{
-            .m_logtype{" <int> <float> <hex> userID=<val> text <hasNumber> \n"},
+            .m_logtype{"<timestamp> <int> <float> <hex> userID=<val> text <hasNumber> \n"},
             .m_timestamp_raw{"2012-12-12 12:12:12.123"},
             .m_tokens{
                     {{"2012-12-12 12:12:12.123", "firstTimestamp", {}},
@@ -395,7 +395,7 @@ TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
             }
     };
     ExpectedEvent const expected_event2{
-            .m_logtype{R"()"},
+            .m_logtype{"<timestamp>"},
             .m_timestamp_raw{"2012-12-12 12:12:12.123"},
             .m_tokens{{{"2012-12-12 12:12:12.123", "newLineTimestamp", {}}}}
     };
