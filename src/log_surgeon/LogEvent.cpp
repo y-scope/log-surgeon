@@ -51,15 +51,16 @@ auto LogEventView::reset() -> void {
 auto LogEventView::get_logtype() const -> std::string {
     std::string logtype;
     for (uint32_t i{1}; i < m_log_output_buffer->pos(); ++i) {
-        auto& token{m_log_output_buffer->get_mutable_token(i)};
-        auto const rule_id{token.m_type_ids_ptr->at(0)};
+        auto token_view{m_log_output_buffer->get_mutable_token(i)};
+        auto const rule_id{token_view.m_type_ids_ptr->at(0)};
         if (static_cast<uint32_t>(SymbolId::TokenUncaughtString) == rule_id) {
-            logtype += token.to_string_view();
+            logtype += token_view.to_string_view();
         } else {
             bool const is_first_token{false == m_log_output_buffer->has_timestamp() && 1 == i};
             if (static_cast<uint32_t>(SymbolId::TokenNewline) != rule_id && false == is_first_token)
             {
-                logtype += token.get_delimiter();
+                logtype += token_view.get_delimiter();
+                token_view.m_start_pos++;
             }
             if (auto const& optional_capture_ids{
                         m_log_parser.m_lexer.get_capture_ids_from_rule_id(rule_id)
@@ -76,10 +77,10 @@ auto LogEventView::get_logtype() const -> std::string {
                         register_pairs.push_back(optional_reg_id_pair.value());
                     }
                 }
-                auto const tag_formatter = [&](capture_id_t id) {
+                auto const tag_formatter = [&](capture_id_t id) -> std::string {
                     return "<" + m_log_parser.get_id_symbol(id) + ">";
                 };
-                token.append_context_to_logtype(
+                token_view.append_context_to_logtype(
                         register_pairs,
                         capture_ids,
                         tag_formatter,

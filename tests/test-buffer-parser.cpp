@@ -264,7 +264,7 @@ TEST_CASE("single_line_without_capture", "[BufferParser]") {
  *
  * ### Expected Logtype
  * @code
- * "userID=<uid> userID=234  userID=<uid> 123  userID=<uid>"
+ * "userID=<uid> userID=234 userID=<uid> 123 userID=<uid>"
  * @endcode
  *
  * ### Expected Tokenization
@@ -282,7 +282,7 @@ TEST_CASE("single_line_with_capture", "[BufferParser]") {
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
 
     ExpectedEvent const expected_event{
-            .m_logtype{R"(userID=<uid> userID=234  userID=<uid> 123  userID=<uid>)"},
+            .m_logtype{R"(userID=<uid> userID=234 userID=<uid> 123 userID=<uid>)"},
             .m_timestamp_raw{""},
             .m_tokens{
                     {{"userID=123", "myVar", {{{"uid", {{7}, {10}}}}}},
@@ -380,7 +380,7 @@ TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
     constexpr string_view cInput{"2012-12-12 12:12:12.123 123 123.123 abc userID=123 text user123 "
                                  "\n2012-12-12 12:12:12.123"};
     ExpectedEvent const expected_event1{
-            .m_logtype{" <int> <float> <hex>  userID=<val> text <hasNumber> \n"},
+            .m_logtype{" <int> <float> <hex> userID=<val> text <hasNumber> \n"},
             .m_timestamp_raw{"2012-12-12 12:12:12.123"},
             .m_tokens{
                     {{"2012-12-12 12:12:12.123", "firstTimestamp", {}},
