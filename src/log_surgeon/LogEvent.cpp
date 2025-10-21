@@ -85,14 +85,11 @@ auto LogEventView::get_logtype() const -> std::string {
                     };
 
                     auto capture_name{m_log_parser.get_id_symbol(capture_id)};
-                    for (uint32_t i{0};
-                         i < 1 && i < start_positions.size() && i < end_positions.size();
-                         i++)
-                    {
-                        capture_view.m_end_pos = start_positions.at(i);
+                    if (0 < start_positions.size() && 0 < end_positions.size()) {
+                        capture_view.m_end_pos = start_positions[0];
                         logtype.append(capture_view.to_string_view());
                         logtype.append("<" + capture_name + ">");
-                        capture_view.m_start_pos = end_positions.at(i);
+                        capture_view.m_start_pos = end_positions[0];
                     }
                 }
             } else {
@@ -100,6 +97,7 @@ auto LogEventView::get_logtype() const -> std::string {
             }
         }
     }
+
     return logtype;
 }
 
