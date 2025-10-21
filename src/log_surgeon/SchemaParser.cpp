@@ -487,6 +487,10 @@ auto SchemaParser::add_lexical_rules() -> void {
     comment_characters->add_literal('\r');
     comment_characters->add_literal('\n');
     add_token_group("CommentCharacters", std::move(comment_characters));
+    add_token_group("IdentifierCharacters", make_unique<RegexASTGroupByte>('a', 'z'));
+    add_token_group("IdentifierCharacters", make_unique<RegexASTGroupByte>('A', 'Z'));
+    add_token_group("IdentifierCharacters", make_unique<RegexASTGroupByte>('0', '9'));
+    add_token("IdentifierCharacters", '_');
 }
 
 auto SchemaParser::add_productions() -> void {
@@ -532,8 +536,8 @@ auto SchemaParser::add_productions() -> void {
             {"WhitespaceStar", "Identifier", "Colon", "Regex"},
             schema_var_rule
     );
-    add_production("Identifier", {"Identifier", "AlphaNumeric"}, existing_identifier_rule);
-    add_production("Identifier", {"AlphaNumeric"}, new_identifier_rule);
+    add_production("Identifier", {"Identifier", "IdentifierCharacters"}, existing_identifier_rule);
+    add_production("Identifier", {"IdentifierCharacters"}, new_identifier_rule);
     add_production("WhitespaceStar", {"WhitespaceStar", "Space"}, nullptr);
     add_production("WhitespaceStar", {}, nullptr);
     add_production("Regex", {"Concat"}, regex_identity_rule);

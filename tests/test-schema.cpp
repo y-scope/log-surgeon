@@ -108,16 +108,14 @@ TEST_CASE("add_capture_var", "[Schema]") {
  * @brief Create a schema, adding different invalid delimiter strings.
  */
 TEST_CASE("add_invalid_delims", "[Schema]") {
-    constexpr string_view cInvalidDelimiterString1{"myVar:userID=123"};
-    constexpr string_view cInvalidDelimiterString2{"Delimiter:userID=123"};
-    constexpr string_view cInvalidDelimiterString3{"de_limiters:userID=123"};
-    constexpr string_view cInvalidDelimiterString4{""};
+    constexpr string_view cInvalidDelimiterString0{"myVar:userID=123"};
+    constexpr string_view cInvalidDelimiterString1{"Delimiter:userID=123"};
+    constexpr string_view cInvalidDelimiterString2{""};
 
     Schema schema;
+    REQUIRE_THROWS_AS(schema.add_delimiters(cInvalidDelimiterString0), std::invalid_argument);
     REQUIRE_THROWS_AS(schema.add_delimiters(cInvalidDelimiterString1), std::invalid_argument);
-    REQUIRE_THROWS_AS(schema.add_delimiters(cInvalidDelimiterString2), std::invalid_argument);
-    REQUIRE_THROWS_AS(schema.add_delimiters(cInvalidDelimiterString3), std::runtime_error);
-    REQUIRE_THROWS_AS(schema.add_delimiters(cInvalidDelimiterString4), std::runtime_error);
+    REQUIRE_THROWS_AS(schema.add_delimiters(cInvalidDelimiterString2), std::runtime_error);
 }
 
 /**
@@ -125,18 +123,16 @@ TEST_CASE("add_invalid_delims", "[Schema]") {
  * @brief Create a schema, adding different invalid variables.
  */
 TEST_CASE("add_invalid_vars", "[Schema]") {
-    constexpr string_view cInvalidVarString1{"my_var:userID=123"};
-    constexpr string_view cInvalidVarString2{"myVar:[userID=123"};
-    constexpr string_view cInvalidVarString3{"userID=123"};
-    constexpr string_view cInvalidVarString4{R"(delimiters: \t\r\n)"};
-    constexpr string_view cInvalidVarString5{""};
+    constexpr string_view cInvalidVarString0{"myVar:[userID=123"};
+    constexpr string_view cInvalidVarString1{"userID=123"};
+    constexpr string_view cInvalidVarString2{R"(delimiters: \t\r\n)"};
+    constexpr string_view cInvalidVarString3{""};
 
     Schema schema;
+    REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString0, -1), std::runtime_error);
     REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString1, -1), std::runtime_error);
-    REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString2, -1), std::runtime_error);
+    REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString2, -1), std::invalid_argument);
     REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString3, -1), std::runtime_error);
-    REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString4, -1), std::invalid_argument);
-    REQUIRE_THROWS_AS(schema.add_variable(cInvalidVarString5, -1), std::runtime_error);
 }
 
 /**
@@ -155,4 +151,33 @@ TEST_CASE("add_invalid_var_priorities", "[Schema]") {
     schema.add_variable(cVarString2, 1);
     REQUIRE_THROWS_AS(schema.add_variable(cVarString3, invalidPos1), std::invalid_argument);
     REQUIRE_THROWS_AS(schema.add_variable(cVarString3, invalidPos2), std::invalid_argument);
+}
+
+/**
+ * @ingroup unit_tests_schema
+ * @brief Create a schema, adding a variable and capture group name with an underscore.
+ */
+TEST_CASE("add_underscore_name", "[Schema]") {
+    Schema schema;
+    string const var_name = "var_name";
+    string const cap_name = "cap_name";
+    string const var_schema = var_name + string(":a(?<") + cap_name + string(">_)b");
+    schema.add_variable(string_view(var_schema), -1);
+
+    auto const schema_ast = schema.release_schema_ast_ptr();
+    REQUIRE(schema_ast->m_schema_vars.size() == 1);
+    REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());
+
+    auto& schema_var_ast_ptr = schema_ast->m_schema_vars.at(0);
+    REQUIRE(nullptr != schema_var_ast_ptr);
+    auto& schema_var_ast = dynamic_cast<SchemaVarAST&>(*schema_var_ast_ptr);
+    REQUIRE(var_name == schema_var_ast.m_name);
+
+    REQUIRE_NOTHROW([&]() -> void {
+        (void)dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr);
+    }());
+
+    auto const captures{schema_var_ast.m_regex_ptr->get_subtree_positive_captures()};
+    REQUIRE(captures.size() == 1);
+    REQUIRE(cap_name == captures.at(0)->get_name());
 }
