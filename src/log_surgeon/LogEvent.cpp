@@ -51,6 +51,9 @@ auto LogEventView::reset() -> void {
 
 auto LogEventView::get_logtype() const -> std::string {
     std::string logtype;
+    if (m_log_output_buffer->has_timestamp()) {
+        logtype += "<timestamp>";
+    }
     for (uint32_t i{1}; i < m_log_output_buffer->pos(); ++i) {
         auto token_view{m_log_output_buffer->get_mutable_token(i)};
         auto const rule_id{token_view.m_type_ids_ptr->at(0)};
