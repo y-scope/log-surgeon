@@ -302,8 +302,66 @@ TEST_CASE("single_line_with_capture", "[BufferParser]") {
 }
 
 /**
+ * @ingroup test_buffer_parser_capture
+ * @brief Validates tokenization behavior when using optional capture groups in variable schemas.
+ *
+ * This test is an extension of `single_line_with_capture` that verifies the correct behaviour when
+ * an optional capture group is not found.
+ *
+ * ### Schema Definition
+ * @code
+ * delimiters: \n\r\[:,
+ * myVar:userID=(?<uid>123){0,1}
+ * @endcode
+ *
+ * ### Test Input
+ * @code
+ * "userID=123 userID= userID=456"
+ * @endcode
+ *
+ * ### Expected Logtype
+ * @code
+ * "userID=<uid> userID= userID=456"
+ * @endcode
+ *
+ * ### Expected Tokenization
+ * @code
+ * "userID=123" -> "myVar" with "123" -> "uid"
+ * " userID=" -> "myVar" with empty -> "uid"
+ * " userID=456" -> uncaught string
+ * @endcode
+ */
+TEST_CASE("single_line_with_optional_capture", "[BufferParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cVarSchema{"myVar:userID=(?<uid>123){0,1}"};
+    constexpr string_view cInput{"userID=123 userID= userID=456"};
+
+    ExpectedEvent const expected_event{
+            .m_logtype{R"(userID=<uid> userID= userID=456)"},
+            .m_timestamp_raw{""},
+            .m_tokens{
+                    {{"userID=123",
+                      "myVar",
+                      {{{"uid", {.m_start_positions{7}, .m_end_positions{10}}}}}},
+                     {" userID=",
+                      "myVar",
+                      {{{"uid", {.m_start_positions{-1}, .m_end_positions{-1}}}}}},
+                     {" userID=456", "", {}}}
+            }
+    };
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cVarSchema, -1);
+    BufferParser buffer_parser(std::move(schema.release_schema_ast_ptr()));
+
+    parse_and_validate(buffer_parser, cInput, {expected_event});
+}
+
+/**
  * @defgroup test_buffer_parser_default_schema Buffer parser using the default schema.
- * @brief Tests for CLP's default variable schema: timestamp, int, float, hex, key-value pairs, etc.
+ * @brief Tests for CLP's default variable schema: timestamp, int, float, hex, key-value pairs,
+ * etc.
  *
  * Validates token recognition across common variable types using a default schema definition.
  */
@@ -325,8 +383,8 @@ TEST_CASE("single_line_with_capture", "[BufferParser]") {
  * - Inputs are matched and classified according to their variable type.
  * - Capture groups are properly detected and positionally tracked.
  *
- * This group demonstrates how to define and integrate regex-based schemas, including named capture
- * groups, for structured log tokenization.
+ * This group demonstrates how to define and integrate regex-based schemas, including named
+ * capture groups, for structured log tokenization.
  *
  * ### Schema Definition
  * @code
@@ -414,9 +472,11 @@ TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
 }
 
 /**
- * @defgroup test_buffer_parser_newline_vars Buffer parser identifying variable tokens on newlines.
- * @brief Tests covering how `BufferParser` categorizes variable tokens appearing at the start of
- * new lines, including interaction with static-text, delimiters, and capture group repetition.
+ * @defgroup test_buffer_parser_newline_vars Buffer parser identifying variable tokens on
+ * newlines.
+ * @brief Tests covering how `BufferParser` categorizes variable tokens appearing at the start
+ * of new lines, including interaction with static-text, delimiters, and capture group
+ * repetition.
  *
  * These tests verify correct tokenization and recognition of variables and delimiters when
  * variables occur on new lines, especially following different token types.
@@ -428,8 +488,8 @@ TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
  * variable.
  *
  * This test verifies that when a line ends with a variable token and the next line starts with
- * static text followed by an integer variable, the `BufferParser` correctly recognizes the newline
- * as a delimiter and parses the tokens appropriately.
+ * static text followed by an integer variable, the `BufferParser` correctly recognizes the
+ * newline as a delimiter and parses the tokens appropriately.
  *
  * ### Schema Definition
  * @code
@@ -484,9 +544,9 @@ TEST_CASE("multi_line_with_newline_static_var_sequence", "[BufferParser]") {
  * @brief Test variable after static-text at start of newline when previous line ends in
  * static-text.
  *
- * This test verifies that when a line ends with static text and the next line starts with static
- * text followed by an integer variable, the `BufferParser` identifies the newline properly and
- * tokenizes the input correctly.
+ * This test verifies that when a line ends with static text and the next line starts with
+ * static text followed by an integer variable, the `BufferParser` identifies the newline
+ * properly and tokenizes the input correctly.
  *
  * ### Schema Definition
  * @code
@@ -541,8 +601,8 @@ TEST_CASE("multi_line_with_static_newline_static_var_sequence", "[BufferParser]"
  * @ingroup test_buffer_parser_newline_vars
  * @brief Test variable at start of newline when previous line ends in static-text.
  *
- * This test verifies that when a line ends with static text and the next line starts directly with
- * an integer variable, the `BufferParser` treats the newline and variable token correctly.
+ * This test verifies that when a line ends with static text and the next line starts directly
+ * with an integer variable, the `BufferParser` treats the newline and variable token correctly.
  *
  * ### Schema Definition
  * @code
@@ -597,9 +657,9 @@ TEST_CASE("multi_line_with_static_newline_var_sequence", "[BufferParser]") {
  * @brief Test variable followed by newline at start of newline when previous line ends in
  * static-text.
  *
- * This test verifies that when a line ends with static text, and the next line contains an integer
- * variable followed by a newline, the `BufferParser` correctly separates the tokens, recognizing
- * the newline delimiter.
+ * This test verifies that when a line ends with static text, and the next line contains an
+ * integer variable followed by a newline, the `BufferParser` correctly separates the tokens,
+ * recognizing the newline delimiter.
  *
  * ### Schema Definition
  * @code
@@ -655,9 +715,9 @@ TEST_CASE("multi_line_with_static_newline_var_newline_sequence", "[BufferParser]
  * @ingroup test_buffer_parser_newline_vars
  * @brief Test a variable at start of a newline when previous line ends in a delimiter.
  *
- * This test verifies that if a line ends with a delimiter (e.g., space) and the next line starts
- * with an integer variable, the `BufferParser` correctly identifies the tokens including the
- * newline.
+ * This test verifies that if a line ends with a delimiter (e.g., space) and the next line
+ * starts with an integer variable, the `BufferParser` correctly identifies the tokens including
+ * the newline.
  *
  * ### Schema Definition
  * @code
@@ -731,8 +791,8 @@ TEST_CASE("multi_line_with_delim_newline_var_sequence", "[BufferParser]") {
  * - Variable `function` with regex `function:[A-Za-z]+::[A-Za-z]+1`
  * - Variable `path` with regex `path:[a-zA-Z0-9_/\.\-]+/[a-zA-Z0-9_/\.\-]+`
  *
- * The test inputs validate tokenization of strings containing these variables, ensuring variables
- * are correctly identified and delimited tokens are separated.
+ * The test inputs validate tokenization of strings containing these variables, ensuring
+ * variables are correctly identified and delimited tokens are separated.
  *
  * ### Schema Definition
  * @code
@@ -743,8 +803,8 @@ TEST_CASE("multi_line_with_delim_newline_var_sequence", "[BufferParser]") {
  *
  * ### Test Inputs
  * @code
- * "[WARNING] A:2 [folder/file.cc:150] insert node:folder/file-op7, id:7 and folder/file-op8, id:8\n
- * Perform App::Action App::Action1 ::App::Action::Action1 on word::my/path/to/file.txt"
+ * "[WARNING] A:2 [folder/file.cc:150] insert node:folder/file-op7, id:7 and folder/file-op8,
+ * id:8\n Perform App::Action App::Action1 ::App::Action::Action1 on word::my/path/to/file.txt"
  * @endcode
  *
  * ### Expected Logtype
@@ -796,12 +856,12 @@ TEST_CASE("multi_line_with_delimited_vars", "[BufferParser]") {
     constexpr string_view cInput{
             "[WARNING] A:2 [folder/file.cc:150] insert node:folder/file-op7, id:7 and "
             "folder/file-op8, id:8\n"
-            "Perform App::Action App::Action1 ::App::Action::Action1 on word::my/path/to/file.txt"
+            "Perform App::Action App::Action1 ::App::Action::Action1 on "
+            "word::my/path/to/file.txt"
     };
     ExpectedEvent const expected_event1{
-            .m_logtype{
-                    "[WARNING] A:2 [<path>:150] insert node:<path>, id:7 and <path>, id:8<newLine>"
-            },
+            .m_logtype{"[WARNING] A:2 [<path>:150] insert node:<path>, id:7 and <path>, "
+                       "id:8<newLine>"},
             .m_timestamp_raw{""},
             .m_tokens{
                     {{"[WARNING]", "", {}},
@@ -858,14 +918,15 @@ TEST_CASE("multi_line_with_delimited_vars", "[BufferParser]") {
  * @ingroup test_buffer_parser_capture
  * @brief Tests a multi-capture rule parsing an Android log.
  *
- * This test verifies that a multi-capture rule correctly identifies the location of each capture
- * group. It tests that `BufferParser` correctly flattens the logtype, as well as stores the full
- * tree correctly.
+ * This test verifies that a multi-capture rule correctly identifies the location of each
+ * capture group. It tests that `BufferParser` correctly flattens the logtype, as well as stores
+ * the full tree correctly.
  *
  * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
- * header:(?<timestamp>\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}) (?<PID>\d{4}) (?<TID>\d{4}) \
+ * header:(?<timestamp>\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}) (?<PID>\d{4}) (?<TID>\d{4})
+ * \
  *        (?<LogLevel>I|D|E|W)
  * @endcode
  *
@@ -929,13 +990,14 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
  * @brief Tests a multi-capture rule parsing a Kubernetes log.
  *
  * This test also verifies that a multi-capture rule correctly identifies the location of each
- * capture group. It tests that `BufferParser` correctly flattens the logtype, as well as stores the
- * full tree correctly.
+ * capture group. It tests that `BufferParser` correctly flattens the logtype, as well as stores
+ * the full tree correctly.
  *
  * ### Schema Definition
  * @code
  * delimiters: \n\r\[:,
- * header:(?<timestamp>[A-Za-z]{3} \d{2} \d{2}:\d{2}:\d{2}) ip\-(?<IP>\d{3}\-\d{2}\-\d{2}\-\d{2}) \
+ * header:(?<timestamp>[A-Za-z]{3} \d{2} \d{2}:\d{2}:\d{2})
+ * ip\-(?<IP>\d{3}\-\d{2}\-\d{2}\-\d{2}) \
  *        ku\[(?<PID>\d{4})\]: (?<LogLevel>I|D|E|W)(?<LID>\d{4}) \
  *        (?<LTime>\d{2}:\d{2}:\d{2}\.\d{4})    (?<TID>\d{4})
  * @endcode
