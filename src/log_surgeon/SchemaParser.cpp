@@ -117,13 +117,13 @@ auto SchemaParser::try_schema_string(string_view const schema_string) -> unique_
 }
 
 static auto new_identifier_rule(NonTerminal* m) -> unique_ptr<IdentifierAST> {
-    return make_unique<IdentifierAST>(IdentifierAST{m->token_cast(0).to_string()[0]});
+    return make_unique<IdentifierAST>(IdentifierAST{m->token_cast(0).to_string().at(0)});
 }
 
 static auto existing_identifier_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     auto parser_ast{m->non_terminal_cast(0).release_parser_ast()};
     auto* identifier_ast{dynamic_cast<IdentifierAST*>(parser_ast.get())};
-    identifier_ast->add_character(m->token_cast(1).to_string()[0]);
+    identifier_ast->add_character(m->token_cast(1).to_string().at(0));
     return parser_ast;
 }
 
@@ -231,7 +231,7 @@ static auto regex_match_exactly_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     )};
     uint32_t reps{0};
     auto num_digits{int_ast->get_digits().size()};
-    for (size_t i{0}; i < num_digits; i++) {
+    for (size_t i{0}; i < num_digits; ++i) {
         reps += int_ast->get_digit(i) * (uint32_t)pow(10, num_digits - i - 1);
     }
     return make_unique<ParserValueRegex>(make_unique<RegexASTMultiplicationByte>(
@@ -247,16 +247,16 @@ static auto regex_match_range_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     )};
     uint32_t min{0};
     auto num_digits{int_ast->get_digits().size()};
-    for (size_t i{0}; i < num_digits; i++) {
+    for (size_t i{0}; i < num_digits; ++i) {
         min += int_ast->get_digit(i) * (uint32_t)pow(10, num_digits - i - 1);
     }
 
     int_ast = dynamic_cast<RegexASTIntegerByte*>(
             m->non_terminal_cast(4).get_parser_ast().get<unique_ptr<RegexASTByte>>().get()
     );
-    uint32_t max = 0;
+    uint32_t max{0};
     num_digits = int_ast->get_digits().size();
-    for (uint32_t i = 0; i < num_digits; i++) {
+    for (uint32_t i{0}; i < num_digits; ++i) {
         max += int_ast->get_digit(i) * (uint32_t)pow(10, num_digits - i - 1);
     }
 

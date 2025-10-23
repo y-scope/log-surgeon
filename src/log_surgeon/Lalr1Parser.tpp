@@ -22,7 +22,7 @@ namespace {
                 Overloaded{
                         [&line_num](Token& token) { line_num = token.m_line; },
                         [&symbols](NonTerminal& m) {
-                            for (size_t i = 0; i < m.get_production()->m_body.size(); i++) {
+                            for (size_t i{0}; i < m.get_production()->m_body.size(); ++i) {
                                 symbols.push(m.move_symbol(i));
                             }
                         }
@@ -532,7 +532,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_after_last_newline(
                             }
                         },
                         [&parse_stack_matches](NonTerminal& m) {
-                            for (size_t i = 0; i < m.get_production()->m_body.size(); i++) {
+                            for (size_t i{0}; i < m.get_production()->m_body.size(); ++i) {
                                 parse_stack_matches.push(m.move_symbol(i));
                             }
                         }
