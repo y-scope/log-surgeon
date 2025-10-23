@@ -8,7 +8,6 @@ namespace log_surgeon {
 constexpr uint32_t cUnicodeMax = 0x10'FFFF;
 constexpr uint32_t cSizeOfUnicode = cUnicodeMax + 1;
 constexpr uint32_t cSizeOfByte = 256;
-constexpr uint32_t cSizeOfAllChildren = 10'000;
 constexpr uint32_t cNullSymbol = 10'000'000;
 
 enum class ErrorCode {

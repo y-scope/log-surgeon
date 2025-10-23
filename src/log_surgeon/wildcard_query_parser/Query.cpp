@@ -135,8 +135,6 @@ auto Query::get_all_single_token_interpretations(
 
 auto Query::get_matching_variable_types(string const& regex_string, ByteLexer const& lexer)
         -> set<uint32_t> {
-    NonTerminal::m_next_children_start = 0;
-
     Schema schema;
     schema.add_variable("search:" + regex_string, -1);
     auto const schema_ast = schema.release_schema_ast_ptr();

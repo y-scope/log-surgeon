@@ -22,12 +22,8 @@ namespace {
                 Overloaded{
                         [&line_num](Token& token) { line_num = token.m_line; },
                         [&symbols](NonTerminal& m) {
-                            for (size_t i = 0; i < m.m_production->m_body.size(); i++) {
-                                symbols.push(
-                                        std::move(
-                                                NonTerminal::m_all_children[m.m_children_start + i]
-                                        )
-                                );
+                            for (size_t i = 0; i < m.get_production()->m_body.size(); i++) {
+                                symbols.push(m.move_symbol(i));
                             }
                         }
                 },
@@ -536,13 +532,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_after_last_newline(
                             }
                         },
                         [&parse_stack_matches](NonTerminal& m) {
-                            for (size_t i = 0; i < m.m_production->m_body.size(); i++) {
-                                assert(m.m_children_start + i < cSizeOfAllChildren);
-                                parse_stack_matches.push(
-                                        std::move(
-                                                NonTerminal::m_all_children[m.m_children_start + i]
-                                        )
-                                );
+                            for (size_t i = 0; i < m.get_production()->m_body.size(); i++) {
+                                parse_stack_matches.push(m.move_symbol(i));
                             }
                         }
                 },
@@ -717,13 +708,13 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse_symbol(
                         m_next_token = next_token;
                         NonTerminal matched_non_terminal(reduce);
                         auto n = reduce->m_body.size();
+                        matched_non_terminal.resize_symbols(n);
                         for (size_t i = 0; i < n; i++) {
                             m_parse_stack_states.pop();
-                            assert((matched_non_terminal.m_children_start + n - i - 1)
-                                   < cSizeOfAllChildren);
-                            NonTerminal::m_all_children
-                                    [matched_non_terminal.m_children_start + n - i - 1]
-                                    = std::move(m_parse_stack_matches.top());
+                            matched_non_terminal.set_symbol(
+                                    n - i - 1,
+                                    std::move(m_parse_stack_matches.top())
+                            );
                             m_parse_stack_matches.pop();
                         }
                         if (reduce->m_semantic_rule != nullptr) {
@@ -734,11 +725,13 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse_symbol(
                             } else {
                                 m_input_buffer.set_consumed_pos(m_next_token->m_start_pos - 1);
                             }
-                            matched_non_terminal.m_ast
-                                    = reduce->m_semantic_rule(&matched_non_terminal);
+                            matched_non_terminal.set_ast(
+                                    reduce->m_semantic_rule(&matched_non_terminal)
+                            );
                         }
                         auto* curr = m_parse_stack_states.top();
-                        auto const& it = curr->m_actions[matched_non_terminal.m_production->m_head];
+                        auto const& it
+                                = curr->m_actions[matched_non_terminal.get_production()->m_head];
                         m_parse_stack_states.push(std::get<ItemSet*>(it));
                         m_parse_stack_matches.emplace(std::move(matched_non_terminal));
                         ret = true;
