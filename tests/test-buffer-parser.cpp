@@ -321,7 +321,7 @@ TEST_CASE("single_line_with_capture", "[BufferParser]") {
  *
  * ### Expected Logtype
  * @code
- * "userID=userID=<uid> userID= userID=456"
+ * "userID=<uid> userID= userID=456"
  * @endcode
  *
  * ### Expected Tokenization
