@@ -82,9 +82,8 @@ public:
     }
 
     /**
-     * Return a reference to the AST that relates this non_terminal's children together (based on
+     * @return A reference to the `ParserAST` that relates this non_terminal's children together (based on
      * the production/syntax-rule that was determined to have generated them).
-     * @return ParserAST&
      */
     auto get_parser_ast() -> ParserAST& { return *m_ast; }
 
