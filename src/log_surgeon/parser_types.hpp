@@ -6,6 +6,7 @@
 #include <functional>
 #include <memory>
 #include <set>
+#include <stdexcept>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -67,7 +68,7 @@ public:
      * Return the ith child's (body of production) MatchedSymbol as a Token.
      * Note: only children are needed (and stored) for performing semantic actions (for the AST)
      * @param i
-     * @return Token*
+     * @return Token&
      */
     [[nodiscard]] auto token_cast(uint32_t i) -> Token& { return std::get<Token>(m_symbols.at(i)); }
 
@@ -75,17 +76,18 @@ public:
      * Return the ith child's (body of production) MatchedSymbol as a NonTerminal. Note: only
      * children are needed (and stored) for performing semantic actions (for the AST)
      * @param i
-     * @return NonTerminal*
+     * @return NonTerminal&
      */
     [[nodiscard]] auto non_terminal_cast(uint32_t i) -> NonTerminal& {
         return std::get<NonTerminal>(m_symbols.at(i));
     }
 
-    /**
-     * @return A reference to the `ParserAST` that relates this non_terminal's children together (based on
-     * the production/syntax-rule that was determined to have generated them).
-     */
-    auto get_parser_ast() -> ParserAST& { return *m_ast; }
+    auto get_parser_ast() -> ParserAST& {
+        if (nullptr == m_ast) {
+            throw std::runtime_error("No owned ParserAST");
+        }
+        return *m_ast;
+    }
 
     /**
      * Release and return the AST that relates this non_terminal's children together (based on the
@@ -94,32 +96,14 @@ public:
      */
     auto release_parser_ast() -> std::unique_ptr<ParserAST> { return std::move(m_ast); }
 
-    /**
-     * Store the specified ParserAST.
-     * @param ast
-     */
-    auto set_ast(std::unique_ptr<ParserAST> ast) -> void { m_ast = std::move(ast); }
+    auto set_parser_ast(std::unique_ptr<ParserAST> ast) -> void { m_ast = std::move(ast); }
 
-    /**
-     * Move the ith child's (body of production) MatchedSymbol out of the symbols container.
-     * @param i
-     * @return MatchedSymbol&&
-     */
     [[nodiscard]] auto move_symbol(uint32_t i) -> MatchedSymbol&& {
         return std::move(m_symbols.at(i));
     }
 
-    /**
-     * Resize the symbols container allowing for unordered insertion.
-     * @param i
-     * @return MatchedSymbol&&
-     */
     auto resize_symbols(uint32_t size) -> void { m_symbols.resize(size); }
 
-    /**
-     * Store the specified MatchedSymbol as the ith element.
-     * @param ast
-     */
     auto set_symbol(uint32_t i, MatchedSymbol symbol) -> void {
         m_symbols.at(i) = std::move(symbol);
     }

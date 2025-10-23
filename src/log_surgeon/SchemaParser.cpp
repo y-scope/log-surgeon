@@ -190,17 +190,17 @@ static auto regex_identity_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
 }
 
 static auto regex_cat_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
-    return make_unique<ParserValueRegex>(unique_ptr<RegexASTByte>(make_unique<RegexASTCatByte>(
+    return make_unique<ParserValueRegex>(make_unique<RegexASTCatByte>(
             std::move(m->non_terminal_cast(0).get_parser_ast().get<unique_ptr<RegexASTByte>>()),
             std::move(m->non_terminal_cast(1).get_parser_ast().get<unique_ptr<RegexASTByte>>())
-    )));
+    ));
 }
 
 static auto regex_or_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
-    return make_unique<ParserValueRegex>(unique_ptr<RegexASTByte>(make_unique<RegexASTOrByte>(
+    return make_unique<ParserValueRegex>(make_unique<RegexASTOrByte>(
             std::move(m->non_terminal_cast(0).get_parser_ast().get<unique_ptr<RegexASTByte>>()),
             std::move(m->non_terminal_cast(2).get_parser_ast().get<unique_ptr<RegexASTByte>>())
-    )));
+    ));
 }
 
 static auto regex_match_zero_or_more_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
@@ -232,7 +232,7 @@ static auto regex_match_exactly_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     uint32_t reps{0};
     auto num_digits{int_ast->get_digits().size()};
     for (size_t i{0}; i < num_digits; ++i) {
-        reps += int_ast->get_digit(i) * (uint32_t)pow(10, num_digits - i - 1);
+        reps += int_ast->get_digit(i) * static_cast<uint32_t>(pow(10, num_digits - i - 1));
     }
     return make_unique<ParserValueRegex>(make_unique<RegexASTMultiplicationByte>(
             std::move(m->non_terminal_cast(0).get_parser_ast().get<unique_ptr<RegexASTByte>>()),
@@ -248,7 +248,7 @@ static auto regex_match_range_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     uint32_t min{0};
     auto num_digits{int_ast->get_digits().size()};
     for (size_t i{0}; i < num_digits; ++i) {
-        min += int_ast->get_digit(i) * (uint32_t)pow(10, num_digits - i - 1);
+        min += int_ast->get_digit(i) * static_cast<uint32_t>(pow(10, num_digits - i - 1));
     }
 
     int_ast = dynamic_cast<RegexASTIntegerByte*>(
@@ -257,7 +257,7 @@ static auto regex_match_range_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     uint32_t max{0};
     num_digits = int_ast->get_digits().size();
     for (uint32_t i{0}; i < num_digits; ++i) {
-        max += int_ast->get_digit(i) * (uint32_t)pow(10, num_digits - i - 1);
+        max += int_ast->get_digit(i) * static_cast<uint32_t>(pow(10, num_digits - i - 1));
     }
 
     auto& regex_ast{m->non_terminal_cast(0).get_parser_ast().get<unique_ptr<RegexASTByte>>()};

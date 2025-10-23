@@ -725,7 +725,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse_symbol(
                             } else {
                                 m_input_buffer.set_consumed_pos(m_next_token->m_start_pos - 1);
                             }
-                            matched_non_terminal.set_ast(
+                            matched_non_terminal.set_parser_ast(
                                     reduce->m_semantic_rule(&matched_non_terminal)
                             );
                         }
