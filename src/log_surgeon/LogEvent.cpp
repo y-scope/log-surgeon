@@ -88,7 +88,9 @@ auto LogEventView::get_logtype() const -> std::string {
                     };
 
                     auto capture_name{m_log_parser.get_id_symbol(capture_id)};
-                    if (0 < start_positions.size() && 0 < end_positions.size()) {
+                    if (false == start_positions.empty() && -1 < start_positions[0]
+                        && false == end_positions.empty() && -1 < end_positions[0])
+                    {
                         capture_view.m_end_pos = start_positions[0];
                         logtype.append(capture_view.to_string_view());
                         logtype.append("<" + capture_name + ">");
