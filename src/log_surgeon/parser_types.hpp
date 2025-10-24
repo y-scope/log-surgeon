@@ -6,8 +6,10 @@
 #include <functional>
 #include <memory>
 #include <set>
+#include <stdexcept>
 #include <tuple>
 #include <unordered_map>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -58,47 +60,58 @@ public:
  */
 class NonTerminal {
 public:
-    NonTerminal() : m_children_start(0), m_production(nullptr), m_ast(nullptr) {}
+    NonTerminal() : NonTerminal(nullptr) {}
 
-    explicit NonTerminal(Production* production)
-            : m_children_start(m_next_children_start),
-              m_production(production),
-              m_ast(nullptr) {
-        m_next_children_start += production->m_body.size();
-    }
+    explicit NonTerminal(Production* production) : m_production(production), m_ast(nullptr) {}
 
     /**
      * Return the ith child's (body of production) MatchedSymbol as a Token.
      * Note: only children are needed (and stored) for performing semantic actions (for the AST)
      * @param i
-     * @return Token*
+     * @return Token&
      */
-    [[nodiscard]] auto token_cast(uint32_t i) const -> Token* {
-        assert(i < cSizeOfAllChildren);
-        return &std::get<Token>(m_all_children[m_children_start + i]);
-    }
+    [[nodiscard]] auto token_cast(uint32_t i) -> Token& { return std::get<Token>(m_symbols.at(i)); }
 
     /**
      * Return the ith child's (body of production) MatchedSymbol as a NonTerminal. Note: only
      * children are needed (and stored) for performing semantic actions (for the AST)
      * @param i
-     * @return NonTerminal*
+     * @return NonTerminal&
      */
-    [[nodiscard]] auto non_terminal_cast(uint32_t i) const -> NonTerminal* {
-        assert(i < cSizeOfAllChildren);
-        return &std::get<NonTerminal>(m_all_children[m_children_start + i]);
+    [[nodiscard]] auto non_terminal_cast(uint32_t i) -> NonTerminal& {
+        return std::get<NonTerminal>(m_symbols.at(i));
+    }
+
+    auto get_parser_ast() -> ParserAST& {
+        if (nullptr == m_ast) {
+            throw std::runtime_error("No owned ParserAST");
+        }
+        return *m_ast;
     }
 
     /**
-     * Return the AST that relates this non_terminal's children together (based on the
-     * production/syntax-rule that was determined to have generated them)
+     * Release and return the AST that relates this non_terminal's children together (based on the
+     * production/syntax-rule that was determined to have generated them).
      * @return std::unique_ptr<ParserAST>
      */
-    auto get_parser_ast() -> std::unique_ptr<ParserAST>& { return m_ast; }
+    auto release_parser_ast() -> std::unique_ptr<ParserAST> { return std::move(m_ast); }
 
-    static MatchedSymbol m_all_children[];
-    static inline uint32_t m_next_children_start{0};
-    uint32_t m_children_start;
+    auto set_parser_ast(std::unique_ptr<ParserAST> ast) -> void { m_ast = std::move(ast); }
+
+    [[nodiscard]] auto move_symbol(uint32_t i) -> MatchedSymbol&& {
+        return std::move(m_symbols.at(i));
+    }
+
+    auto resize_symbols(uint32_t size) -> void { m_symbols.resize(size); }
+
+    auto set_symbol(uint32_t i, MatchedSymbol symbol) -> void {
+        m_symbols.at(i) = std::move(symbol);
+    }
+
+    [[nodiscard]] auto get_production() -> Production* { return m_production; }
+
+private:
+    std::vector<MatchedSymbol> m_symbols;
     Production* m_production;
     std::unique_ptr<ParserAST> m_ast;
 };

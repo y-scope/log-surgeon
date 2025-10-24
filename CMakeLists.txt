@@ -108,7 +108,6 @@ set(SOURCE_FILES
     src/log_surgeon/LogParserOutputBuffer.hpp
     src/log_surgeon/Parser.tpp
     src/log_surgeon/Parser.hpp
-    src/log_surgeon/parser_types.cpp
     src/log_surgeon/parser_types.hpp
     src/log_surgeon/ParserAst.cpp
     src/log_surgeon/ParserAst.hpp
