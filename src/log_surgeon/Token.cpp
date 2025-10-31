@@ -44,4 +44,13 @@ auto Token::get_length() const -> uint32_t {
     }
     return m_buffer_size - m_start_pos + m_end_pos;
 }
+
+auto Token::release_delimiter() -> char {
+    auto const delim{m_buffer[m_start_pos]};
+    m_start_pos++;
+    if (m_start_pos == m_buffer_size) {
+        m_start_pos = 0;
+    }
+    return delim;
+}
 }  // namespace log_surgeon

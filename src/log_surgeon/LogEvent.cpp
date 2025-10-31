@@ -63,8 +63,7 @@ auto LogEventView::get_logtype() const -> std::string {
             bool const is_first_token{false == m_log_output_buffer->has_timestamp() && 1 == i};
             if (static_cast<uint32_t>(SymbolId::TokenNewline) != rule_id && false == is_first_token)
             {
-                logtype += token_view.get_delimiter();
-                token_view.m_start_pos++;
+                logtype += token_view.release_delimiter();
             }
             if (auto const& optional_capture_ids{
                         m_log_parser.m_lexer.get_capture_ids_from_rule_id(rule_id)

@@ -45,6 +45,11 @@ public:
         return m_reg_handler.get_reversed_positions(reg_id);
     }
 
+    /**
+     * @return The leading delimiter character and remove it.
+     */
+    [[nodiscard]] auto release_delimiter() -> char;
+
     uint32_t m_start_pos{0};
     uint32_t m_end_pos{0};
     char const* m_buffer{nullptr};
