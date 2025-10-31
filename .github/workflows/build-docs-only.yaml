@@ -1,0 +1,24 @@
+name: "build"
+
+on:
+  pull_request:
+    paths:
+      - "README.md"
+      - "docs/**/*"
+      - "*.md"
+  push:
+    paths:
+      - "README.md"
+      - "docs/**/*"
+      - "*.md"
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Documentation-only changes"
+        run: echo "Only documentation changed, skipping build"
