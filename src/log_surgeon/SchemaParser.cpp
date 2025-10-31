@@ -472,14 +472,12 @@ auto SchemaParser::add_lexical_rules() -> void {
     // RegexASTGroupByte default constructs to an m_negate group, so we add the only two characters
     // which can't be in a comment, the newline and carriage return characters as they signify the
     // end of the comment.
-    unique_ptr<RegexASTGroupByte> comment_characters = make_unique<RegexASTGroupByte>();
+    auto comment_characters{make_unique<RegexASTGroupByte>()};
     comment_characters->add_literal('\r');
     comment_characters->add_literal('\n');
     add_token_group("CommentCharacters", std::move(comment_characters));
-    add_token_group("IdentifierCharacters", make_unique<RegexASTGroupByte>('a', 'z'));
-    add_token_group("IdentifierCharacters", make_unique<RegexASTGroupByte>('A', 'Z'));
-    add_token_group("IdentifierCharacters", make_unique<RegexASTGroupByte>('0', '9'));
-    add_token("IdentifierCharacters", '_');
+    add_token_group("IdentifierCharacters", make_unique<RegexASTGroupByte>('!', ':' - 1));
+    add_token_group("IdentifierCharacters", make_unique<RegexASTGroupByte>(':' + 1, '~'));
 }
 
 auto SchemaParser::add_productions() -> void {
