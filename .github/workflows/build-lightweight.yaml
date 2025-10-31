@@ -1,0 +1,26 @@
+name: "build"
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/build-lightweight.yaml"
+      - "README.md"
+      - "docs/**/*"
+      - "*.md"
+  push:
+    paths:
+      - ".github/workflows/build-lightweight.yaml"
+      - "README.md"
+      - "docs/**/*"
+      - "*.md"
+
+concurrency:
+  group: "build-lightweight-${{github.ref}}"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Non-code changes only"
+        run: echo "Only non-code changes detected, skipping build"
