@@ -44,7 +44,7 @@ auto LogEventView::reset() -> void {
     }
     for (uint32_t i = start; i < m_log_output_buffer->pos(); i++) {
         auto& token = m_log_output_buffer->get_mutable_token(i);
-        raw_log += token.to_string_view();
+        raw_log += token.to_string();
     }
     return raw_log;
 }
@@ -56,9 +56,9 @@ auto LogEventView::get_logtype() const -> std::string {
     }
     for (uint32_t i{1}; i < m_log_output_buffer->pos(); ++i) {
         auto token_view{m_log_output_buffer->get_mutable_token(i)};
-        auto const rule_id{token_view.m_type_ids_ptr->at(0)};
+        auto const rule_id{token_view.get_type_ids()->at(0)};
         if (static_cast<uint32_t>(SymbolId::TokenUncaughtString) == rule_id) {
-            logtype += token_view.to_string_view();
+            logtype += token_view.to_string();
         } else {
             bool const is_first_token{false == m_log_output_buffer->has_timestamp() && 1 == i};
             if (static_cast<uint32_t>(SymbolId::TokenNewline) != rule_id && false == is_first_token)
@@ -90,14 +90,14 @@ auto LogEventView::get_logtype() const -> std::string {
                     if (false == start_positions.empty() && -1 < start_positions[0]
                         && false == end_positions.empty() && -1 < end_positions[0])
                     {
-                        capture_view.m_end_pos = start_positions[0];
-                        logtype.append(capture_view.to_string_view());
+                        capture_view.set_end_pos(start_positions[0]);
+                        logtype.append(capture_view.to_string());
                         logtype.append("<" + capture_name + ">");
-                        capture_view.m_start_pos = end_positions[0];
+                        capture_view.set_start_pos(end_positions[0]);
                     }
                 }
-                capture_view.m_end_pos = token_view.m_end_pos;
-                logtype.append(capture_view.to_string_view());
+                capture_view.set_end_pos(token_view.get_end_pos());
+                logtype.append(capture_view.to_string());
             } else {
                 logtype += "<" + m_log_parser.get_id_symbol(rule_id) + ">";
             }
@@ -128,7 +128,7 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
     for (uint32_t i = start; i < src.get_log_output_buffer()->pos(); i++) {
         Token& token = src.get_log_output_buffer()->get_mutable_token(i);
         uint32_t start_pos = curr_pos;
-        for (char const& c : token.to_string_view()) {
+        for (char const& c : token.to_string()) {
             m_buffer[curr_pos] = c;
             curr_pos++;
         }
@@ -139,14 +139,14 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
                 m_buffer.data(),
                 buffer_size,
                 0,
-                token.m_type_ids_ptr
+                token.get_type_ids()
         };
         m_log_output_buffer->set_curr_token(copied_token);
         m_log_output_buffer->advance_to_next_token();
     }
     for (uint32_t i = 0; i < get_log_output_buffer()->pos(); i++) {
         Token& token = get_log_output_buffer()->get_mutable_token(i);
-        auto const& token_types = *token.m_type_ids_ptr;
+        auto const& token_types = *token.get_type_ids();
         add_token(token_types[0], &token);
     }
 }
