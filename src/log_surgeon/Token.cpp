@@ -2,9 +2,10 @@
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 
 namespace log_surgeon {
-auto Token::to_string() -> std::string {
+auto Token::get_cached_string() -> std::string const& {
     if (m_cached_string.empty()) {
         if (get_start_pos() <= get_end_pos()) {
             auto const token{m_buffer.subspan(get_start_pos(), get_end_pos() - get_start_pos())};
@@ -19,6 +20,18 @@ auto Token::to_string() -> std::string {
         }
     }
     return m_cached_string;
+}
+
+auto Token::to_string() -> std::string {
+    return {get_cached_string()};
+}
+
+auto Token::to_string_view() -> std::string_view {
+    if (get_start_pos() <= get_end_pos()) {
+        auto const token{m_buffer.subspan(get_start_pos(), get_end_pos() - get_start_pos())};
+        return {token.begin(), token.end()};
+    }
+    return {get_cached_string()};
 }
 
 auto Token::get_delimiter() const -> std::string {
@@ -56,8 +69,7 @@ auto Token::increment_start_pos() -> size_t {
 }
 
 auto Token::get_next_pos() const -> size_t {
-    auto next_pos{get_start_pos()};
-    next_pos++;
+    auto next_pos{get_start_pos() + 1};
     if (next_pos == get_buffer_size()) {
         next_pos = 0;
     }
