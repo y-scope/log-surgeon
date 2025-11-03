@@ -40,11 +40,11 @@ auto print_timestamp_loglevel(LogEventView const& event, uint32_t loglevel_id) -
     }
     if (nullptr != timestamp) {
         cout << "timestamp: ";
-        cout << timestamp->to_string();
+        cout << timestamp->to_string_view();
     }
     if (nullptr != loglevel) {
         cout << ", loglevel:";
-        cout << loglevel->to_string();
+        cout << loglevel->to_string_view();
     }
     cout << "\n";
 }
