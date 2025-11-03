@@ -146,7 +146,7 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
     }
     for (uint32_t i = 0; i < get_log_output_buffer()->pos(); i++) {
         Token& token = get_log_output_buffer()->get_mutable_token(i);
-        auto const& token_types = *token.get_type_ids();
+        auto const& token_types{*token.get_type_ids()};
         add_token(token_types[0], &token);
     }
 }

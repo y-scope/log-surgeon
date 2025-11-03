@@ -137,7 +137,8 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
             }
             next_token = optional_next_token.value();
             if (false == output_buffer->has_timestamp()
-                && next_token.get_type_ids()->at(0) == (uint32_t)SymbolId::TokenNewlineTimestamp)
+                && next_token.get_type_ids()->at(0)
+                           == static_cast<uint32_t>(SymbolId::TokenNewlineTimestamp))
             {
                 // TODO: combine the below with found_start_of_next_message
                 // into 1 function
