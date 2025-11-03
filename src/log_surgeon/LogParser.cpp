@@ -159,14 +159,15 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
                 return ErrorCode::Success;
             }
         }
-        if (next_token.get_type_ids()->at(0) == (uint32_t)SymbolId::TokenEnd) {
+        if (next_token.get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenEnd)) {
             output_buffer->set_token(0, next_token);
             output_buffer->set_pos(1);
             parsing_action = ParsingAction::CompressAndFinish;
             return ErrorCode::Success;
         }
-        if (next_token.get_type_ids()->at(0) == (uint32_t)SymbolId::TokenFirstTimestamp
-            || next_token.get_type_ids()->at(0) == (uint32_t)SymbolId::TokenNewlineTimestamp)
+        if (next_token.get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenFirstTimestamp)
+            || next_token.get_type_ids()->at(0)
+                       == static_cast<uint32_t>(SymbolId::TokenNewlineTimestamp))
         {
             output_buffer->set_has_timestamp(true);
             output_buffer->set_token(0, next_token);

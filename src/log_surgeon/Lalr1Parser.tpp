@@ -548,7 +548,9 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_until_next_newline(Token* error_token)
         -> std::string {
     std::string rest_of_line;
-    bool next_is_end_token{error_token->get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenEnd)};
+    bool next_is_end_token{
+            error_token->get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenEnd)
+    };
     bool next_has_newline = (error_token->to_string().find('\n') != std::string::npos)
                             || (error_token->to_string().find('\r') != std::string::npos);
     while (!next_has_newline && !next_is_end_token) {
@@ -581,7 +583,9 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::report_error() -> std::string {
         error_indicator += " ";
     }
     error_indicator += "^\n";
-    if (token.get_type_ids()->at(0) == (uint32_t)SymbolId::TokenEnd && consumed_input.empty()) {
+    if (token.get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenEnd)
+        && consumed_input.empty())
+    {
         error_type = "empty file";
         error_indicator = "^\n";
     } else {

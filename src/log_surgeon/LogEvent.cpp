@@ -128,7 +128,7 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
     for (uint32_t i = start; i < src.get_log_output_buffer()->pos(); i++) {
         Token& token = src.get_log_output_buffer()->get_mutable_token(i);
         uint32_t start_pos = curr_pos;
-        for (char const& c : token.to_string()) {
+        for (char const& c : token.to_string_view()) {
             m_buffer[curr_pos] = c;
             curr_pos++;
         }
