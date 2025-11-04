@@ -60,7 +60,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
                     input_buffer.storage().size(),
                     m_match_line,
                     m_type_ids,
-                    std::move(m_dfa->release_reg_handler())
+                    m_dfa->release_reg_handler()
             };
             return {ErrorCode::Success, token};
         }
@@ -141,7 +141,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
                         input_buffer.storage().size(),
                         m_match_line,
                         m_type_ids,
-                        std::move(m_dfa->release_reg_handler())
+                        m_dfa->release_reg_handler()
                 };
                 return {ErrorCode::Success, token};
             }

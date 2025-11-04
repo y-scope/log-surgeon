@@ -153,8 +153,6 @@ tasks:
             - "log_surgeon/Schema.cpp"
             - "log_surgeon/SchemaParser.cpp"
             - "log_surgeon/SchemaParser.hpp"
-            - "log_surgeon/Token.cpp"
-            - "log_surgeon/Token.hpp"
             - "log_surgeon/utils.hpp"
             - "test-buffer-parser.cpp"
             - "test-dfa.cpp"
