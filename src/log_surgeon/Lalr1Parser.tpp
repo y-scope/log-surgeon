@@ -559,7 +559,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_until_next_newline(Tok
                            || (token.to_string().find('\r') != std::string::npos);
         if (!next_has_newline) {
             rest_of_line += token.to_string();
-            next_is_end_token = (token.get_type_ids()->at(0) == (uint32_t)SymbolId::TokenEnd);
+            next_is_end_token
+                    = token.get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenEnd);
         }
     }
     rest_of_line += "\n";
