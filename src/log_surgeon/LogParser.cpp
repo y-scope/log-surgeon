@@ -187,7 +187,7 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
         }
         Token next_token{optional_next_token.value()};
         output_buffer->set_curr_token(next_token);
-        auto token_type = next_token.get_type_ids()->at(0);
+        auto token_type{next_token.get_type_ids()->at(0)};
         bool found_start_of_next_message
                 = (output_buffer->has_timestamp()
                    && token_type == (uint32_t)SymbolId::TokenNewlineTimestamp)
