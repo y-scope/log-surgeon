@@ -114,6 +114,9 @@ public:
     [[nodiscard]] auto get_next_pos() const -> size_t;
 
 private:
+    /**
+     * @return The cached string, computing it first if it is empty.
+     */
     auto get_cached_string() -> std::string const&;
 
     size_t m_start_pos{0};
