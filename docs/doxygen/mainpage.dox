@@ -2,7 +2,8 @@
  *
  * # Use case examples of schema rules and parsing results:
  *
- * - @ref test_buffer_parser_no_capture "Basic log parser"
+ * - @ref test_buffer_parser_no_capture "Basic log buffer parser"
+ * - @ref test_reader_parser_no_capture "Basic log file parser"
  * - @ref test_buffer_parser_capture "Captures"
  * - @ref test_buffer_parser_default_schema "Default CLP schema"
  * - @ref test_buffer_parser_delimited_variables "Backtracking on delimited variables"
@@ -19,6 +20,7 @@
  * - @ref unit_tests_prefix_tree "Prefix tree"
  * - @ref unit_tests_query "Query"
  * - @ref unit_tests_query_interpretation "Query Interpretation"
+ * - @ref unit_tests_reader_parser_wrap_around "Reader Parser"
  * - @ref unit_tests_regex_ast "Regex AST"
  * - @ref unit_tests_register_handler "Register handler"
  * - @ref unit_tests_schema "Schema"

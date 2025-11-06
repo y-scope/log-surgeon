@@ -45,6 +45,7 @@ constexpr char cTokenHex[] = "hex";
 constexpr char cTokenFirstTimestamp[] = "firstTimestamp";
 constexpr char cTokenNewlineTimestamp[] = "newLineTimestamp";
 constexpr char cTokenNewline[] = "newLine";
+// Buffer size cannot be odd, so always use a multiple of 2
 constexpr uint32_t cStaticByteBuffSize = 48'000;
 
 namespace utf8 {
