@@ -90,7 +90,7 @@ auto parse_and_validate(
         }
 
         read_to = input.size() - curr_pos;
-        if(read_to  > count) {
+        if (read_to  > count) {
             read_to = count;
         }
 
@@ -334,11 +334,11 @@ TEST_CASE("reader_parser_wrap_around", "[ReaderParser]") {
 
         int32_t log_start_pos{static_cast<int32_t>(cStaticByteBuffSize) - offset};
         int32_t cap_begin{log_start_pos+18};
-        if(cap_begin >= cStaticByteBuffSize) {
+        if (cap_begin >= cStaticByteBuffSize) {
             cap_begin -= cStaticByteBuffSize;
         }
         int32_t cap_end{log_start_pos+21};
-        if(cap_end >= cStaticByteBuffSize) {
+        if (cap_end >= cStaticByteBuffSize) {
             cap_end -= cStaticByteBuffSize;
         }
         ExpectedEvent expected_event3{
