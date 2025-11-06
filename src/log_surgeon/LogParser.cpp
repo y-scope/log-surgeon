@@ -137,39 +137,37 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
             }
             next_token = optional_next_token.value();
             if (false == output_buffer->has_timestamp()
-                && next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenNewlineTimestamp)
+                && next_token.get_type_ids()->at(0)
+                           == static_cast<uint32_t>(SymbolId::TokenNewlineTimestamp))
             {
                 // TODO: combine the below with found_start_of_next_message
                 // into 1 function
                 // Increment by 1 because the '\n' character is not part of the
                 // next log message
                 m_start_of_log_message = next_token;
-                if (m_start_of_log_message.m_start_pos == m_start_of_log_message.m_buffer_size - 1)
-                {
-                    m_start_of_log_message.m_start_pos = 0;
-                } else {
-                    m_start_of_log_message.m_start_pos++;
-                }
+                m_start_of_log_message.increment_start_pos();
                 // make a message with just the '\n' character
-                next_token.m_end_pos = next_token.m_start_pos + 1;
-                next_token.m_type_ids_ptr
-                        = &Lexer<ByteNfaState, ByteDfaState>::cTokenUncaughtStringTypes;
+                next_token.set_end_pos(next_token.get_next_pos());
+                next_token.set_type_ids(
+                        &Lexer<ByteNfaState, ByteDfaState>::cTokenUncaughtStringTypes
+                );
                 output_buffer->set_token(1, next_token);
                 output_buffer->set_pos(2);
-                m_input_buffer.set_consumed_pos(next_token.m_start_pos);
+                m_input_buffer.set_consumed_pos(next_token.get_start_pos());
                 m_has_start_of_log = true;
                 parsing_action = ParsingAction::Compress;
                 return ErrorCode::Success;
             }
         }
-        if (next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd) {
+        if (next_token.get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenEnd)) {
             output_buffer->set_token(0, next_token);
             output_buffer->set_pos(1);
             parsing_action = ParsingAction::CompressAndFinish;
             return ErrorCode::Success;
         }
-        if (next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenFirstTimestamp
-            || next_token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenNewlineTimestamp)
+        if (next_token.get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenFirstTimestamp)
+            || next_token.get_type_ids()->at(0)
+                       == static_cast<uint32_t>(SymbolId::TokenNewlineTimestamp))
         {
             output_buffer->set_has_timestamp(true);
             output_buffer->set_token(0, next_token);
@@ -189,11 +187,11 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
         }
         Token next_token{optional_next_token.value()};
         output_buffer->set_curr_token(next_token);
-        auto token_type = next_token.m_type_ids_ptr->at(0);
+        auto token_type{next_token.get_type_ids()->at(0)};
         bool found_start_of_next_message
                 = (output_buffer->has_timestamp()
                    && token_type == (uint32_t)SymbolId::TokenNewlineTimestamp)
-                  || (!output_buffer->has_timestamp() && next_token.get_char(0) == '\n'
+                  || (false == output_buffer->has_timestamp() && next_token.get_delimiter() == "\n"
                       && token_type != (uint32_t)SymbolId::TokenNewline);
         if (token_type == (uint32_t)SymbolId::TokenEnd) {
             parsing_action = ParsingAction::CompressAndFinish;
@@ -202,7 +200,7 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
         if (false == output_buffer->has_timestamp()
             && token_type == (uint32_t)SymbolId::TokenNewline)
         {
-            m_input_buffer.set_consumed_pos(output_buffer->get_curr_token().m_end_pos);
+            m_input_buffer.set_consumed_pos(output_buffer->get_curr_token().get_end_pos());
             output_buffer->advance_to_next_token();
             parsing_action = ParsingAction::Compress;
             return ErrorCode::Success;
@@ -211,22 +209,13 @@ auto LogParser::parse(LogParser::ParsingAction& parsing_action) -> ErrorCode {
             // increment by 1 because the '\n' character is not part of the next
             // log message
             m_start_of_log_message = output_buffer->get_curr_token();
-            if (m_start_of_log_message.m_start_pos == m_start_of_log_message.m_buffer_size - 1) {
-                m_start_of_log_message.m_start_pos = 0;
-            } else {
-                m_start_of_log_message.m_start_pos++;
-            }
+            auto const consumed_pos{m_start_of_log_message.increment_start_pos()};
             // make the last token of the current message the '\n' character
             Token curr_token = output_buffer->get_curr_token();
-            curr_token.m_end_pos = curr_token.m_start_pos + 1;
-            curr_token.m_type_ids_ptr
-                    = &Lexer<ByteNfaState, ByteDfaState>::cTokenUncaughtStringTypes;
+            curr_token.set_end_pos(curr_token.get_next_pos());
+            curr_token.set_type_ids(&Lexer<ByteNfaState, ByteDfaState>::cTokenUncaughtStringTypes);
             output_buffer->set_curr_token(curr_token);
-            if (0 == m_start_of_log_message.m_start_pos) {
-                m_input_buffer.set_consumed_pos(m_input_buffer.storage().size() - 1);
-            } else {
-                m_input_buffer.set_consumed_pos(m_start_of_log_message.m_start_pos - 1);
-            }
+            m_input_buffer.set_consumed_pos(consumed_pos);
             m_has_start_of_log = true;
             output_buffer->advance_to_next_token();
             parsing_action = ParsingAction::Compress;
@@ -255,7 +244,7 @@ auto LogParser::generate_log_event_view_metadata() -> void {
     uint32_t first_newline_pos{0};
     for (uint32_t i = start; i < m_log_event_view->m_log_output_buffer->pos(); i++) {
         Token* token = &m_log_event_view->m_log_output_buffer->get_mutable_token(i);
-        m_log_event_view->add_token(token->m_type_ids_ptr->at(0), token);
+        m_log_event_view->add_token(token->get_type_ids()->at(0), token);
         if (token->get_delimiter() == "\n" && first_newline_pos == 0) {
             first_newline_pos = i;
         }

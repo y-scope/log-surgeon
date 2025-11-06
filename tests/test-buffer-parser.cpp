@@ -116,7 +116,7 @@ auto parse_and_validate(
                 expected_token_type
                         = buffer_parser.get_log_parser().get_symbol_id(expected_type).value();
             }
-            auto const token_type{token.m_type_ids_ptr->at(0)};
+            auto const token_type{token.get_type_ids()->at(0)};
             REQUIRE(expected_token_type == token_type);
 
             if (false == expected_captures.empty()) {
