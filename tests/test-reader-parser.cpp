@@ -99,12 +99,10 @@ auto parse_and_validate(
         return ErrorCode::Success;
     }};
 
-
     reader_parser.reset_and_set_reader(reader);
 
     CAPTURE(serialize_id_symbol_map(reader_parser.get_log_parser().m_lexer.m_id_symbol));
     CAPTURE(input);
-    string input_str(input);
 
     size_t count{0};
     for (auto const& [expected_logtype, expected_timestamp_raw, expected_tokens] : expected_events)
