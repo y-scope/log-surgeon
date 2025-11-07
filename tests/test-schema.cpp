@@ -1,5 +1,7 @@
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/Schema.hpp>
@@ -16,8 +18,10 @@
 
 using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
+using std::pair;
 using std::string;
 using std::string_view;
+using std::vector;
 
 using RegexASTCatByte
         = log_surgeon::finite_automata::RegexASTCat<log_surgeon::finite_automata::ByteNfaState>;
@@ -155,29 +159,64 @@ TEST_CASE("add_invalid_var_priorities", "[Schema]") {
 
 /**
  * @ingroup unit_tests_schema
- * @brief Create a schema, adding a variable and capture group name with an underscore.
+ * @brief Create a schema, adding a variable and capture group name with various character
+ * combinations that should succeed.
  */
-TEST_CASE("add_underscore_name", "[Schema]") {
+TEST_CASE("add_various_correct_variable_names", "[Schema]") {
     Schema schema;
-    string const var_name = "var_name";
-    string const cap_name = "cap_name";
-    string const var_schema = var_name + string(":a(?<") + cap_name + string(">_)b");
-    schema.add_variable(string_view(var_schema), -1);
 
-    auto const schema_ast = schema.release_schema_ast_ptr();
-    REQUIRE(schema_ast->m_schema_vars.size() == 1);
-    REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());
+    vector<pair<string, string>> name_pairs {
+            {"varName123","capName123"},
+            {"var_name","cap_name"},
+            {"var@name","cap@name"},
+            {"var.name","cap.name"},
+            {"var-name","cap-name"},
+            {"var~name","cap~name"},
+            {"var\"name\"","cap\"name\""},
+            {"var'name'","cap'name'"}
+    };
 
-    auto& schema_var_ast_ptr = schema_ast->m_schema_vars.at(0);
-    REQUIRE(nullptr != schema_var_ast_ptr);
-    auto& schema_var_ast = dynamic_cast<SchemaVarAST&>(*schema_var_ast_ptr);
-    REQUIRE(var_name == schema_var_ast.m_name);
+    for (auto const& [var_name, cap_name] : name_pairs) {
+        string const var_schema{var_name + string(":a(?<") + cap_name + string(">_)b")};
+        schema.add_variable(string_view(var_schema), -1);
 
-    REQUIRE_NOTHROW([&]() -> void {
-        (void)dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr);
-    }());
+        auto const schema_ast{schema.release_schema_ast_ptr()};
+        REQUIRE(schema_ast->m_schema_vars.size() == 1);
+        REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());
 
-    auto const captures{schema_var_ast.m_regex_ptr->get_subtree_positive_captures()};
-    REQUIRE(captures.size() == 1);
-    REQUIRE(cap_name == captures.at(0)->get_name());
+        auto& schema_var_ast_ptr{schema_ast->m_schema_vars.at(0)};
+        REQUIRE(nullptr != schema_var_ast_ptr);
+        auto& schema_var_ast{dynamic_cast<SchemaVarAST&>(*schema_var_ast_ptr)};
+        REQUIRE(var_name == schema_var_ast.m_name);
+
+        REQUIRE_NOTHROW([&]() -> void {
+            (void)dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr);
+        }());
+
+        auto const captures{schema_var_ast.m_regex_ptr->get_subtree_positive_captures()};
+        REQUIRE(captures.size() == 1);
+        REQUIRE(cap_name == captures.at(0)->get_name());
+    }
+}
+
+/**
+ * @ingroup unit_tests_schema
+ * @brief Create a schema, adding a variable and capture group name with various character
+ * combinations that should throw errors.
+ */
+TEST_CASE("add_various_incorrect_variable_names", "[Schema]") {
+    Schema schema;
+
+    vector<pair<string, string>> name_pairs {
+        {"var name","validName"},
+        {"validName","cap:name"},
+        {"validName","cap name"},
+    };
+
+    for (auto const& [var_name, cap_name] : name_pairs) {
+        CAPTURE(var_name);
+        CAPTURE(cap_name);
+        string const var_schema{var_name + string(":a(?<") + cap_name + string(">_)b")};
+        REQUIRE_THROWS(schema.add_variable(string_view(var_schema), -1));
+    }
 }
