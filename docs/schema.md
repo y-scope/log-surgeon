@@ -29,8 +29,8 @@ For documentation, the schema allows for user comments by ignoring any text prec
 <variable-name>:<variable-pattern>
 ```
 
-* `variable-name` may contain any alphanumeric characters, but may not be the reserved names
-  `delimiters` or `timestamp`.
+* `variable-name` may contain any printable character except space and colon, but may not be the
+  reserved names `delimiters` or `timestamp`.
 * `variable-pattern` is a regular expression using the supported
   [syntax](#regular-expression-syntax).
 
