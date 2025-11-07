@@ -20,7 +20,7 @@ namespace {
         MatchedSymbol& curr_symbol = symbols.top();
         std::visit(
                 Overloaded{
-                        [&line_num](Token& token) { line_num = token.m_line; },
+                        [&line_num](Token& token) { line_num = token.get_line_num(); },
                         [&symbols](NonTerminal& m) {
                             for (size_t i{0}; i < m.get_production()->m_body.size(); ++i) {
                                 symbols.push(m.move_symbol(i));
@@ -548,7 +548,9 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_until_next_newline(Token* error_token)
         -> std::string {
     std::string rest_of_line;
-    bool next_is_end_token = (error_token->m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd);
+    bool next_is_end_token{
+            error_token->get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenEnd)
+    };
     bool next_has_newline = (error_token->to_string().find('\n') != std::string::npos)
                             || (error_token->to_string().find('\r') != std::string::npos);
     while (!next_has_newline && !next_is_end_token) {
@@ -557,7 +559,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_until_next_newline(Tok
                            || (token.to_string().find('\r') != std::string::npos);
         if (!next_has_newline) {
             rest_of_line += token.to_string();
-            next_is_end_token = (token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd);
+            next_is_end_token
+                    = token.get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenEnd);
         }
     }
     rest_of_line += "\n";
@@ -581,7 +584,9 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::report_error() -> std::string {
         error_indicator += " ";
     }
     error_indicator += "^\n";
-    if (token.m_type_ids_ptr->at(0) == (uint32_t)SymbolId::TokenEnd && consumed_input.empty()) {
+    if (token.get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenEnd)
+        && consumed_input.empty())
+    {
         error_type = "empty file";
         error_indicator = "^\n";
     } else {
@@ -667,7 +672,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_next_symbol() -> Token {
 template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse_advance(Token& next_token, bool* accept)
         -> bool {
-    for (auto const type : *next_token.m_type_ids_ptr) {
+    for (auto const type : *next_token.get_type_ids()) {
         if (parse_symbol(type, next_token, accept)) {
             return *accept;
         }
@@ -718,12 +723,12 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse_symbol(
                             m_parse_stack_matches.pop();
                         }
                         if (reduce->m_semantic_rule != nullptr) {
-                            if (0 == m_next_token->m_start_pos) {
+                            if (0 == m_next_token->get_start_pos()) {
                                 m_input_buffer.set_consumed_pos(
                                         m_input_buffer.storage().size() - 1
                                 );
                             } else {
-                                m_input_buffer.set_consumed_pos(m_next_token->m_start_pos - 1);
+                                m_input_buffer.set_consumed_pos(m_next_token->get_start_pos() - 1);
                             }
                             matched_non_terminal.set_parser_ast(
                                     reduce->m_semantic_rule(&matched_non_terminal)

@@ -132,7 +132,7 @@ static auto schema_var_rule(NonTerminal* m) -> unique_ptr<SchemaVarAST> {
     return make_unique<SchemaVarAST>(
             identifier_ast.m_name,
             std::move(m->non_terminal_cast(3).get_parser_ast().get<unique_ptr<RegexASTByte>>()),
-            m->token_cast(2).m_line
+            m->token_cast(2).get_line_num()
     );
 }
 

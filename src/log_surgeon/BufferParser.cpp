@@ -32,7 +32,7 @@ BufferParser::parse_next_event(char* buf, size_t size, size_t& offset, bool fini
         if (0 != m_log_parser.get_log_event_view().m_log_output_buffer->pos()) {
             offset = m_log_parser.get_log_event_view()
                              .m_log_output_buffer->get_token(0)
-                             .m_start_pos;
+                             .get_start_pos();
         }
         reset();
         return error_code;
