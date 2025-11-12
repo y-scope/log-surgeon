@@ -127,7 +127,7 @@ public:
 
     [[nodiscard]] auto get_state() const -> TypedNfaState const* { return m_nfa_state; }
 
-    [[nodiscard]] auto get_tag_id_to_reg_ids() const -> std::map<tag_id_t, reg_id_t> {
+    [[nodiscard]] auto get_tag_id_to_reg_ids() const -> std::map<tag_id_t, reg_id_t> const& {
         return m_tag_id_to_reg_ids;
     }
 
@@ -140,7 +140,9 @@ public:
         return std::nullopt;
     }
 
-    [[nodiscard]] auto get_lookahead() const -> std::vector<TagOperation> { return m_lookahead; }
+    [[nodiscard]] auto get_lookahead() const -> std::vector<TagOperation> const& {
+        return m_lookahead;
+    }
 
     [[nodiscard]] auto get_tag_lookahead(tag_id_t const tag_id) const
             -> std::optional<TagOperation> {
