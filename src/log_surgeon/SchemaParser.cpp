@@ -480,6 +480,8 @@ auto SchemaParser::add_lexical_rules() -> void {
     add_token_group("IdentifierCharacters", make_unique<RegexASTGroupByte>('A', 'Z'));
     add_token_group("IdentifierCharacters", make_unique<RegexASTGroupByte>('0', '9'));
     add_token("IdentifierCharacters", '_');
+    add_token_group("DelimiterCharacters", make_unique<RegexASTGroupByte>('!', '~'));
+    add_token("DelimiterCharacters", ' ');
 }
 
 auto SchemaParser::add_productions() -> void {
@@ -509,10 +511,17 @@ auto SchemaParser::add_productions() -> void {
     );
     add_production(
             "DelimiterString",
-            {"DelimiterString", "Literal"},
+            {"DelimiterString", "DelimiterCharacter"},
             existing_delimiter_string_rule
     );
-    add_production("DelimiterString", {"Literal"}, new_delimiter_string_rule);
+    add_production(
+            "DelimiterString",
+            {"DelimiterString", "WhiteSpaceCharacter"},
+            existing_delimiter_string_rule
+    );
+    add_production("DelimiterString", {"DelimiterCharacter"}, new_delimiter_string_rule);
+    add_production("DelimiterString", {"WhiteSpaceCharacter"}, new_delimiter_string_rule);
+    add_production("DelimiterCharacter", {"DelimiterCharacters"}, regex_literal_rule);
     add_production("PortableNewLine", {"CarriageReturn", "NewLine"}, nullptr);
     add_production("PortableNewLine", {"NewLine"}, nullptr);
     add_production("Comment", {"ForwardSlash", "ForwardSlash", "Text"}, nullptr);
@@ -581,11 +590,6 @@ auto SchemaParser::add_productions() -> void {
     add_production("IncompleteGroup", {"Lbracket", "WhiteSpace"}, regex_add_literal_new_group_rule);
     add_production("IncompleteGroup", {"Lbracket", "Hat"}, regex_complement_incomplete_group_rule);
     add_production("LiteralRange", {"Literal", "Dash", "Literal"}, regex_range_rule);
-    add_production("Literal", {"Backslash", "t"}, regex_tab_rule);
-    add_production("Literal", {"Backslash", "n"}, regex_newline_rule);
-    add_production("Literal", {"Backslash", "v"}, regex_vertical_tab_rule);
-    add_production("Literal", {"Backslash", "f"}, regex_form_feed_rule);
-    add_production("Literal", {"Backslash", "r"}, regex_char_return_rule);
     add_production("Literal", {"Space"}, regex_literal_rule);
     add_production("Literal", {"Bang"}, regex_literal_rule);
     add_production("Literal", {"Quotation"}, regex_literal_rule);
@@ -630,6 +634,12 @@ auto SchemaParser::add_productions() -> void {
         std::ignore = special_regex_char;
         add_production("Literal", {"Backslash", special_regex_name}, regex_cancel_literal_rule);
     }
+    add_production("Literal", {"WhiteSpaceCharacter"}, regex_identity_rule);
+    add_production("WhiteSpaceCharacter", {"Backslash", "t"}, regex_tab_rule);
+    add_production("WhiteSpaceCharacter", {"Backslash", "n"}, regex_newline_rule);
+    add_production("WhiteSpaceCharacter", {"Backslash", "v"}, regex_vertical_tab_rule);
+    add_production("WhiteSpaceCharacter", {"Backslash", "f"}, regex_form_feed_rule);
+    add_production("WhiteSpaceCharacter", {"Backslash", "r"}, regex_char_return_rule);
     add_production("Integer", {"Integer", "Numeric"}, regex_existing_integer_rule);
     add_production("Integer", {"Numeric"}, regex_new_integer_rule);
     add_production("Digit", {"Backslash", "d"}, regex_digit_rule);

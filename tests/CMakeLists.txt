@@ -13,6 +13,7 @@ target_sources(
         test-prefix-tree.cpp
         test-query.cpp
         test-query-interpretation.cpp
+        test-reader-parser.cpp
         test-regex-ast.cpp
         test-register-handler.cpp
         test-schema.cpp
