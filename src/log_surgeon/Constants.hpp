@@ -32,8 +32,7 @@ enum class SymbolId : uint32_t {
     TokenInt,
     TokenFloat,
     TokenHex,
-    TokenFirstTimestamp,
-    TokenNewlineTimestamp,
+    TokenHeader,
     TokenNewline
 };
 
@@ -42,8 +41,7 @@ constexpr char cTokenUncaughtString[] = "$UncaughtString";
 constexpr char cTokenInt[] = "int";
 constexpr char cTokenFloat[] = "float";
 constexpr char cTokenHex[] = "hex";
-constexpr char cTokenFirstTimestamp[] = "firstTimestamp";
-constexpr char cTokenNewlineTimestamp[] = "newLineTimestamp";
+constexpr char cTokenHeader[] = "header";
 constexpr char cTokenNewline[] = "newLine";
 // Buffer size cannot be odd, so always use a multiple of 2
 constexpr uint32_t cStaticByteBuffSize = 48'000;

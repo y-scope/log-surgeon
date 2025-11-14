@@ -89,14 +89,10 @@ auto parse_and_validate(
         REQUIRE(ErrorCode::Success == err);
         auto const& event{buffer_parser.get_log_parser().get_log_event_view()};
         REQUIRE(expected_logtype == event.get_logtype());
-        if (nullptr == event.get_timestamp()) {
-            REQUIRE(expected_timestamp_raw.empty());
-        } else {
-            REQUIRE(expected_timestamp_raw == event.get_timestamp()->to_string());
-        }
+        REQUIRE(expected_timestamp_raw == event.get_timestamp());
 
         uint32_t event_offset{0};
-        if (nullptr == event.get_timestamp()) {
+        if (event.get_timestamp().empty()) {
             event_offset = 1;
         }
 
@@ -426,7 +422,7 @@ TEST_CASE("single_line_with_optional_capture", "[BufferParser]") {
 TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cVarSchema1{
-            R"(timestamp:[0-9]{4}\-[0-9]{2}\-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}[,\.][0-9]{0,3})"
+            R"(header:(?<timestamp>(\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}[,\.]\d{0,3})))"
     };
     constexpr string_view cVarSchema2{R"(int:\-{0,1}[0-9]+)"};
     constexpr string_view cVarSchema3{R"(float:\-{0,1}[0-9]+\.[0-9]+)"};
@@ -441,7 +437,7 @@ TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
             .m_logtype{"<timestamp> <int> <float> <hex> userID=<val> text <hasNumber> \n"},
             .m_timestamp_raw{"2012-12-12 12:12:12.123"},
             .m_tokens{
-                    {{"2012-12-12 12:12:12.123", "firstTimestamp", {}},
+                    {{"2012-12-12 12:12:12.123", "header", {{{"timestamp", {{0}, {23}}}}}},
                      {" 123", "int", {}},
                      {" 123.123", "float", {}},
                      {" abc", "hex", {}},
@@ -961,7 +957,7 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
     };
     ExpectedEvent const expected_event{
             .m_logtype{"<timestamp> <PID> <TID> <LogLevel> MyService <key>=TEXT B=1.1"},
-            .m_timestamp_raw{""},
+            .m_timestamp_raw{"1999-12-12T01:02:03.456"},
             .m_tokens{
                     {{"1999-12-12T01:02:03.456 1234 5678 I",
                       "header",
@@ -1043,7 +1039,7 @@ TEST_CASE("multi_capture_two", "[BufferParser]") {
     )};
     ExpectedEvent const expected_event{
             .m_logtype{"<timestamp> ip-<IP> ku[<PID>]: <LogLevel><LID> <LTime>    <TID> Y failed"},
-            .m_timestamp_raw{""},
+            .m_timestamp_raw{"Jan 01 02:03:04"},
             .m_tokens{
                     {{"Jan 01 02:03:04 ip-999-99-99-99 ku[1234]: E5678 02:03:04.5678    1111",
                       "header",
@@ -1054,8 +1050,7 @@ TEST_CASE("multi_capture_two", "[BufferParser]") {
                         {"LID", {{43}, {47}}},
                         {"LTime", {{48}, {61}}},
                         {"TID", {{65}, {69}}}}}},
-                     {" Y", "", {}},
-                     {" failed", "", {}}}
+                     {" Y failed", "", {}}}
             }
     };
 

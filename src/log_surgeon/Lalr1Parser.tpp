@@ -59,8 +59,7 @@ Lalr1Parser<TypedNfaState, TypedDfaState>::Lalr1Parser() {
     m_terminals.insert((uint32_t)SymbolId::TokenInt);
     m_terminals.insert((uint32_t)SymbolId::TokenFloat);
     m_terminals.insert((uint32_t)SymbolId::TokenHex);
-    m_terminals.insert((uint32_t)SymbolId::TokenFirstTimestamp);
-    m_terminals.insert((uint32_t)SymbolId::TokenNewlineTimestamp);
+    m_terminals.insert((uint32_t)SymbolId::TokenHeader);
     m_terminals.insert((uint32_t)SymbolId::TokenNewline);
 }
 

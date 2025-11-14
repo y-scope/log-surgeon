@@ -114,14 +114,10 @@ auto parse_and_validate(
         REQUIRE(ErrorCode::Success == err);
         auto const& event{reader_parser.get_log_parser().get_log_event_view()};
         REQUIRE(expected_logtype == event.get_logtype());
-        if (nullptr == event.get_timestamp()) {
-            REQUIRE(expected_timestamp_raw.empty());
-        } else {
-            REQUIRE(expected_timestamp_raw == event.get_timestamp()->to_string());
-        }
+        REQUIRE(expected_timestamp_raw == event.get_timestamp());
 
         uint32_t event_offset{0};
-        if (nullptr == event.get_timestamp()) {
+        if (event.get_timestamp().empty()) {
             event_offset = 1;
         }
 
@@ -228,7 +224,7 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
  * @endcode
  */
 TEST_CASE("single_line_without_capture_reader_parser", "[ReaderParser]") {
-    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=123"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
     ExpectedEvent const expected_event{
@@ -272,7 +268,7 @@ TEST_CASE("single_line_without_capture_reader_parser", "[ReaderParser]") {
 TEST_CASE("reader_parser_wrap_around", "[ReaderParser]") {
     REQUIRE(48000 == cStaticByteBuffSize);
     
-    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cVarSchema1{"myVar:userID=123"};
     constexpr string_view cVarSchema2{"myCapture:userID=(?<capture>234)"};
     constexpr string_view cInput1{"userID=123 userID=234 userID=123 123 userID=123\n"};

@@ -34,6 +34,25 @@ auto Token::to_string_view() -> std::string_view {
     return {get_cached_string()};
 }
 
+auto Token::get_capture_string_view(
+        finite_automata::PrefixTree::position_t const capture_start_pos,
+        finite_automata::PrefixTree::position_t const capture_end_pos
+) -> std::string_view {
+    if (capture_start_pos <= capture_end_pos) {
+        auto const token{m_buffer.subspan(capture_start_pos, capture_end_pos - capture_start_pos)};
+        return {token.begin(), token.end()};
+    }
+    if (m_cached_string.empty()) {
+        auto const capture_start{
+                m_buffer.subspan(capture_start_pos, get_buffer_size() - capture_start_pos)
+        };
+        auto const capture_end{m_buffer.subspan(0, capture_end_pos)};
+        m_cached_string = std::string{capture_start.begin(), capture_start.end()}
+                          + std::string{capture_end.begin(), capture_end.end()};
+    }
+    return {m_cached_string};
+}
+
 auto Token::get_delimiter() const -> std::string {
     auto const delim{m_buffer.subspan(get_start_pos(), 1)};
     return {delim.begin(), delim.end()};
