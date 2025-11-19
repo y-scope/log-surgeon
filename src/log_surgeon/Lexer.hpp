@@ -3,7 +3,6 @@
 
 #include <array>
 #include <cstdint>
-#include <map>
 #include <memory>
 #include <optional>
 #include <set>
@@ -13,6 +12,7 @@
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/finite_automata/Dfa.hpp>
 #include <log_surgeon/finite_automata/DfaState.hpp>
 #include <log_surgeon/finite_automata/NfaState.hpp>
@@ -166,29 +166,29 @@ public:
     }
 
     /**
-     * Retrieves a list of capture IDs for a given rule ID.
-     * These capture IDs correspond to the captures in the rule that were matched during lexing.
+     * Retrieves a list of capture pointers for a given rule ID.
+     * These pointers correspond to the captures in the rule that were matched during lexing.
      * @param rule_id The ID of the rule to search for captures.
-     * @return A vector of capture IDs if the rule contains captures;
+     * @return A vector of capture pointers if the rule contains captures;
      * @return std::nullopt if no captures are found for the rule.
      */
-    [[nodiscard]] auto get_capture_ids_from_rule_id(rule_id_t const rule_id) const
-            -> std::optional<std::vector<capture_id_t>> {
-        if (m_rule_id_to_capture_ids.contains(rule_id)) {
-            return m_rule_id_to_capture_ids.at(rule_id);
+    [[nodiscard]] auto get_captures_from_rule_id(rule_id_t const rule_id) const
+            -> std::optional<std::vector<finite_automata::Capture const*>> {
+        if (m_rule_id_to_capture.contains(rule_id)) {
+            return m_rule_id_to_capture.at(rule_id);
         }
         return std::nullopt;
     }
 
     /**
-     * @param capture_id ID associated with a capture within a rule.
+     * @param capture Pointer to the capture.
      * @return The start and end tag of the capture on success.
-     * @return std::nullopt if no capture is associated with the given capture ID.
+     * @return std::nullopt if no tags are associated with the given capture.
      */
-    [[nodiscard]] auto get_tag_id_pair_from_capture_id(capture_id_t const capture_id) const
+    [[nodiscard]] auto get_tag_id_pair_from_capture(finite_automata::Capture const* const capture) const
             -> std::optional<std::pair<tag_id_t, tag_id_t>> {
-        if (m_capture_id_to_tag_id_pair.contains(capture_id)) {
-            return m_capture_id_to_tag_id_pair.at(capture_id);
+        if (m_capture_to_tag_id_pair.contains(capture)) {
+            return m_capture_to_tag_id_pair.at(capture);
         }
         return std::nullopt;
     }
@@ -209,14 +209,14 @@ public:
     }
 
     /**
-     * Retrieves the register IDs for the start and end tags associated with a given capture ID.
-     * @param capture_id The ID of the capture to search for.
+     * Retrieves the register IDs for the start and end tags associated with a given capture.
+     * @param capture Pointer to the capture to search for.
      * @return A pair of register IDs corresponding to the start and end tags of the capture.
      * @return std::nullopt if no such capture is found.
      */
-    [[nodiscard]] auto get_reg_ids_from_capture_id(capture_id_t const capture_id) const
+    [[nodiscard]] auto get_reg_ids_from_capture(finite_automata::Capture const* const capture) const
             -> std::optional<std::pair<reg_id_t, reg_id_t>> {
-        auto const optional_tag_id_pair{get_tag_id_pair_from_capture_id(capture_id)};
+        auto const optional_tag_id_pair{get_tag_id_pair_from_capture(capture)};
         if (false == optional_tag_id_pair.has_value()) {
             return std::nullopt;
         }
@@ -265,8 +265,10 @@ private:
     bool m_asked_for_more_data{false};
     TypedDfaState const* m_prev_state{nullptr};
     TypedDfaState const* m_state{nullptr};
-    std::unordered_map<rule_id_t, std::vector<capture_id_t>> m_rule_id_to_capture_ids;
-    std::unordered_map<capture_id_t, std::pair<tag_id_t, tag_id_t>> m_capture_id_to_tag_id_pair;
+    std::unordered_map<rule_id_t, std::vector<finite_automata::Capture const*>>
+            m_rule_id_to_capture;
+    std::unordered_map<finite_automata::Capture const*, std::pair<tag_id_t, tag_id_t>>
+            m_capture_to_tag_id_pair;
 };
 
 namespace lexers {
