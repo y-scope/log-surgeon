@@ -822,7 +822,7 @@ void RegexASTOr<TypedNfaState>::add_to_nfa(
 template <typename TypedNfaState>
 [[nodiscard]] auto RegexASTOr<TypedNfaState>::serialize() const -> std::u32string {
     return fmt::format(
-            U"({})|({}){}",
+            U"(({})|({}){})",
             nullptr != m_left ? m_left->serialize() : U"null",
             nullptr != m_right ? m_right->serialize() : U"null",
             RegexAST<TypedNfaState>::serialize_negative_captures()
