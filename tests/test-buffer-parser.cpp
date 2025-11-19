@@ -143,7 +143,8 @@ auto parse_and_validate(
                     auto const [expected_start_positions, expected_end_positions]{
                             expected_positions
                     };
-                    // Note: Known bug that start positions contain failed match starts as well
+                    // Note: Known bug that start positions contain failed match starts as well, so
+                    // currently it must be truncated.
                     actual_start_positions.resize(actual_end_positions.size());
                     REQUIRE(expected_start_positions == actual_start_positions);
                     REQUIRE(expected_end_positions == actual_end_positions);
