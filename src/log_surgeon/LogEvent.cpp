@@ -86,7 +86,7 @@ auto LogEventView::get_logtype() const -> std::string {
                             capture_view.get_reversed_reg_positions(optional_reg_id_pair->second)
                     };
 
-                    auto capture_name{capture->get_name()};
+                    auto const& capture_name{capture->get_name()};
                     if (false == start_positions.empty() && -1 < start_positions[0]
                         && false == end_positions.empty() && -1 < end_positions[0])
                     {
