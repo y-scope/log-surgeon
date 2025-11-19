@@ -13,8 +13,6 @@ public:
 
 private:
     std::string m_name;
-    std::string m_rule_name;
-    uint32_t m_pos{0};
 };
 }  // namespace log_surgeon::finite_automata
 
