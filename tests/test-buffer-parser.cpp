@@ -128,6 +128,7 @@ auto parse_and_validate(
                     return;
                 }
 
+                REQUIRE(expected_captures.size() == optional_captures.value().size());
                 for (uint32_t j{0}; j < optional_captures.value().size(); j++) {
                     auto const capture{optional_captures.value()[j]};
                     auto const [expected_name, expected_positions]{expected_captures[j]};
