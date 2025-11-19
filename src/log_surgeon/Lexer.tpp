@@ -439,9 +439,9 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
     for (auto const& rule : m_rules) {
         auto const rule_id{rule.get_variable_id()};
         if (false == rule.get_captures().empty()) {
-            m_rule_id_to_capture.try_emplace(rule_id);
+            auto& captures_vec{m_rule_id_to_capture.try_emplace(rule_id).first->second};
             for (auto const* capture : rule.get_captures()) {
-                m_rule_id_to_capture.at(rule_id).push_back(capture);
+                captures_vec.push_back(capture);
             }
         }
     }
