@@ -24,42 +24,6 @@
 
 namespace log_surgeon::finite_automata {
 /**
- * Stores context about the NFA traversal to allow for capture ASTs to have the needed context.
- * Specifically, for capture groups with the same name, we need to know the name of the variable
- * containing the capture and the position of the capture in said variable.
- *
- * Note: This information cannot be known when constructing the AST as capture productions will be
- * resolved before variable productions. So it must be resolved during NFA construction.
- */
-class NfaContext {
-public:
-    auto reset() -> void {
-        m_curr_rule_name.clear();
-        m_curr_pos = 0;
-    }
-    
-    auto set_curr_rule_name(std::string curr_rule_name) -> void {
-        m_curr_rule_name = std::move(curr_rule_name);
-    }
-
-    auto set_curr_pos(uint32_t curr_pos) -> void {
-        m_curr_pos = curr_pos;
-    }
-
-    [[nodiscard]] auto get_curr_rule_name() const -> std::string const& {
-        return m_curr_rule_name;
-    }
-    
-    [[nodiscard]] auto get_curr_pos() const -> uint32_t {
-        return m_curr_pos;
-    }
-    
-private:
-    std::string m_curr_rule_name;
-    uint32_t m_curr_pos{0};
-};
-
-/**
  * Represents a Non-Deterministic Finite Automaton (NFA) designed to recognize a language based on
  * a set of rules provided during initialization. This class serves as an intermediate
  * representation used for generating the corresponding Deterministic Finite Automaton (DFA).
@@ -159,7 +123,6 @@ private:
     TypedNfaState* m_root;
     UniqueIdGenerator m_state_id_generator;
     UniqueIdGenerator m_tag_id_generator;
-    NfaContext context;
 };
 
 template <typename TypedNfaState>
