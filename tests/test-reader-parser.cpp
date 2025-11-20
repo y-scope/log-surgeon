@@ -204,7 +204,7 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
  *
  * ### Schema Definition
  * @code
- * delimiters: \n\r\[:,
+ * delimiters: \n\r[:,
  * myVar:userID=123
  * @endcode
  *
@@ -228,7 +228,7 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
  * @endcode
  */
 TEST_CASE("single_line_without_capture_reader_parser", "[ReaderParser]") {
-    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=123"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
     ExpectedEvent const expected_event{
@@ -272,7 +272,7 @@ TEST_CASE("single_line_without_capture_reader_parser", "[ReaderParser]") {
 TEST_CASE("reader_parser_wrap_around", "[ReaderParser]") {
     REQUIRE(48000 == cStaticByteBuffSize);
     
-    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cVarSchema1{"myVar:userID=123"};
     constexpr string_view cVarSchema2{"myCapture:userID=(?<capture>234)"};
     constexpr string_view cInput1{"userID=123 userID=234 userID=123 123 userID=123\n"};
