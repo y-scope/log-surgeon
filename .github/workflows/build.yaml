@@ -52,7 +52,7 @@ jobs:
             --silent \
             --show-error \
             https://taskfile.dev/install.sh \
-          | sh -s -- -d
+          | sh -s -- -d -b ~/.local/bin
 
       - name: "Install uv"
         shell: "bash"
