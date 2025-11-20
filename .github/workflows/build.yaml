@@ -45,7 +45,7 @@ jobs:
 
       - name: "Install task"
         shell: "bash"
-        run: "npm install -g @go-task/cli@3.44.0"
+        run: "sh -c '$(curl --location https://taskfile.dev/install.sh)' -- -d"
 
       - name: "Install uv"
         shell: "bash"
