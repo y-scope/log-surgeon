@@ -45,7 +45,14 @@ jobs:
 
       - name: "Install task"
         shell: "bash"
-        run: "sh -c '$(curl --location https://taskfile.dev/install.sh)' -- -d"
+        run: |-
+          curl \
+            --fail \
+            --location \
+            --silent \
+            --show-error \
+            https://taskfile.dev/install.sh \
+          | sh -- -d
 
       - name: "Install uv"
         shell: "bash"
