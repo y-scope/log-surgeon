@@ -183,3 +183,25 @@ TEST_CASE("order_of_operations", "[Regex]") {
     test_regex_ast("var:(a|b)+(c|d)*", U"(((a)|(b))){1,inf}(()|((((c)|(d))){1,inf}))");
     test_regex_ast("var:(a|b)c+|d*", U"((((a)|(b))(c){1,inf})|((()|((d){1,inf}))))");
 }
+
+/**
+ * @ingroup unit_tests_regex_ast
+ * @brief Test regex shorthands.
+ */
+TEST_CASE("regex_shorthands", "[Regex]") {
+    test_regex_ast("var:\\d", U"[0-9]");
+    test_regex_ast("var:\\D", U"[^0-9]");
+
+    test_regex_ast("var:\\s", U"[ - ,\\t-\\t,\\r-\\r,\\n-\\n,\\v-\\v,\\f-\\f]");
+    test_regex_ast("var:\\S", U"[^ - ,\\t-\\t,\\r-\\r,\\n-\\n,\\v-\\v,\\f-\\f]");
+
+    test_regex_ast("var:\\w", U"[a-z,A-Z,0-9,_-_]");
+    test_regex_ast("var:\\W", U"[^a-z,A-Z,0-9,_-_]");
+
+    test_regex_ast("var:a?", U"(a){0,1}");
+    test_regex_ast("var:a*", U"(()|((a){1,inf}))");
+    test_regex_ast("var:a+", U"(a){1,inf}");
+    test_regex_ast("var:a{0,5}", U"(()|((a){1,5}))");
+    test_regex_ast("var:a{3,5}", U"(a){3,5}");
+    test_regex_ast("var:a{3,0}", U"(a){3,inf}");
+}

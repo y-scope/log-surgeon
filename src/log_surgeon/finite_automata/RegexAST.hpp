@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <memory>
 #include <ranges>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -423,6 +424,8 @@ public:
     auto add_literal(uint32_t literal) -> void { m_ranges.emplace_back(literal, literal); }
 
     auto set_is_wildcard_true() -> void { m_is_wildcard = true; }
+
+    auto set_negate(bool const negate) -> void { m_negate = negate; }
 
     [[nodiscard]] auto is_wildcard() const -> bool { return m_is_wildcard; }
 
@@ -1133,19 +1136,37 @@ template <typename TypedNfaState>
     if (m_is_wildcard) {
         ranges_serialized += U"*";
     } else {
+        auto unescape = [](uint32_t const c) -> uint32_t {
+            switch (c) {
+                case '\t': return 't';
+                case '\n': return 'n';
+                case '\r': return 'r';
+                case '\f': return 'f';
+                case '\v': return 'v';
+                default: return c;
+            }
+        };
+
         auto const transformed_ranges
                 = m_ranges
-                  | std::ranges::views::transform([](std::pair<uint32_t, uint32_t> const& range) {
+                  | std::ranges::views::transform([&](std::pair<uint32_t, uint32_t> const& range) {
                         auto const [begin, end] = range;
+
+                        std::set<uint32_t> const whitespace_set{'\t', '\n', '\r', '\f', '\v'};
+                        auto begin_esc{whitespace_set.contains(begin) ? U"\\" : U""};
+                        auto end_esc{whitespace_set.contains(end) ? U"\\" : U""};
+
                         return fmt::format(
-                                U"{}-{}",
-                                static_cast<char32_t>(begin),
-                                static_cast<char32_t>(end)
+                                U"{}{}-{}{}",
+                                begin_esc,
+                                static_cast<char32_t>(unescape(begin)),
+                                end_esc,
+                                static_cast<char32_t>(unescape(end))
                         );
                     });
         for (auto const& range_u32string : transformed_ranges) {
             if (false == ranges_serialized.empty()) {
-                ranges_serialized += U", ";  // Add separator
+                ranges_serialized += U",";  // Add separator
             }
             ranges_serialized += range_u32string;
         }
