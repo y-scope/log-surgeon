@@ -51,7 +51,9 @@ TEST_CASE("add_number_var", "[Schema]") {
     auto& schema_var_ast = dynamic_cast<SchemaVarAST&>(*schema_var_ast_ptr);
     REQUIRE(var_name == schema_var_ast.m_name);
 
-    REQUIRE_NOTHROW([&]() { (void)dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr); }());
+    REQUIRE_NOTHROW([&]() -> void {
+        std::ignore = dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr);
+    }());
 }
 
 /**
@@ -176,7 +178,7 @@ TEST_CASE("add_underscore_name", "[Schema]") {
     REQUIRE(var_name == schema_var_ast.m_name);
 
     REQUIRE_NOTHROW([&]() -> void {
-        (void)dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr);
+        std::ignore = dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr);
     }());
 
     auto const captures{schema_var_ast.m_regex_ptr->get_subtree_positive_captures()};
@@ -206,7 +208,7 @@ TEST_CASE("non_unique_capture_names", "[Schema]") {
         REQUIRE(var_name == schema_var_ast.m_name);
 
         REQUIRE_NOTHROW([&]() -> void {
-            (void)dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr);
+            std::ignore = dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr);
         }());
 
         auto const captures{schema_var_ast.m_regex_ptr->get_subtree_positive_captures()};
