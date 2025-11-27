@@ -190,13 +190,41 @@ TEST_CASE("order_of_operations", "[Regex]") {
  */
 TEST_CASE("regex_shorthands", "[Regex]") {
     test_regex_ast("var:\\d", U"[0-9]");
-    test_regex_ast("var:\\D", U"[^0-9]");
+    test_regex_ast("var:[\\d]", U"[0-9]");
+    test_regex_ast("var:[a-z\\d]", U"[a-z,0-9]");
+    test_regex_ast("var:[\\da-z]", U"[0-9,a-z]");
+    test_regex_ast("var:\\D", UR"([\x0-\x47,\x58-\x1114111])");
+    test_regex_ast("var:[\\D]", UR"([\x0-\x47,\x58-\x1114111])");
+    test_regex_ast("var:[1\\D]", UR"([1,\x0-\x47,\x58-\x1114111])");
+    test_regex_ast("var:[\\D1]", UR"([\x0-\x47,\x58-\x1114111,1])");
 
-    test_regex_ast("var:\\s", U"[ ,\\t,\\r,\\n,\\v,\\f]");
-    test_regex_ast("var:\\S", U"[^ ,\\t,\\r,\\n,\\v,\\f]");
+    test_regex_ast("var:\\s", UR"([ ,\t,\r,\n,\v,\f])");
+    test_regex_ast("var:[\\s]", UR"([ ,\t,\r,\n,\v,\f])");
+    test_regex_ast("var:[a-z\\s]", UR"([a-z, ,\t,\r,\n,\v,\f])");
+    test_regex_ast("var:[\\sa-z]", UR"([ ,\t,\r,\n,\v,\f,a-z])");
+    test_regex_ast("var:\\S", UR"([\x0-\x31,\x33-\x8,\n-\f,\x14-\x9,\v-\n,\f-\v,\x13-\x1114111])");
+    test_regex_ast(
+            "var:[\\S]",
+            UR"([\x0-\x31,\x33-\x8,\n-\f,\x14-\x9,\v-\n,\f-\v,\x13-\x1114111])"
+    );
+    test_regex_ast(
+            "var:[\\t\\S]",
+            UR"([\t,\x0-\x31,\x33-\x8,\n-\f,\x14-\x9,\v-\n,\f-\v,\x13-\x1114111])"
+    );
+    test_regex_ast(
+            "var:[\\S\\t]",
+            UR"([\x0-\x31,\x33-\x8,\n-\f,\x14-\x9,\v-\n,\f-\v,\x13-\x1114111,\t])"
+    );
+
+    test_regex_ast(
+            "var:[^A-F\\da-f]",
+            UR"([^A-F,0-9,a-f])"
+    );
 
     test_regex_ast("var:\\w", U"[a-z,A-Z,0-9,_]");
-    test_regex_ast("var:\\W", U"[^a-z,A-Z,0-9,_]");
+    test_regex_ast("var:[\\w]", U"[a-z,A-Z,0-9,_]");
+    test_regex_ast("var:\\W", UR"([\x0-\x96,{-@,[-/,:-^,\x96-\x1114111])");
+    test_regex_ast("var:[\\W]", UR"([\x0-\x96,{-@,[-/,:-^,\x96-\x1114111])");
 
     test_regex_ast("var:a?", U"(a){0,1}");
     test_regex_ast("var:a*", U"(()|((a){1,inf}))");

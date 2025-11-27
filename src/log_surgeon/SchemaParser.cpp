@@ -373,7 +373,7 @@ static auto regex_digit_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
 
 static auto regex_non_digit_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
     auto regex_ast_group{make_unique<RegexASTGroupByte>('0', '9')};
-    regex_ast_group->set_negate(true);
+    regex_ast_group->negate();
     return make_unique<ParserValueRegex>(std::move(regex_ast_group));
 }
 
@@ -414,7 +414,7 @@ static auto regex_non_white_space_rule(NonTerminal* /* m */) -> unique_ptr<Parse
     auto regex_ast_group{
             make_unique<RegexASTGroupByte>(RegexASTGroupByte({' ', '\t', '\r', '\n', '\v', '\f'}))
     };
-    regex_ast_group->set_negate(true);
+    regex_ast_group->negate();
     return make_unique<ParserValueRegex>(std::move(regex_ast_group));
 }
 
@@ -435,7 +435,7 @@ static auto regex_non_word_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
     regex_ast_group->add_range('A', 'Z');
     regex_ast_group->add_range('0', '9');
     regex_ast_group->add_literal('_');
-    regex_ast_group->set_negate(true);
+    regex_ast_group->negate();
     return make_unique<ParserValueRegex>(std::move(regex_ast_group));
 }
 
@@ -589,7 +589,9 @@ auto SchemaParser::add_productions() -> void {
     add_production("Or", {"Or", "Vbar", "Concat"}, regex_or_rule);
     add_production("Or", {"Concat"}, regex_identity_rule);
     add_production("Concat", {"Concat", "Quantity"}, regex_cat_rule);
+    add_production("Concat", {"Concat", "CompleteGroup"}, regex_cat_rule);
     add_production("Concat", {"Quantity"}, regex_identity_rule);
+    add_production("Concat", {"CompleteGroup"}, regex_identity_rule);
     add_production("Quantity", {"CompleteGroup", "Star"}, regex_match_zero_or_more_rule);
     add_production("Quantity", {"CompleteGroup", "Plus"}, regex_match_one_or_more_rule);
     add_production("Quantity", {"CompleteGroup", "QuestionMark"}, regex_match_zero_or_one_rule);
@@ -603,12 +605,10 @@ auto SchemaParser::add_productions() -> void {
             {"CompleteGroup", "Lbrace", "Integer", "Comma", "Integer", "Rbrace"},
             regex_match_range_rule
     );
-    add_production("Quantity", {"CompleteGroup"}, regex_identity_rule);
     add_production("CompleteGroup", {"IncompleteGroup", "Rbracket"}, regex_identity_rule);
-    add_production("CompleteGroup", {"Literal"}, regex_identity_rule);
-    add_production("CompleteGroup", {"Digit"}, regex_identity_rule);
     add_production("CompleteGroup", {"Wildcard"}, regex_identity_rule);
-    add_production("CompleteGroup", {"WhiteSpace"}, regex_identity_rule);
+    add_production("CompleteGroup", {"Shorthand"}, regex_identity_rule);
+    add_production("CompleteGroup", {"Literal"}, regex_identity_rule);
     add_production(
             "IncompleteGroup",
             {"IncompleteGroup", "LiteralRange"},
@@ -616,7 +616,7 @@ auto SchemaParser::add_productions() -> void {
     );
     add_production(
             "IncompleteGroup",
-            {"IncompleteGroup", "Digit"},
+            {"IncompleteGroup", "Shorthand"},
             regex_add_range_existing_group_rule
     );
     add_production(
@@ -624,15 +624,9 @@ auto SchemaParser::add_productions() -> void {
             {"IncompleteGroup", "Literal"},
             regex_add_literal_existing_group_rule
     );
-    add_production(
-            "IncompleteGroup",
-            {"IncompleteGroup", "WhiteSpace"},
-            regex_add_literal_existing_group_rule
-    );
     add_production("IncompleteGroup", {"Lbracket", "LiteralRange"}, regex_add_range_new_group_rule);
-    add_production("IncompleteGroup", {"Lbracket", "Digit"}, regex_add_range_new_group_rule);
+    add_production("IncompleteGroup", {"Lbracket", "Shorthand"}, regex_add_range_new_group_rule);
     add_production("IncompleteGroup", {"Lbracket", "Literal"}, regex_add_literal_new_group_rule);
-    add_production("IncompleteGroup", {"Lbracket", "WhiteSpace"}, regex_add_literal_new_group_rule);
     add_production("IncompleteGroup", {"Lbracket", "Hat"}, regex_complement_incomplete_group_rule);
     add_production("LiteralRange", {"Literal", "Dash", "Literal"}, regex_range_rule);
     add_production("Literal", {"Space"}, regex_literal_rule);
@@ -688,11 +682,11 @@ auto SchemaParser::add_productions() -> void {
     add_production("Integer", {"Integer", "Numeric"}, regex_existing_integer_rule);
     add_production("Integer", {"Numeric"}, regex_new_integer_rule);
     add_production("Wildcard", {"Dot"}, regex_wildcard_rule);
-    add_production("Digit", {"Backslash", "d"}, regex_digit_rule);
-    add_production("Digit", {"Backslash", "D"}, regex_non_digit_rule);
-    add_production("WhiteSpace", {"Backslash", "s"}, regex_white_space_rule);
-    add_production("WhiteSpace", {"Backslash", "S"}, regex_non_white_space_rule);
-    add_production("WhiteSpace", {"Backslash", "w"}, regex_word_rule);
-    add_production("WhiteSpace", {"Backslash", "W"}, regex_non_word_rule);
+    add_production("Shorthand", {"Backslash", "d"}, regex_digit_rule);
+    add_production("Shorthand", {"Backslash", "D"}, regex_non_digit_rule);
+    add_production("Shorthand", {"Backslash", "s"}, regex_white_space_rule);
+    add_production("Shorthand", {"Backslash", "S"}, regex_non_white_space_rule);
+    add_production("Shorthand", {"Backslash", "w"}, regex_word_rule);
+    add_production("Shorthand", {"Backslash", "W"}, regex_non_word_rule);
 }
 }  // namespace log_surgeon

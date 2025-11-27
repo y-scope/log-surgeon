@@ -425,7 +425,7 @@ public:
 
     auto set_is_wildcard_true() -> void { m_is_wildcard = true; }
 
-    auto set_negate(bool const negate) -> void { m_negate = negate; }
+    auto negate() -> void { m_ranges = complement(m_ranges); }
 
     [[nodiscard]] auto is_wildcard() const -> bool { return m_is_wildcard; }
 
@@ -1019,8 +1019,14 @@ template <typename TypedNfaState>
 RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTGroup const* left, RegexASTGroup const* right)
         : m_negate(left->m_negate),
           m_ranges(left->m_ranges) {
-    assert(right->m_ranges.size() == 1);  // Only add LiteralRange
-    m_ranges.push_back(right->m_ranges[0]);
+    if (right->m_negate) {
+        throw std::runtime_error(
+                "RegexASTGroup4: A bracket expression in the schema contains a negative subgroup."
+        );
+    }
+    for (auto const& range : right->m_ranges) {
+        m_ranges.push_back(range);
+    }
 }
 
 template <typename TypedNfaState>
@@ -1037,10 +1043,9 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTLiteral<TypedNfaState> const
 }
 
 template <typename TypedNfaState>
-RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTGroup const* right) : m_negate(false) {
-    assert(right->m_ranges.size() == 1);  // Only add LiteralRange
-    m_ranges.push_back(right->m_ranges[0]);
-}
+RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTGroup const* right)
+        : m_negate(right->m_negate),
+          m_ranges(right->m_ranges) {}
 
 template <typename TypedNfaState>
 RegexASTGroup<TypedNfaState>::RegexASTGroup(
@@ -1155,20 +1160,40 @@ template <typename TypedNfaState>
                         std::set<uint32_t> const whitespace_set{'\t', '\n', '\r', '\f', '\v'};
                         auto begin_esc{whitespace_set.contains(begin) ? U"\\" : U""};
                         auto end_esc{whitespace_set.contains(end) ? U"\\" : U""};
+                        auto begin_printable{32 <= begin && 125 >= begin};
+                        begin_printable |= whitespace_set.contains(begin);
+                        auto end_printable{32 <= end && 125 >= end};
+                        end_printable |= whitespace_set.contains(end);
 
                         if (begin == end) {
+                            if (begin_printable) {
+                                return fmt::format(
+                                        U"{}{}",
+                                        begin_esc,
+                                        static_cast<char32_t>(unescape(begin))
+                                );
+                            }
                             return fmt::format(
                                     U"{}{}",
+                                    U"\\x",
+                                    begin
+                            );
+                        }
+                        if (begin_printable && end_printable) {
+                            return fmt::format(
+                                    U"{}{}-{}{}",
                                     begin_esc,
-                                    static_cast<char32_t>(unescape(begin))
+                                    static_cast<char32_t>(unescape(begin)),
+                                    end_esc,
+                                    static_cast<char32_t>(unescape(end))
                             );
                         }
                         return fmt::format(
                                 U"{}{}-{}{}",
-                                begin_esc,
-                                static_cast<char32_t>(unescape(begin)),
-                                end_esc,
-                                static_cast<char32_t>(unescape(end))
+                                U"\\x",
+                                begin,
+                                U"\\x",
+                                end
                         );
                     });
         for (auto const& range_u32string : transformed_ranges) {
