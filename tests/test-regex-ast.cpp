@@ -214,7 +214,7 @@ TEST_CASE("regex_shorthands", "[Regex]") {
     test_regex_ast("var:\\W", UR"([\x0-\x47,:-@,[-^,`,\x123-\x1114111])");
     test_regex_ast("var:[\\W]", UR"([\x0-\x47,:-@,[-^,`,\x123-\x1114111])");
 
-    test_regex_ast("var:a?", U"(a){0,1}");
+    test_regex_ast("var:a?", U"(()|(a))");
     test_regex_ast("var:a*", U"(()|((a){1,inf}))");
     test_regex_ast("var:a+", U"(a){1,inf}");
     test_regex_ast("var:a{0,5}", U"(()|((a){1,5}))");

@@ -226,10 +226,10 @@ static auto regex_match_one_or_more_rule(NonTerminal* m) -> unique_ptr<ParserAST
 }
 
 static auto regex_match_zero_or_one_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
-    return make_unique<ParserValueRegex>(make_unique<RegexASTMultiplicationByte>(
-            std::move(m->non_terminal_cast(0).get_parser_ast().get<unique_ptr<RegexASTByte>>()),
-            0,
-            1
+    // To handle negative captures we treat `R?` as `R | ∅`.
+    return make_unique<ParserValueRegex>(make_unique<RegexASTOrByte>(
+            make_unique<RegexASTEmptyByte>(),
+            std::move(m->non_terminal_cast(0).get_parser_ast().get<unique_ptr<RegexASTByte>>())
     ));
 }
 
