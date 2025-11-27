@@ -1157,12 +1157,13 @@ template <typename TypedNfaState>
             }
         };
 
+        std::set<uint32_t> const whitespace_set{'\t', '\n', '\r', '\f', '\v'};
+
         auto const transformed_ranges
                 = m_ranges
                   | std::ranges::views::transform([&](std::pair<uint32_t, uint32_t> const& range) {
                         auto const [begin, end] = range;
 
-                        std::set<uint32_t> const whitespace_set{'\t', '\n', '\r', '\f', '\v'};
                         auto begin_esc{whitespace_set.contains(begin) ? U"\\" : U""};
                         auto end_esc{whitespace_set.contains(end) ? U"\\" : U""};
                         auto begin_printable{32 <= begin && 125 >= begin};
