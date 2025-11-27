@@ -367,12 +367,16 @@ static auto regex_new_integer_rule(NonTerminal* m) -> unique_ptr<ParserAST> {
     );
 }
 
+static auto make_digit_group() -> unique_ptr<RegexASTGroupByte> {
+    return make_unique<RegexASTGroupByte>('0', '9');
+}
+
 static auto regex_digit_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
-    return make_unique<ParserValueRegex>(make_unique<RegexASTGroupByte>('0', '9'));
+    return make_unique<ParserValueRegex>(make_digit_group());
 }
 
 static auto regex_non_digit_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
-    auto regex_ast_group{make_unique<RegexASTGroupByte>('0', '9')};
+    auto regex_ast_group{make_digit_group()};
     regex_ast_group->negate();
     return make_unique<ParserValueRegex>(std::move(regex_ast_group));
 }
@@ -403,38 +407,36 @@ static auto regex_newline_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
     return make_unique<ParserValueRegex>(make_unique<RegexASTLiteralByte>('\n'));
 }
 
+static auto make_white_space_group() -> unique_ptr<RegexASTGroupByte> {
+    return make_unique<RegexASTGroupByte>(RegexASTGroupByte({' ', '\t', '\r', '\n', '\v', '\f'}));
+}
+
 static auto regex_white_space_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
-    auto regex_ast_group{
-            make_unique<RegexASTGroupByte>(RegexASTGroupByte({' ', '\t', '\r', '\n', '\v', '\f'}))
-    };
-    return make_unique<ParserValueRegex>(std::move(regex_ast_group));
+    return make_unique<ParserValueRegex>(make_white_space_group());
 }
 
 static auto regex_non_white_space_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
-    auto regex_ast_group{
-            make_unique<RegexASTGroupByte>(RegexASTGroupByte({' ', '\t', '\r', '\n', '\v', '\f'}))
-    };
+    auto regex_ast_group{make_white_space_group()};
     regex_ast_group->negate();
     return make_unique<ParserValueRegex>(std::move(regex_ast_group));
 }
 
-static auto regex_word_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
+static auto make_word_group() -> unique_ptr<RegexASTGroupByte> {
     auto regex_ast_group{
             make_unique<RegexASTGroupByte>('a', 'z')
     };
     regex_ast_group->add_range('A', 'Z');
     regex_ast_group->add_range('0', '9');
     regex_ast_group->add_literal('_');
-    return make_unique<ParserValueRegex>(std::move(regex_ast_group));
+    return regex_ast_group;
+}
+
+static auto regex_word_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
+    return make_unique<ParserValueRegex>(make_word_group());
 }
 
 static auto regex_non_word_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
-    auto regex_ast_group{
-            make_unique<RegexASTGroupByte>('a', 'z')
-    };
-    regex_ast_group->add_range('A', 'Z');
-    regex_ast_group->add_range('0', '9');
-    regex_ast_group->add_literal('_');
+    auto regex_ast_group{make_word_group()};
     regex_ast_group->negate();
     return make_unique<ParserValueRegex>(std::move(regex_ast_group));
 }
