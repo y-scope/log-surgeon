@@ -1180,7 +1180,7 @@ template <typename TypedNfaState>
                             }
                             return fmt::format(
                                     U"{}{}",
-                                    U"\\x",
+                                    U"\\u",
                                     begin
                             );
                         }
@@ -1195,9 +1195,9 @@ template <typename TypedNfaState>
                         }
                         return fmt::format(
                                 U"{}{}-{}{}",
-                                U"\\x",
+                                U"\\u",
                                 begin,
-                                U"\\x",
+                                U"\\u",
                                 end
                         );
                     });

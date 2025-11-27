@@ -193,26 +193,26 @@ TEST_CASE("regex_shorthands", "[Regex]") {
     test_regex_ast("var:[\\d]", U"[0-9]");
     test_regex_ast("var:[a-z\\d]", U"[a-z,0-9]");
     test_regex_ast("var:[\\da-z]", U"[0-9,a-z]");
-    test_regex_ast("var:\\D", UR"([\x0-\x47,\x58-\x1114111])");
-    test_regex_ast("var:[\\D]", UR"([\x0-\x47,\x58-\x1114111])");
-    test_regex_ast("var:[1\\D]", UR"([1,\x0-\x47,\x58-\x1114111])");
-    test_regex_ast("var:[\\D1]", UR"([\x0-\x47,\x58-\x1114111,1])");
+    test_regex_ast("var:\\D", UR"([\u0-\u47,\u58-\u1114111])");
+    test_regex_ast("var:[\\D]", UR"([\u0-\u47,\u58-\u1114111])");
+    test_regex_ast("var:[1\\D]", UR"([1,\u0-\u47,\u58-\u1114111])");
+    test_regex_ast("var:[\\D1]", UR"([\u0-\u47,\u58-\u1114111,1])");
 
     test_regex_ast("var:\\s", UR"([ ,\t,\r,\n,\v,\f])");
     test_regex_ast("var:[\\s]", UR"([ ,\t,\r,\n,\v,\f])");
     test_regex_ast("var:[a-z\\s]", UR"([a-z, ,\t,\r,\n,\v,\f])");
     test_regex_ast("var:[\\sa-z]", UR"([ ,\t,\r,\n,\v,\f,a-z])");
-    test_regex_ast("var:\\S", UR"([\x0-\x8,\x14-\x31,\x33-\x1114111])");
-    test_regex_ast("var:[\\S]", UR"([\x0-\x8,\x14-\x31,\x33-\x1114111])");
-    test_regex_ast("var:[\\t\\S]", UR"([\t,\x0-\x8,\x14-\x31,\x33-\x1114111])");
-    test_regex_ast("var:[\\S\\t]", UR"([\x0-\x8,\x14-\x31,\x33-\x1114111,\t])");
+    test_regex_ast("var:\\S", UR"([\u0-\u8,\u14-\u31,\u33-\u1114111])");
+    test_regex_ast("var:[\\S]", UR"([\u0-\u8,\u14-\u31,\u33-\u1114111])");
+    test_regex_ast("var:[\\t\\S]", UR"([\t,\u0-\u8,\u14-\u31,\u33-\u1114111])");
+    test_regex_ast("var:[\\S\\t]", UR"([\u0-\u8,\u14-\u31,\u33-\u1114111,\t])");
 
     test_regex_ast("var:[^A-F\\da-f]", UR"([^A-F,0-9,a-f])");
 
     test_regex_ast("var:\\w", U"[a-z,A-Z,0-9,_]");
     test_regex_ast("var:[\\w]", U"[a-z,A-Z,0-9,_]");
-    test_regex_ast("var:\\W", UR"([\x0-\x47,:-@,[-^,`,\x123-\x1114111])");
-    test_regex_ast("var:[\\W]", UR"([\x0-\x47,:-@,[-^,`,\x123-\x1114111])");
+    test_regex_ast("var:\\W", UR"([\u0-\u47,:-@,[-^,`,\u123-\u1114111])");
+    test_regex_ast("var:[\\W]", UR"([\u0-\u47,:-@,[-^,`,\u123-\u1114111])");
 
     test_regex_ast("var:a?", U"(()|(a))");
     test_regex_ast("var:a*", U"(()|((a){1,inf}))");
