@@ -425,7 +425,12 @@ public:
 
     auto set_is_wildcard_true() -> void { m_is_wildcard = true; }
 
-    auto negate() -> void { m_ranges = complement(m_ranges); }
+    auto negate() -> void {
+        auto merged_ranges{m_ranges};
+        std::sort(merged_ranges.begin(), merged_ranges.end());
+        merged_ranges = merge(merged_ranges);
+        m_ranges = complement(merged_ranges);
+    }
 
     [[nodiscard]] auto is_wildcard() const -> bool { return m_is_wildcard; }
 
