@@ -1,5 +1,6 @@
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <log_surgeon/finite_automata/RegexAST.hpp>
 #include <log_surgeon/Schema.hpp>
@@ -18,6 +19,7 @@ using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
 using std::string;
 using std::string_view;
+using std::vector;
 
 using RegexASTCatByte
         = log_surgeon::finite_automata::RegexASTCat<log_surgeon::finite_automata::ByteNfaState>;
@@ -49,7 +51,9 @@ TEST_CASE("add_number_var", "[Schema]") {
     auto& schema_var_ast = dynamic_cast<SchemaVarAST&>(*schema_var_ast_ptr);
     REQUIRE(var_name == schema_var_ast.m_name);
 
-    REQUIRE_NOTHROW([&]() { (void)dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr); }());
+    REQUIRE_NOTHROW([&]() -> void {
+        std::ignore = dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr);
+    }());
 }
 
 /**
@@ -174,10 +178,41 @@ TEST_CASE("add_underscore_name", "[Schema]") {
     REQUIRE(var_name == schema_var_ast.m_name);
 
     REQUIRE_NOTHROW([&]() -> void {
-        (void)dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr);
+        std::ignore = dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr);
     }());
 
     auto const captures{schema_var_ast.m_regex_ptr->get_subtree_positive_captures()};
     REQUIRE(captures.size() == 1);
     REQUIRE(cap_name == captures.at(0)->get_name());
+}
+
+/**
+ * @ingroup unit_tests_schema
+ * @brief Create a schema, adding non-unique capture group names.
+ */
+TEST_CASE("non_unique_capture_names", "[Schema]") {
+    Schema schema;
+    vector<string> const var_names{"var_name1", "var_name2", "var_name3"};
+    string const cap_name{"cap_name"};
+
+    for (auto const& var_name : var_names) {
+        string const var_schema{var_name + string(":a(?<") + cap_name + string(">_)b")};
+        schema.add_variable(string_view(var_schema), -1);
+        auto const schema_ast = schema.release_schema_ast_ptr();
+        REQUIRE(schema_ast->m_schema_vars.size() == 1);
+        REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());
+
+        auto& schema_var_ast_ptr{schema_ast->m_schema_vars.at(0)};
+        REQUIRE(nullptr != schema_var_ast_ptr);
+        auto& schema_var_ast = dynamic_cast<SchemaVarAST&>(*schema_var_ast_ptr);
+        REQUIRE(var_name == schema_var_ast.m_name);
+
+        REQUIRE_NOTHROW([&]() -> void {
+            std::ignore = dynamic_cast<RegexASTCatByte&>(*schema_var_ast.m_regex_ptr);
+        }());
+
+        auto const captures{schema_var_ast.m_regex_ptr->get_subtree_positive_captures()};
+        REQUIRE(captures.size() == 1);
+        REQUIRE(cap_name == captures.at(0)->get_name());
+    }
 }

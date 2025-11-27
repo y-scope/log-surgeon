@@ -20,7 +20,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <fmt/format.h>
 
-using log_surgeon::capture_id_t;
 using log_surgeon::cStaticByteBuffSize;
 using log_surgeon::ErrorCode;
 using log_surgeon::finite_automata::PrefixTree;
@@ -146,17 +145,17 @@ auto parse_and_validate(
 
             if (false == expected_captures.empty()) {
                 auto const& lexer{reader_parser.get_log_parser().m_lexer};
-                auto optional_capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
-                REQUIRE(optional_capture_ids.has_value());
+                auto optional_captures{lexer.get_captures_from_rule_id(token_type)};
+                REQUIRE(optional_captures.has_value());
 
-                if (false == optional_capture_ids.has_value()) {
+                if (false == optional_captures.has_value()) {
                     return;
                 }
 
-                for (auto const capture_id : optional_capture_ids.value()) {
-                    auto const capture_name{lexer.m_id_symbol.at(capture_id)};
+                for (auto const capture : optional_captures.value()) {
+                    auto const capture_name{capture->get_name()};
                     REQUIRE(expected_captures.contains(capture_name));
-                    auto optional_reg_ids{lexer.get_reg_ids_from_capture_id(capture_id)};
+                    auto optional_reg_ids{lexer.get_reg_ids_from_capture(capture)};
                     REQUIRE(optional_reg_ids.has_value());
                     if (false == optional_reg_ids.has_value()) {
                         return;
@@ -204,7 +203,7 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
  *
  * ### Schema Definition
  * @code
- * delimiters: \n\r\[:,
+ * delimiters: \n\r[:,
  * myVar:userID=123
  * @endcode
  *
@@ -228,7 +227,7 @@ auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> str
  * @endcode
  */
 TEST_CASE("single_line_without_capture_reader_parser", "[ReaderParser]") {
-    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=123"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
     ExpectedEvent const expected_event{
@@ -272,7 +271,7 @@ TEST_CASE("single_line_without_capture_reader_parser", "[ReaderParser]") {
 TEST_CASE("reader_parser_wrap_around", "[ReaderParser]") {
     REQUIRE(48000 == cStaticByteBuffSize);
     
-    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r\[:,)"};
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cVarSchema1{"myVar:userID=123"};
     constexpr string_view cVarSchema2{"myCapture:userID=(?<capture>234)"};
     constexpr string_view cInput1{"userID=123 userID=234 userID=123 123 userID=123\n"};
