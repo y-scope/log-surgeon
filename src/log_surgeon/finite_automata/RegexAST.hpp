@@ -1156,6 +1156,13 @@ template <typename TypedNfaState>
                         auto begin_esc{whitespace_set.contains(begin) ? U"\\" : U""};
                         auto end_esc{whitespace_set.contains(end) ? U"\\" : U""};
 
+                        if (begin == end) {
+                            return fmt::format(
+                                    U"{}{}",
+                                    begin_esc,
+                                    static_cast<char32_t>(unescape(begin))
+                            );
+                        }
                         return fmt::format(
                                 U"{}{}-{}{}",
                                 begin_esc,

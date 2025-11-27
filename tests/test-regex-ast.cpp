@@ -192,11 +192,11 @@ TEST_CASE("regex_shorthands", "[Regex]") {
     test_regex_ast("var:\\d", U"[0-9]");
     test_regex_ast("var:\\D", U"[^0-9]");
 
-    test_regex_ast("var:\\s", U"[ - ,\\t-\\t,\\r-\\r,\\n-\\n,\\v-\\v,\\f-\\f]");
-    test_regex_ast("var:\\S", U"[^ - ,\\t-\\t,\\r-\\r,\\n-\\n,\\v-\\v,\\f-\\f]");
+    test_regex_ast("var:\\s", U"[ ,\\t,\\r,\\n,\\v,\\f]");
+    test_regex_ast("var:\\S", U"[^ ,\\t,\\r,\\n,\\v,\\f]");
 
-    test_regex_ast("var:\\w", U"[a-z,A-Z,0-9,_-_]");
-    test_regex_ast("var:\\W", U"[^a-z,A-Z,0-9,_-_]");
+    test_regex_ast("var:\\w", U"[a-z,A-Z,0-9,_]");
+    test_regex_ast("var:\\W", U"[^a-z,A-Z,0-9,_]");
 
     test_regex_ast("var:a?", U"(a){0,1}");
     test_regex_ast("var:a*", U"(()|((a){1,inf}))");
