@@ -590,24 +590,20 @@ auto SchemaParser::add_productions() -> void {
     add_production("Or", {"Concat"}, regex_identity_rule);
     add_production("Concat", {"Concat", "Quantity"}, regex_cat_rule);
     add_production("Concat", {"Quantity"}, regex_identity_rule);
-    add_production("Quantity", {"MatchStar"}, regex_identity_rule);
-    add_production("Quantity", {"MatchPlus"}, regex_identity_rule);
-    add_production("Quantity", {"MatchExact"}, regex_identity_rule);
-    add_production("Quantity", {"MatchRange"}, regex_identity_rule);
-    add_production("Quantity", {"CompleteGroup"}, regex_identity_rule);
-    add_production("MatchStar", {"CompleteGroup", "Star"}, regex_match_zero_or_more_rule);
-    add_production("MatchPlus", {"CompleteGroup", "Plus"}, regex_match_one_or_more_rule);
-    add_production("MatchPlus", {"CompleteGroup", "QuestionMark"}, regex_match_zero_or_one_rule);
+    add_production("Quantity", {"CompleteGroup", "Star"}, regex_match_zero_or_more_rule);
+    add_production("Quantity", {"CompleteGroup", "Plus"}, regex_match_one_or_more_rule);
+    add_production("Quantity", {"CompleteGroup", "QuestionMark"}, regex_match_zero_or_one_rule);
     add_production(
-            "MatchExact",
+            "Quantity",
             {"CompleteGroup", "Lbrace", "Integer", "Rbrace"},
             regex_match_exactly_rule
     );
     add_production(
-            "MatchRange",
+            "Quantity",
             {"CompleteGroup", "Lbrace", "Integer", "Comma", "Integer", "Rbrace"},
             regex_match_range_rule
     );
+    add_production("Quantity", {"CompleteGroup"}, regex_identity_rule);
     add_production("CompleteGroup", {"IncompleteGroup", "Rbracket"}, regex_identity_rule);
     add_production("CompleteGroup", {"Literal"}, regex_identity_rule);
     add_production("CompleteGroup", {"Digit"}, regex_identity_rule);
