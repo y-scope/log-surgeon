@@ -151,14 +151,14 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
             output_buffer->set_token(0, next_token);
             // TODO: this is a problem because if multiple headers are defined, they'll all think
             // they contain the same captures
-            auto optional_capture_ids{m_lexer.get_capture_ids_from_rule_id(
+            auto optional_captures{m_lexer.get_captures_from_rule_id(
                     static_cast<uint32_t>(SymbolId::TokenHeader)
             )};
-            if (optional_capture_ids.has_value()) {
-                for (auto const capture_id : optional_capture_ids.value()) {
-                    if (m_lexer.m_id_symbol[capture_id].starts_with("timestamp")) {
+            if (optional_captures.has_value()) {
+                for (auto const capture : optional_captures.value()) {
+                    if (capture->get_name() == "timestamp") {
                         auto [start_reg_id,
-                              end_reg_id]{m_lexer.get_reg_ids_from_capture_id(capture_id).value()};
+                              end_reg_id]{m_lexer.get_reg_ids_from_capture(capture).value()};
                         auto start_pos{next_token.get_reversed_reg_positions(start_reg_id)};
                         auto end_pos{next_token.get_reversed_reg_positions(end_reg_id)};
                         auto timestamp{next_token.get_capture_string_view(start_pos[0], end_pos[0])};

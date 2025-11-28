@@ -68,15 +68,15 @@ auto LogEventView::get_logtype() const -> std::string {
             {
                 logtype += token_view.release_delimiter();
             }
-            auto const& optional_capture_ids{
-                m_log_parser.m_lexer.get_capture_ids_from_rule_id(rule_id)
+            auto const& optional_captures{
+                m_log_parser.m_lexer.get_captures_from_rule_id(rule_id)
             };
-            if (optional_capture_ids.has_value()) {
+            if (optional_captures.has_value()) {
                 auto capture_view{token_view};
-                auto const& capture_ids{optional_capture_ids.value()};
-                for (auto const capture_id : capture_ids) {
+                auto const& captures{optional_captures.value()};
+                for (auto const capture : captures) {
                     auto const& optional_reg_id_pair{
-                            m_log_parser.m_lexer.get_reg_ids_from_capture_id(capture_id)
+                            m_log_parser.m_lexer.get_reg_ids_from_capture(capture)
                     };
                     if (false == optional_reg_id_pair.has_value()) {
                         continue;
@@ -88,7 +88,7 @@ auto LogEventView::get_logtype() const -> std::string {
                             capture_view.get_reversed_reg_positions(optional_reg_id_pair->second)
                     };
 
-                    auto capture_name{m_log_parser.get_id_symbol(capture_id)};
+                    auto const& capture_name{capture->get_name()};
                     if (false == start_positions.empty() && -1 < start_positions[0]
                         && false == end_positions.empty() && -1 < end_positions[0])
                     {
@@ -105,7 +105,6 @@ auto LogEventView::get_logtype() const -> std::string {
             }
         }
     }
-
     return logtype;
 }
 

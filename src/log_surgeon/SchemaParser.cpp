@@ -538,15 +538,16 @@ auto SchemaParser::add_productions() -> void {
     add_production("Identifier", {"IdentifierCharacters"}, new_identifier_rule);
     add_production("WhitespaceStar", {"WhitespaceStar", "Space"}, nullptr);
     add_production("WhitespaceStar", {}, nullptr);
-    add_production("Regex", {"Concat"}, regex_identity_rule);
-    add_production("Concat", {"Concat", "Or"}, regex_cat_rule);
-    add_production("Concat", {"Or"}, regex_identity_rule);
-    add_production("Or", {"Or", "Vbar", "Literal"}, regex_or_rule);
-    add_production("Or", {"MatchStar"}, regex_identity_rule);
-    add_production("Or", {"MatchPlus"}, regex_identity_rule);
-    add_production("Or", {"MatchExact"}, regex_identity_rule);
-    add_production("Or", {"MatchRange"}, regex_identity_rule);
-    add_production("Or", {"CompleteGroup"}, regex_identity_rule);
+    add_production("Regex", {"Or"}, regex_identity_rule);
+    add_production("Or", {"Or", "Vbar", "Concat"}, regex_or_rule);
+    add_production("Or", {"Concat"}, regex_identity_rule);
+    add_production("Concat", {"Concat", "Quantity"}, regex_cat_rule);
+    add_production("Concat", {"Quantity"}, regex_identity_rule);
+    add_production("Quantity", {"MatchStar"}, regex_identity_rule);
+    add_production("Quantity", {"MatchPlus"}, regex_identity_rule);
+    add_production("Quantity", {"MatchExact"}, regex_identity_rule);
+    add_production("Quantity", {"MatchRange"}, regex_identity_rule);
+    add_production("Quantity", {"CompleteGroup"}, regex_identity_rule);
     add_production("MatchStar", {"CompleteGroup", "Star"}, regex_match_zero_or_more_rule);
     add_production("MatchPlus", {"CompleteGroup", "Plus"}, regex_match_one_or_more_rule);
     add_production(

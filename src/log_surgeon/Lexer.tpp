@@ -4,7 +4,6 @@
 #include <cassert>
 #include <memory>
 #include <stack>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -440,28 +439,18 @@ auto Lexer<TypedNfaState, TypedDfaState>::get_highest_priority_rule(rule_id_t co
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::generate() {
     for (auto const& rule : m_rules) {
-        for (auto const* capture : rule.get_captures()) {
-            std::string const capture_name{capture->get_name()};
-            if (m_symbol_id.contains(capture_name)) {
-                throw std::invalid_argument(
-                        "`m_rules` contains capture names that are not unique."
-                );
+        auto const rule_id{rule.get_variable_id()};
+        if (false == rule.get_captures().empty()) {
+            auto& captures_vec{m_rule_id_to_capture.try_emplace(rule_id).first->second};
+            for (auto const* capture : rule.get_captures()) {
+                captures_vec.push_back(capture);
             }
-            auto const capture_id{m_symbol_id.size()};
-            m_symbol_id.emplace(capture_name, capture_id);
-            m_id_symbol.emplace(capture_id, capture_name);
-
-            auto const rule_id{rule.get_variable_id()};
-            m_rule_id_to_capture_ids.try_emplace(rule_id);
-            m_rule_id_to_capture_ids.at(rule_id).push_back(capture_id);
         }
     }
 
     finite_automata::Nfa<TypedNfaState> nfa{m_rules};
     for (auto const& [capture, tag_id_pair] : nfa.get_capture_to_tag_id_pair()) {
-        std::string const capture_name{capture->get_name()};
-        auto const capture_id{m_symbol_id.at(capture_name)};
-        m_capture_id_to_tag_id_pair.emplace(capture_id, tag_id_pair);
+        m_capture_to_tag_id_pair.emplace(capture, tag_id_pair);
     }
 
     m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState, TypedNfaState>>(nfa);
