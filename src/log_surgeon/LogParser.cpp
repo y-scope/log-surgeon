@@ -64,19 +64,13 @@ auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
         // transform '.' from any-character into any non-delimiter character
         rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters);
 
-        // check if regex contains a delimiter
-        std::array<bool, cSizeOfUnicode> is_possible_input{};
-        rule->m_regex_ptr->set_possible_inputs_to_true(is_possible_input);
-
         if (rule->m_name == "header") {
-            // Need to add a special character to specify this character in a schema file e.g. \B
-            auto start_of_file_regex = make_unique<RegexASTMultiplication<ByteNfaState>>(
+            auto start_of_file_or_new_line_regex{make_unique<RegexASTOr<ByteNfaState>>(
                     make_unique<RegexASTLiteral<ByteNfaState>>(utf8::cCharStartOfFile),
-                    0,
-                    1
-            );
+                    make_unique<RegexASTLiteral<ByteNfaState>>('\n')
+            )};
             rule->m_regex_ptr = make_unique<RegexASTCat<ByteNfaState>>(
-                    std::move(start_of_file_regex),
+                    std::move(start_of_file_or_new_line_regex),
                     std::move(rule->m_regex_ptr)
             );
         } else {
@@ -149,8 +143,8 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
         if (next_token.get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenHeader)) {
             output_buffer->set_has_header(true);
             output_buffer->set_token(0, next_token);
-            // TODO: this is a problem because if multiple headers are defined, they'll all think
-            // they contain the same captures
+            output_buffer->set_has_timestamp(false);
+            output_buffer->set_timestamp("");
             auto optional_captures{m_lexer.get_captures_from_rule_id(
                     static_cast<uint32_t>(SymbolId::TokenHeader)
             )};
@@ -159,16 +153,24 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
                     if (capture->get_name() == "timestamp") {
                         auto [start_reg_id,
                               end_reg_id]{m_lexer.get_reg_ids_from_capture(capture).value()};
-                        auto start_pos{next_token.get_reversed_reg_positions(start_reg_id)};
-                        auto end_pos{next_token.get_reversed_reg_positions(end_reg_id)};
-                        auto timestamp{next_token.get_capture_string_view(start_pos[0], end_pos[0])};
+                        auto starts{next_token.get_reversed_reg_positions(start_reg_id)};
+                        auto ends{next_token.get_reversed_reg_positions(end_reg_id)};
+                        if (starts.empty() || ends.empty() || starts[0] < 0 || ends[0] < 0) {
+                            continue;
+                        }
+                        auto timestamp{
+                                next_token.get_capture_string_view(starts[0], ends[0])
+                        };
+                        output_buffer->set_has_timestamp(true);
                         output_buffer->set_timestamp(timestamp);
+                        break;
                     }
                 }
             }
             output_buffer->set_pos(1);
         } else {
             output_buffer->set_has_header(false);
+            output_buffer->set_has_timestamp(false);
             output_buffer->set_timestamp("");
             output_buffer->set_token(1, next_token);
             output_buffer->set_pos(2);

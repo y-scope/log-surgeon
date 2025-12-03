@@ -34,6 +34,10 @@ public:
 
     [[nodiscard]] auto has_header() const -> bool { return m_has_header; }
 
+    auto set_has_timestamp(bool has_timestamp) -> void { m_has_timestamp = has_timestamp; }
+
+    [[nodiscard]] auto has_timestamp() const -> bool { return m_has_timestamp; }
+
     auto set_timestamp(std::string_view const& timestamp) -> void { m_timestamp = timestamp; }
 
     [[nodiscard]] auto get_timestamp() const -> std::string { return m_timestamp; }
