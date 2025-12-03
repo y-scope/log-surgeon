@@ -54,6 +54,21 @@ public:
     [[nodiscard]] auto to_string_view() -> std::string_view;
 
     /**
+     * @param capture_start_pos Start position of the capture in the input buffer
+     * @param capture_end_pos End position of the capture in the input buffer
+     * @return The substring containing the capture
+     */
+    [[nodiscard]] auto get_capture_string_view(
+            finite_automata::PrefixTree::position_t capture_start_pos,
+            finite_automata::PrefixTree::position_t capture_end_pos
+    ) -> std::string_view;
+
+
+    [[nodiscard]] auto get_first_char() const -> char {
+        return m_buffer[get_start_pos()];
+    }
+
+    /**
      * @return The first character (as a string) of the token string (which is a
      * delimiter if delimiters are being used)
      */
@@ -126,6 +141,7 @@ private:
     std::vector<uint32_t> const* m_type_ids_ptr{nullptr};
     finite_automata::RegisterHandler m_reg_handler{};
     std::string m_cached_string;
+    std::string m_cached_capture_string;
 };
 }  // namespace log_surgeon
 
