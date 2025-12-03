@@ -1149,26 +1149,38 @@ TEST_CASE("multi_capture_non_unique_names", "[BufferParser]") {
  * ### Schema Definition
  * @code
  * delimiters: \n\r[:,
- * header:[a-z]+ (?<timestamp>[A-Za-z]{3} \d{2} \d{2}:\d{2}:\d{2}) [a-z]+ (?<capture>\d+) [a-z]+
+ * header:[a-z]+ (?<timestamp>[A-Za-z]{3} \d{2} \d{2}:\d{2}:\d{2}) [a-z]+ (?<int>\d+) [a-z]+
+ * header:[a-z]+ (?<timestamp>...) [a-z]+ (?<timestamp>...) [a-z]+
+ * header:[a-z]{4,0}
+ * header:(?<int>\d+) ((?<hex>[a-fA-F]+)|(?<timestamp>...)){0,1} abc:(?<timestamp>...){0,1}
  * float:\d+\.\d+
  * @endcode
  *
  * ### Input Example
  * @code
- * "text Jan 01 02:03:04 text 123 text word 12.12"
+ * "text Jan 01 02:03:04 text 123 text word 12.12\na\n"
+ * "text Feb 01 02:03:05 text Mar 29 12:11:10 text word 12.12\na\n"
+ * "text word 12.12\na\n"
+ * "123  abc: 12.12\na\n"
+ * "123 DFF abc: 12.12\na\n"
+ * "123 Dec 10 11:11:11 abc: 12.12\na\n"
+ * "123  abc:Apr 10 11:11:11 12.12\na\n"
+ * "123 DFF abc:May 12 05:06:07 12.12\na\n"
+ * "123 Jun 18 08:12:21 abc:Jul 21 02:11:12 12.12\na"
  *
  * @endcode
  *
  * ### Expected Logtype
  * @code
- * "text <timestamp> text <int> text word <float>"
- * @endcode
- *
- * ### Expected Tokenization
- * @code
- * "text Jan 01 02:03:04 text 123 text" -> header
- * " word" -> uncaught string
- * " 12.12" -> float
+ * "text <timestamp> text <int> text word <float><newLine>a\n"
+ * "text <timestamp> text <timestamp> text word <float><newLine>a\n"
+ * "text word <float><newLine>a\n"
+ * "<int>  abc: <float><newLine>a\n"
+ * "<int> <hex> abc: <float><newLine>a\n"
+ * "<int> <timestamp> abc: <float><newLine>a\n"
+ * "<int>  abc:<timestamp> <float><newLine>a\n"
+ * "<int> <hex> abc:<timestamp> <float><newLine>a\n"
+ * "<int> <timestamp> abc:<timestamp> <float><newLine>a"
  * @endcode
  */
 TEST_CASE("multiple_headers", "[BufferParser]") {
