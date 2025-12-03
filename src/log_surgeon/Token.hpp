@@ -141,6 +141,7 @@ private:
     std::vector<uint32_t> const* m_type_ids_ptr{nullptr};
     finite_automata::RegisterHandler m_reg_handler{};
     std::string m_cached_string;
+    std::string m_cached_capture_string;
 };
 }  // namespace log_surgeon
 
