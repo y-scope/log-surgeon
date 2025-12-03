@@ -25,6 +25,7 @@ public:
 
     auto reset() -> void {
         m_has_header = false;
+        m_has_timestamp = false;
         m_timestamp.clear();
         m_has_delimiters = false;
         m_storage.reset();
