@@ -42,14 +42,12 @@ auto Token::get_capture_string_view(
         auto const token{m_buffer.subspan(capture_start_pos, capture_end_pos - capture_start_pos)};
         return {token.begin(), token.end()};
     }
-    if (m_cached_capture_string.empty()) {
-        auto const capture_start{
-                m_buffer.subspan(capture_start_pos, get_buffer_size() - capture_start_pos)
-        };
-        auto const capture_end{m_buffer.subspan(0, capture_end_pos)};
-        m_cached_capture_string = std::string{capture_start.begin(), capture_start.end()}
-                          + std::string{capture_end.begin(), capture_end.end()};
-    }
+    auto const capture_start{
+            m_buffer.subspan(capture_start_pos, get_buffer_size() - capture_start_pos)
+    };
+    auto const capture_end{m_buffer.subspan(0, capture_end_pos)};
+    m_cached_capture_string = std::string{capture_start.begin(), capture_start.end()}
+                      + std::string{capture_end.begin(), capture_end.end()};
     return {m_cached_capture_string};
 }
 
