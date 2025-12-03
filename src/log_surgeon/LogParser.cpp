@@ -151,6 +151,7 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
             if (optional_captures.has_value()) {
                 for (auto const capture : optional_captures.value()) {
                     if (capture->get_name() == "timestamp") {
+                        // Can access optional without checking as captures must have registers
                         auto [start_reg_id,
                               end_reg_id]{m_lexer.get_reg_ids_from_capture(capture).value()};
                         auto starts{next_token.get_reversed_reg_positions(start_reg_id)};
