@@ -38,9 +38,9 @@ public:
 
     [[nodiscard]] auto has_timestamp() const -> bool { return m_has_timestamp; }
 
-    auto set_timestamp(std::string_view const& timestamp) -> void { m_timestamp = timestamp; }
+    auto set_timestamp(std::string_view const timestamp) -> void { m_timestamp = timestamp; }
 
-    [[nodiscard]] auto get_timestamp() const -> std::string { return m_timestamp; }
+    [[nodiscard]] auto get_timestamp() const -> std::string const& { return m_timestamp; }
 
     auto set_has_delimiters(bool has_delimiters) -> void { m_has_delimiters = has_delimiters; }
 
