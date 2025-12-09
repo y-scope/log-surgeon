@@ -1010,11 +1010,12 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(
 ) {
     if (left == nullptr || right == nullptr) {
         auto const null_ptr_name{left == nullptr ? "left" : "right"};
-        throw std::runtime_error(
-                "RegexASTGroup(RegexASTGroup, RegexASTLiteral): " + null_ptr_name + " == nullptr: "
-                "A bracket expression in the schema contains illegal characters, remember to "
-                "escape special characters. Refer to README-Schema.md for more details."
-        );
+        throw std::runtime_error(fmt::format(
+                "RegexASTGroup(RegexASTGroup, RegexASTLiteral): {} == nullptr: A bracket expression "
+                "in the schema contains illegal characters, remember to escape special characters. "
+                "Refer to README-Schema.md for more details.",
+                null_ptr_name
+        ));
     }
     m_negate = left->m_negate;
     m_ranges = left->m_ranges;
@@ -1025,11 +1026,12 @@ template <typename TypedNfaState>
 RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTGroup const* left, RegexASTGroup const* right) {
     if (left == nullptr || right == nullptr) {
         auto const null_ptr_name{left == nullptr ? "left" : "right"};
-        throw std::runtime_error(
-                "RegexASTGroup(RegexASTGroup, RegexASTGroup): " + null_ptr_name + " == nullptr: A "
-                "bracket expression in the schema contains illegal characters, remember to escape "
-                "special characters. Refer to README-Schema.md for more details."
-        );
+        throw std::runtime_error(fmt::format(
+                "RegexASTGroup(RegexASTGroup, RegexASTGroup): {} == nullptr: A bracket expression "
+                "in the schema contains illegal characters, remember to escape special characters. "
+                "Refer to README-Schema.md for more details.",
+                null_ptr_name
+        ));
     }
     if (right->m_negate) {
         throw std::runtime_error(
@@ -1077,11 +1079,12 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(
 ) {
     if (left == nullptr || right == nullptr) {
         auto const null_ptr_name{left == nullptr ? "left" : "right"};
-        throw std::runtime_error(
-                "RegexASTGroup(RegexASTLiteral, RegexASTLiteral): " + null_ptr_name + " == "
-                "nullptr: A bracket expression in the schema contains illegal characters, remember "
-                "to escape special characters. Refer to README-Schema.md for more details."
-        );
+        throw std::runtime_error(fmt::format(
+                "RegexASTGroup(RegexASTLiteral, RegexASTLiteral):  {} == nullptr: A bracket "
+                "expression in the schema contains illegal characters, remember to escape special "
+                "characters. Refer to README-Schema.md for more details.",
+                null_ptr_name
+        ));
     }
     m_negate = false;
     assert(right->get_character() > left->get_character());
@@ -1185,10 +1188,16 @@ template <typename TypedNfaState>
 
                         auto begin_esc{whitespace_set.contains(begin) ? U"\\" : U""};
                         auto end_esc{whitespace_set.contains(end) ? U"\\" : U""};
-                        auto begin_printable{32 <= begin && 125 >= begin};
-                        begin_printable |= whitespace_set.contains(begin);
-                        auto end_printable{32 <= end && 125 >= end};
-                        end_printable |= whitespace_set.contains(end);
+                        auto const begin_printable{
+                                (cPrintableAsciiRange.first <= begin
+                                && cPrintableAsciiRange.second >= begin)
+                                || whitespace_set.contains(begin)
+                        };
+                        auto const end_printable{
+                                (cPrintableAsciiRange.first <= end
+                                && cPrintableAsciiRange.second >= end)
+                                || whitespace_set.contains(end)
+                        };
 
                         if (begin == end) {
                             if (begin_printable) {
