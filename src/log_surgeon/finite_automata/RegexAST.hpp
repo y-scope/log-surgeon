@@ -1179,24 +1179,27 @@ template <typename TypedNfaState>
             }
         };
 
-        std::set<uint32_t> const whitespace_set{'\t', '\n', '\r', '\f', '\v'};
+        std::set<uint32_t> const control_whitespace_set{
+                cControlWhitespaceChars.begin(),
+                cControlWhitespaceChars.end()
+        };
 
         auto const transformed_ranges
                 = m_ranges
                   | std::ranges::views::transform([&](std::pair<uint32_t, uint32_t> const& range) {
-                        auto const [begin, end] = range;
+                        auto const [begin, end]{range};
 
-                        auto begin_esc{whitespace_set.contains(begin) ? U"\\" : U""};
-                        auto end_esc{whitespace_set.contains(end) ? U"\\" : U""};
+                        auto begin_esc{control_whitespace_set.contains(begin) ? U"\\" : U""};
+                        auto end_esc{control_whitespace_set.contains(end) ? U"\\" : U""};
                         auto const begin_printable{
                                 (cPrintableAsciiRange.first <= begin
                                 && cPrintableAsciiRange.second >= begin)
-                                || whitespace_set.contains(begin)
+                                || control_whitespace_set.contains(begin)
                         };
                         auto const end_printable{
                                 (cPrintableAsciiRange.first <= end
                                 && cPrintableAsciiRange.second >= end)
-                                || whitespace_set.contains(end)
+                                || control_whitespace_set.contains(end)
                         };
 
                         if (begin == end) {

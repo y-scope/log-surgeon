@@ -1,6 +1,7 @@
 #ifndef LOG_SURGEON_CONSTANTS_HPP
 #define LOG_SURGEON_CONSTANTS_HPP
 
+#include <array>
 #include <cstdint>
 #include <utility>
 
@@ -10,6 +11,7 @@ constexpr uint32_t cSizeOfUnicode = cUnicodeMax + 1;
 constexpr uint32_t cSizeOfByte = 256;
 constexpr uint32_t cNullSymbol = 10'000'000;
 constexpr std::pair<uint32_t, uint32_t> cPrintableAsciiRange{32, 125};
+constexpr std::array<uint32_t, 5> cControlWhitespaceChars{'\t', '\n', '\r', '\f', '\v'};
 
 enum class ErrorCode {
     Success,
