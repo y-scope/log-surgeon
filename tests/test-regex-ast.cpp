@@ -198,10 +198,10 @@ TEST_CASE("regex_shorthands", "[Regex]") {
     test_regex_ast("var:[1\\D]", UR"([1,\u0-\u47,\u58-\u1114111])");
     test_regex_ast("var:[\\D1]", UR"([\u0-\u47,\u58-\u1114111,1])");
 
-    test_regex_ast("var:\\s", UR"([ ,\t,\r,\n,\v,\f])");
-    test_regex_ast("var:[\\s]", UR"([ ,\t,\r,\n,\v,\f])");
-    test_regex_ast("var:[a-z\\s]", UR"([a-z, ,\t,\r,\n,\v,\f])");
-    test_regex_ast("var:[\\sa-z]", UR"([ ,\t,\r,\n,\v,\f,a-z])");
+    test_regex_ast("var:\\s", UR"([ ,\t,\n,\r,\f,\v])");
+    test_regex_ast("var:[\\s]", UR"([ ,\t,\n,\r,\f,\v])");
+    test_regex_ast("var:[a-z\\s]", UR"([a-z, ,\t,\n,\r,\f,\v])");
+    test_regex_ast("var:[\\sa-z]", UR"([ ,\t,\n,\r,\f,\v,a-z])");
     test_regex_ast("var:\\S", UR"([\u0-\u8,\u14-\u31,\u33-\u1114111])");
     test_regex_ast("var:[\\S]", UR"([\u0-\u8,\u14-\u31,\u33-\u1114111])");
     test_regex_ast("var:[\\t\\S]", UR"([\t,\u0-\u8,\u14-\u31,\u33-\u1114111])");

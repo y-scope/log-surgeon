@@ -13,6 +13,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/FileReader.hpp>
@@ -52,6 +53,7 @@ using std::make_unique;
 using std::string;
 using std::string_view;
 using std::unique_ptr;
+using std::vector;
 
 namespace log_surgeon {
 SchemaParser::SchemaParser() {
@@ -408,7 +410,13 @@ static auto regex_newline_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
 }
 
 static auto make_white_space_group() -> unique_ptr<RegexASTGroupByte> {
-    return make_unique<RegexASTGroupByte>(RegexASTGroupByte({' ', '\t', '\r', '\n', '\v', '\f'}));
+    vector<uint32_t> white_space_chars{' '};
+    white_space_chars.insert(
+            white_space_chars.end(),
+            cControlWhiteSpaceChars.begin(),
+            cControlWhiteSpaceChars.end()
+    );
+    return make_unique<RegexASTGroupByte>(RegexASTGroupByte(white_space_chars));
 }
 
 static auto regex_white_space_rule(NonTerminal* /* m */) -> unique_ptr<ParserAST> {
