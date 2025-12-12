@@ -69,9 +69,9 @@ public:
     }
 
     /**
-     * @return the Token corresponding to the LogEvent's timestamp.
+     * @return the string corresponding to the LogEvent's timestamp.
      */
-    [[nodiscard]] auto get_timestamp() const -> Token*;
+    [[nodiscard]] auto get_timestamp() const -> std::string;
 
     /**
      * @param multiline Whether the log event contains multiple lines.
