@@ -1188,18 +1188,18 @@ TEST_CASE("multi_capture_non_unique_names", "[BufferParser]") {
  * @endcode
  */
 TEST_CASE("multiple_headers", "[BufferParser]") {
-    #define HEX "(?<hex>[a-fA-F]+)"
-    #define INT "(?<int>\\d+)"
-    #define TS_REGEX "(?<timestamp>[A-Za-z]{3} \\d{2} \\d{2}:\\d{2}:\\d{2})"
-    #define W "[a-z]+"
+    constexpr string_view cHex{"(?<hex>[a-fA-F]+)"};
+    constexpr string_view cInt{"(?<int>\\d+)"};
+    constexpr string_view cTS{"(?<timestamp>[A-Za-z]{3} \\d{2} \\d{2}:\\d{2}:\\d{2})"};
+    constexpr string_view cW{"[a-z]+"};
 
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
-    constexpr string_view cVar1{"header:" W " " TS_REGEX " " W " " INT " " W};
-    constexpr string_view cVar2{"header:" W " " TS_REGEX " " W " " TS_REGEX " " W};
+    auto const var1{fmt::format("header:{} {} {} {} {}", cW, cTS, cW, cInt, cW)};
+    auto const var2{fmt::format("header:{} {} {} {} {}", cW, cTS, cW, cTS, cW)};
     constexpr string_view cVar3{"header:[a-z]{4,0}"};
-    constexpr string_view cVar4{"header:" INT " (" HEX "|" TS_REGEX "){0,1} abc:" TS_REGEX "{0,1}"};
-
+    auto const var4{fmt::format("header:{} ({}|{}){{0,1}} abc:{}{{0,1}}", cInt, cHex, cTS, cTS)};
     constexpr string_view cVar5{R"(float:\d+\.\d+)"};
+
     constexpr string_view cInput{"text Jan 01 02:03:04 text 123 text word 12.12\na\n"
                                  "text Feb 01 02:03:05 text Mar 29 12:11:10 text word 12.12\na\n"
                                  "text word 12.12\na\n"
@@ -1394,10 +1394,10 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
-    schema.add_variable(cVar1, -1);
-    schema.add_variable(cVar2, -1);
+    schema.add_variable(var1, -1);
+    schema.add_variable(var2, -1);
     schema.add_variable(cVar3, -1);
-    schema.add_variable(cVar4, -1);
+    schema.add_variable(var4, -1);
     schema.add_variable(cVar5, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
