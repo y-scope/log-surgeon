@@ -69,7 +69,13 @@ Note that:
 header:Prefix (?<timestamp>[TIMESTAMP-PATTERN]) suffix
 ```
 
-* The prefix/suffix can be empty, contain static text, or capture other variables if needed.
+* Multiple headers can be specified within a schema.
+* Prefix/suffix can be empty, contain static text, or capture other variables if needed.
+* The timestamp capture can be omitted if the log-event boundary does not contain a timestamp.
+* Multiple timestamp captures are allowed within a header. These can exist within regex repetitions
+  or alternations.
+  * If no timestamps are parsed, the event's logtype has no timestamp.
+  * If one or more timestamps are parsed, the event's logtype uses the first timestamp.
 * `timestamp` is a reserved name for the capture within a header rule.
 * `[TIMESTAMP-PATTERN]` is a regular expression using the supported
   [syntax](#regular-expression-syntax).
