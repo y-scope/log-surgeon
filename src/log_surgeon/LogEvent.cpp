@@ -76,18 +76,13 @@ auto LogEventView::get_logtype() const -> std::string {
                 auto capture_view{token_view};
                 auto const& captures{optional_captures.value()};
                 for (auto const capture : captures) {
-                    auto const& optional_reg_id_pair{
+                    auto const [reg_start_id, reg_end_id]{
                             m_log_parser.m_lexer.get_reg_ids_from_capture(capture)
                     };
-                    if (false == optional_reg_id_pair.has_value()) {
-                        continue;
-                    }
                     auto const start_positions{
-                            capture_view.get_reversed_reg_positions(optional_reg_id_pair->first)
+                            capture_view.get_reversed_reg_positions(reg_start_id)
                     };
-                    auto const end_positions{
-                            capture_view.get_reversed_reg_positions(optional_reg_id_pair->second)
-                    };
+                    auto const end_positions{capture_view.get_reversed_reg_positions(reg_end_id)};
 
                     auto const& capture_name{capture->get_name()};
                     if (false == start_positions.empty() && -1 < start_positions[0]

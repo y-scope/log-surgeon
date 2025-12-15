@@ -155,12 +155,7 @@ auto parse_and_validate(
                 for (auto const capture : optional_captures.value()) {
                     auto const capture_name{capture->get_name()};
                     REQUIRE(expected_captures.contains(capture_name));
-                    auto optional_reg_ids{lexer.get_reg_ids_from_capture(capture)};
-                    REQUIRE(optional_reg_ids.has_value());
-                    if (false == optional_reg_ids.has_value()) {
-                        return;
-                    }
-                    auto const [start_reg_id, end_reg_id]{optional_reg_ids.value()};
+                    auto const [start_reg_id, end_reg_id]{lexer.get_reg_ids_from_capture(capture)};
                     auto const actual_start_positions{
                             token.get_reversed_reg_positions(start_reg_id)
                     };

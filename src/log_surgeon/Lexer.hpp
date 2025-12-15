@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -212,24 +213,24 @@ public:
      * Retrieves the register IDs for the start and end tags associated with a given capture.
      * @param capture Pointer to the capture to search for.
      * @return A pair of register IDs corresponding to the start and end tags of the capture.
-     * @return std::nullopt if no such capture is found.
+     * @throw runtime_error if capture does not have tag ids or register ids.
      */
     [[nodiscard]] auto get_reg_ids_from_capture(finite_automata::Capture const* const capture) const
-            -> std::optional<std::pair<reg_id_t, reg_id_t>> {
+            -> std::pair<reg_id_t, reg_id_t> {
         auto const optional_tag_id_pair{get_tag_id_pair_from_capture(capture)};
         if (false == optional_tag_id_pair.has_value()) {
-            return std::nullopt;
+            throw std::runtime_error(capture->get_name() + " has no tag ids");
         }
         auto const [start_tag_id, end_tag_id]{optional_tag_id_pair.value()};
 
         auto const optional_start_reg_id{get_reg_id_from_tag_id(start_tag_id)};
         if (false == optional_start_reg_id.has_value()) {
-            return std::nullopt;
+            throw std::runtime_error(capture->get_name() + " has no start reg id");
         }
 
         auto const optional_end_reg_id{get_reg_id_from_tag_id(end_tag_id)};
         if (false == optional_end_reg_id.has_value()) {
-            return std::nullopt;
+            throw std::runtime_error(capture->get_name() + " has no end reg id");
         }
 
         return std::make_pair(optional_start_reg_id.value(), optional_end_reg_id.value());
