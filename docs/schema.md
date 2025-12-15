@@ -18,8 +18,8 @@ There are three types of rules in a schema file:
 * [Delimiters](#delimiters): Specifies the characters that separate tokens in the log.
 * [Headers](#headers): Identifies the boundary between log events. Headers are also treated as
   variables.
-  * The first [timestamp](#headers) captured within a header is considered the log event's
-    timestamp.
+  * The first capture named `timestamp` matched within a header pattern is considered the log
+    event's timestamp.
 
 For documentation, the schema allows for user comments by ignoring any text preceded by `//`.
 
@@ -31,7 +31,7 @@ For documentation, the schema allows for user comments by ignoring any text prec
 <variable-name>:<variable-pattern>
 ```
 
-* `variable-name` may contain any alphanumeric characters, but may not be the reserved names
+* `variable-name` may contain any alphanumeric characters, but may not use the reserved names
   `delimiters`, `header`, or `timestamp`.
 * `variable-pattern` is a regular expression using the supported
   [syntax](#regular-expression-syntax).
