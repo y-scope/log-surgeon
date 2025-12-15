@@ -113,10 +113,14 @@ auto parse_and_validate(
         REQUIRE(ErrorCode::Success == err);
         auto const& event{reader_parser.get_log_parser().get_log_event_view()};
         REQUIRE(expected_logtype == event.get_logtype());
-        REQUIRE(expected_timestamp_raw == event.get_timestamp());
+        if (expected_timestamp_raw.empty()) {
+            REQUIRE(false == event.get_timestamp().has_value());
+        } else {
+            REQUIRE(expected_timestamp_raw == event.get_timestamp().value());
+        }
 
         uint32_t event_offset{0};
-        if (event.get_timestamp().empty()) {
+        if (false == event.get_timestamp().has_value()) {
             event_offset = 1;
         }
 

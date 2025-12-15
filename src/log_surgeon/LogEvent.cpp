@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -29,7 +30,7 @@ auto LogEventView::reset() -> void {
     m_multiline = false;
 }
 
-[[nodiscard]] auto LogEventView::get_timestamp() const -> std::string {
+[[nodiscard]] auto LogEventView::get_timestamp() const -> std::optional<std::string> const& {
     return m_log_output_buffer->get_timestamp();
 }
 
@@ -111,7 +112,6 @@ auto LogEventView::get_logtype() const -> std::string {
 LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()} {
     set_multiline(src.is_multiline());
     m_log_output_buffer->set_has_header(src.m_log_output_buffer->has_header());
-    m_log_output_buffer->set_has_timestamp(src.m_log_output_buffer->has_timestamp());
     m_log_output_buffer->set_timestamp(src.m_log_output_buffer->get_timestamp());
     m_log_output_buffer->set_has_delimiters(src.m_log_output_buffer->has_delimiters());
     uint32_t start{0};

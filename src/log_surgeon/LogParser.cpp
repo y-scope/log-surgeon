@@ -143,8 +143,7 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
         if (next_token.get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenHeader)) {
             output_buffer->set_has_header(true);
             output_buffer->set_token(0, next_token);
-            output_buffer->set_has_timestamp(false);
-            output_buffer->set_timestamp("");
+            output_buffer->set_timestamp(std::nullopt);
             auto optional_captures{m_lexer.get_captures_from_rule_id(
                     static_cast<uint32_t>(SymbolId::TokenHeader)
             )};
@@ -162,7 +161,6 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
                         auto timestamp{
                                 next_token.get_capture_string_view(starts[0], ends[0])
                         };
-                        output_buffer->set_has_timestamp(true);
                         output_buffer->set_timestamp(timestamp);
                         break;
                     }
@@ -171,8 +169,7 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
             output_buffer->set_pos(1);
         } else {
             output_buffer->set_has_header(false);
-            output_buffer->set_has_timestamp(false);
-            output_buffer->set_timestamp("");
+            output_buffer->set_timestamp(std::nullopt);
             output_buffer->set_token(1, next_token);
             output_buffer->set_pos(2);
         }
