@@ -96,9 +96,10 @@ delimiters: \t\r\n:,!;%
 
 // Keywords
 header:(?<timestamp>\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3}){0,1})
-header:(?<timestamp>\[\d{8}\-\d{2}:\d{2}:\d{2}\])
-int:\-{0,1}[0-9]+
-float:\-{0,1}[0-9]+\.[0-9]+
+header:Log (?<pid>\d+) (?<timestamp>\[\d{8}\-\d{2}:\d{2}:\d{2}\]){0,1}
+header:--- Log:
+int:\-{0,1}\d+
+float:\-{0,1}\d+\.\d+
 
 // Custom variables
 hex:[a-fA-F]+
