@@ -32,11 +32,12 @@ auto check_input(std::vector<std::string> const& args) -> int {
 
 auto print_timestamp_loglevel(LogEventView const& event, uint32_t loglevel_id) -> void {
     Token* loglevel{nullptr};
-    if (event.get_log_output_buffer()->has_timestamp()) {
+    auto const& optional_timestamp{event.get_log_output_buffer()->get_timestamp()};
+    if (optional_timestamp.has_value()) {
         if (auto const& vec{event.get_variables(loglevel_id)}; false == vec.empty()) {
             loglevel = vec[0];
         }
-        cout << "timestamp: " << event.get_timestamp();
+        cout << "timestamp: " << optional_timestamp.value();
     }
     if (nullptr != loglevel) {
         cout << ", loglevel:";
