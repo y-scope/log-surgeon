@@ -1,4 +1,4 @@
-// Timestamps (using the `timestamp` keyword)
+// Timestamps (using a `header` rule with a `timestamp` named capture)
 // E.g. 2015-01-31T15:50:45.392
 header:(?<timestamp>:\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}.\d{3})
 // E.g. 2015-01-31T15:50:45,392
