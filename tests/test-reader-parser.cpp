@@ -120,7 +120,7 @@ auto parse_and_validate(
         }
 
         uint32_t event_offset{0};
-        if (false == event.get_timestamp().has_value()) {
+        if (false == event.get_log_output_buffer()->has_header()) {
             event_offset = 1;
         }
 
