@@ -16,8 +16,10 @@ There are three types of rules in a schema file:
 
 * [Variables](#variables): Defines patterns for capturing specific pieces of the log.
 * [Delimiters](#delimiters): Specifies the characters that separate tokens in the log.
-* [Timestamps](#timestamps): Identifies the boundary between log events. Timestamps are also treated
-  as variables.
+* [Headers](#headers): Identifies the boundary between log events. Headers are also treated as
+  variables.
+  * The first [timestamp](#headers) captured within a header is considered the log event's
+    timestamp.
 
 For documentation, the schema allows for user comments by ignoring any text preceded by `//`.
 
@@ -30,7 +32,7 @@ For documentation, the schema allows for user comments by ignoring any text prec
 ```
 
 * `variable-name` may contain any alphanumeric characters, but may not be the reserved names
-  `delimiters` or `timestamp`.
+  `delimiters`, `header`, or `timestamp`.
 * `variable-pattern` is a regular expression using the supported
   [syntax](#regular-expression-syntax).
 
@@ -59,24 +61,25 @@ Note that:
 * A schema file must contain at least one `delimiters` rule. If multiple `delimiters` rules are
   specified, only the last one will be used.
 
-### Timestamps
+### Headers
 
 **Syntax:**
 
 ```txt
-timestamp:<timestamp-pattern>
+header:Prefix (?<timestamp>[TIMESTAMP-PATTERN]) suffix
 ```
 
-* `timestamp` is a reserved name for this rule.
-* `timestamp-pattern` is a regular expression using the supported
+* The prefix/suffix can be empty, contain static text, or capture other variables if needed.
+* `timestamp` is a reserved name for the capture within a header rule.
+* `[TIMESTAMP-PATTERN]` is a regular expression using the supported
   [syntax](#regular-expression-syntax).
 
 Note that:
 
-* The parser uses a timestamp to denote the start of a new log event if:
+* The parser uses a header to denote the start of a new log event if:
   * It appears as the first token in the input, or
   * It appears after a newline character.
-* Until a timestamp is found, the parser will use a newline character to denote the start of a new
+* Until a header is found, the parser will use a newline character to denote the start of a new
   log event.
 
 ## Example schema file
@@ -86,8 +89,8 @@ Note that:
 delimiters: \t\r\n:,!;%
 
 // Keywords
-timestamp:\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3}){0,1}
-timestamp:\[\d{8}\-\d{2}:\d{2}:\d{2}\]
+header:(?<timestamp>\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3}){0,1})
+header:(?<timestamp>\[\d{8}\-\d{2}:\d{2}:\d{2}\])
 int:\-{0,1}[0-9]+
 float:\-{0,1}[0-9]+\.[0-9]+
 
@@ -99,7 +102,7 @@ equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
 
 * `delimiters: \t\r\n:,!;%` indicates that ` `, `\t`, `\r`, `\n`, `:`, `,`, `!`, `;`, and `%` are
   delimiters.
-* `timestamp` matches two different patterns:
+* `header` matches two different timestamp patterns:
   * `2023-04-19 12:32:08.064`
   * `[20230419-12:32:08]`
 * `int`, `float`, `hex`, `hasNumber`, and `equalsCapture` all match different user defined
