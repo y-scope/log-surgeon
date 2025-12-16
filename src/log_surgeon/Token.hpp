@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -54,14 +55,15 @@ public:
     [[nodiscard]] auto to_string_view() -> std::string_view;
 
     /**
-     * @param capture_start_pos Start position of the capture in the input buffer
-     * @param capture_end_pos End position of the capture in the input buffer
-     * @return The substring containing the capture
+     * @param start_pos Start position of the capture in the input buffer.
+     * @param end_pos End position of the capture in the input buffer.
+     * @return A token containing the capture, if the start and end positions are non-negative.
+     * @return std::nullopt, otherwise.
      */
-    [[nodiscard]] auto get_capture_string_view(
-            finite_automata::PrefixTree::position_t capture_start_pos,
-            finite_automata::PrefixTree::position_t capture_end_pos
-    ) -> std::string_view;
+    [[nodiscard]] auto get_capture_token(
+            finite_automata::PrefixTree::position_t start_pos,
+            finite_automata::PrefixTree::position_t end_pos
+    ) const -> std::optional<Token>;
 
 
     [[nodiscard]] auto get_first_char() const -> char {
@@ -141,7 +143,6 @@ private:
     std::vector<uint32_t> const* m_type_ids_ptr{nullptr};
     finite_automata::RegisterHandler m_reg_handler{};
     std::string m_cached_string;
-    std::string m_cached_capture_string;
 };
 }  // namespace log_surgeon
 

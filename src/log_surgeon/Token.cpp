@@ -1,6 +1,7 @@
 #include "Token.hpp"
 
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -34,21 +35,21 @@ auto Token::to_string_view() -> std::string_view {
     return {get_cached_string()};
 }
 
-auto Token::get_capture_string_view(
-        finite_automata::PrefixTree::position_t const capture_start_pos,
-        finite_automata::PrefixTree::position_t const capture_end_pos
-) -> std::string_view {
-    if (capture_start_pos <= capture_end_pos) {
-        auto const token{m_buffer.subspan(capture_start_pos, capture_end_pos - capture_start_pos)};
-        return {token.begin(), token.end()};
+auto Token::get_capture_token(
+        finite_automata::PrefixTree::position_t const start_pos,
+        finite_automata::PrefixTree::position_t const end_pos
+) const -> std::optional<Token> {
+    if (start_pos < 0 || end_pos < 0) {
+        return std::nullopt;
     }
-    auto const capture_start{
-            m_buffer.subspan(capture_start_pos, get_buffer_size() - capture_start_pos)
+    return Token{
+            static_cast<size_t>(start_pos),
+            static_cast<size_t>(end_pos),
+            m_buffer.data(),
+            m_buffer.size(),
+            m_line_num,
+            m_type_ids_ptr
     };
-    auto const capture_end{m_buffer.subspan(0, capture_end_pos)};
-    m_cached_capture_string = std::string{capture_start.begin(), capture_start.end()}
-                      + std::string{capture_end.begin(), capture_end.end()};
-    return {m_cached_capture_string};
 }
 
 auto Token::get_delimiter() const -> std::string {
