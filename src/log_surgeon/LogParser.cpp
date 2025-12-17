@@ -156,9 +156,7 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
                         if (starts.empty() || ends.empty()) {
                             continue;
                         }
-                        auto optional_ts_token{
-                                next_token.get_capture_token(starts[0], ends[0])
-                        };
+                        auto optional_ts_token{next_token.get_sub_token(starts[0], ends[0])};
                         if (false == optional_ts_token.has_value()) {
                             continue;
                         }

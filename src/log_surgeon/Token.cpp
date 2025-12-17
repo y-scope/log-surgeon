@@ -35,7 +35,7 @@ auto Token::to_string_view() -> std::string_view {
     return {get_cached_string()};
 }
 
-auto Token::get_capture_token(
+auto Token::get_sub_token(
         finite_automata::PrefixTree::position_t const start_pos,
         finite_automata::PrefixTree::position_t const end_pos
 ) const -> std::optional<Token> {
