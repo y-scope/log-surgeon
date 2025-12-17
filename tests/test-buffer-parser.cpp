@@ -424,10 +424,10 @@ TEST_CASE("single_line_with_optional_capture", "[BufferParser]") {
 TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cVarSchema1{
-            R"(header:(?<timestamp>(\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}[,\.]\d{0,3})))"
+            R"(header:(?<timestamp>(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[,\.]\d{0,3})))"
     };
-    constexpr string_view cVarSchema2{R"(int:\-{0,1}[0-9]+)"};
-    constexpr string_view cVarSchema3{R"(float:\-{0,1}[0-9]+\.[0-9]+)"};
+    constexpr string_view cVarSchema2{R"(int:-{0,1}[0-9]+)"};
+    constexpr string_view cVarSchema3{R"(float:-{0,1}[0-9]+\.[0-9]+)"};
     constexpr string_view cVarSchema4{R"(hex:[a-fA-F]+)"};
     constexpr string_view cVarSchema5{
             R"(keyValuePair:[^ \r\n=]+=(?<val>[^ \r\n]*[A-Za-z0-9][^ \r\n]*))"
@@ -492,7 +492,7 @@ TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
  * ### Schema Definition
  * @code
  * delimiters: \n\r[:,
- * int: \-{0,1}[0-9]+
+ * int: -{0,1}[0-9]+
  * @endcode
  *
  * ### Test Input
@@ -516,7 +516,7 @@ TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
  */
 TEST_CASE("multi_line_with_newline_static_var_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
-    constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cVarSchema{R"(int:-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567\nText 1234567"};
     ExpectedEvent const expected_event1{
             .m_logtype{R"(<int><newLine>)"},
@@ -549,7 +549,7 @@ TEST_CASE("multi_line_with_newline_static_var_sequence", "[BufferParser]") {
  * ### Schema Definition
  * @code
  * delimiters: \n\r[:,
- * int: \-{0,1}[0-9]+
+ * int: -{0,1}[0-9]+
  * @endcode
  *
  * ### Test Input
@@ -574,7 +574,7 @@ TEST_CASE("multi_line_with_newline_static_var_sequence", "[BufferParser]") {
  */
 TEST_CASE("multi_line_with_static_newline_static_var_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
-    constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cVarSchema{R"(int:-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\nText 1234567"};
     ExpectedEvent const expected_event1{
             .m_logtype{R"(<int> abc<newLine>)"},
@@ -605,7 +605,7 @@ TEST_CASE("multi_line_with_static_newline_static_var_sequence", "[BufferParser]"
  * ### Schema Definition
  * @code
  * delimiters: \n\r[:,
- * int: \-{0,1}[0-9]+
+ * int: -{0,1}[0-9]+
  * @endcode
  *
  * ### Test Input
@@ -629,7 +629,7 @@ TEST_CASE("multi_line_with_static_newline_static_var_sequence", "[BufferParser]"
  */
 TEST_CASE("multi_line_with_static_newline_var_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
-    constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cVarSchema{R"(int:-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\n1234567"};
     ExpectedEvent const expected_event1{
             .m_logtype{"<int> abc\n"},
@@ -662,7 +662,7 @@ TEST_CASE("multi_line_with_static_newline_var_sequence", "[BufferParser]") {
  * ### Schema Definition
  * @code
  * delimiters: \n\r[:,
- * int: \-{0,1}[0-9]+
+ * int: -{0,1}[0-9]+
  * @endcode
  *
  * ### Test Input
@@ -687,7 +687,7 @@ TEST_CASE("multi_line_with_static_newline_var_sequence", "[BufferParser]") {
  */
 TEST_CASE("multi_line_with_static_newline_var_newline_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
-    constexpr string_view cVarSchema{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cVarSchema{R"(int:-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 abc\n1234567\n"};
     ExpectedEvent const expected_event1{
             .m_logtype{"<int> abc\n"},
@@ -720,7 +720,7 @@ TEST_CASE("multi_line_with_static_newline_var_newline_sequence", "[BufferParser]
  * ### Schema Definition
  * @code
  * delimiters: \n\r[:,
- * int: \-{0,1}[0-9]+
+ * int: -{0,1}[0-9]+
  * @endcode
  *
  * ### Input Example
@@ -744,7 +744,7 @@ TEST_CASE("multi_line_with_static_newline_var_newline_sequence", "[BufferParser]
  */
 TEST_CASE("multi_line_with_delim_newline_var_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
-    constexpr string_view cRule{R"(int:\-{0,1}[0-9]+)"};
+    constexpr string_view cRule{R"(int:-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567 \n1234567"};
     ExpectedEvent const expected_event1{
             .m_logtype{"<int> \n"},
@@ -923,7 +923,7 @@ TEST_CASE("multi_line_with_delimited_vars", "[BufferParser]") {
  * ### Schema Definition
  * @code
  * delimiters: \n\r[:,
- * header:(?<timestamp>\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}) (?<PID>\d{4}) (?<TID>\d{4})
+ * header:(?<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}) (?<PID>\d{4}) (?<TID>\d{4})
  * \
  *        (?<LogLevel>I|D|E|W)
  * @endcode
@@ -948,7 +948,7 @@ TEST_CASE("multi_line_with_delimited_vars", "[BufferParser]") {
  */
 TEST_CASE("multi_capture_one", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
-    constexpr string_view cTime{R"((?<timestamp>\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}))"};
+    constexpr string_view cTime{R"((?<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}))"};
     constexpr string_view cPid{R"((?<PID>\d{4}))"};
     constexpr string_view cTid{R"((?<TID>\d{4}))"};
     constexpr string_view cLogLevel{R"((?<LogLevel>I|D|E|W))"};
@@ -995,7 +995,7 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
  * @code
  * delimiters: \n\r[:,
  * header:(?<timestamp>[A-Za-z]{3} \d{2} \d{2}:\d{2}:\d{2})
- * ip\-(?<IP>\d{3}\-\d{2}\-\d{2}\-\d{2}) \
+ * ip-(?<IP>\d{3}-\d{2}-\d{2}-\d{2}) \
  *        ku\[(?<PID>\d{4})\]: (?<LogLevel>I|D|E|W)(?<LID>\d{4}) \
  *        (?<LTime>\d{2}:\d{2}:\d{2}\.\d{4})    (?<TID>\d{4})
  * @endcode
@@ -1020,7 +1020,7 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
 TEST_CASE("multi_capture_two", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cTime{R"((?<timestamp>[A-Za-z]{3} \d{2} \d{2}:\d{2}:\d{2}))"};
-    constexpr string_view cIp{R"((?<IP>\d{3}\-\d{2}\-\d{2}\-\d{2}))"};
+    constexpr string_view cIp{R"((?<IP>\d{3}-\d{2}-\d{2}-\d{2}))"};
     constexpr string_view cPid{R"((?<PID>\d{4}))"};
     constexpr string_view cLogLevel{R"((?<LogLevel>I|D|E|W))"};
     constexpr string_view cLid{R"((?<LID>\d{4}))"};
@@ -1030,7 +1030,7 @@ TEST_CASE("multi_capture_two", "[BufferParser]") {
                                  "    1111 Y failed"};
 
     string const header_rule{fmt::format(
-            R"(header:{} ip\-{} ku\[{}\]: {}{} {}    {})",
+            R"(header:{} ip-{} ku\[{}\]: {}{} {}    {})",
             cTime,
             cIp,
             cPid,

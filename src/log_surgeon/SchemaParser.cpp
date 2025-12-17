@@ -542,7 +542,6 @@ auto SchemaParser::add_lexical_rules() -> void {
 }
 
 auto SchemaParser::add_productions() -> void {
-    // add_production("Schema", {}, new_schema_rule);
     add_production("Schema", {"Comment"}, new_schema_rule);
     add_production("Schema", {"SchemaVar"}, new_schema_rule_with_var);
     add_production(
@@ -619,6 +618,7 @@ auto SchemaParser::add_productions() -> void {
     add_production("CompleteGroup", {"Wildcard"}, regex_identity_rule);
     add_production("CompleteGroup", {"Shorthand"}, regex_identity_rule);
     add_production("CompleteGroup", {"Literal"}, regex_identity_rule);
+    add_production("CompleteGroup", {"Dash"}, regex_literal_rule);
     add_production(
             "IncompleteGroup",
             {"IncompleteGroup", "LiteralRange"},
@@ -647,31 +647,15 @@ auto SchemaParser::add_productions() -> void {
     add_production("Literal", {"Percent"}, regex_literal_rule);
     add_production("Literal", {"Ampersand"}, regex_literal_rule);
     add_production("Literal", {"Apostrophe"}, regex_literal_rule);
-    add_production("Literal", {"Backslash", "Lparen"}, regex_cancel_literal_rule);
-    add_production("Literal", {"Backslash", "Rparen"}, regex_cancel_literal_rule);
-    add_production("Literal", {"Backslash", "Star"}, regex_cancel_literal_rule);
-    add_production("Literal", {"Backslash", "Plus"}, regex_cancel_literal_rule);
     add_production("Literal", {"Comma"}, regex_literal_rule);
-    add_production("Literal", {"Backslash", "Dash"}, regex_cancel_literal_rule);
-    add_production("Literal", {"Backslash", "Dot"}, regex_cancel_literal_rule);
     add_production("Literal", {"ForwardSlash"}, regex_literal_rule);
     add_production("Literal", {"AlphaNumeric"}, regex_literal_rule);
     add_production("Literal", {"Colon"}, regex_literal_rule);
     add_production("Literal", {"SemiColon"}, regex_literal_rule);
     add_production("Literal", {"Equal"}, regex_literal_rule);
     add_production("Literal", {"At"}, regex_literal_rule);
-    add_production("Literal", {"Backslash", "Lbracket"}, regex_cancel_literal_rule);
-    add_production("Literal", {"Backslash", "Backslash"}, regex_cancel_literal_rule);
-    add_production("Literal", {"Backslash", "Rbracket"}, regex_cancel_literal_rule);
-    add_production("Literal", {"Backslash", "Hat"}, regex_cancel_literal_rule);
     add_production("Literal", {"Underscore"}, regex_literal_rule);
     add_production("Literal", {"Backtick"}, regex_literal_rule);
-    add_production("Literal", {"Backslash", "Lbrace"}, regex_cancel_literal_rule);
-    add_production("Literal", {"Backslash", "Vbar"}, regex_cancel_literal_rule);
-    add_production("Literal", {"Backslash", "Rbrace"}, regex_cancel_literal_rule);
-    add_production("Literal", {"Backslash", "Langle"}, regex_cancel_literal_rule);
-    add_production("Literal", {"Backslash", "Rangle"}, regex_cancel_literal_rule);
-    add_production("Literal", {"Backslash", "QuestionMark"}, regex_cancel_literal_rule);
     add_production("Literal", {"Tilde"}, regex_literal_rule);
     add_production(
             "Literal",
