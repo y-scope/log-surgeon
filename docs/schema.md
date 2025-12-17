@@ -28,15 +28,21 @@ For documentation, the schema allows for user comments by ignoring any text prec
 **Syntax:**
 
 ```txt
-<variable-name>:<variable-pattern>
+$VARIABLE_NAME$:$VARIABLE_PATTERN$
 ```
 
-* `variable-name` may contain any alphanumeric characters, but may not use the reserved names
+* `$VARIABLE_NAME$` may contain any alphanumeric characters, but may not use the reserved names
   `delimiters`, `header`, or `timestamp`.
-* `variable-pattern` is a regular expression using the supported
+* `$VARIABLE_PATTERN$` is a regular expression using the supported
   [syntax](#regular-expression-syntax).
 
-Note that:
+**Example:**
+
+```txt
+equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
+```
+
+**Note that:**
 
 * A schema file may contain zero or more variable rules.
 * Repeating the same variable name in another rule will `OR` the regular expressions (perform an
@@ -49,14 +55,19 @@ Note that:
 **Syntax:**
 
 ```txt
-delimiters:<characters>
+delimiters:$CHARACTERS$
 ```
 
 * `delimiters` is a reserved name for this rule.
-* `characters` is a set of characters that should be treated as delimiters. These characters define
-  the boundaries between tokens in the log.
+* `$CHARACTERS$` is a set of characters that should be treated as delimiters. These characters
+  define the boundaries between tokens in the log.
 
-Note that:
+**Example:**
+```txt
+delimiters: \t\r\n:,!;%
+```
+
+**Note that:**
 
 * A schema file must contain at least one `delimiters` rule. If multiple `delimiters` rules are
   specified, only the last one will be used.
@@ -66,21 +77,26 @@ Note that:
 **Syntax:**
 
 ```txt
-header:Prefix (?<timestamp>[TIMESTAMP-PATTERN]) suffix
+header:$PREFIX$(?<timestamp>$TIMESTAMP-PATTERN$)$SUFFIX$
 ```
 
 * Multiple headers can be specified within a schema.
-* Prefix/suffix can be empty, contain static text, or capture other variables if needed.
 * The timestamp capture can be omitted if the log-event boundary does not contain a timestamp.
 * Multiple timestamp captures are allowed within a header. These can exist within regex repetitions
   or alternations.
   * If no timestamps are parsed, the event's logtype has no timestamp.
   * If one or more timestamps are parsed, the event's logtype uses the first timestamp.
 * `timestamp` is a reserved name for the capture within a header rule.
-* `[TIMESTAMP-PATTERN]` is a regular expression using the supported
+* `$PREFIX$`, `$SUFFIX$`, and `$TIMESTAMP-PATTERN$` are regular expressions using the supported
   [syntax](#regular-expression-syntax).
 
-Note that:
+**Example:**
+
+```txt
+header:Log (?<pid>\d+) (?<timestamp>\[\d{8}\-\d{2}:\d{2}:\d{2}\]){0,1}
+```
+
+**Note that:**
 
 * The parser uses a header to denote the start of a new log event if:
   * It appears as the first token in the input, or
