@@ -63,6 +63,7 @@ delimiters:$CHARACTERS$
   define the boundaries between tokens in the log.
 
 **Example:**
+
 ```txt
 delimiters: \t\r\n:,!;%
 ```
