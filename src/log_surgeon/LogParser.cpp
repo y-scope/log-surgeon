@@ -153,14 +153,11 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
                         auto [start_reg_id, end_reg_id]{m_lexer.get_reg_ids_from_capture(capture)};
                         auto starts{next_token.get_reversed_reg_positions(start_reg_id)};
                         auto ends{next_token.get_reversed_reg_positions(end_reg_id)};
-                        if (starts.empty() || ends.empty()) {
+                        if (starts.empty() || ends.empty() || starts[0] < 0 || ends[0] < 0) {
                             continue;
                         }
-                        auto optional_ts_token{next_token.get_sub_token(starts[0], ends[0])};
-                        if (false == optional_ts_token.has_value()) {
-                            continue;
-                        }
-                        output_buffer->set_timestamp(optional_ts_token.value().to_string_view());
+                        auto ts_token{next_token.get_sub_token(starts[0], ends[0])};
+                        output_buffer->set_timestamp(ts_token.to_string_view());
                         break;
                     }
                 }

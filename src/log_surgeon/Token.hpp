@@ -57,13 +57,13 @@ public:
     /**
      * @param start_pos Start position of the sub token in the input buffer.
      * @param end_pos End position of the sub token in the input buffer.
-     * @return A token containing the sub token, if the start and end positions are non-negative.
-     * @return std::nullopt, otherwise.
+     * @return A token containing the sub token.
+     * @throw std::out_of_range if the start and end positions are outside the buffer bounds.
      */
     [[nodiscard]] auto get_sub_token(
             finite_automata::PrefixTree::position_t start_pos,
             finite_automata::PrefixTree::position_t end_pos
-    ) const -> std::optional<Token>;
+    ) const -> Token;
 
 
     [[nodiscard]] auto get_first_char() const -> char {

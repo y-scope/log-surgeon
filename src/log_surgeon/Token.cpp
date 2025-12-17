@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -38,9 +39,14 @@ auto Token::to_string_view() -> std::string_view {
 auto Token::get_sub_token(
         finite_automata::PrefixTree::position_t const start_pos,
         finite_automata::PrefixTree::position_t const end_pos
-) const -> std::optional<Token> {
+) const -> Token {
     if (start_pos < 0 || end_pos < 0) {
-        return std::nullopt;
+        throw std::out_of_range("Negative position used in `get_sub_token`.");
+    }
+    if (static_cast<size_t>(start_pos) >= m_buffer.size()
+        || static_cast<size_t>(end_pos) > m_buffer.size())
+    {
+        throw std::out_of_range("Position exceeds buffer bounds in `get_sub_token`.");
     }
     return Token{
             static_cast<size_t>(start_pos),
