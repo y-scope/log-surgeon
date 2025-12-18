@@ -48,8 +48,7 @@ add_library(
 add_to_target(common log_surgeon::log_surgeon)
 
 list(
-    APPEND
-    libraries
+    APPEND libraries
     log_surgeon::log_surgeon
     common
 )
