@@ -27,7 +27,7 @@ For documentation, the schema allows for user comments by ignoring any text prec
 
 **Syntax:**
 
-```txt
+```plaintext
 $VARIABLE_NAME$:$VARIABLE_PATTERN$
 ```
 
@@ -38,7 +38,7 @@ $VARIABLE_NAME$:$VARIABLE_PATTERN$
 
 **Example:**
 
-```txt
+```plaintext
 equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
 ```
 
@@ -54,7 +54,7 @@ equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
 
 **Syntax:**
 
-```txt
+```plaintext
 delimiters:$CHARACTERS$
 ```
 
@@ -64,7 +64,7 @@ delimiters:$CHARACTERS$
 
 **Example:**
 
-```txt
+```plaintext
 delimiters: \t\r\n:,!;%
 ```
 
@@ -77,7 +77,7 @@ delimiters: \t\r\n:,!;%
 
 **Syntax:**
 
-```txt
+```plaintext
 header:$PREFIX$(?<timestamp>$TIMESTAMP-PATTERN$)$SUFFIX$
 ```
 
@@ -93,7 +93,7 @@ header:$PREFIX$(?<timestamp>$TIMESTAMP-PATTERN$)$SUFFIX$
 
 **Example:**
 
-```txt
+```plaintext
 header:Log (?<pid>\d+) (?<timestamp>\[\d{8}\-\d{2}:\d{2}:\d{2}\]){0,1}
 ```
 
@@ -107,7 +107,7 @@ header:Log (?<pid>\d+) (?<timestamp>\[\d{8}\-\d{2}:\d{2}:\d{2}\]){0,1}
 
 ## Example schema file
 
-```txt
+```plaintext
 // Delimiters
 delimiters: \t\r\n:,!;%
 
@@ -139,7 +139,7 @@ equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
 The following regular expression rules are supported by the schema. When building a regular
 expression, the rules are applied as they appear in this list, from top to bottom.
 
-```txt
+```plaintext
 REGEX RULE       EXAMPLE       DEFINITION
 Concatenation    ab            Match two expressions in sequence (e.g., 'a'
                                  followed by 'b').
