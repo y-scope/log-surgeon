@@ -120,6 +120,8 @@ tasks:
       - task: "utils:cpp-lint:clang-tidy-find"
         vars:
           EXCLUDE_PATTERNS:
+            - "examples/common.cpp"
+            - "examples/common.hpp"
             - "log_surgeon/Buffer.hpp"
             - "log_surgeon/BufferParser.cpp"
             - "log_surgeon/BufferParser.hpp"
