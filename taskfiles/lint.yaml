@@ -158,6 +158,7 @@ tasks:
             - "test-dfa.cpp"
             - "test-lexer.cpp"
             - "test-nfa.cpp"
+            - "test-reader-parser.cpp"
             - "test-regex-ast.cpp"
             - "test-schema.cpp"
           FLAGS:
