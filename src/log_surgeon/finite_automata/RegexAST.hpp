@@ -1010,12 +1010,14 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(
 ) {
     if (left == nullptr || right == nullptr) {
         auto const null_ptr_name{left == nullptr ? "left" : "right"};
-        throw std::runtime_error(fmt::format(
-                "RegexASTGroup(RegexASTGroup, RegexASTLiteral): {} == nullptr: A bracket expression "
-                "in the schema contains illegal characters, remember to escape special characters. "
-                "Refer to README-Schema.md for more details.",
-                null_ptr_name
-        ));
+        throw std::runtime_error(
+                fmt::format(
+                        "RegexASTGroup(RegexASTGroup, RegexASTLiteral): {} == nullptr: A bracket "
+                        "expression in the schema contains illegal characters, remember to escape "
+                        "special characters. Refer to README-Schema.md for more details.",
+                        null_ptr_name
+                )
+        );
     }
     m_negate = left->m_negate;
     m_ranges = left->m_ranges;
@@ -1026,12 +1028,14 @@ template <typename TypedNfaState>
 RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTGroup const* left, RegexASTGroup const* right) {
     if (left == nullptr || right == nullptr) {
         auto const null_ptr_name{left == nullptr ? "left" : "right"};
-        throw std::runtime_error(fmt::format(
-                "RegexASTGroup(RegexASTGroup, RegexASTGroup): {} == nullptr: A bracket expression "
-                "in the schema contains illegal characters, remember to escape special characters. "
-                "Refer to README-Schema.md for more details.",
-                null_ptr_name
-        ));
+        throw std::runtime_error(
+                fmt::format(
+                        "RegexASTGroup(RegexASTGroup, RegexASTGroup): {} == nullptr: A bracket "
+                        "expression in the schema contains illegal characters, remember to escape "
+                        "special characters. Refer to README-Schema.md for more details.",
+                        null_ptr_name
+                )
+        );
     }
     if (right->m_negate) {
         throw std::runtime_error(
@@ -1079,12 +1083,14 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(
 ) {
     if (left == nullptr || right == nullptr) {
         auto const null_ptr_name{left == nullptr ? "left" : "right"};
-        throw std::runtime_error(fmt::format(
-                "RegexASTGroup(RegexASTLiteral, RegexASTLiteral):  {} == nullptr: A bracket "
-                "expression in the schema contains illegal characters, remember to escape special "
-                "characters. Refer to README-Schema.md for more details.",
-                null_ptr_name
-        ));
+        throw std::runtime_error(
+                fmt::format(
+                        "RegexASTGroup(RegexASTLiteral, RegexASTLiteral):  {} == nullptr: A "
+                        "bracket expression in the schema contains illegal characters, remember to "
+                        "escape special characters. Refer to README-Schema.md for more details.",
+                        null_ptr_name
+                )
+        );
     }
     m_negate = false;
     assert(right->get_character() > left->get_character());
@@ -1170,12 +1176,18 @@ template <typename TypedNfaState>
     } else {
         auto unescape = [](uint32_t const c) -> uint32_t {
             switch (c) {
-                case '\t': return 't';
-                case '\n': return 'n';
-                case '\r': return 'r';
-                case '\f': return 'f';
-                case '\v': return 'v';
-                default: return c;
+                case '\t':
+                    return 't';
+                case '\n':
+                    return 'n';
+                case '\r':
+                    return 'r';
+                case '\f':
+                    return 'f';
+                case '\v':
+                    return 'v';
+                default:
+                    return c;
             }
         };
 
@@ -1193,12 +1205,12 @@ template <typename TypedNfaState>
                         auto end_esc{control_white_space_set.contains(end) ? U"\\" : U""};
                         auto const begin_printable{
                                 (cPrintableAsciiRange.first <= begin
-                                && cPrintableAsciiRange.second >= begin)
+                                 && cPrintableAsciiRange.second >= begin)
                                 || control_white_space_set.contains(begin)
                         };
                         auto const end_printable{
                                 (cPrintableAsciiRange.first <= end
-                                && cPrintableAsciiRange.second >= end)
+                                 && cPrintableAsciiRange.second >= end)
                                 || control_white_space_set.contains(end)
                         };
 
@@ -1210,11 +1222,7 @@ template <typename TypedNfaState>
                                         static_cast<char32_t>(unescape(begin))
                                 );
                             }
-                            return fmt::format(
-                                    U"{}{}",
-                                    U"\\u",
-                                    begin
-                            );
+                            return fmt::format(U"{}{}", U"\\u", begin);
                         }
                         if (begin_printable && end_printable) {
                             return fmt::format(
@@ -1225,13 +1233,7 @@ template <typename TypedNfaState>
                                     static_cast<char32_t>(unescape(end))
                             );
                         }
-                        return fmt::format(
-                                U"{}{}-{}{}",
-                                U"\\u",
-                                begin,
-                                U"\\u",
-                                end
-                        );
+                        return fmt::format(U"{}{}-{}{}", U"\\u", begin, U"\\u", end);
                     });
         for (auto const& range_u32string : transformed_ranges) {
             if (false == ranges_serialized.empty()) {

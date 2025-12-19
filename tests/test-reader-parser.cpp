@@ -89,7 +89,7 @@ auto parse_and_validate(
         }
 
         read_to = input.size() - curr_pos;
-        if (read_to  > count) {
+        if (read_to > count) {
             read_to = count;
         }
 
@@ -264,8 +264,8 @@ TEST_CASE("single_line_without_capture_reader_parser", "[ReaderParser]") {
  *   tested variable as well (which include a capture).
  */
 TEST_CASE("reader_parser_wrap_around", "[ReaderParser]") {
-    REQUIRE(48000 == cStaticByteBuffSize);
-    
+    REQUIRE(48'000 == cStaticByteBuffSize);
+
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cVarSchema1{"myVar:userID=123"};
     constexpr string_view cVarSchema2{"myCapture:userID=(?<capture>234)"};
@@ -298,16 +298,16 @@ TEST_CASE("reader_parser_wrap_around", "[ReaderParser]") {
         cInput += cInput3;
 
         ExpectedEvent expected_event1{
-            .m_logtype{"<myVar> userID=<capture> <myVar> 123 <myVar>\n"},
-            .m_timestamp_raw{""},
-            .m_tokens{
+                .m_logtype{"<myVar> userID=<capture> <myVar> 123 <myVar>\n"},
+                .m_timestamp_raw{""},
+                .m_tokens{
                         {{"userID=123", "myVar", {}},
-                         {" userID=234", "myCapture", {{{"capture",{{18}, {21}}}}}},
+                         {" userID=234", "myCapture", {{{"capture", {{18}, {21}}}}}},
                          {" userID=123", "myVar", {}},
                          {" 123", "", {}},
                          {" userID=123", "myVar", {}},
                          {"\n", "", {}}}
-            }
+                }
         };
 
         string_view logtype2_view{logtype2};
@@ -315,36 +315,36 @@ TEST_CASE("reader_parser_wrap_around", "[ReaderParser]") {
         string remaining_filler_with_space{" " + remaining_filler};
         string_view remaining_filler_view{remaining_filler_with_space};
         ExpectedEvent expected_event2{
-            .m_logtype{logtype2_view},
-            .m_timestamp_raw{""},
-            .m_tokens{
-                    {{user_var_view, "myVar", {}},
-                     {remaining_filler_view, "", {}},
-                     {"\n", "", {}}}
-            }
+                .m_logtype{logtype2_view},
+                .m_timestamp_raw{""},
+                .m_tokens{
+                        {{user_var_view, "myVar", {}},
+                         {remaining_filler_view, "", {}},
+                         {"\n", "", {}}}
+                }
         };
 
         int32_t log_start_pos{static_cast<int32_t>(cStaticByteBuffSize) - offset};
-        int32_t cap_begin{log_start_pos+18};
+        int32_t cap_begin{log_start_pos + 18};
         if (cap_begin >= cStaticByteBuffSize) {
             cap_begin -= cStaticByteBuffSize;
         }
-        int32_t cap_end{log_start_pos+21};
+        int32_t cap_end{log_start_pos + 21};
         if (cap_end >= cStaticByteBuffSize) {
             cap_end -= cStaticByteBuffSize;
         }
         ExpectedEvent expected_event3{
-            .m_logtype{"<myVar> userID=<capture> <myVar> 123 <myVar>"},
-            .m_timestamp_raw{""},
-            .m_tokens{
-                    {{"userID=123", "myVar", {}},
-                     {" userID=234", "myCapture", {{{"capture",{{cap_begin}, {cap_end}}}}}},
-                     {" userID=123", "myVar", {}},
-                     {" 123", "", {}},
-                     {" userID=123", "myVar", {}}}
-            }
+                .m_logtype{"<myVar> userID=<capture> <myVar> 123 <myVar>"},
+                .m_timestamp_raw{""},
+                .m_tokens{
+                        {{"userID=123", "myVar", {}},
+                         {" userID=234", "myCapture", {{{"capture", {{cap_begin}, {cap_end}}}}}},
+                         {" userID=123", "myVar", {}},
+                         {" 123", "", {}},
+                         {" userID=123", "myVar", {}}}
+                }
         };
-        
+
         vector<ExpectedEvent> expected_events;
         for (uint32_t i{0}; i < cNumInput1; ++i) {
             expected_events.push_back(expected_event1);
