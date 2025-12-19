@@ -7,7 +7,7 @@
 
 #include <log_surgeon/LogEvent.hpp>
 
-namespace {
+namespace examples {
     auto check_input(std::vector<std::string> const& args) -> int;
 
     auto print_timestamp_loglevel(

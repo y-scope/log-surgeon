@@ -12,7 +12,7 @@
 using namespace std;
 using namespace log_surgeon;
 
-namespace {
+namespace examples {
     auto check_input(std::vector<std::string> const& args) -> int {
         int ret{0};
         if (2 != args.size()) {
