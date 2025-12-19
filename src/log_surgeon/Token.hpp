@@ -64,10 +64,7 @@ public:
             finite_automata::PrefixTree::position_t end_pos
     ) const -> Token;
 
-
-    [[nodiscard]] auto get_first_char() const -> char {
-        return m_buffer[get_start_pos()];
-    }
+    [[nodiscard]] auto get_first_char() const -> char { return m_buffer[get_start_pos()]; }
 
     /**
      * @return The first character (as a string) of the token string (which is a

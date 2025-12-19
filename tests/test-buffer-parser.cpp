@@ -1209,7 +1209,8 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
             .m_logtype{"text <timestamp> text <int> text word <float><newLine>a\n"},
             .m_timestamp_raw{"Jan 01 02:03:04"},
             .m_tokens{
-                    {{"text Jan 01 02:03:04 text 123 text", "header",
+                    {{"text Jan 01 02:03:04 text 123 text",
+                      "header",
                       {{{"timestamp", {{5}, {20}}},
                         {"int", {{26}, {29}}},
                         {"timestamp", {{}, {}}},
@@ -1230,7 +1231,8 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
             .m_logtype{"text <timestamp> text <timestamp> text word <float><newLine>a\n"},
             .m_timestamp_raw{"Feb 01 02:03:05"},
             .m_tokens{
-                    {{"text Feb 01 02:03:05 text Mar 29 12:11:10 text", "header",
+                    {{"text Feb 01 02:03:05 text Mar 29 12:11:10 text",
+                      "header",
                       {{{"timestamp", {{}, {}}},
                         {"int", {{}, {}}},
                         {"timestamp", {{53}, {68}}},
@@ -1251,7 +1253,8 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
             .m_logtype{"text word <float><newLine>a\n"},
             .m_timestamp_raw{""},
             .m_tokens{
-                    {{"text", "header",
+                    {{"text",
+                      "header",
                       {{{"timestamp", {{}, {}}},
                         {"int", {{}, {}}},
                         {"timestamp", {{}, {}}},
@@ -1272,7 +1275,8 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
             .m_logtype{"<int>  abc: <float><newLine>a\n"},
             .m_timestamp_raw{""},
             .m_tokens{
-                    {{"123  abc:", "header",
+                    {{"123  abc:",
+                      "header",
                       {{{"timestamp", {{}, {}}},
                         {"int", {{}, {}}},
                         {"timestamp", {{}, {}}},
@@ -1292,7 +1296,8 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
             .m_logtype{"<int> <hex> abc: <float><newLine>a\n"},
             .m_timestamp_raw{""},
             .m_tokens{
-                    {{"123 DFF abc:", "header",
+                    {{"123 DFF abc:",
+                      "header",
                       {{{"timestamp", {{}, {}}},
                         {"int", {{}, {}}},
                         {"timestamp", {{}, {}}},
@@ -1312,7 +1317,8 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
             .m_logtype{"<int> <timestamp> abc: <float><newLine>a\n"},
             .m_timestamp_raw{"Dec 10 11:11:11"},
             .m_tokens{
-                    {{"123 Dec 10 11:11:11 abc:", "header",
+                    {{"123 Dec 10 11:11:11 abc:",
+                      "header",
                       {{{"timestamp", {{}, {}}},
                         {"int", {{}, {}}},
                         {"timestamp", {{}, {}}},
@@ -1332,7 +1338,8 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
             .m_logtype{"<int>  abc:<timestamp> <float><newLine>a\n"},
             .m_timestamp_raw{"Apr 10 11:11:11"},
             .m_tokens{
-                    {{"123  abc:Apr 10 11:11:11", "header",
+                    {{"123  abc:Apr 10 11:11:11",
+                      "header",
                       {{{"timestamp", {{}, {}}},
                         {"int", {{}, {}}},
                         {"timestamp", {{}, {}}},
@@ -1352,7 +1359,8 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
             .m_logtype{"<int> <hex> abc:<timestamp> <float><newLine>a\n"},
             .m_timestamp_raw{"May 12 05:06:07"},
             .m_tokens{
-                    {{"123 DFF abc:May 12 05:06:07", "header",
+                    {{"123 DFF abc:May 12 05:06:07",
+                      "header",
                       {{{"timestamp", {{}, {}}},
                         {"int", {{}, {}}},
                         {"timestamp", {{}, {}}},
@@ -1372,7 +1380,8 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
             .m_logtype{"<int> <timestamp> abc:<timestamp> <float><newLine>a"},
             .m_timestamp_raw{"Jun 18 08:12:21"},
             .m_tokens{
-                    {{"123 Jun 18 08:12:21 abc:Jul 21 02:11:12", "header",
+                    {{"123 Jun 18 08:12:21 abc:Jul 21 02:11:12",
+                      "header",
                       {{{"timestamp", {{}, {}}},
                         {"int", {{}, {}}},
                         {"timestamp", {{}, {}}},
@@ -1396,15 +1405,17 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
     schema.add_variable(cVar5, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
-    parse_and_validate(buffer_parser, cInput, {
-            expected_event1,
-            expected_event2,
-            expected_event3,
-            expected_event4,
-            expected_event5,
-            expected_event6,
-            expected_event7,
-            expected_event8,
-            expected_event9
-    });
+    parse_and_validate(
+            buffer_parser,
+            cInput,
+            {expected_event1,
+             expected_event2,
+             expected_event3,
+             expected_event4,
+             expected_event5,
+             expected_event6,
+             expected_event7,
+             expected_event8,
+             expected_event9}
+    );
 }

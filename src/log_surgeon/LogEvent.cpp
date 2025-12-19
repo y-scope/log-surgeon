@@ -69,9 +69,7 @@ auto LogEventView::get_logtype() const -> std::string {
             {
                 logtype += token_view.release_delimiter();
             }
-            auto const& optional_captures{
-                m_log_parser.m_lexer.get_captures_from_rule_id(rule_id)
-            };
+            auto const& optional_captures{m_log_parser.m_lexer.get_captures_from_rule_id(rule_id)};
             if (optional_captures.has_value()) {
                 auto capture_view{token_view};
                 auto const& captures{optional_captures.value()};
