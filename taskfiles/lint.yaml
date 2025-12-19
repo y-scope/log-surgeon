@@ -82,13 +82,14 @@ tasks:
       BUILD_DIR: "{{.G_EXAMPLES_DEBUG_BUILD_DIR}}"
     sources: *examples_sources
     deps:
-      - "cpp-lint-configs"
       - task: "examples:generate"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
           BUILD_TYPE: "debug"
       - "venv"
     cmds:
+      - "ls {{.G_EXAMPLES_DEBUG_BUILD_DIR}}"
+      - "cat {{.G_EXAMPLES_DEBUG_BUILD_DIR}}/compile_commands.json"
       - task: "utils:cpp-lint:clang-tidy-find"
         vars:
           EXCLUDE_PATTERNS:
@@ -110,7 +111,6 @@ tasks:
       BUILD_DIR: "{{.G_LOG_SURGEON_DEBUG_BUILD_DIR}}"
     sources: *log_surgeon_sources
     deps:
-      - "cpp-lint-configs"
       - task: "log-surgeon:generate"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
