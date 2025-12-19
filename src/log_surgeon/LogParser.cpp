@@ -149,7 +149,7 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
                     m_lexer.get_captures_from_rule_id(static_cast<uint32_t>(SymbolId::TokenHeader))
             };
             if (optional_captures.has_value()) {
-                for (auto const capture : optional_captures.value()) {
+                for (auto const* const capture : optional_captures.value()) {
                     if (capture->get_name() == "timestamp") {
                         auto [start_reg_id, end_reg_id]{m_lexer.get_reg_ids_from_capture(capture)};
                         auto starts{next_token.get_reversed_reg_positions(start_reg_id)};
@@ -157,7 +157,10 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
                         if (starts.empty() || ends.empty() || starts[0] < 0 || ends[0] < 0) {
                             continue;
                         }
-                        auto ts_token{next_token.get_sub_token(starts[0], ends[0])};
+                        auto ts_token{next_token.get_sub_token(
+                                static_cast<size_t>(starts[0]),
+                                static_cast<size_t>(ends[0])
+                        )};
                         output_buffer->set_timestamp(ts_token.to_string_view());
                         break;
                     }
