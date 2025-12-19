@@ -45,11 +45,10 @@ jobs:
           | sh
 
       - if: "matrix.os == 'macos-15'"
-        name: "Install llvm."
-        run: |-
-          brew install llvm@21
-          sudo ln -s "$(brew --prefix llvm)/clang-21" "/usr/local/bin/cc"
-          sudo ln -s "$(brew --prefix llvm)/clang++-21" "/usr/local/bin/c++"
+        name: "Set SDKROOT so clang-tidy can find the Xcode SDK."
+        run: |
+          echo "SDKROOT=$(xcrun --show-sdk-path)"
+          echo "SDKROOT=$(xcrun --show-sdk-path)" >> $GITHUB_ENV
 
       # We use clang for linting so CMake doesn't generate compile_commands.json with any gcc
       # specific flags that would confuse clang-tidy.
