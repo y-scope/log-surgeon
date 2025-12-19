@@ -58,6 +58,10 @@ jobs:
             https://astral.sh/uv/0.8.4/install.sh \
           | sh
 
+      - if: "matrix.os == 'macos-*'"
+        name: "Install llvm."
+        run: "brew install llvm"
+
       - name: "Build and run unit tests"
         run: "task test:run-${{matrix.build_type}}"
 

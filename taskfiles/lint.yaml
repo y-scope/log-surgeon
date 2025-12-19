@@ -88,8 +88,6 @@ tasks:
           BUILD_TYPE: "debug"
       - "venv"
     cmds:
-      - "ls {{.G_EXAMPLES_DEBUG_BUILD_DIR}}"
-      - "cat {{.G_EXAMPLES_DEBUG_BUILD_DIR}}/compile_commands.json"
       - task: "utils:cpp-lint:clang-tidy-find"
         vars:
           EXCLUDE_PATTERNS:
