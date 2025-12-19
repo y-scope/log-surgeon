@@ -11,6 +11,7 @@
 
 #include "common.hpp"
 
+namespace examples {
 using namespace std;
 using namespace log_surgeon;
 
@@ -89,12 +90,13 @@ auto process_logs(string const& schema_path, string const& input_path) -> void {
         cout << log.to_string() << endl;
     }
 }
+}  // namespace examples
 
 auto main(int argc, char* argv[]) -> int {
     std::vector<std::string> const args(argv + 1, argv + argc);
-    if (int const err{check_input(args)}; 0 != err) {
+    if (int const err{examples::check_input(args)}; 0 != err) {
         return err;
     }
-    process_logs(args[0], args[1]);
+    examples::process_logs(args[0], args[1]);
     return 0;
 }

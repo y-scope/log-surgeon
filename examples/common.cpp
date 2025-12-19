@@ -12,6 +12,7 @@
 using namespace std;
 using namespace log_surgeon;
 
+namespace examples {
 auto check_input(std::vector<std::string> const& args) -> int {
     int ret{0};
     if (2 != args.size()) {
@@ -48,3 +49,4 @@ auto print_timestamp_loglevel(LogEventView const& event, uint32_t loglevel_id) -
     }
     cout << "\n";
 }
+}  // namespace examples

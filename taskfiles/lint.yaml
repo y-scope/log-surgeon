@@ -75,6 +75,34 @@ tasks:
         vars:
           FLAGS: ["--dry-run"]
 
+  check-cpp-static-examples:
+    # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
+    aliases: ["fix-cpp-static-examples"]
+    vars:
+      BUILD_DIR: "{{.G_EXAMPLES_DEBUG_BUILD_DIR}}"
+    sources: *examples_sources
+    deps:
+      - "cpp-lint-configs"
+      - task: "examples:generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          BUILD_TYPE: "debug"
+      - "venv"
+    cmds:
+      - task: "utils:cpp-lint:clang-tidy-find"
+        vars:
+          EXCLUDE_PATTERNS:
+            - "buffer-parser.cpp"
+            - "intersect-test.cpp"
+            - "reader-parser.cpp"
+          FLAGS:
+            - "--config-file '{{.G_UTILS_CONFIGS_DIR}}/.clang-tidy'"
+            - "-p '{{.BUILD_DIR}}'"
+          OUTPUT_DIR: "{{.G_BUILD_DIR}}/lint-clang-tidy"
+          ROOT_PATHS:
+            ref: ".G_EXAMPLES_ROOT_PATHS"
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
+
   check-cpp-static-log-surgeon:
     # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
     aliases: ["fix-cpp-static-log-surgeon"]
