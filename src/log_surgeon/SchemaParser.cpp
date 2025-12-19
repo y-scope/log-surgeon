@@ -430,9 +430,7 @@ static auto regex_non_white_space_rule(NonTerminal* /* m */) -> unique_ptr<Parse
 }
 
 static auto make_word_group() -> unique_ptr<RegexASTGroupByte> {
-    auto regex_ast_group{
-            make_unique<RegexASTGroupByte>('a', 'z')
-    };
+    auto regex_ast_group{make_unique<RegexASTGroupByte>('a', 'z')};
     regex_ast_group->add_range('A', 'Z');
     regex_ast_group->add_range('0', '9');
     regex_ast_group->add_literal('_');

@@ -186,8 +186,9 @@ public:
      * @return The start and end tag of the capture on success.
      * @return std::nullopt if no tags are associated with the given capture.
      */
-    [[nodiscard]] auto get_tag_id_pair_from_capture(finite_automata::Capture const* const capture) const
-            -> std::optional<std::pair<tag_id_t, tag_id_t>> {
+    [[nodiscard]] auto get_tag_id_pair_from_capture(
+            finite_automata::Capture const* const capture
+    ) const -> std::optional<std::pair<tag_id_t, tag_id_t>> {
         if (m_capture_to_tag_id_pair.contains(capture)) {
             return m_capture_to_tag_id_pair.at(capture);
         }
