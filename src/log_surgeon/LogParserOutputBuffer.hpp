@@ -1,6 +1,8 @@
 #ifndef LOG_SURGEON_LOG_PARSER_OUTPUT_BUFFER_HPP
 #define LOG_SURGEON_LOG_PARSER_OUTPUT_BUFFER_HPP
 
+#include <optional>
+
 #include <log_surgeon/Buffer.hpp>
 #include <log_surgeon/Token.hpp>
 
@@ -24,14 +26,23 @@ public:
     auto advance_to_next_token() -> void;
 
     auto reset() -> void {
-        m_has_timestamp = false;
+        m_has_header = false;
+        m_timestamp = std::nullopt;
         m_has_delimiters = false;
         m_storage.reset();
     }
 
-    auto set_has_timestamp(bool has_timestamp) -> void { m_has_timestamp = has_timestamp; }
+    auto set_has_header(bool has_header) -> void { m_has_header = has_header; }
 
-    [[nodiscard]] auto has_timestamp() const -> bool { return m_has_timestamp; }
+    [[nodiscard]] auto has_header() const -> bool { return m_has_header; }
+
+    auto set_timestamp(std::optional<std::string_view> const& timestamp) -> void {
+        m_timestamp = timestamp;
+    }
+
+    [[nodiscard]] auto get_timestamp() const -> std::optional<std::string> const& {
+        return m_timestamp;
+    }
 
     auto set_has_delimiters(bool has_delimiters) -> void { m_has_delimiters = has_delimiters; }
 
@@ -58,7 +69,8 @@ public:
     [[nodiscard]] auto size() const -> uint32_t { return m_storage.size(); }
 
 private:
-    bool m_has_timestamp{false};
+    bool m_has_header{false};
+    std::optional<std::string> m_timestamp;
     bool m_has_delimiters{false};
     // contains the static and dynamic Token buffers
     Buffer<Token> m_storage{};

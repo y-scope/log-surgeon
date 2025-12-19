@@ -1,6 +1,7 @@
 #include "Token.hpp"
 
 #include <cstddef>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -32,6 +33,28 @@ auto Token::to_string_view() -> std::string_view {
         return {token.begin(), token.end()};
     }
     return {get_cached_string()};
+}
+
+auto Token::get_sub_token(
+        finite_automata::PrefixTree::position_t const start_pos,
+        finite_automata::PrefixTree::position_t const end_pos
+) const -> Token {
+    if (start_pos < 0 || end_pos < 0) {
+        throw std::out_of_range("Negative position used in `get_sub_token`.");
+    }
+    if (static_cast<size_t>(start_pos) >= m_buffer.size()
+        || static_cast<size_t>(end_pos) > m_buffer.size())
+    {
+        throw std::out_of_range("Position exceeds buffer bounds in `get_sub_token`.");
+    }
+    return Token{
+            static_cast<size_t>(start_pos),
+            static_cast<size_t>(end_pos),
+            m_buffer.data(),
+            m_buffer.size(),
+            m_line_num,
+            m_type_ids_ptr
+    };
 }
 
 auto Token::get_delimiter() const -> std::string {

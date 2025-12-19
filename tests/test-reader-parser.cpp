@@ -113,14 +113,14 @@ auto parse_and_validate(
         REQUIRE(ErrorCode::Success == err);
         auto const& event{reader_parser.get_log_parser().get_log_event_view()};
         REQUIRE(expected_logtype == event.get_logtype());
-        if (nullptr == event.get_timestamp()) {
-            REQUIRE(expected_timestamp_raw.empty());
+        if (expected_timestamp_raw.empty()) {
+            REQUIRE(false == event.get_timestamp().has_value());
         } else {
-            REQUIRE(expected_timestamp_raw == event.get_timestamp()->to_string());
+            REQUIRE(expected_timestamp_raw == event.get_timestamp().value());
         }
 
         uint32_t event_offset{0};
-        if (nullptr == event.get_timestamp()) {
+        if (false == event.get_log_output_buffer()->has_header()) {
             event_offset = 1;
         }
 
@@ -155,12 +155,7 @@ auto parse_and_validate(
                 for (auto const capture : optional_captures.value()) {
                     auto const capture_name{capture->get_name()};
                     REQUIRE(expected_captures.contains(capture_name));
-                    auto optional_reg_ids{lexer.get_reg_ids_from_capture(capture)};
-                    REQUIRE(optional_reg_ids.has_value());
-                    if (false == optional_reg_ids.has_value()) {
-                        return;
-                    }
-                    auto const [start_reg_id, end_reg_id]{optional_reg_ids.value()};
+                    auto const [start_reg_id, end_reg_id]{lexer.get_reg_ids_from_capture(capture)};
                     auto const actual_start_positions{
                             token.get_reversed_reg_positions(start_reg_id)
                     };

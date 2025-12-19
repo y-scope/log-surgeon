@@ -16,8 +16,10 @@ There are three types of rules in a schema file:
 
 * [Variables](#variables): Defines patterns for capturing specific pieces of the log.
 * [Delimiters](#delimiters): Specifies the characters that separate tokens in the log.
-* [Timestamps](#timestamps): Identifies the boundary between log events. Timestamps are also treated
-  as variables.
+* [Headers](#headers): Identifies the boundary between log events. Headers are also treated as
+  variables.
+  * The first capture named `timestamp` matched within a header pattern is considered the log
+    event's timestamp.
 
 For documentation, the schema allows for user comments by ignoring any text preceded by `//`.
 
@@ -25,16 +27,22 @@ For documentation, the schema allows for user comments by ignoring any text prec
 
 **Syntax:**
 
-```txt
-<variable-name>:<variable-pattern>
+```plaintext
+$VARIABLE_NAME$:$VARIABLE_PATTERN$
 ```
 
-* `variable-name` may contain any alphanumeric characters, but may not be the reserved names
-  `delimiters` or `timestamp`.
-* `variable-pattern` is a regular expression using the supported
+* `$VARIABLE_NAME$` may contain any alphanumeric characters, but may not use the reserved names
+  `delimiters`, `header`, or `timestamp`.
+* `$VARIABLE_PATTERN$` is a regular expression using the supported
   [syntax](#regular-expression-syntax).
 
-Note that:
+**Example:**
+
+```plaintext
+equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
+```
+
+**Note that:**
 
 * A schema file may contain zero or more variable rules.
 * Repeating the same variable name in another rule will `OR` the regular expressions (perform an
@@ -46,50 +54,69 @@ Note that:
 
 **Syntax:**
 
-```txt
-delimiters:<characters>
+```plaintext
+delimiters:$CHARACTERS$
 ```
 
 * `delimiters` is a reserved name for this rule.
-* `characters` is a set of characters that should be treated as delimiters. These characters define
-  the boundaries between tokens in the log.
+* `$CHARACTERS$` is a set of characters that should be treated as delimiters. These characters
+  define the boundaries between tokens in the log.
 
-Note that:
+**Example:**
+
+```plaintext
+delimiters: \t\r\n:,!;%
+```
+
+**Note that:**
 
 * A schema file must contain at least one `delimiters` rule. If multiple `delimiters` rules are
   specified, only the last one will be used.
 
-### Timestamps
+### Headers
 
 **Syntax:**
 
-```txt
-timestamp:<timestamp-pattern>
+```plaintext
+header:$PREFIX$(?<timestamp>$TIMESTAMP-PATTERN$)$SUFFIX$
 ```
 
-* `timestamp` is a reserved name for this rule.
-* `timestamp-pattern` is a regular expression using the supported
+* Multiple headers can be specified within a schema.
+* The timestamp capture can be omitted if the log-event boundary does not contain a timestamp.
+* Multiple timestamp captures are allowed within a header. These can exist within regex repetitions
+  or alternations.
+  * If no timestamps are parsed, the event's logtype has no timestamp.
+  * If one or more timestamps are parsed, the event's logtype uses the first timestamp.
+* `timestamp` is a reserved name for the capture within a header rule.
+* `$PREFIX$`, `$SUFFIX$`, and `$TIMESTAMP-PATTERN$` are regular expressions using the supported
   [syntax](#regular-expression-syntax).
 
-Note that:
+**Example:**
 
-* The parser uses a timestamp to denote the start of a new log event if:
+```plaintext
+header:Log (?<pid>\d+) (?<timestamp>\[\d{8}\-\d{2}:\d{2}:\d{2}\]){0,1}
+```
+
+**Note that:**
+
+* The parser uses a header to denote the start of a new log event if:
   * It appears as the first token in the input, or
   * It appears after a newline character.
-* Until a timestamp is found, the parser will use a newline character to denote the start of a new
+* Until a header is found, the parser will use a newline character to denote the start of a new
   log event.
 
 ## Example schema file
 
-```txt
+```plaintext
 // Delimiters
 delimiters: \t\r\n:,!;%
 
 // Keywords
-timestamp:\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3}){0,1}
-timestamp:\[\d{8}\-\d{2}:\d{2}:\d{2}\]
-int:\-{0,1}[0-9]+
-float:\-{0,1}[0-9]+\.[0-9]+
+header:(?<timestamp>\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3}){0,1})
+header:Log (?<pid>\d+) (?<timestamp>\[\d{8}\-\d{2}:\d{2}:\d{2}\]){0,1}
+header:--- Log:
+int:\-{0,1}\d+
+float:\-{0,1}\d+\.\d+
 
 // Custom variables
 hex:[a-fA-F]+
@@ -99,7 +126,7 @@ equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
 
 * `delimiters: \t\r\n:,!;%` indicates that ` `, `\t`, `\r`, `\n`, `:`, `,`, `!`, `;`, and `%` are
   delimiters.
-* `timestamp` matches two different patterns:
+* `header` matches two different timestamp patterns:
   * `2023-04-19 12:32:08.064`
   * `[20230419-12:32:08]`
 * `int`, `float`, `hex`, `hasNumber`, and `equalsCapture` all match different user defined
@@ -112,7 +139,7 @@ equalsCapture:.*=(?<equals>.*[a-zA-Z0-9].*)
 The following regular expression rules are supported by the schema. When building a regular
 expression, the rules are applied as they appear in this list, from top to bottom.
 
-```txt
+```plaintext
 REGEX RULE       EXAMPLE       DEFINITION
 Concatenation    ab            Match two expressions in sequence (e.g., 'a'
                                  followed by 'b').

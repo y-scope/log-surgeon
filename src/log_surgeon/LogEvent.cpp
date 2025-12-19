@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -29,17 +30,14 @@ auto LogEventView::reset() -> void {
     m_multiline = false;
 }
 
-[[nodiscard]] auto LogEventView::get_timestamp() const -> Token* {
-    if (m_log_output_buffer->has_timestamp()) {
-        return &m_log_output_buffer->get_mutable_token(0);
-    }
-    return nullptr;
+[[nodiscard]] auto LogEventView::get_timestamp() const -> std::optional<std::string> const& {
+    return m_log_output_buffer->get_timestamp();
 }
 
 [[nodiscard]] auto LogEventView::to_string() const -> std::string {
     std::string raw_log;
     uint32_t start = 0;
-    if (false == m_log_output_buffer->has_timestamp()) {
+    if (false == m_log_output_buffer->has_header()) {
         start = 1;
     }
     for (uint32_t i = start; i < m_log_output_buffer->pos(); i++) {
@@ -51,40 +49,38 @@ auto LogEventView::reset() -> void {
 
 auto LogEventView::get_logtype() const -> std::string {
     std::string logtype;
-    if (m_log_output_buffer->has_timestamp()) {
-        logtype += "<timestamp>";
+    uint32_t buffer_start{1};
+    if (m_log_output_buffer->has_header()) {
+        buffer_start = 0;
     }
-    for (uint32_t i{1}; i < m_log_output_buffer->pos(); ++i) {
+    for (uint32_t i{buffer_start}; i < m_log_output_buffer->pos(); ++i) {
         auto token_view{m_log_output_buffer->get_mutable_token(i)};
         auto const rule_id{token_view.get_type_ids()->at(0)};
         if (static_cast<uint32_t>(SymbolId::TokenUncaughtString) == rule_id) {
             logtype += token_view.to_string_view();
         } else {
-            bool const is_first_token{false == m_log_output_buffer->has_timestamp() && 1 == i};
+            bool is_first_token;
+            if (m_log_output_buffer->has_header()) {
+                is_first_token = 0 == i;
+            } else {
+                is_first_token = 1 == i;
+            }
             if (static_cast<uint32_t>(SymbolId::TokenNewline) != rule_id && false == is_first_token)
             {
                 logtype += token_view.release_delimiter();
             }
-            if (auto const& optional_captures{
-                        m_log_parser.m_lexer.get_captures_from_rule_id(rule_id)
-                };
-                optional_captures.has_value())
-            {
+            auto const& optional_captures{m_log_parser.m_lexer.get_captures_from_rule_id(rule_id)};
+            if (optional_captures.has_value()) {
                 auto capture_view{token_view};
                 auto const& captures{optional_captures.value()};
                 for (auto const capture : captures) {
-                    auto const& optional_reg_id_pair{
+                    auto const [reg_start_id, reg_end_id]{
                             m_log_parser.m_lexer.get_reg_ids_from_capture(capture)
                     };
-                    if (false == optional_reg_id_pair.has_value()) {
-                        continue;
-                    }
                     auto const start_positions{
-                            capture_view.get_reversed_reg_positions(optional_reg_id_pair->first)
+                            capture_view.get_reversed_reg_positions(reg_start_id)
                     };
-                    auto const end_positions{
-                            capture_view.get_reversed_reg_positions(optional_reg_id_pair->second)
-                    };
+                    auto const end_positions{capture_view.get_reversed_reg_positions(reg_end_id)};
 
                     auto const& capture_name{capture->get_name()};
                     if (false == start_positions.empty() && -1 < start_positions[0]
@@ -103,16 +99,16 @@ auto LogEventView::get_logtype() const -> std::string {
             }
         }
     }
-
     return logtype;
 }
 
 LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()} {
     set_multiline(src.is_multiline());
-    m_log_output_buffer->set_has_timestamp(src.m_log_output_buffer->has_timestamp());
+    m_log_output_buffer->set_has_header(src.m_log_output_buffer->has_header());
+    m_log_output_buffer->set_timestamp(src.m_log_output_buffer->get_timestamp());
     m_log_output_buffer->set_has_delimiters(src.m_log_output_buffer->has_delimiters());
-    uint32_t start = 0;
-    if (nullptr == src.get_timestamp()) {
+    uint32_t start{0};
+    if (false == src.m_log_output_buffer->has_header()) {
         start = 1;
     }
     uint32_t buffer_size{0};
