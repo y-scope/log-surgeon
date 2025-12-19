@@ -9,18 +9,18 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/Token.hpp>
 
-using namespace std;
-using namespace log_surgeon;
+namespace examples {
+using std::cout;
 
 auto check_input(std::vector<std::string> const& args) -> int {
     int ret{0};
     if (2 != args.size()) {
         ret = 1;
         cout << "Not enough arguments.\n";
-    } else if (filesystem::path const f{args[0]}; false == filesystem::exists(f)) {
+    } else if (std::filesystem::path const f{args[0]}; false == std::filesystem::exists(f)) {
         ret = 2;
         cout << "Schema file does not exist.\n";
-    } else if (filesystem::path const f{args[1]}; false == filesystem::exists(f)) {
+    } else if (std::filesystem::path const f{args[1]}; false == std::filesystem::exists(f)) {
         ret = 3;
         cout << "Input file does not exist.\n";
     }
@@ -30,9 +30,10 @@ auto check_input(std::vector<std::string> const& args) -> int {
     return ret;
 }
 
-auto print_timestamp_loglevel(LogEventView const& event, uint32_t loglevel_id) -> void {
-    Token* timestamp{event.get_timestamp()};
-    Token* loglevel{nullptr};
+auto print_timestamp_loglevel(log_surgeon::LogEventView const& event, uint32_t loglevel_id)
+        -> void {
+    log_surgeon::Token* timestamp{event.get_timestamp()};
+    log_surgeon::Token* loglevel{nullptr};
     if (nullptr != timestamp) {
         if (auto const& vec{event.get_variables(loglevel_id)}; false == vec.empty()) {
             loglevel = vec[0];
@@ -48,3 +49,4 @@ auto print_timestamp_loglevel(LogEventView const& event, uint32_t loglevel_id) -
     }
     cout << "\n";
 }
+}  // namespace examples

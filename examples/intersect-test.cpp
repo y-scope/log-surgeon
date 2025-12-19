@@ -19,6 +19,7 @@ using std::vector;
 
 using ByteLexicalRule = log_surgeon::LexicalRule<ByteNfaState>;
 
+namespace examples {
 auto get_intersect_for_query(
         std::map<uint32_t, std::string>& m_id_symbol,
         Dfa<ByteDfaState, ByteNfaState> const& dfa1,
@@ -49,6 +50,7 @@ auto get_intersect_for_query(
     }
     std::cout << std::endl;
 }
+}  // namespace examples
 
 auto main() -> int {
     for (int i = 0; i < 2; i++) {
@@ -80,15 +82,15 @@ auto main() -> int {
         }
         Nfa<ByteNfaState> nfa(std::move(rules));
         Dfa<ByteDfaState, ByteNfaState> dfa(nfa);
-        get_intersect_for_query(m_id_symbol, dfa, "*1*");
-        get_intersect_for_query(m_id_symbol, dfa, "*a*");
-        get_intersect_for_query(m_id_symbol, dfa, "*a1*");
-        get_intersect_for_query(m_id_symbol, dfa, "*=*");
-        get_intersect_for_query(m_id_symbol, dfa, "abc123");
-        get_intersect_for_query(m_id_symbol, dfa, "=");
-        get_intersect_for_query(m_id_symbol, dfa, "1");
-        get_intersect_for_query(m_id_symbol, dfa, "a*1");
-        get_intersect_for_query(m_id_symbol, dfa, "a1");
+        examples::get_intersect_for_query(m_id_symbol, dfa, "*1*");
+        examples::get_intersect_for_query(m_id_symbol, dfa, "*a*");
+        examples::get_intersect_for_query(m_id_symbol, dfa, "*a1*");
+        examples::get_intersect_for_query(m_id_symbol, dfa, "*=*");
+        examples::get_intersect_for_query(m_id_symbol, dfa, "abc123");
+        examples::get_intersect_for_query(m_id_symbol, dfa, "=");
+        examples::get_intersect_for_query(m_id_symbol, dfa, "1");
+        examples::get_intersect_for_query(m_id_symbol, dfa, "a*1");
+        examples::get_intersect_for_query(m_id_symbol, dfa, "a1");
     }
     return 0;
 }
