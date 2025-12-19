@@ -7,12 +7,8 @@
 
 #include <log_surgeon/LogEvent.hpp>
 
-namespace examples {
-    auto check_input(std::vector<std::string> const& args) -> int;
+auto check_input(std::vector<std::string> const& args) -> int;
 
-    auto print_timestamp_loglevel(
-            log_surgeon::LogEventView const& event, uint32_t loglevel_id
-    ) -> void;
-}  // namespace example
+auto print_timestamp_loglevel(log_surgeon::LogEventView const& event, uint32_t loglevel_id) -> void;
 
 #endif  // COMMON_HPP
