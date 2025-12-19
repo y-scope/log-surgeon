@@ -1123,9 +1123,9 @@ TEST_CASE("multi_capture_non_unique_names", "[BufferParser]") {
             .m_tokens{
                     {{"Log", "", {}},
                      {" is", "", {}},
-                     {" myCapture123 text anotherCapture123", "var1",
-                      {{{"capture", {{7}, {19}}},
-                        {"capture", {{25}, {42}}}}}},
+                     {" myCapture123 text anotherCapture123",
+                      "var1",
+                      {{{"capture", {{7}, {19}}}, {"capture", {{25}, {42}}}}}},
                      {" and", "", {}},
                      {" then", "", {}},
                      {" another", "", {}},
