@@ -47,7 +47,6 @@ jobs:
       - if: "matrix.os == 'macos-15'"
         name: "Set SDKROOT so clang-tidy can find the Xcode SDK."
         run: |
-          echo "SDKROOT=$(xcrun --show-sdk-path)"
           echo "SDKROOT=$(xcrun --show-sdk-path)" >> $GITHUB_ENV
 
       # We use clang for linting so CMake doesn't generate compile_commands.json with any gcc
