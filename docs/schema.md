@@ -112,11 +112,11 @@ header:Log (?<pid>\d+) (?<timestamp>\[\d{8}\-\d{2}:\d{2}:\d{2}\]){0,1}
 delimiters: \t\r\n:,!;%
 
 // Keywords
-header:(?<timestamp>\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3}){0,1})
-header:Log (?<pid>\d+) (?<timestamp>\[\d{8}\-\d{2}:\d{2}:\d{2}\]){0,1}
+header:(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3}){0,1})
+header:Log (?<pid>\d+) (?<timestamp>\[\d{8}-\d{2}:\d{2}:\d{2}\]){0,1}
 header:--- Log:
-int:\-{0,1}\d+
-float:\-{0,1}\d+\.\d+
+int:-{0,1}\d+
+float:-{0,1}\d+\.\d+
 
 // Custom variables
 hex:[a-fA-F]+
@@ -163,6 +163,7 @@ Named Capture    (?<var>[01]+) Match an expression and assign it a name (e.g.,
 * Special characters include: ( ) * + - . [ \ ] ^ { | } < > ?
   - Escape these with '\' when used literally (e.g., \., \(, \\).
   - Special characters must be escaped even in ranges.
+  - Hyphens `-` do not need to be escaped outside of ranges.
 
 * For each regex rule, the expression(s) it contains can be formed by applying
   any sequence of valid regex rules, including the rule itself, thus allowing

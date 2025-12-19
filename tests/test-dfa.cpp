@@ -189,7 +189,7 @@ TEST_CASE("multi_valued_capture_containing_repetition", "[DFA]") {
  * @brief Create a DFA for matching an integer.
  */
 TEST_CASE("int_var", "[DFA]") {
-    string const var_schema{"int:\\-{0,1}\\d+"};
+    string const var_schema{"int:-{0,1}\\d+"};
     string const expected_serialized_dfa{
             "0:byte_transitions={--()->1,0-()->2,1-()->2,2-()->2,3-()->2,4-()->2,5-()->2,6-()->2,7-"
             "()->2,8-()->2,9-()->2}\n"

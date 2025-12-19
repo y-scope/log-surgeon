@@ -145,8 +145,8 @@ TEST_CASE("add_invalid_vars", "[Schema]") {
  */
 TEST_CASE("add_invalid_var_priorities", "[Schema]") {
     constexpr string_view cVarString1{"uId:userID=123"};
-    constexpr string_view cVarString2{R"(int:\-{0,1}\d+)"};
-    constexpr string_view cVarString3{R"(float:\-{0,1}\d+\.\d+)"};
+    constexpr string_view cVarString2{R"(int:-{0,1}\d+)"};
+    constexpr string_view cVarString3{R"(float:-{0,1}\d+\.\d+)"};
     constexpr int32_t invalidPos1{3};
     constexpr int32_t invalidPos2{-2};
 
@@ -191,11 +191,12 @@ TEST_CASE("add_underscore_name", "[Schema]") {
  * @brief Create a schema, adding non-unique capture group names.
  */
 TEST_CASE("non_unique_capture_names", "[Schema]") {
-    Schema schema;
     vector<string> const var_names{"var_name1", "var_name2", "var_name3"};
     string const cap_name{"cap_name"};
 
     for (auto const& var_name : var_names) {
+        CAPTURE(var_name);
+        Schema schema;
         string const var_schema{var_name + string(":a(?<") + cap_name + string(">_)b")};
         schema.add_variable(string_view(var_schema), -1);
         auto const schema_ast = schema.release_schema_ast_ptr();
@@ -215,4 +216,36 @@ TEST_CASE("non_unique_capture_names", "[Schema]") {
         REQUIRE(captures.size() == 1);
         REQUIRE(cap_name == captures.at(0)->get_name());
     }
+}
+
+/**
+ * @ingroup unit_tests_schema
+ * @brief Create a schema, adding non-escaped hyphens.
+ */
+TEST_CASE("non_escaped_hyphens", "[Schema]") {
+    vector<string> const vars{R"(v1:ID-(?<id>\d{4}))", R"(v2:\d{4}-\d{4}-\d{4})", R"(v3:[a\-z])"};
+
+    Schema schema;
+    schema.add_variable(string_view(vars[0]), -1);
+    schema.add_variable(string_view(vars[1]), -1);
+    schema.add_variable(string_view(vars[2]), -1);
+    auto const schema_ast = schema.release_schema_ast_ptr();
+    REQUIRE(schema_ast->m_schema_vars.size() == 3);
+    REQUIRE(schema.release_schema_ast_ptr()->m_schema_vars.empty());
+
+    REQUIRE(nullptr != schema_ast->m_schema_vars.at(0));
+    REQUIRE(nullptr != schema_ast->m_schema_vars.at(1));
+    REQUIRE(nullptr != schema_ast->m_schema_vars.at(2));
+    auto& schema_var_ast0 = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(0));
+    auto& schema_var_ast1 = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(1));
+    auto& schema_var_ast2 = dynamic_cast<SchemaVarAST&>(*schema_ast->m_schema_vars.at(2));
+    REQUIRE_NOTHROW([&]() -> void {
+        std::ignore = dynamic_cast<RegexASTCatByte&>(*schema_var_ast0.m_regex_ptr);
+    }());
+    REQUIRE_NOTHROW([&]() -> void {
+        std::ignore = dynamic_cast<RegexASTCatByte&>(*schema_var_ast1.m_regex_ptr);
+    }());
+    REQUIRE_NOTHROW([&]() -> void {
+        std::ignore = dynamic_cast<RegexASTGroupByte&>(*schema_var_ast2.m_regex_ptr);
+    }());
 }

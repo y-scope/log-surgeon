@@ -189,7 +189,7 @@ TEST_CASE("multi_valued_capture_containing_repetition", "[NFA]") {
  * @brief Create a NFA for matching an integer.
  */
 TEST_CASE("int_var", "[NFA]") {
-    string const var_schema{"int:\\-{0,1}\\d+"};
+    string const var_schema{"int:-{0,1}\\d+"};
     string const expected_serialized_nfa{
             "0:byte_transitions={--->1},spontaneous_transition={1[]}\n"
             "1:byte_transitions={0-->2,1-->2,2-->2,3-->2,4-->2,5-->2,6-->2,7-->2,8-->2,9-->2},"
