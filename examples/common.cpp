@@ -49,4 +49,4 @@ namespace examples {
         }
         cout << "\n";
     }
-}  // namespace
+}  // namespace example

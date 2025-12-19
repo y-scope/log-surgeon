@@ -13,6 +13,6 @@ namespace examples {
     auto print_timestamp_loglevel(
             log_surgeon::LogEventView const& event, uint32_t loglevel_id
     ) -> void;
-}  // namespace
+}  // namespace example
 
 #endif  // COMMON_HPP
