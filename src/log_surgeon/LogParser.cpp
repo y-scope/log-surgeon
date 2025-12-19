@@ -76,7 +76,8 @@ auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
         } else {
             // For log-specific lexing: modify variable regex to contain a delimiter at the start.
             auto delimiter_group = make_unique<RegexASTGroup<ByteNfaState>>(
-                    RegexASTGroup<ByteNfaState>(delimiters));
+                    RegexASTGroup<ByteNfaState>(delimiters)
+            );
             rule->m_regex_ptr = make_unique<RegexASTCat<ByteNfaState>>(
                     std::move(delimiter_group),
                     std::move(rule->m_regex_ptr)
@@ -144,9 +145,9 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
             output_buffer->set_has_header(true);
             output_buffer->set_token(0, next_token);
             output_buffer->set_timestamp(std::nullopt);
-            auto optional_captures{m_lexer.get_captures_from_rule_id(
-                    static_cast<uint32_t>(SymbolId::TokenHeader)
-            )};
+            auto optional_captures{
+                    m_lexer.get_captures_from_rule_id(static_cast<uint32_t>(SymbolId::TokenHeader))
+            };
             if (optional_captures.has_value()) {
                 for (auto const capture : optional_captures.value()) {
                     if (capture->get_name() == "timestamp") {
