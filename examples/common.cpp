@@ -12,7 +12,7 @@
 using namespace std;
 using namespace log_surgeon;
 
-auto check_input(std::vector<std::string> const& args) -> int {
+static auto check_input(std::vector<std::string> const& args) -> int {
     int ret{0};
     if (2 != args.size()) {
         ret = 1;
@@ -30,8 +30,8 @@ auto check_input(std::vector<std::string> const& args) -> int {
     return ret;
 }
 
-auto print_timestamp_loglevel(LogEventView const& event, uint32_t loglevel_id) -> void {
-    Token* timestamp{event.get_timestamp()};
+static auto print_timestamp_loglevel(LogEventView const& event, uint32_t loglevel_id) -> void {
+    Token* const timestamp{event.get_timestamp()};
     Token* loglevel{nullptr};
     if (nullptr != timestamp) {
         if (auto const& vec{event.get_variables(loglevel_id)}; false == vec.empty()) {
