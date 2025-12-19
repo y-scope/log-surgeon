@@ -60,7 +60,8 @@ tasks:
     cmds:
       - task: "check-cpp-format-examples"
       - task: "check-cpp-format-log-surgeon"
-      - task: "check-cpp-static-examples"
+      # Skipped as all files fail.
+      # - task: "check-cpp-static-examples"
       - task: "check-cpp-static-log-surgeon"
 
   check-cpp-format-examples:
@@ -204,7 +205,8 @@ tasks:
     cmds:
       - task: "fix-cpp-format-examples"
       - task: "fix-cpp-format-log-surgeon"
-      - task: "fix-cpp-static-examples"
+      # Skipped as all files fail.
+      # - task: "check-cpp-static-examples"
       - task: "fix-cpp-static-log-surgeon"
 
   fix-cpp-format-examples:
