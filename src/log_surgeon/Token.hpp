@@ -57,12 +57,9 @@ public:
      * @param start_pos Start position of the sub token in the input buffer.
      * @param end_pos End position of the sub token in the input buffer.
      * @return A token containing the sub token.
-     * @throw std::out_of_range if the start and end positions are outside the buffer bounds.
+     * @throw std::out_of_range if the start or end positions are outside the buffer bounds.
      */
-    [[nodiscard]] auto get_sub_token(
-            finite_automata::PrefixTree::position_t start_pos,
-            finite_automata::PrefixTree::position_t end_pos
-    ) const -> Token;
+    [[nodiscard]] auto get_sub_token(size_t start_pos, size_t end_pos) const -> Token;
 
     [[nodiscard]] auto get_first_char() const -> char { return m_buffer[get_start_pos()]; }
 
