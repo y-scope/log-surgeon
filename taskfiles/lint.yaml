@@ -93,8 +93,6 @@ tasks:
         vars:
           EXCLUDE_PATTERNS:
             - "buffer-parser.cpp"
-            - "common.cpp"
-            - "common.hpp"
             - "intersect-test.cpp"
             - "reader-parser.cpp"
           FLAGS:
