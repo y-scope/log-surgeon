@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <memory>
 #include <ranges>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -424,6 +425,13 @@ public:
 
     auto set_is_wildcard_true() -> void { m_is_wildcard = true; }
 
+    auto negate() -> void {
+        auto merged_ranges{m_ranges};
+        std::sort(merged_ranges.begin(), merged_ranges.end());
+        merged_ranges = merge(merged_ranges);
+        m_ranges = complement(merged_ranges);
+    }
+
     [[nodiscard]] auto is_wildcard() const -> bool { return m_is_wildcard; }
 
     [[nodiscard]] auto is_negated() const -> bool { return m_negate; }
@@ -822,7 +830,7 @@ void RegexASTOr<TypedNfaState>::add_to_nfa(
 template <typename TypedNfaState>
 [[nodiscard]] auto RegexASTOr<TypedNfaState>::serialize() const -> std::u32string {
     return fmt::format(
-            U"({})|({}){}",
+            U"(({})|({}){})",
             nullptr != m_left ? m_left->serialize() : U"null",
             nullptr != m_right ? m_right->serialize() : U"null",
             RegexAST<TypedNfaState>::serialize_negative_captures()
@@ -1000,12 +1008,14 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(
         RegexASTGroup const* left,
         RegexASTLiteral<TypedNfaState> const* right
 ) {
-    if (right == nullptr) {
-        throw std::runtime_error(
-                "RegexASTGroup1: right == nullptr: A bracket expression in the schema contains"
-                " illegal characters, remember to escape special characters. Refer to"
-                " README-Schema.md for more details."
-        );
+    if (left == nullptr || right == nullptr) {
+        auto const null_ptr_name{left == nullptr ? "left" : "right"};
+        throw std::runtime_error(fmt::format(
+                "RegexASTGroup(RegexASTGroup, RegexASTLiteral): {} == nullptr: A bracket expression "
+                "in the schema contains illegal characters, remember to escape special characters. "
+                "Refer to README-Schema.md for more details.",
+                null_ptr_name
+        ));
     }
     m_negate = left->m_negate;
     m_ranges = left->m_ranges;
@@ -1013,20 +1023,36 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(
 }
 
 template <typename TypedNfaState>
-RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTGroup const* left, RegexASTGroup const* right)
-        : m_negate(left->m_negate),
-          m_ranges(left->m_ranges) {
-    assert(right->m_ranges.size() == 1);  // Only add LiteralRange
-    m_ranges.push_back(right->m_ranges[0]);
+RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTGroup const* left, RegexASTGroup const* right) {
+    if (left == nullptr || right == nullptr) {
+        auto const null_ptr_name{left == nullptr ? "left" : "right"};
+        throw std::runtime_error(fmt::format(
+                "RegexASTGroup(RegexASTGroup, RegexASTGroup): {} == nullptr: A bracket expression "
+                "in the schema contains illegal characters, remember to escape special characters. "
+                "Refer to README-Schema.md for more details.",
+                null_ptr_name
+        ));
+    }
+    if (right->m_negate) {
+        throw std::runtime_error(
+                "RegexASTGroup(RegexASTGroup, RegexASTGroup): A bracket expression in the schema "
+                "contains a negative subgroup."
+        );
+    }
+    m_negate = left->m_negate;
+    m_ranges = left->m_ranges;
+    for (auto const& range : right->m_ranges) {
+        m_ranges.push_back(range);
+    }
 }
 
 template <typename TypedNfaState>
 RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTLiteral<TypedNfaState> const* right) {
     if (right == nullptr) {
         throw std::runtime_error(
-                "RegexASTGroup2: right == nullptr: A bracket expression in the schema contains"
-                " illegal characters, remember to escape special characters. Refer to"
-                " README-Schema.md for more details."
+                "RegexASTGroup(RegexASTLiteral): right == nullptr: A bracket expression in the "
+                "schema contains illegal characters, remember to escape special characters. Refer "
+                "to README-Schema.md for more details."
         );
     }
     m_negate = false;
@@ -1034,9 +1060,16 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTLiteral<TypedNfaState> const
 }
 
 template <typename TypedNfaState>
-RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTGroup const* right) : m_negate(false) {
-    assert(right->m_ranges.size() == 1);  // Only add LiteralRange
-    m_ranges.push_back(right->m_ranges[0]);
+RegexASTGroup<TypedNfaState>::RegexASTGroup(RegexASTGroup const* right) {
+    if (right == nullptr) {
+        throw std::runtime_error(
+                "RegexASTGroup(RegexASTGroup): right == nullptr: A bracket expression in the "
+                "schema contains illegal characters, remember to escape special characters. Refer "
+                "to README-Schema.md for more details."
+        );
+    }
+    m_negate = right->m_negate;
+    m_ranges = right->m_ranges;
 }
 
 template <typename TypedNfaState>
@@ -1045,11 +1078,13 @@ RegexASTGroup<TypedNfaState>::RegexASTGroup(
         RegexASTLiteral<TypedNfaState> const* right
 ) {
     if (left == nullptr || right == nullptr) {
-        throw std::runtime_error(
-                "RegexASTGroup3: left == nullptr || right == nullptr: A bracket expression in the "
-                "schema contains illegal characters, remember to escape special characters. Refer "
-                "to README-Schema.md for more details."
-        );
+        auto const null_ptr_name{left == nullptr ? "left" : "right"};
+        throw std::runtime_error(fmt::format(
+                "RegexASTGroup(RegexASTLiteral, RegexASTLiteral):  {} == nullptr: A bracket "
+                "expression in the schema contains illegal characters, remember to escape special "
+                "characters. Refer to README-Schema.md for more details.",
+                null_ptr_name
+        ));
     }
     m_negate = false;
     assert(right->get_character() > left->get_character());
@@ -1133,19 +1168,74 @@ template <typename TypedNfaState>
     if (m_is_wildcard) {
         ranges_serialized += U"*";
     } else {
+        auto unescape = [](uint32_t const c) -> uint32_t {
+            switch (c) {
+                case '\t': return 't';
+                case '\n': return 'n';
+                case '\r': return 'r';
+                case '\f': return 'f';
+                case '\v': return 'v';
+                default: return c;
+            }
+        };
+
+        std::set<uint32_t> const control_white_space_set{
+                cControlWhiteSpaceChars.begin(),
+                cControlWhiteSpaceChars.end()
+        };
+
         auto const transformed_ranges
                 = m_ranges
-                  | std::ranges::views::transform([](std::pair<uint32_t, uint32_t> const& range) {
-                        auto const [begin, end] = range;
+                  | std::ranges::views::transform([&](std::pair<uint32_t, uint32_t> const& range) {
+                        auto const [begin, end]{range};
+
+                        auto begin_esc{control_white_space_set.contains(begin) ? U"\\" : U""};
+                        auto end_esc{control_white_space_set.contains(end) ? U"\\" : U""};
+                        auto const begin_printable{
+                                (cPrintableAsciiRange.first <= begin
+                                && cPrintableAsciiRange.second >= begin)
+                                || control_white_space_set.contains(begin)
+                        };
+                        auto const end_printable{
+                                (cPrintableAsciiRange.first <= end
+                                && cPrintableAsciiRange.second >= end)
+                                || control_white_space_set.contains(end)
+                        };
+
+                        if (begin == end) {
+                            if (begin_printable) {
+                                return fmt::format(
+                                        U"{}{}",
+                                        begin_esc,
+                                        static_cast<char32_t>(unescape(begin))
+                                );
+                            }
+                            return fmt::format(
+                                    U"{}{}",
+                                    U"\\u",
+                                    begin
+                            );
+                        }
+                        if (begin_printable && end_printable) {
+                            return fmt::format(
+                                    U"{}{}-{}{}",
+                                    begin_esc,
+                                    static_cast<char32_t>(unescape(begin)),
+                                    end_esc,
+                                    static_cast<char32_t>(unescape(end))
+                            );
+                        }
                         return fmt::format(
-                                U"{}-{}",
-                                static_cast<char32_t>(begin),
-                                static_cast<char32_t>(end)
+                                U"{}{}-{}{}",
+                                U"\\u",
+                                begin,
+                                U"\\u",
+                                end
                         );
                     });
         for (auto const& range_u32string : transformed_ranges) {
             if (false == ranges_serialized.empty()) {
-                ranges_serialized += U", ";  // Add separator
+                ranges_serialized += U",";  // Add separator
             }
             ranges_serialized += range_u32string;
         }

@@ -79,14 +79,14 @@ TEST_CASE("capture", "[Regex]") {
                         "?<containerID>\\d+"
                     ")C"
                 ")",
-            U"(Z<~letter1><~letter2><~letter><~containerID>)|("
-                "A("
-                    "(((a)|(b))<letter1><~letter2>)|"
-                    "(((c)|(d))<letter2><~letter1>)"
-                ")<letter>B("
+            U"((Z<~letter1><~letter2><~letter><~containerID>)|("
+                "A(("
+                    "((((a)|(b)))<letter1><~letter2>)|"
+                    "((((c)|(d)))<letter2><~letter1>)"
+                "))<letter>B("
                     "([0-9]){1,inf}"
                 ")<containerID>C"
-            ")"
+            "))"
             // clang-format on
     );
 }
@@ -96,9 +96,9 @@ TEST_CASE("capture", "[Regex]") {
  * @brief Create ASTs from regexes with repetition.
  */
 TEST_CASE("repetition", "[Regex]") {
-    test_regex_ast("repetition:a{0,10}", U"()|((a){1,10})");
+    test_regex_ast("repetition:a{0,10}", U"(()|((a){1,10}))");
     test_regex_ast("repetition:a{5,10}", U"(a){5,10}");
-    test_regex_ast("repetition:a*", U"()|((a){1,inf})");
+    test_regex_ast("repetition:a*", U"(()|((a){1,inf}))");
     test_regex_ast("repetition:a+", U"(a){1,inf}");
 }
 
@@ -107,7 +107,7 @@ TEST_CASE("repetition", "[Regex]") {
  * @brief Create ASTs from simple regexes with a capture group containing repetition.
  */
 TEST_CASE("capture_containing_repetition", "[Regex]") {
-    test_regex_ast("capture:(?<letter>a{0,10})", U"(()|((a){1,10}))<letter>");
+    test_regex_ast("capture:(?<letter>a{0,10})", U"((()|((a){1,10})))<letter>");
     test_regex_ast("capture:(?<letter>a{5,10})", U"((a){5,10})<letter>");
 }
 
@@ -116,9 +116,9 @@ TEST_CASE("capture_containing_repetition", "[Regex]") {
  * @brief Create ASTs from simple regexes with a multi-valued (repeated) capture group.
  */
 TEST_CASE("multi_valued_capture_0", "[Regex]") {
-    test_regex_ast("capture:(?<letter>a){0,10}", U"(<~letter>)|(((a)<letter>){1,10})");
+    test_regex_ast("capture:(?<letter>a){0,10}", U"((<~letter>)|(((a)<letter>){1,10}))");
     test_regex_ast("capture:(?<letter>a){5,10}", U"((a)<letter>){5,10}");
-    test_regex_ast("capture:(?<letter>a)*", U"(<~letter>)|(((a)<letter>){1,inf})");
+    test_regex_ast("capture:(?<letter>a)*", U"((<~letter>)|(((a)<letter>){1,inf}))");
     test_regex_ast("capture:(?<letter>a)+", U"((a)<letter>){1,inf}");
 }
 
@@ -141,17 +141,83 @@ TEST_CASE("multi_valued_capture_1", "[Regex]") {
                         "(?<letterD>d)"
                     "){0,10}"
                 ")",
-            U"("
-                "(<~letterA><~letterB>)|(("
+            U"((("
+                "(<~letterA><~letterB>)|((("
                     "((a)<letterA><~letterB>)|"
                     "((b)<letterB><~letterA>)"
-                "){1,inf})"
-            "<~letterC><~letterD>)|("
-                "(<~letterC><~letterD>)|(("
+                ")){1,inf})"
+            "<~letterC><~letterD>))|(("
+                "(<~letterC><~letterD>)|((("
                     "((c)<letterC><~letterD>)|"
                     "((d)<letterD><~letterC>)"
-                "){1,10})"
-            "<~letterA><~letterB>)"
+                ")){1,10})"
+            "<~letterA><~letterB>)))"
             // clang-format on
     );
+}
+
+/**
+ * @ingroup unit_tests_regex_ast
+ * @brief Test order of operations.
+ */
+TEST_CASE("order_of_operations", "[Regex]") {
+    test_regex_ast("var:abc|def", U"((abc)|(def))");
+
+    test_regex_ast("var:a|\\d+", U"((a)|(([0-9]){1,inf}))");
+    test_regex_ast("var:a*|b+", U"(((()|((a){1,inf})))|((b){1,inf}))");
+
+    test_regex_ast("var:(a|b)c", U"((a)|(b))c");
+    test_regex_ast("var:(a|b)+c*", U"(((a)|(b))){1,inf}(()|((c){1,inf}))");
+
+    test_regex_ast("var:a{2,5}|b", U"(((a){2,5})|(b))");
+    test_regex_ast("var:(ab){1,3}|cd", U"(((ab){1,3})|(cd))");
+
+    test_regex_ast("var:.\\d+", U"[*]([0-9]){1,inf}");
+    test_regex_ast("var:.\\d+|cd", U"(([*]([0-9]){1,inf})|(cd))");
+
+    test_regex_ast("var:a|b|c", U"((((a)|(b)))|(c))");
+    test_regex_ast("var:(a|b)(c|d)", U"((a)|(b))((c)|(d))");
+    test_regex_ast("var:(a|b)|(c|d)", U"((((a)|(b)))|(((c)|(d))))");
+
+    test_regex_ast("var:a|(b|c)*", U"((a)|((()|((((b)|(c))){1,inf}))))");
+    test_regex_ast("var:(a|b)+(c|d)*", U"(((a)|(b))){1,inf}(()|((((c)|(d))){1,inf}))");
+    test_regex_ast("var:(a|b)c+|d*", U"((((a)|(b))(c){1,inf})|((()|((d){1,inf}))))");
+}
+
+/**
+ * @ingroup unit_tests_regex_ast
+ * @brief Test regex shorthands.
+ */
+TEST_CASE("regex_shorthands", "[Regex]") {
+    test_regex_ast("var:\\d", U"[0-9]");
+    test_regex_ast("var:[\\d]", U"[0-9]");
+    test_regex_ast("var:[a-z\\d]", U"[a-z,0-9]");
+    test_regex_ast("var:[\\da-z]", U"[0-9,a-z]");
+    test_regex_ast("var:\\D", UR"([\u0-\u47,\u58-\u1114111])");
+    test_regex_ast("var:[\\D]", UR"([\u0-\u47,\u58-\u1114111])");
+    test_regex_ast("var:[1\\D]", UR"([1,\u0-\u47,\u58-\u1114111])");
+    test_regex_ast("var:[\\D1]", UR"([\u0-\u47,\u58-\u1114111,1])");
+
+    test_regex_ast("var:\\s", UR"([ ,\t,\n,\r,\f,\v])");
+    test_regex_ast("var:[\\s]", UR"([ ,\t,\n,\r,\f,\v])");
+    test_regex_ast("var:[a-z\\s]", UR"([a-z, ,\t,\n,\r,\f,\v])");
+    test_regex_ast("var:[\\sa-z]", UR"([ ,\t,\n,\r,\f,\v,a-z])");
+    test_regex_ast("var:\\S", UR"([\u0-\u8,\u14-\u31,\u33-\u1114111])");
+    test_regex_ast("var:[\\S]", UR"([\u0-\u8,\u14-\u31,\u33-\u1114111])");
+    test_regex_ast("var:[\\t\\S]", UR"([\t,\u0-\u8,\u14-\u31,\u33-\u1114111])");
+    test_regex_ast("var:[\\S\\t]", UR"([\u0-\u8,\u14-\u31,\u33-\u1114111,\t])");
+
+    test_regex_ast("var:[^A-F\\da-f]", UR"([^A-F,0-9,a-f])");
+
+    test_regex_ast("var:\\w", U"[a-z,A-Z,0-9,_]");
+    test_regex_ast("var:[\\w]", U"[a-z,A-Z,0-9,_]");
+    test_regex_ast("var:\\W", UR"([\u0-\u47,:-@,[-^,`,\u123-\u1114111])");
+    test_regex_ast("var:[\\W]", UR"([\u0-\u47,:-@,[-^,`,\u123-\u1114111])");
+
+    test_regex_ast("var:a?", U"(()|(a))");
+    test_regex_ast("var:a*", U"(()|((a){1,inf}))");
+    test_regex_ast("var:a+", U"(a){1,inf}");
+    test_regex_ast("var:a{0,5}", U"(()|((a){1,5}))");
+    test_regex_ast("var:a{3,5}", U"(a){3,5}");
+    test_regex_ast("var:a{3,0}", U"(a){3,inf}");
 }

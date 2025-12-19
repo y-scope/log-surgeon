@@ -1,7 +1,6 @@
 #ifndef LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
 #define LOG_SURGEON_FINITE_AUTOMATA_NFA_HPP
 
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
