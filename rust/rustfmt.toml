@@ -1,0 +1,21 @@
+# https://rust-lang.github.io/rustfmt/
+edition = "2024"
+style_edition = "2024"
+
+error_on_line_overflow = true
+error_on_unformatted = true
+
+hard_tabs = true
+newline_style = "Unix"
+max_width = 120
+
+imports_granularity = "Item"
+imports_layout = "Vertical"
+group_imports = "StdExternalCrate"
+
+match_block_trailing_comma = true
+use_field_init_shorthand = true
+format_macro_matchers = true
+format_macro_bodies = true
+hex_literal_case = "Upper"
+short_array_element_width_threshold = 16

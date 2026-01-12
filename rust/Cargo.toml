@@ -1,0 +1,9 @@
+[package]
+name = "log-mechanic"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+nom = "8"
+tracing = "0.1"
+tracing-subscriber = "0.3"
