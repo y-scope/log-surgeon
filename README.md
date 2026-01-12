@@ -55,6 +55,7 @@ while (false == parser.done()) {
     if (ErrorCode err{parser.parse_next_event()}; ErrorCode::Success != err) {
         throw runtime_error("Parsing Failed");
     }
+    LogEventView const& event = parser.get_log_parser().get_log_event_view();
 
     // Get and print the timestamp
     Token* timestamp{event.get_timestamp()};
@@ -72,7 +73,6 @@ while (false == parser.done()) {
     // Other analysis...
 
     // Print the entire event
-    LogEventView const& event = parser.get_log_parser().get_log_event_view();
     cout << event->to_string() << endl;
 }
 ```
@@ -87,10 +87,11 @@ Requirements:
 * CMake >= 3.22.1
 * GCC >= 10 or Clang >= 7
 * [Catch2] >= 3.8.1
-* [fmt] >= 11.2.0
+* [fmt] >= 8.0.1
 * [GSL] >= 4.0.0
 * [Task] >= 3.38
 * [uv] >= 0.7.10
+* [ystdlib-cpp] >= 0.1.0
 
 To build and install the project to `$HOME/.local`:
 
@@ -193,3 +194,4 @@ The following are issues we're aware of and working on:
 [GSL]: https://github.com/microsoft/GSL
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv
+[ystdlib-cpp]: https://github.com/y-scope/ystdlib-cpp

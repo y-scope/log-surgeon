@@ -9,7 +9,7 @@ IncludeCategories:
     Priority: 4
 
   # External library headers. Update when adding new libraries.
-  - Regex: "^<(fmt|gsl)"
+  - Regex: "^<(fmt|gsl|ystdlib)"
     Priority: 3
 
   # C system headers
