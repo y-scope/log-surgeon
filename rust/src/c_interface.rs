@@ -5,7 +5,7 @@ use crate::schema::Schema;
 
 #[unsafe(no_mangle)]
 extern "C" fn clp_log_surgeon_schema_new() -> Box<Schema> {
-	todo!();
+	Box::new(Schema::new())
 }
 
 #[unsafe(no_mangle)]
