@@ -4,6 +4,7 @@ use std::num::NonZero;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
+use crate::log_event::LogComponent;
 use crate::regex::Regex;
 use crate::schema::Schema;
 
@@ -167,7 +168,7 @@ impl<'schema> Nfa<'schema> {
 
 	// https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf
 	// - Algorithm 1
-	pub fn simulate(&self, input: &str) -> bool {
+	pub fn simulate<'input>(&self, input: &'input str) -> Option<(LogComponent<'schema, 'input>, usize)> {
 		let start: (usize, Vec<TagMatches>) = (
 			0,
 			vec![TagMatches {
@@ -177,38 +178,70 @@ impl<'schema> Nfa<'schema> {
 
 		let mut state_set: BTreeSet<(usize, Vec<TagMatches>)> = BTreeSet::new();
 		state_set.insert(start);
+		state_set = self.epsilon_closure(state_set, 0);
+
+		let mut maybe_last_match: Option<(usize, Vec<TagMatches>)> = None;
 
 		for (i, ch) in input.char_indices() {
 			println!("=== step {i}, ch {}", u32::from(ch));
 			println!("state set is {state_set:#?}");
-			state_set = self.epsilon_closure(state_set, i);
-			println!("======= closure");
-			println!("closure is {state_set:#?}");
 			state_set = self.step_on_symbol(&state_set, ch);
-			println!("======= step");
-			println!("closure is {state_set:#?}");
+			println!("after step is {state_set:#?}");
+			state_set = self.epsilon_closure(state_set, i + 1);
+			println!("after closure is {state_set:#?}");
 			if state_set.is_empty() {
-				return false;
+				break;
+			}
+			for (state, matches) in state_set.iter() {
+				// TODO more general
+				if *state == 1 {
+					println!("=== got match!");
+					assert_eq!(matches.len(), 1);
+					maybe_last_match = Some((i, matches.clone()));
+				}
 			}
 		}
-
-		state_set = self.epsilon_closure(state_set, input.len());
-
-		let mut found: bool = false;
 
 		for (state, matches) in state_set.iter() {
 			// TODO more general
 			if *state == 1 {
 				println!("=== got match!");
 				assert_eq!(matches.len(), 1);
+				let mut m: Vec<(usize, &str, usize, usize)> = Vec::new();
 				for (variable, (starts, ends)) in matches.last().unwrap().offsets.iter() {
 					println!("[matched variable {variable:?} {starts:?} {ends:?}");
+					for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
+						m.push((variable.rule, variable.capture, x, y));
+					}
 				}
-				found = true;
+				return Some((
+					LogComponent {
+						full_text: input,
+						matches: m,
+					},
+					input.len(),
+				));
 			}
 		}
 
-		found
+		if let Some((pos, last_match)) = maybe_last_match {
+			let mut m: Vec<(usize, &str, usize, usize)> = Vec::new();
+			for (variable, (starts, ends)) in last_match.last().unwrap().offsets.iter() {
+				println!("[matched variable {variable:?} {starts:?} {ends:?}");
+				for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
+					m.push((variable.rule, variable.capture, x, y));
+				}
+			}
+			return Some((
+				LogComponent {
+					full_text: &input[0..pos],
+					matches: m,
+				},
+				pos,
+			));
+		}
+
+		None
 	}
 
 	pub fn to_dfa(&self) -> Dfa<'schema> {
@@ -820,9 +853,9 @@ mod test {
 		let mut schema: Schema = Schema::new();
 		schema.add_rule("hello", r);
 		let nfa: Nfa<'_> = Nfa::for_schema(&schema).unwrap();
-		let b: bool = nfa.simulate("012a2b2cworld");
+		let b: bool = nfa.simulate("012a2b2cworld").is_some();
 		assert!(b);
-		let b: bool = nfa.simulate("0xyzworld");
+		let b: bool = nfa.simulate("0xyzworld").is_some();
 		assert!(b);
 	}
 }

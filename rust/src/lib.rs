@@ -4,5 +4,8 @@
 
 pub mod automata;
 pub mod interval_tree;
+pub mod log_event;
 pub mod regex;
 pub mod schema;
+
+pub mod c_interface;

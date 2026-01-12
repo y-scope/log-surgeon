@@ -18,7 +18,7 @@ fn main() {
 		schema.add_rule("hello", r);
 		let nfa: Nfa<'_> = Nfa::for_schema(&schema).unwrap();
 		dbg!(&nfa);
-		let b: bool = nfa.simulate("012a2b2cworld");
+		let b: bool = nfa.simulate("012a2b2cworld").is_some();
 		assert!(b);
 		// let dfa: Dfa<'_> = nfa.to_dfa();
 		// dbg!(&dfa);
@@ -36,7 +36,7 @@ fn main() {
 		let mut schema: Schema = Schema::new();
 		schema.add_rule("hello", r);
 		let nfa: Nfa<'_> = Nfa::for_schema(&schema).unwrap();
-		let b: bool = nfa.simulate("0xyzxy");
+		let b: bool = nfa.simulate("0xyzxy").is_some();
 		println!("matched: {b}");
 	}
 	{
@@ -44,7 +44,7 @@ fn main() {
 		let mut schema: Schema = Schema::new();
 		schema.add_rule("hello", r);
 		let nfa: Nfa<'_> = Nfa::for_schema(&schema).unwrap();
-		let b: bool = nfa.simulate("foofoofoo");
+		let b: bool = nfa.simulate("foofoofoo").is_some();
 		println!("matched: {b}");
 	}
 
