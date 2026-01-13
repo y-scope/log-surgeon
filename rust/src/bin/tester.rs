@@ -1,4 +1,5 @@
-use log_mechanic::automata::*;
+use log_mechanic::dfa::*;
+use log_mechanic::nfa::*;
 use log_mechanic::regex::*;
 use log_mechanic::schema::*;
 
@@ -26,7 +27,7 @@ fn main() {
 		// assert!(b);
 		// let b: bool = nfa.simulate("012a2b2cworld").is_some();
 		// assert!(b);
-		let dfa: Dfa<'_> = nfa.to_dfa();
+		let dfa: Dfa<'_> = Dfa::determinization(&nfa);
 		dbg!(&dfa);
 		// let b: bool = dfa.simulate("aaaaa");
 		// println!("matched: {b}");

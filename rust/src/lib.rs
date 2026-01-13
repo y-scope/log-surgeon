@@ -2,9 +2,10 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-pub mod automata;
+pub mod dfa;
 pub mod interval_tree;
 pub mod log_event;
+pub mod nfa;
 pub mod regex;
 pub mod schema;
 

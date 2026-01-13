@@ -1,5 +1,5 @@
-use crate::automata::Nfa;
 use crate::log_event::LogComponent;
+use crate::nfa::Nfa;
 use crate::regex::Regex;
 use crate::schema::Schema;
 
