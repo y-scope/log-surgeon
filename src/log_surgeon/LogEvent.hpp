@@ -1,10 +1,17 @@
 #ifndef LOG_SURGEON_LOG_EVENT_HPP
 #define LOG_SURGEON_LOG_EVENT_HPP
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include <ystdlib/error_handling/Result.hpp>
+
+#include <log_surgeon/finite_automata/Capture.hpp>
+#include <log_surgeon/finite_automata/PrefixTree.hpp>
 #include <log_surgeon/LogParserOutputBuffer.hpp>
 #include <log_surgeon/Token.hpp>
 
@@ -99,7 +106,7 @@ public:
      * events from the same logging source code may have the same logtype.
      * @return The logtype of the log.
      */
-    auto get_logtype() const -> std::string;
+    [[nodiscard]] auto get_logtype() const -> std::string;
 
     /**
      * Adds a Token to the array of tokens of a particular token type.
@@ -114,6 +121,37 @@ public:
         // this function
         m_log_var_occurrences[token_type_id].push_back(token_ptr);
     }
+
+    /**
+     * Retrieves the position of match of type `capture` within `root_var`. `root_var` must be the
+     * root parent variable containing `capture`.
+     * @param root_var The parent log surgeon schema variable for `capture`.
+     * @param capture The capture group type.
+     * @return A result containing a `CapturePosition` on success, or an error code indicating the
+     * failure:
+     * - ClpsErrorCodeEnum::Failure if the capture's positions are invalid.
+     */
+    [[nodiscard]] auto get_capture_positions(
+            Token const& root_var,
+            finite_automata::Capture const* const& capture
+    ) const -> ystdlib::error_handling::Result<Token::CaptureMatchPosition>;
+
+    /**
+     * Returns the capture group matches within `root_var` sorted by their appearance within the
+     * text, with parent capture groups appearing before their children. More formally, they are
+     * sorted by increasing start position and then by decreasing end position.
+     *
+     * Since capture groups can only overlap when nested and cannot span across the boundary of
+     * another group, a capture group is a leaf if its end position is less than the end position of
+     * the next capture group (or it is the last capture group).
+     * @param root_var The root variable to get the capture groups from.
+     * @return A result containing the sorted capture group matches, or an error code indicating the
+     * failure:
+     * - std::errc::invalid_argument if no capture groups are found for `root_var`.
+     * - std::errc::protocol_error if the positions of a capture group are not found.
+     */
+    [[nodiscard]] auto get_capture_matches(log_surgeon::Token const& root_var) const
+            -> ystdlib::error_handling::Result<std::vector<Token::CaptureMatch>>;
 
     // TODO: have LogParser own the output buffer as a LogEventView is already
     // tied to a single log parser
