@@ -4,6 +4,7 @@ use log_mechanic::schema::*;
 
 fn main() {
 	// tracing_subscriber::fmt()
+	// 	.pretty()
 	// 	.with_file(true)
 	// 	.with_line_number(true)
 	// 	.with_span_events(
@@ -12,18 +13,25 @@ fn main() {
 	// 	.init();
 	{
 		let r: Regex = Regex::from_pattern("0((?<foobar>1(2[a-zA-Z])*)|(?<baz>xyz))*world").unwrap();
+		// let r: Regex = Regex::from_pattern("a*").unwrap();
+		// let r: Regex = Regex::from_pattern("[^a-z]|(abc){3,5}").unwrap();
 		// let r: Regex = Regex::from_pattern("0(xyz)*world").unwrap();
+		// let r: Regex = Regex::from_pattern("(?<foo>a)*").unwrap();
 		dbg!(&r);
 		let mut schema: Schema = Schema::new();
 		schema.add_rule("hello", r);
 		let nfa: Nfa<'_> = Nfa::for_schema(&schema).unwrap();
-		dbg!(&nfa);
-		let b: bool = nfa.simulate("012a2b2cworld").is_some();
-		assert!(b);
-		// let dfa: Dfa<'_> = nfa.to_dfa();
-		// dbg!(&dfa);
-		// let b: bool = dfa.simulate("012a2b2cworld");
+		println!("nfa is {nfa:#?}");
+		// let b: bool = nfa.simulate("aabb").is_some();
+		// assert!(b);
+		// let b: bool = nfa.simulate("012a2b2cworld").is_some();
+		// assert!(b);
+		let dfa: Dfa<'_> = nfa.to_dfa();
+		dbg!(&dfa);
+		// let b: bool = dfa.simulate("aaaaa");
 		// println!("matched: {b}");
+		let b: bool = dfa.simulate("012a2b2cworld");
+		println!("matched: {b}");
 		// let b: bool = dfa.simulate("0xyzworld");
 		// println!("matched: {b}");
 		// let b: bool = dfa.simulate("0world");
@@ -31,22 +39,22 @@ fn main() {
 		// let b: bool = dfa.simulate("0xyz12a2b2cxyzworld");
 		// println!("matched: {b}");
 	}
-	{
-		let r: Regex = Regex::from_pattern("0(?<foo>xyz)*xy").unwrap();
-		let mut schema: Schema = Schema::new();
-		schema.add_rule("hello", r);
-		let nfa: Nfa<'_> = Nfa::for_schema(&schema).unwrap();
-		let b: bool = nfa.simulate("0xyzxy").is_some();
-		println!("matched: {b}");
-	}
-	{
-		let r: Regex = Regex::from_pattern("((?<foo>foo)|(?<bar>bar))*").unwrap();
-		let mut schema: Schema = Schema::new();
-		schema.add_rule("hello", r);
-		let nfa: Nfa<'_> = Nfa::for_schema(&schema).unwrap();
-		let b: bool = nfa.simulate("foofoofoo").is_some();
-		println!("matched: {b}");
-	}
+	// {
+	// 	let r: Regex = Regex::from_pattern("0(?<foo>xyz)*xy").unwrap();
+	// 	let mut schema: Schema = Schema::new();
+	// 	schema.add_rule("hello", r);
+	// 	let nfa: Nfa<'_> = Nfa::for_schema(&schema).unwrap();
+	// 	let b: bool = nfa.simulate("0xyzxy").is_some();
+	// 	println!("matched: {b}");
+	// }
+	// {
+	// 	let r: Regex = Regex::from_pattern("((?<foo>foo)|(?<bar>bar))*").unwrap();
+	// 	let mut schema: Schema = Schema::new();
+	// 	schema.add_rule("hello", r);
+	// 	let nfa: Nfa<'_> = Nfa::for_schema(&schema).unwrap();
+	// 	let b: bool = nfa.simulate("foofoofoo").is_some();
+	// 	println!("matched: {b}");
+	// }
 
 	// 	let dfa: Dfa<'_> = nfa.determinization();
 	// 	dbg!(&dfa);
