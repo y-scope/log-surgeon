@@ -8,10 +8,10 @@
 #include <string>
 #include <vector>
 
+#include <ystdlib/error_handling/ErrorCode.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <log_surgeon/finite_automata/Capture.hpp>
-#include <log_surgeon/finite_automata/PrefixTree.hpp>
 #include <log_surgeon/LogParserOutputBuffer.hpp>
 #include <log_surgeon/Token.hpp>
 
@@ -131,7 +131,7 @@ public:
      * failure:
      * - ClpsErrorCodeEnum::Failure if the capture's positions are invalid.
      */
-    [[nodiscard]] auto get_capture_positions(
+    [[nodiscard]] auto get_capture_position(
             Token const& root_var,
             finite_automata::Capture const* const& capture
     ) const -> ystdlib::error_handling::Result<Token::CaptureMatchPosition>;
@@ -181,6 +181,15 @@ public:
 private:
     std::vector<char> m_buffer;
 };
+
+enum class LogEventErrorCodeEnum : uint8_t {
+    NoCaptureGroup,
+    NoCaptureGroupMatch
+};
+
+using LogEventErrorCode = ystdlib::error_handling::ErrorCode<LogEventErrorCodeEnum>;
 }  // namespace log_surgeon
+
+YSTDLIB_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(log_surgeon::LogEventErrorCodeEnum);
 
 #endif  // LOG_SURGEON_LOG_EVENT_HPP

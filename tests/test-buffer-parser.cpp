@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -22,7 +23,6 @@ using log_surgeon::finite_automata::PrefixTree;
 using log_surgeon::rule_id_t;
 using log_surgeon::Schema;
 using log_surgeon::SymbolId;
-using std::pair;
 using std::string;
 using std::string_view;
 using std::unordered_map;
@@ -34,10 +34,24 @@ struct CapturePositions {
     vector<PrefixTree::position_t> m_end_positions;
 };
 
+struct ExpectedCaptureMatch {
+    ExpectedCaptureMatch(string name, CapturePositions pos, bool leaf)
+            : m_name(std::move(name)),
+              m_pos(std::move(pos)),
+              m_leaf(leaf) {}
+
+    ExpectedCaptureMatch(string name, CapturePositions pos)
+            : ExpectedCaptureMatch(std::move(name), std::move(pos), true) {}
+
+    string m_name;
+    CapturePositions m_pos;
+    bool m_leaf;
+};
+
 struct ExpectedToken {
     string_view m_raw_string;
     string m_type;
-    vector<pair<string, CapturePositions>> m_captures;
+    vector<ExpectedCaptureMatch> m_captures;
 };
 
 struct ExpectedEvent {
@@ -128,10 +142,11 @@ auto parse_and_validate(
                     return;
                 }
 
+                // Testing direct usage of fields to inspect capture group matches.
                 REQUIRE(expected_captures.size() == optional_captures.value().size());
                 for (uint32_t j{0}; j < optional_captures.value().size(); j++) {
-                    auto const capture{optional_captures.value()[j]};
-                    auto const [expected_name, expected_positions]{expected_captures[j]};
+                    auto const* capture{optional_captures.value()[j]};
+                    auto const [expected_name, expected_positions, unused]{expected_captures[j]};
                     REQUIRE(expected_name == capture->get_name());
                     auto const [start_reg_id, end_reg_id]{lexer.get_reg_ids_from_capture(capture)};
                     auto actual_start_positions{token.get_reversed_reg_positions(start_reg_id)};
@@ -145,6 +160,51 @@ auto parse_and_validate(
                     REQUIRE(expected_start_positions == actual_start_positions);
                     REQUIRE(expected_end_positions == actual_end_positions);
                 }
+
+                // Testing event API for capture group matches.
+                auto sorted_expected_captures{expected_tokens[i].m_captures};
+                std::sort(
+                        sorted_expected_captures.begin(),
+                        sorted_expected_captures.end(),
+                        [](ExpectedCaptureMatch const& a, ExpectedCaptureMatch const& b) -> bool {
+                            if (a.m_pos.m_start_positions.empty()
+                                || 0 > a.m_pos.m_start_positions[0]) {
+                                return false;
+                            }
+                            if (b.m_pos.m_start_positions.empty()
+                                || 0 > b.m_pos.m_start_positions[0]) {
+                                return true;
+                            }
+                            if (a.m_pos.m_start_positions[0] != b.m_pos.m_start_positions[0]) {
+                                return a.m_pos.m_start_positions[0] < b.m_pos.m_start_positions[0];
+                            }
+                            return a.m_pos.m_end_positions[0] > b.m_pos.m_end_positions[0];
+                        }
+                );
+                auto matches{event.get_capture_matches(token)};
+                REQUIRE(false == matches.has_error());
+                size_t captures_with_no_match{0};
+                for (size_t j{0}; j < sorted_expected_captures.size(); ++j) {
+                    auto const [expected_name, expected_positions, expected_leaf]{
+                            sorted_expected_captures[j]
+                    };
+                    auto const [expected_start_positions, expected_end_positions]{
+                            expected_positions
+                    };
+                    if (expected_start_positions.empty() || 0 > expected_start_positions[0]
+                        || expected_end_positions.empty() || 0 > expected_end_positions[0])
+                    {
+                        ++captures_with_no_match;
+                        continue;
+                    }
+                    auto const capture{matches.value().at(j - captures_with_no_match)};
+                    REQUIRE(expected_name == capture.m_capture->get_name());
+                    REQUIRE(expected_start_positions[0] == capture.m_pos.m_start);
+                    REQUIRE(expected_end_positions[0] == capture.m_pos.m_end);
+                    REQUIRE(expected_leaf == capture.m_leaf);
+                }
+                REQUIRE(sorted_expected_captures.size() - captures_with_no_match
+                        == matches.value().size());
             }
         }
     }
@@ -345,6 +405,63 @@ TEST_CASE("single_line_with_optional_capture", "[BufferParser]") {
                       "myVar",
                       {{{"uid", {.m_start_positions{-1}, .m_end_positions{-1}}}}}},
                      {" userID=456", "", {}}}
+            }
+    };
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cVarSchema, -1);
+    BufferParser buffer_parser(std::move(schema.release_schema_ast_ptr()));
+
+    parse_and_validate(buffer_parser, cInput, {expected_event});
+}
+
+/**
+ * @ingroup test_buffer_parser_capture
+ * @brief Validates tokenization behavior when using nested capture groups in variable schemas.
+ *
+ * This test is an extension of `single_line_with_capture` that verifies the correct behaviour when
+ * a nested capture groups are not found.
+ *
+ * ### Schema Definition
+ * @code
+ * delimiters: \n\r[:,
+ * myVar:userID=(?<full>abc_(?<uid>\d{3}))
+ * @endcode
+ *
+ * ### Test Input
+ * @code
+ * "userID=abc_123 userID=abc_456"
+ * @endcode
+ *
+ * ### Expected Logtype
+ * @code
+ * "userID=<uid> userID=<uid>"
+ * @endcode
+ *
+ * ### Expected Tokenization
+ * @code
+ * "userID=abc_123" -> "myVar" with "abc_123" -> "full", "123" -> "uid"
+ * " userID=abc_456" -> "myVar" with "abc_456" -> "full", "456" -> "uid"
+ * @endcode
+ */
+TEST_CASE("single_line_with_nested_capture", "[BufferParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
+    constexpr string_view cVarSchema{R"(myVar:userID=(?<full>abc_(?<uid>\d{3})))"};
+    constexpr string_view cInput{"userID=abc_123 userID=abc_456"};
+
+    ExpectedEvent const expected_event{
+            .m_logtype{R"(userID=abc_<uid> userID=abc_<uid>)"},
+            .m_timestamp_raw{""},
+            .m_tokens{
+                    {{"userID=abc_123",
+                      "myVar",
+                      {{{"uid", {.m_start_positions{11}, .m_end_positions{14}}},
+                        {"full", {.m_start_positions{7}, .m_end_positions{14}}, false}}}},
+                     {" userID=abc_456",
+                      "myVar",
+                      {{{"uid", {.m_start_positions{26}, .m_end_positions{29}}},
+                        {"full", {.m_start_positions{22}, .m_end_positions{29}}, false}}}}}
             }
     };
 
