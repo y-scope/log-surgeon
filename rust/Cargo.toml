@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
-crate-type = ["lib", "cdylib"]
+crate-type = ["lib", "staticlib"]
 
 [build-dependencies]
 cbindgen = "0.29"
 
 [dependencies]
+libc = "0.2"
 nom = "8"

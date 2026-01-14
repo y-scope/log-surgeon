@@ -18,6 +18,8 @@ typedef struct CSlice_c_char {
 
 typedef struct CSlice_c_char CStringView;
 
+struct CSlice_c_char clp_log_surgeon_c_string_view(const char *pointer);
+
 void clp_log_surgeon_component_delete(struct LogComponent *component);
 
 size_t clp_log_surgeon_component_matches_count(const struct LogComponent *component);
