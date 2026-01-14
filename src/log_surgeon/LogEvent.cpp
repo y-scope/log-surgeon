@@ -116,10 +116,11 @@ auto LogEventView::get_capture_matches(Token const& root_var) const
     for (size_t i{0}; i < captures->size(); ++i) {
         auto const* const capture{captures->at(i)};
         auto position{get_capture_position(root_var, capture)};
-        if (position.has_error()
-            && LogEventErrorCode{LogEventErrorCodeEnum::NoCaptureGroupMatch} == position.error())
-        {
-            continue;
+        if (position.has_error()) {
+            if (LogEventErrorCode{LogEventErrorCodeEnum::NoCaptureGroupMatch} == position.error()) {
+                continue;
+            }
+            return position.error();
         }
         ordered_matches.emplace(capture, position.value(), true);
     }
@@ -218,7 +219,7 @@ template <>
 auto LogEventErrorCategory::message(LogEventErrorCodeEnum error_enum) const -> std::string {
     switch (error_enum) {
         case LogEventErrorCodeEnum::NoCaptureGroups:
-            return "LogEvent NoCaptureGroup";
+            return "LogEvent NoCaptureGroups";
         case LogEventErrorCodeEnum::NoCaptureGroupMatch:
             return "LogEvent NoCaptureGroupMatch";
         default:
