@@ -3,6 +3,7 @@ use crate::regex::Regex;
 #[derive(Debug)]
 pub struct Schema {
 	pub rules: Vec<Rule>,
+	pub delimiters: String,
 }
 
 #[derive(Debug)]
@@ -14,7 +15,10 @@ pub struct Rule {
 
 impl Schema {
 	pub fn new() -> Self {
-		Self { rules: Vec::new() }
+		Self {
+			rules: Vec::new(),
+			delimiters: String::new(),
+		}
 	}
 
 	pub fn add_rule<LikeString>(&mut self, name: LikeString, regex: Regex)

@@ -5,50 +5,50 @@ use std::collections::btree_map::Entry;
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
 use crate::nfa::Nfa;
+use crate::nfa::NfaIdx;
 use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tag;
-use crate::nfa::Variable;
 
 #[derive(Debug)]
 pub struct Dfa<'schema> {
-	states: Vec<(DfaState<'schema>, IntervalTree<u32, usize>)>,
-	state_map: BTreeMap<DfaState<'schema>, usize>,
+	states: Vec<DfaState<'schema>>,
+	kernels: BTreeMap<Kernel<'schema>, usize>,
 	/// Bijection between `tags` and `{ 0..tags.len() }`.
-	tags: BTreeMap<Tag<'schema>, usize>,
-	/// ("Current") number of registers used.
-	registers: usize,
+	tags: Vec<Tag<'schema>>,
+	tag_ids: BTreeMap<Tag<'schema>, DfaTag>,
+	/// During construction, this is the "current" count;
+	/// after construction, this is the "total required".
+	number_of_registers: usize,
+}
+
+#[derive(Debug)]
+struct DfaState<'schema> {
+	kernel: Kernel<'schema>,
+	transitions: IntervalTree<u32, Transition>,
+	is_final: bool,
+	final_operations: Vec<RegisterOp>,
+	tag_for_register: BTreeMap<usize, Tag<'schema>>,
 }
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-struct DfaState<'schema> {
-	configurations: BTreeSet<Configuration<'schema>>,
-}
+struct Kernel<'schema>(BTreeSet<Configuration<'schema>>);
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 struct Configuration<'schema> {
-	nfa_state: usize,
+	nfa_state: NfaIdx,
 	register_for_tag: Vec<usize>,
-	tags: Vec<(Tag<'schema>, Sign)>,
+	tag_path_in_closure: Vec<(Tag<'schema>, SymbolicPosition)>,
 }
 
-/*
-#[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-enum DfaTag {
-	Positive(u32),
-	Negative(u32),
+#[derive(Debug, Clone)]
+struct Transition {
+	destination: usize,
+	operations: Vec<RegisterOp>,
 }
 
-impl std::fmt::Debug for DfaTag {
-	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		// TODO explain lifetime
-		match self {
-			Self::Positive(t) => fmt.write_fmt(format_args!("DfaTag({t})")),
-			Self::Negative(t) => fmt.write_fmt(format_args!("DfaTag(-{t})")),
-		}
-	}
-}
-*/
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+struct DfaTag(usize);
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 struct RegisterOp {
@@ -61,7 +61,7 @@ enum RegisterAction {
 	Set {
 		position: SymbolicPosition,
 	},
-	// "Copy" in the paper.
+	/// "Copy" in the re2c/TDFA 2022 paper.
 	CopyFrom {
 		source: usize,
 	},
@@ -75,23 +75,6 @@ enum RegisterAction {
 enum SymbolicPosition {
 	Current,
 	Nil,
-}
-
-#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-enum Sign {
-	Positive,
-	Negative,
-}
-
-struct NfaBuilder<'a, 'schema> {
-	nfa: &'a mut Nfa<'schema>,
-	current: usize,
-	begins: usize,
-}
-
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-struct TagMatches<'schema> {
-	offsets: BTreeMap<Variable<'schema>, (Vec<usize>, Vec<usize>)>,
 }
 
 #[derive(Debug)]
@@ -108,11 +91,26 @@ struct PrefixTreeNode<'schema> {
 impl<'schema> Dfa<'schema> {
 	pub fn simulate(&self, input: &str) -> bool {
 		let mut current_state: usize = 0;
+		let mut registers: Vec<Vec<usize>> = vec![Vec::new(); self.number_of_registers];
 
 		for (i, ch) in input.char_indices() {
 			println!("=== step {i} (state {current_state}), ch {ch:?} ({})", u32::from(ch));
-			if let Some(&next) = self.states[current_state].1.lookup(u32::from(ch)) {
-				current_state = next;
+			let mut seen: BTreeSet<usize> = BTreeSet::new();
+			for config in self.states[current_state].kernel.0.iter() {
+				for (i, &r) in config.register_for_tag.iter().enumerate() {
+					if seen.insert(r) {
+						println!("- tag ({:?}) -> {r} -> {:?}", self.tags[i], registers[r]);
+					}
+				}
+			}
+			if let Some(transition) = self.states[current_state].transitions.lookup(u32::from(ch)) {
+				current_state = transition.destination;
+				self.apply_operations(
+					&mut registers,
+					i,
+					&transition.operations,
+					&self.states[current_state].tag_for_register,
+				);
 			} else {
 				println!("nope!");
 				return false;
@@ -120,44 +118,94 @@ impl<'schema> Dfa<'schema> {
 		}
 
 		println!("ended at {current_state}");
-		for config in self.states[current_state].0.configurations.iter() {
-			if config.nfa_state == 1 {
-				return true;
+		if self.states[current_state].is_final {
+			self.apply_operations(
+				&mut registers,
+				input.len(),
+				&self.states[current_state].final_operations,
+				&self.states[current_state].tag_for_register,
+			);
+			for i in 0..self.tags.len() {
+				println!("- Tag {i} ({:?}): {:?}", self.tags[i], registers[self.tags.len() + i]);
 			}
+			return true;
 		}
 
 		println!("nope2");
 		false
 	}
 
-	// https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf
-	// - Algorithm 3
+	fn apply_operations(
+		&self,
+		registers: &mut [Vec<usize>],
+		pos: usize,
+		ops: &[RegisterOp],
+		tag_for_register: &BTreeMap<usize, Tag<'schema>>,
+	) {
+		println!("tags: {tag_for_register:#?}");
+		for o in ops.iter() {
+			match &o.action {
+				RegisterAction::CopyFrom { source } => {
+					println!(
+						"copying {} ({:?}) <- {} ({:?})",
+						o.target,
+						tag_for_register.get(&o.target),
+						*source,
+						tag_for_register.get(source)
+					);
+					registers[o.target] = registers[*source].clone();
+				},
+				RegisterAction::Append { source, history } => {
+					println!(
+						"appending {} ({:?}) <- {} ({:?}) with history {:?}",
+						o.target,
+						tag_for_register.get(&o.target),
+						*source,
+						tag_for_register.get(source),
+						history
+					);
+					registers[o.target] = registers[*source].clone();
+					for &symbolic in history.iter() {
+						if symbolic == SymbolicPosition::Current {
+							registers[o.target].push(pos);
+						}
+					}
+				},
+				RegisterAction::Set { position } => {
+					todo!("not actually used");
+				},
+			}
+		}
+	}
+}
+
+impl<'schema> Dfa<'schema> {
+	/// https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf
+	/// - Algorithm 3
 	pub fn determinization(nfa: &Nfa<'schema>) -> Self {
-		let tags: BTreeMap<Tag<'_>, usize> = nfa
-			.tags
-			.iter()
-			.scan(0, |i, tag| Some((*tag, std::mem::replace(i, *i + 1))))
-			.collect::<_>();
+		let mut tag_ids: BTreeMap<Tag<'_>, DfaTag> = BTreeMap::new();
+		for (i, &tag) in nfa.tags().iter().enumerate() {
+			tag_ids.insert(tag, DfaTag(i));
+		}
 
 		let mut dfa: Self = Self {
 			states: Vec::new(),
-			state_map: BTreeMap::new(),
-			tags,
-			registers: nfa.tags.len() * 2,
+			kernels: BTreeMap::new(),
+			tags: nfa.tags().to_owned(),
+			tag_ids,
+			number_of_registers: 2 * nfa.tags().len(),
 		};
 
-		let registers_initial: BTreeMap<Tag<'_>, usize> = dfa.tags.clone();
-
-		let initial: (Configuration<'_>, Vec<(Tag<'_>, Sign)>) = (
+		let initial: (Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>) = (
 			Configuration {
-				nfa_state: 0,
-				register_for_tag: (0..dfa.tags.len()).collect::<_>(),
-				tags: Vec::new(),
+				nfa_state: nfa.start(),
+				register_for_tag: (0..dfa.tag_ids.len()).collect::<Vec<_>>(),
+				tag_path_in_closure: Vec::new(),
 			},
 			Vec::new(),
 		);
 
-		let initial: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, Sign)>)> =
+		let initial: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>)> =
 			Self::epsilon_closure(nfa, BTreeSet::from([initial]));
 
 		println!("epsilon closure of initial state is: {initial:#?}");
@@ -169,25 +217,40 @@ impl<'schema> Dfa<'schema> {
 		let mut i: usize = 0;
 		while i < dfa.states.len() {
 			// TODO explain why need clone, borrowed in loop
-			let dfa_state: DfaState<'_> = dfa.states[i].0.clone();
-			println!("== On DFA state {i}");
+			let kernel: Kernel<'_> = dfa.states[i].kernel.clone();
+			println!(
+				"== On DFA state {i} {:?}",
+				kernel.0.iter().map(|config| config.nfa_state).collect::<BTreeSet<_>>()
+			);
 
-			let mut register_action_tag: BTreeMap<(Tag<'_>, RegisterAction), usize> = BTreeMap::new();
+			for interval in kernel.nontrivial_transitions(nfa).iter() {
+				let mut register_action_tag: BTreeMap<(Tag<'_>, RegisterAction), usize> = BTreeMap::new();
+				let next: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>)> =
+					Self::step_on_interval(nfa, &kernel.0, *interval);
+				let next: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>)> =
+					Self::epsilon_closure(nfa, next);
 
-			for interval in dfa_state.nontrivial_transitions(nfa).iter() {
-				let next: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, Sign)>)> =
-					Self::step_on_interval(nfa, &dfa_state.configurations, *interval);
-				let next: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, Sign)>)> = Self::epsilon_closure(nfa, next);
-
-				let (next, mut operations): (BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, Sign)>)>, Vec<RegisterOp>) =
-					dfa.transition_operations(next, &mut register_action_tag);
+				println!("dfa {i} on {interval:?} transition ops...");
+				let (next, mut operations): (
+					BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>)>,
+					Vec<RegisterOp>,
+				) = dfa.transition_operations(next, &mut register_action_tag);
 
 				let next: usize = dfa.add_state(next, &mut operations);
-				dfa.states[i].1.insert(*interval, next, |existing, new| {
-					panic!(
-						"State {i} transition on {interval:?} had existing target {existing}, trying to insert {new}!"
-					);
-				});
+				println!("stepping from {i} to {next} on {interval:?} has ops {operations:#?}");
+				dfa.states[i].transitions.insert(
+					*interval,
+					Transition {
+						destination: next,
+						operations,
+					},
+					|existing, new| {
+						panic!(
+							"State {i} transition on {interval:?} had existing target {:?}, trying to insert {:?}!",
+							existing, new
+						);
+					},
+				);
 			}
 
 			i += 1;
@@ -198,39 +261,59 @@ impl<'schema> Dfa<'schema> {
 
 	fn add_state(
 		&mut self,
-		configurations: BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, Sign)>)>,
+		configurations: BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, SymbolicPosition)>)>,
 		ops: &mut Vec<RegisterOp>,
 	) -> usize {
-		let dfa_state: DfaState = DfaState {
-			configurations: configurations.into_iter().map(|(config, _)| config).collect::<_>(),
-		};
-		println!(
-			"ADD STATE looking for {:#?}",
-			dfa_state // .configurations
-			          // .iter()
-			          // .map(|config| config.nfa_state)
-			          // .collect::<BTreeSet<_>>()
-		);
+		let mut is_final: bool = false;
+		let mut final_operations: Vec<RegisterOp> = Vec::new();
+		let mut tag_for_register: BTreeMap<usize, Tag<'_>> = BTreeMap::new();
+		let configurations: BTreeSet<Configuration<'_>> = configurations
+			.into_iter()
+			.map(|(config, _)| {
+				if config.nfa_state.is_end() {
+					assert!(!is_final);
+					is_final = true;
+					final_operations = self.final_operations(&config.register_for_tag, &config.tag_path_in_closure);
+				}
+				config
+			})
+			.collect::<BTreeSet<_>>();
+		let kernel: Kernel<'_> = Kernel(configurations);
+		// println!(
+		// 	"ADD STATE looking for {:?} - {:#?}",
+		// 	kernel.0.iter().map(|config| config.nfa_state).collect::<BTreeSet<_>>(),
+		// 	kernel
+		// );
 
-		if let Some(&idx) = self.state_map.get(&dfa_state) {
+		if let Some(&idx) = self.kernels.get(&kernel) {
 			println!("- found {idx}");
 			return idx;
 		}
 
-		for (idx, (state, _)) in self.states.iter().enumerate() {
-			if let Some(new_ops) =
-				self.try_find_bijection(&dfa_state.configurations, &state.configurations, ops.clone())
-			{
+		for (other, &idx) in self.kernels.iter() {
+			if let Some(new_ops) = self.try_find_bijection(&kernel.0, &other.0, ops.clone()) {
 				*ops = new_ops;
 				return idx;
 			}
 		}
 
+		for config in kernel.0.iter() {
+			for (i, &r) in config.register_for_tag.iter().enumerate() {
+				println!("inserting {r}: {:?}", self.tags[i]);
+				let old: Option<Tag<'_>> = tag_for_register.insert(r, self.tags[i]);
+				assert!(old.is_none() || (old == Some(self.tags[i])));
+			}
+		}
 		let idx: usize = self.states.len();
-		println!("- adding state {idx}: {:#?}", &dfa_state.configurations);
-		self.states.push((dfa_state.clone(), IntervalTree::new()));
-		self.state_map.insert(dfa_state, idx);
-		// TODO final states
+		println!("- adding state {idx} ({ops:?}): {:#?}", &kernel.0);
+		self.states.push(DfaState {
+			kernel: kernel.clone(),
+			transitions: IntervalTree::new(),
+			is_final,
+			final_operations,
+			tag_for_register,
+		});
+		self.kernels.insert(kernel, idx);
 		idx
 	}
 
@@ -241,26 +324,26 @@ impl<'schema> Dfa<'schema> {
 		mut ops: Vec<RegisterOp>,
 	) -> Option<Vec<RegisterOp>> {
 		// println!("here {lhs:?}, {rhs:?}");
-		println!("trying bijection");
-		println!(
-			"- {:?}",
-			lhs.iter().map(|config| config.nfa_state).collect::<BTreeSet<_>>()
-		);
-		println!(
-			"- {:?}",
-			rhs.iter().map(|config| config.nfa_state).collect::<BTreeSet<_>>()
-		);
+		// println!("trying bijection");
+		// println!(
+		// 	"- {:?}",
+		// 	lhs.iter().map(|config| config.nfa_state).collect::<BTreeSet<_>>()
+		// );
+		// println!(
+		// 	"- {:?}",
+		// 	rhs.iter().map(|config| config.nfa_state).collect::<BTreeSet<_>>()
+		// );
 		// Do they contain the same NFA states with the same lookahead tags?
 		for x in lhs.iter() {
 			rhs.iter()
-				.find(|y| (x.nfa_state == y.nfa_state) && (x.tags == y.tags))?;
+				.find(|y| (x.nfa_state == y.nfa_state) && (x.tag_path_in_closure == y.tag_path_in_closure))?;
 		}
-		println!("- left <= right");
+		// println!("- left <= right");
 		for x in rhs.iter() {
 			lhs.iter()
-				.find(|y| (x.nfa_state == y.nfa_state) && (x.tags == y.tags))?;
+				.find(|y| (x.nfa_state == y.nfa_state) && (x.tag_path_in_closure == y.tag_path_in_closure))?;
 		}
-		println!("- right <= left");
+		// println!("- right <= left");
 
 		let mut m1: BTreeMap<usize, usize> = BTreeMap::new();
 		let mut m2: BTreeMap<usize, usize> = BTreeMap::new();
@@ -270,43 +353,28 @@ impl<'schema> Dfa<'schema> {
 				if x.nfa_state != y.nfa_state {
 					continue;
 				}
-				println!("== PAIR {}", x.nfa_state);
-				println!("- {:?}", &x.register_for_tag);
-				println!("- {:?}", &y.register_for_tag);
-				for &tag in self.tags.keys() {
+				// println!("== PAIR {:?}", x.nfa_state);
+				// println!("- {:?}", &x.register_for_tag);
+				// println!("- {:?}", &y.register_for_tag);
+				for &tag in self.tag_ids.keys() {
 					let i: usize = x.register_for_tag[self[tag]];
 					let j: usize = y.register_for_tag[self[tag]];
 					match (m1.entry(i), m2.entry(j)) {
 						(Entry::Vacant(e1), Entry::Vacant(e2)) => {
-							println!("inserting {i} <-> {j}");
+							// println!("inserting {i} <-> {j}");
 							e1.insert(j);
 							e2.insert(i);
 						},
 						(Entry::Occupied(e1), Entry::Occupied(e2)) => {
 							if (*e1.get() != j) || (*e2.get() != i) {
-								println!("occupied entry different: {} {}", e1.get(), e2.get());
+								// println!("occupied entry different: {} {}", e1.get(), e2.get());
 								return None;
 							}
 						},
 						_ => {
-							println!("unluck!");
+							// println!("unluck!");
 							return None;
-						}, // (Entry::Vacant(e1), Entry::Occupied(e2)) => {
-						   // 	if i == *e2.get() {
-						   // 		e1.insert(j);
-						   // 	} else {
-						   // 		println!("none1");
-						   // 		return None;
-						   // 	}
-						   // },
-						   // (Entry::Occupied(e1), Entry::Vacant(e2)) => {
-						   // 	if j == *e1.get() {
-						   // 		e2.insert(i);
-						   // 	} else {
-						   // 		println!("none2");
-						   // 		return None;
-						   // 	}
-						   // },
+						},
 					}
 				}
 			}
@@ -384,7 +452,7 @@ impl<'schema> Dfa<'schema> {
 			}
 		}
 
-		println!("found match: {nontrivial_cycle}");
+		// println!("found match: {nontrivial_cycle}");
 		if nontrivial_cycle { None } else { Some(new_ops) }
 	}
 
@@ -392,20 +460,22 @@ impl<'schema> Dfa<'schema> {
 		nfa: &Nfa<'schema>,
 		configurations: &BTreeSet<Configuration<'schema>>,
 		interval: Interval<u32>,
-	) -> BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, Sign)>)> {
-		let mut next_states: BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, Sign)>)> = BTreeSet::new();
+	) -> BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, SymbolicPosition)>)> {
+		let mut next_states: BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, SymbolicPosition)>)> =
+			BTreeSet::new();
 
 		for config in configurations.iter() {
-			let nfa_state: &NfaState<'_> = &nfa.states[config.nfa_state];
-			if let Some(targets) = nfa_state.transitions.lookup(interval.start()) {
+			let nfa_state: &NfaState<'_> = &nfa[config.nfa_state];
+			if let Some(targets) = nfa_state.transitions().lookup(interval.start()) {
+				assert_eq!(Some(targets), nfa_state.transitions().lookup(interval.end()));
 				for &next in targets.iter() {
 					next_states.insert((
 						Configuration {
 							nfa_state: next,
 							register_for_tag: config.register_for_tag.clone(),
-							tags: Vec::new(),
+							tag_path_in_closure: Vec::new(),
 						},
-						config.tags.clone(),
+						config.tag_path_in_closure.clone(),
 					));
 				}
 			}
@@ -425,23 +495,25 @@ impl<'schema> Dfa<'schema> {
 
 	fn epsilon_closure(
 		nfa: &Nfa<'schema>,
-		configurations: BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, Sign)>)>,
-	) -> BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, Sign)>)> {
-		let mut closure: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, Sign)>)> = BTreeSet::new();
-		let mut nfa_states_in_closure: BTreeSet<usize> = BTreeSet::new();
+		configurations: BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, SymbolicPosition)>)>,
+	) -> BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, SymbolicPosition)>)> {
+		let mut closure: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>)> = BTreeSet::new();
+		let mut nfa_states_in_closure: BTreeSet<NfaIdx> = BTreeSet::new();
 
 		let mut i: usize = 0;
-		let mut stack: Vec<(Configuration<'_>, Vec<(Tag<'_>, Sign)>)> = configurations.into_iter().collect::<_>();
+		let mut stack: Vec<(Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>)> =
+			configurations.into_iter().collect::<Vec<_>>();
 
 		while i < stack.len() {
-			// TODO why cloned
-			let (config, inherited): (Configuration<'_>, Vec<(Tag<'_>, Sign)>) = stack[i].clone();
+			// TODO explain why cloned
+			let (config, inherited): (Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>) = stack[i].clone();
 
 			closure.insert((config.clone(), inherited.clone()));
 			nfa_states_in_closure.insert(config.nfa_state);
 
-			for transition in nfa.states[config.nfa_state].spontaneous.iter() {
+			for transition in nfa[config.nfa_state].spontaneous().iter() {
 				if nfa_states_in_closure.contains(&transition.target) {
+					// TODO shouldn't happen..?
 					continue;
 				}
 
@@ -452,10 +524,10 @@ impl<'schema> Dfa<'schema> {
 
 				match transition.kind {
 					SpontaneousTransitionKind::Positive(tag) => {
-						new_config.tags.push((tag, Sign::Positive));
+						new_config.tag_path_in_closure.push((tag, SymbolicPosition::Current));
 					},
 					SpontaneousTransitionKind::Negative(tag) => {
-						new_config.tags.push((tag, Sign::Negative));
+						new_config.tag_path_in_closure.push((tag, SymbolicPosition::Nil));
 					},
 					SpontaneousTransitionKind::Epsilon => (),
 				}
@@ -480,18 +552,19 @@ impl<'schema> Dfa<'schema> {
 
 	fn transition_operations(
 		&mut self,
-		configurations: BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, Sign)>)>,
+		configurations: BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, SymbolicPosition)>)>,
 		register_action_tag: &mut BTreeMap<(Tag<'schema>, RegisterAction), usize>,
 	) -> (
-		BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, Sign)>)>,
+		BTreeSet<(Configuration<'schema>, Vec<(Tag<'schema>, SymbolicPosition)>)>,
 		Vec<RegisterOp>,
 	) {
-		let mut new_configurations: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, Sign)>)> = BTreeSet::new();
+		let mut new_configurations: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>)> = BTreeSet::new();
 		let mut ops: Vec<RegisterOp> = Vec::new();
 
 		for (mut config, inherited) in configurations.into_iter() {
-			for &tag in self.tags.keys() {
+			for &tag in self.tag_ids.keys() {
 				let history: Vec<SymbolicPosition> = Self::history(&inherited, tag);
+				println!("- history for {tag:?} is {history:?}");
 				if history.is_empty() {
 					continue;
 				}
@@ -499,10 +572,13 @@ impl<'schema> Dfa<'schema> {
 				println!("looking for entry {tag:?}, {action:?}...");
 				let r: usize = *register_action_tag
 					.entry((tag, action))
+					.and_modify(|e| {
+						println!("- had {}", *e);
+					})
 					.or_insert_with_key(|(_, action)| {
-						let r: usize = self.registers;
+						let r: usize = self.number_of_registers;
 						println!("- inserting new register {r}");
-						self.registers += 1;
+						self.number_of_registers += 1;
 						ops.push(RegisterOp {
 							target: r,
 							action: action.clone(),
@@ -517,6 +593,27 @@ impl<'schema> Dfa<'schema> {
 		(new_configurations, ops)
 	}
 
+	fn final_operations(&self, registers: &[usize], history: &[(Tag<'schema>, SymbolicPosition)]) -> Vec<RegisterOp> {
+		let mut ops: Vec<RegisterOp> = Vec::new();
+
+		for &t in self.tags.iter() {
+			let history: Vec<SymbolicPosition> = Self::history(history, t);
+			let action: RegisterAction = if history.is_empty() {
+				RegisterAction::CopyFrom {
+					source: registers[self[t]],
+				}
+			} else {
+				self.operation_rhs(registers, history, t)
+			};
+			ops.push(RegisterOp {
+				target: self.tags.len() + self[t],
+				action,
+			});
+		}
+
+		ops
+	}
+
 	fn operation_rhs(&self, registers: &[usize], history: Vec<SymbolicPosition>, tag: Tag<'schema>) -> RegisterAction {
 		RegisterAction::Append {
 			source: registers[self[tag]],
@@ -524,18 +621,17 @@ impl<'schema> Dfa<'schema> {
 		}
 	}
 
-	// TODO replace Sign with SymbolicPosition (or vice versa)
-	fn history(history: &[(Tag<'schema>, Sign)], tag1: Tag<'schema>) -> Vec<SymbolicPosition> {
+	fn history(history: &[(Tag<'schema>, SymbolicPosition)], tag1: Tag<'schema>) -> Vec<SymbolicPosition> {
 		let mut sequence: Vec<SymbolicPosition> = Vec::new();
 		for &(tag2, sign) in history.iter() {
 			if tag2 != tag1 {
 				continue;
 			}
 			match sign {
-				Sign::Positive => {
+				SymbolicPosition::Current => {
 					sequence.push(SymbolicPosition::Current);
 				},
-				Sign::Negative => {
+				SymbolicPosition::Nil => {
 					sequence.push(SymbolicPosition::Nil);
 				},
 			}
@@ -544,18 +640,18 @@ impl<'schema> Dfa<'schema> {
 	}
 }
 
-impl<'schema> DfaState<'schema> {
+impl<'schema> Kernel<'schema> {
 	fn nontrivial_transitions(&self, nfa: &Nfa<'schema>) -> Vec<Interval<u32>> {
 		let mut transitions: IntervalTree<u32, ()> = IntervalTree::new();
 
-		for config in self.configurations.iter() {
-			let nfa_state: &NfaState<'_> = &nfa.states[config.nfa_state];
-			for (interval, _) in nfa_state.transitions.iter() {
+		for config in self.0.iter() {
+			let nfa_state: &NfaState<'_> = &nfa[config.nfa_state];
+			for (interval, _) in nfa_state.transitions().iter() {
 				transitions.insert(*interval, (), |(), ()| ());
 			}
 		}
 
-		transitions.iter().map(|(interval, _)| *interval).collect::<_>()
+		transitions.iter().map(|(interval, _)| *interval).collect::<Vec<_>>()
 	}
 }
 
@@ -563,12 +659,12 @@ impl<'schema> std::ops::Index<Tag<'schema>> for Dfa<'schema> {
 	type Output = usize;
 
 	fn index(&self, tag: Tag<'schema>) -> &Self::Output {
-		&self.tags[&tag]
+		&self.tag_ids[&tag].0
 	}
 }
 
 impl<'schema> std::ops::IndexMut<Tag<'schema>> for Dfa<'schema> {
 	fn index_mut(&mut self, tag: Tag<'schema>) -> &mut Self::Output {
-		self.tags.get_mut(&tag).unwrap()
+		&mut self.tag_ids.get_mut(&tag).unwrap().0
 	}
 }
