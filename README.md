@@ -55,7 +55,7 @@ while (false == parser.done()) {
     if (ErrorCode err{parser.parse_next_event()}; ErrorCode::Success != err) {
         throw runtime_error("Parsing Failed");
     }
-    LogEventView const& event = parser.get_log_parser().get_log_event_view();
+    LogEventView const& event{parser.get_log_parser().get_log_event_view()};
 
     // Get and print the timestamp
     Token* timestamp{event.get_timestamp()};
@@ -64,7 +64,7 @@ while (false == parser.done()) {
     }
 
     // Get and print the log-level
-    auto const& loglevels = event.get_variables(*loglevel_id);
+    auto const& loglevels{event.get_variables(*loglevel_id)};
     if (false == loglevels.empty()) {
         // In case there are multiple matches, just get the first one
         cout << "loglevel:" << loglevels[0]->to_string_view() << endl;
@@ -73,7 +73,7 @@ while (false == parser.done()) {
     // Other analysis...
 
     // Print the entire event
-    cout << event->to_string() << endl;
+    cout << event.to_string() << endl;
 }
 ```
 
