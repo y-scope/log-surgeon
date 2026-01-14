@@ -100,10 +100,13 @@ public:
     [[nodiscard]] auto to_string() const -> std::string;
 
     /**
-     * Constructs a user friendly/readable representation of the log event's
-     * logtype. A logtype is essentially the static text of a log event with the
-     * variable components replaced with their name. Therefore, two separate log
-     * events from the same logging source code may have the same logtype.
+     * Constructs a user friendly/readable representation of the log event's logtype. A logtype is
+     * essentially the static text of a log event with the variable components replaced with their
+     * name. Therefore, two separate log events from the same logging source code may have the same
+     * logtype.
+     *
+     * If a schema variable may contain capture groups, any leaf capture group matches will be
+     * replaced with their name while all other text is treated as static text.
      * @return The logtype of the log.
      */
     [[nodiscard]] auto get_logtype() const -> std::string;
@@ -129,7 +132,8 @@ public:
      * @param capture The capture group type.
      * @return A result containing a `CapturePosition` on success, or an error code indicating the
      * failure:
-     * - ClpsErrorCodeEnum::Failure if the capture's positions are invalid.
+     * - LogEventErrorCodeEnum::NoCaptureGroupMatch if `root_var` contains no valid match positions
+     *   for `capture`.
      */
     [[nodiscard]] auto get_capture_position(
             Token const& root_var,
@@ -145,10 +149,9 @@ public:
      * another group, a capture group is a leaf if its end position is less than the end position of
      * the next capture group (or it is the last capture group).
      * @param root_var The root variable to get the capture groups from.
-     * @return A result containing the sorted capture group matches, or an error code indicating the
-     * failure:
-     * - std::errc::invalid_argument if no capture groups are found for `root_var`.
-     * - std::errc::protocol_error if the positions of a capture group are not found.
+     * @return A result containing the sorted capture group matches (empty if no matches were
+     * found), or an error code indicating the failure:
+     * - LogEventErrorCodeEnum::NoCaptureGroups if no capture groups exist for `root_var`.
      */
     [[nodiscard]] auto get_capture_matches(log_surgeon::Token const& root_var) const
             -> ystdlib::error_handling::Result<std::vector<Token::CaptureMatch>>;
@@ -183,7 +186,7 @@ private:
 };
 
 enum class LogEventErrorCodeEnum : uint8_t {
-    NoCaptureGroup,
+    NoCaptureGroups,
     NoCaptureGroupMatch
 };
 

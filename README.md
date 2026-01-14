@@ -87,7 +87,7 @@ Requirements:
 * CMake >= 3.22.1
 * GCC >= 10 or Clang >= 7
 * [Catch2] >= 3.8.1
-* [fmt] >= 8.0.1
+* [fmt] >= 11.2.0
 * [GSL] >= 4.0.0
 * [Task] >= 3.38
 * [uv] >= 0.7.10

@@ -103,7 +103,7 @@ auto LogEventView::get_capture_matches(Token const& root_var) const
             get_log_parser().m_lexer.get_captures_from_rule_id(root_var.get_type_ids()->at(0))
     };
     if (false == captures.has_value()) {
-        return LogEventErrorCode{LogEventErrorCodeEnum::NoCaptureGroup};
+        return LogEventErrorCode{LogEventErrorCodeEnum::NoCaptureGroups};
     }
 
     auto cmp{[](Token::CaptureMatch const& a, Token::CaptureMatch const& b) -> bool {
@@ -217,7 +217,7 @@ auto LogEventErrorCategory::name() const noexcept -> char const* {
 template <>
 auto LogEventErrorCategory::message(LogEventErrorCodeEnum error_enum) const -> std::string {
     switch (error_enum) {
-        case LogEventErrorCodeEnum::NoCaptureGroup:
+        case LogEventErrorCodeEnum::NoCaptureGroups:
             return "LogEvent NoCaptureGroup";
         case LogEventErrorCodeEnum::NoCaptureGroupMatch:
             return "LogEvent NoCaptureGroupMatch";
