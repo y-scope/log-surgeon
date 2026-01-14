@@ -56,12 +56,16 @@ struct RegisterOp {
 	action: RegisterAction,
 }
 
+/// "Right hand side" of a register operation:
+/// - "**set**" register to `Current` or `Nil`.
+///   Used for single value tags; not relevant for us.
+/// - "**copy**" from register `source`.
+/// - copy from register `source` and "**append**" `history`.
+///   Used for multi-value tags;
+///   since multi-value tags are more general than single value tags,
+///   we treat every tag/capture as multi-valued.
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 enum RegisterAction {
-	Set {
-		position: SymbolicPosition,
-	},
-	/// "Copy" in the re2c/TDFA 2022 paper.
 	CopyFrom {
 		source: usize,
 	},
@@ -77,6 +81,7 @@ enum SymbolicPosition {
 	Nil,
 }
 
+/*
 #[derive(Debug)]
 pub struct PrefixTree<'schema> {
 	nodes: Vec<PrefixTreeNode<'schema>>,
@@ -87,6 +92,7 @@ struct PrefixTreeNode<'schema> {
 	predecessor: usize,
 	tag: (Tag<'schema>, bool),
 }
+*/
 
 impl<'schema> Dfa<'schema> {
 	pub fn simulate(&self, input: &str) -> bool {
@@ -171,9 +177,6 @@ impl<'schema> Dfa<'schema> {
 						}
 					}
 				},
-				RegisterAction::Set { position } => {
-					todo!("not actually used");
-				},
 			}
 		}
 	}
@@ -207,9 +210,6 @@ impl<'schema> Dfa<'schema> {
 
 		let initial: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>)> =
 			Self::epsilon_closure(nfa, BTreeSet::from([initial]));
-
-		println!("epsilon closure of initial state is: {initial:#?}");
-		println!("===== DONE EPSILON CLOSURE 0");
 
 		dfa.add_state(initial, &mut Vec::new());
 
@@ -279,14 +279,8 @@ impl<'schema> Dfa<'schema> {
 			})
 			.collect::<BTreeSet<_>>();
 		let kernel: Kernel<'_> = Kernel(configurations);
-		// println!(
-		// 	"ADD STATE looking for {:?} - {:#?}",
-		// 	kernel.0.iter().map(|config| config.nfa_state).collect::<BTreeSet<_>>(),
-		// 	kernel
-		// );
 
 		if let Some(&idx) = self.kernels.get(&kernel) {
-			println!("- found {idx}");
 			return idx;
 		}
 
@@ -323,27 +317,15 @@ impl<'schema> Dfa<'schema> {
 		rhs: &BTreeSet<Configuration<'schema>>,
 		mut ops: Vec<RegisterOp>,
 	) -> Option<Vec<RegisterOp>> {
-		// println!("here {lhs:?}, {rhs:?}");
-		// println!("trying bijection");
-		// println!(
-		// 	"- {:?}",
-		// 	lhs.iter().map(|config| config.nfa_state).collect::<BTreeSet<_>>()
-		// );
-		// println!(
-		// 	"- {:?}",
-		// 	rhs.iter().map(|config| config.nfa_state).collect::<BTreeSet<_>>()
-		// );
 		// Do they contain the same NFA states with the same lookahead tags?
 		for x in lhs.iter() {
 			rhs.iter()
 				.find(|y| (x.nfa_state == y.nfa_state) && (x.tag_path_in_closure == y.tag_path_in_closure))?;
 		}
-		// println!("- left <= right");
 		for x in rhs.iter() {
 			lhs.iter()
 				.find(|y| (x.nfa_state == y.nfa_state) && (x.tag_path_in_closure == y.tag_path_in_closure))?;
 		}
-		// println!("- right <= left");
 
 		let mut m1: BTreeMap<usize, usize> = BTreeMap::new();
 		let mut m2: BTreeMap<usize, usize> = BTreeMap::new();
@@ -353,26 +335,20 @@ impl<'schema> Dfa<'schema> {
 				if x.nfa_state != y.nfa_state {
 					continue;
 				}
-				// println!("== PAIR {:?}", x.nfa_state);
-				// println!("- {:?}", &x.register_for_tag);
-				// println!("- {:?}", &y.register_for_tag);
 				for &tag in self.tag_ids.keys() {
 					let i: usize = x.register_for_tag[self[tag]];
 					let j: usize = y.register_for_tag[self[tag]];
 					match (m1.entry(i), m2.entry(j)) {
 						(Entry::Vacant(e1), Entry::Vacant(e2)) => {
-							// println!("inserting {i} <-> {j}");
 							e1.insert(j);
 							e2.insert(i);
 						},
 						(Entry::Occupied(e1), Entry::Occupied(e2)) => {
 							if (*e1.get() != j) || (*e2.get() != i) {
-								// println!("occupied entry different: {} {}", e1.get(), e2.get());
 								return None;
 							}
 						},
 						_ => {
-							// println!("unluck!");
 							return None;
 						},
 					}
@@ -404,7 +380,6 @@ impl<'schema> Dfa<'schema> {
 					in_degree_register.insert(*source, 0);
 					in_degree_register.insert(o.target, 0);
 				},
-				_ => (),
 			}
 		}
 		for o in ops.iter() {
@@ -412,7 +387,6 @@ impl<'schema> Dfa<'schema> {
 				RegisterAction::CopyFrom { source } | RegisterAction::Append { source, .. } => {
 					*in_degree_register.get_mut(source).unwrap() += 1;
 				},
-				_ => (),
 			}
 		}
 
@@ -428,7 +402,6 @@ impl<'schema> Dfa<'schema> {
 						RegisterAction::CopyFrom { source } | RegisterAction::Append { source, .. } => {
 							*in_degree_register.get_mut(source).unwrap() += 1;
 						},
-						_ => (),
 					}
 					new_ops.push(o);
 					anything_added = true;
@@ -445,15 +418,13 @@ impl<'schema> Dfa<'schema> {
 								nontrivial_cycle = true;
 							}
 						},
-						_ => (),
 					}
 				}
 				new_ops.extend(ops.drain(..));
 			}
 		}
 
-		// println!("found match: {nontrivial_cycle}");
-		if nontrivial_cycle { None } else { Some(new_ops) }
+		(!nontrivial_cycle).then_some(new_ops)
 	}
 
 	fn step_on_interval(
@@ -564,20 +535,14 @@ impl<'schema> Dfa<'schema> {
 		for (mut config, inherited) in configurations.into_iter() {
 			for &tag in self.tag_ids.keys() {
 				let history: Vec<SymbolicPosition> = Self::history(&inherited, tag);
-				println!("- history for {tag:?} is {history:?}");
 				if history.is_empty() {
 					continue;
 				}
 				let action: RegisterAction = self.operation_rhs(&config.register_for_tag, history, tag);
-				println!("looking for entry {tag:?}, {action:?}...");
 				let r: usize = *register_action_tag
 					.entry((tag, action))
-					.and_modify(|e| {
-						println!("- had {}", *e);
-					})
 					.or_insert_with_key(|(_, action)| {
 						let r: usize = self.number_of_registers;
-						println!("- inserting new register {r}");
 						self.number_of_registers += 1;
 						ops.push(RegisterOp {
 							target: r,
@@ -647,11 +612,11 @@ impl<'schema> Kernel<'schema> {
 		for config in self.0.iter() {
 			let nfa_state: &NfaState<'_> = &nfa[config.nfa_state];
 			for (interval, _) in nfa_state.transitions().iter() {
-				transitions.insert(*interval, (), |(), ()| ());
+				transitions.insert(interval, (), |(), ()| ());
 			}
 		}
 
-		transitions.iter().map(|(interval, _)| *interval).collect::<Vec<_>>()
+		transitions.iter().map(|(interval, _)| interval).collect::<Vec<_>>()
 	}
 }
 
@@ -666,5 +631,26 @@ impl<'schema> std::ops::Index<Tag<'schema>> for Dfa<'schema> {
 impl<'schema> std::ops::IndexMut<Tag<'schema>> for Dfa<'schema> {
 	fn index_mut(&mut self, tag: Tag<'schema>) -> &mut Self::Output {
 		&mut self.tag_ids.get_mut(&tag).unwrap().0
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+	use crate::regex::Regex;
+	use crate::schema::Schema;
+
+	#[test]
+	fn stuff() {
+		{
+			let r: Regex = Regex::from_pattern("0((?<foobar>1(2[a-zA-Z])*)*|(?<baz>xyz))*world").unwrap();
+			let mut schema: Schema = Schema::new();
+			schema.add_rule("hello", r);
+			let nfa: Nfa<'_> = Nfa::for_schema(&schema).unwrap();
+			let dfa: Dfa<'_> = Dfa::determinization(&nfa);
+			dbg!(&dfa);
+			let b: bool = dfa.simulate("012a2b2c12z12zxyzxyzxyzworld");
+			assert!(b);
+		}
 	}
 }

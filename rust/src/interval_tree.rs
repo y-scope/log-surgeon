@@ -61,10 +61,6 @@ impl<T: Number, V: Clone> IntervalTree<T, V> {
 	pub fn len(&self) -> usize {
 		self.intervals.len()
 	}
-
-	pub fn iter(&self) -> impl Iterator<Item = &(Interval<T>, V)> {
-		self.intervals.iter()
-	}
 }
 
 impl<T: Number, V: Clone> IntervalTree<T, V>
@@ -176,6 +172,10 @@ where
 			self.intervals.push((interval, value));
 		}
 		self.invariants();
+	}
+
+	pub fn iter(&self) -> impl Iterator<Item = (Interval<T>, &V)> {
+		self.intervals.iter().map(|(interval, value)| (*interval, value))
 	}
 }
 

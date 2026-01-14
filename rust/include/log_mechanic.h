@@ -9,9 +9,14 @@ typedef struct LogComponent LogComponent;
 
 typedef struct Nfa Nfa;
 
-typedef struct Regex Regex;
-
 typedef struct Schema Schema;
+
+typedef struct CSlice_c_char {
+  const char *pointer;
+  size_t length;
+} CSlice_c_char;
+
+typedef struct CSlice_c_char CStringView;
 
 void clp_log_surgeon_component_delete(struct LogComponent *component);
 
@@ -38,14 +43,7 @@ struct LogComponent *clp_log_surgeon_parse(const struct Nfa *nfa,
                                            size_t len,
                                            size_t *pos);
 
-void clp_log_surgeon_regex_delete(struct Regex *regex);
-
-struct Regex *clp_log_surgeon_regex_from_pattern(const uint8_t *pattern, size_t len);
-
-void clp_log_surgeon_schema_add_rule(struct Schema *schema,
-                                     const uint8_t *name,
-                                     size_t len,
-                                     struct Regex *regex);
+void clp_log_surgeon_schema_add_rule(struct Schema *schema, CStringView name, CStringView pattern);
 
 void clp_log_surgeon_schema_delete(struct Schema *schema);
 

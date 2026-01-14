@@ -1,7 +1,20 @@
+use std::ffi::c_char;
+use std::marker::PhantomData;
+use std::str::Utf8Error;
+
 use crate::log_event::LogComponent;
 use crate::nfa::Nfa;
 use crate::regex::Regex;
 use crate::schema::Schema;
+
+#[repr(C)]
+pub struct CSlice<'lifetime, T> {
+	pointer: *const T,
+	length: usize,
+	_lifetime: PhantomData<&'lifetime [T]>,
+}
+
+pub type CStringView<'lifetime> = CSlice<'lifetime, c_char>;
 
 #[unsafe(no_mangle)]
 extern "C" fn clp_log_surgeon_schema_new() -> Box<Schema> {
@@ -16,30 +29,17 @@ unsafe extern "C" fn clp_log_surgeon_schema_delete(schema: Box<Schema>) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn clp_log_surgeon_schema_add_rule(
 	schema: &mut Schema,
-	name: *const u8,
-	len: usize,
-	regex: Box<Regex>,
+	name: CStringView<'_>,
+	pattern: CStringView<'_>,
 ) {
-	let bytes: &[u8] = unsafe { std::slice::from_raw_parts(name, len) };
-	let name: &str = str::from_utf8(bytes).unwrap();
-	schema.add_rule(name, *regex);
+	let name: &str = name.as_utf8().unwrap();
+	let pattern: &str = pattern.as_utf8().unwrap();
+	let regex: Regex = Regex::from_pattern(pattern).unwrap();
+	schema.add_rule(name, regex);
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_regex_from_pattern(pattern: *const u8, len: usize) -> Option<Box<Regex>> {
-	let bytes: &[u8] = unsafe { std::slice::from_raw_parts(pattern, len) };
-	let pattern: &str = str::from_utf8(bytes).unwrap();
-	let regex: Regex = Regex::from_pattern(pattern).ok()?;
-	Some(Box::new(regex))
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_regex_delete(regex: Box<Regex>) {
-	std::mem::drop(regex);
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_nfa_for_schema(schema: &Schema) -> Option<Box<Nfa<'_>>> {
+unsafe extern "C" fn clp_log_surgeon_nfa_for_schema<'schema>(schema: &'schema Schema) -> Option<Box<Nfa<'schema>>> {
 	let nfa: Nfa<'_> = Nfa::for_schema(schema).ok()?;
 	Some(Box::new(nfa))
 }
@@ -100,4 +100,17 @@ unsafe extern "C" fn clp_log_surgeon_component_matches_get(
 	*name_len = component.matches[i].1.len();
 	*start = component.matches[i].2;
 	*end = component.matches[i].3;
+}
+
+impl<'lifetime, T> CSlice<'lifetime, T> {
+	fn as_slice(&self) -> &'lifetime [T] {
+		unsafe { std::slice::from_raw_parts(self.pointer, self.length) }
+	}
+}
+
+impl<'lifetime> CSlice<'lifetime, c_char> {
+	fn as_utf8(&self) -> Result<&'lifetime str, Utf8Error> {
+		let bytes: &[u8] = unsafe { std::slice::from_raw_parts(self.pointer.cast::<u8>(), self.length) };
+		str::from_utf8(bytes)
+	}
 }

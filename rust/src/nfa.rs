@@ -606,7 +606,7 @@ impl<'schema> NfaState<'schema> {
 
 /// Ideally, we could write:
 ///
-/// ```rust
+/// ```ignore
 /// type MergeFn = fn(&BTreeSet<NfaIdx>, &BTreeSet<NfaIdx>) -> BTreeSet<NfaIdx>;
 /// const MERGE_SETS: MergeFn = <&BTreeSet<NfaIdx> as std::ops::BitOr>::bitor;
 /// ```
