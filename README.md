@@ -92,6 +92,12 @@ Requirements:
 * [Task] >= 3.38
 * [uv] >= 0.7.10
 
+After cloning the repository, initialize submodules:
+
+```shell
+git submodule update --init --recursive
+```
+
 To build and install the project to `$HOME/.local`:
 
 ```shell
