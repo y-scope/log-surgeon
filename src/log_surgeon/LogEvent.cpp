@@ -84,15 +84,19 @@ auto LogEventView::get_logtype() const -> std::string {
             logtype.append("<" + m_log_parser.get_id_symbol(rule_id) + ">");
             continue;
         }
-        auto pos{token_view.get_start_pos()};
+        auto prev_end_pos{token_view.get_start_pos()};
         for (auto const& match : matches.value()) {
             if (match.m_leaf) {
-                logtype.append(token_view.get_sub_token(pos, match.m_pos.m_start).to_string_view());
+                logtype.append(
+                        token_view.get_sub_token(prev_end_pos, match.m_pos.m_start).to_string_view()
+                );
                 logtype.append("<" + match.m_capture->get_name() + ">");
-                pos = match.m_pos.m_end;
+                prev_end_pos = match.m_pos.m_end;
             }
         }
-        logtype.append(token_view.get_sub_token(pos, token_view.get_end_pos()).to_string_view());
+        logtype.append(
+                token_view.get_sub_token(prev_end_pos, token_view.get_end_pos()).to_string_view()
+        );
     }
     return logtype;
 }
@@ -113,8 +117,7 @@ auto LogEventView::get_capture_matches(Token const& root_var) const
         return a.m_pos.m_end > b.m_pos.m_end;
     }};
     std::set<Token::CaptureMatch, decltype(cmp)> ordered_matches;
-    for (size_t i{0}; i < captures->size(); ++i) {
-        auto const* const capture{captures->at(i)};
+    for (auto const* const capture : captures.value()) {
         auto position{get_capture_position(root_var, capture)};
         if (position.has_error()) {
             if (LogEventErrorCode{LogEventErrorCodeEnum::NoCaptureGroupMatch} == position.error()) {
@@ -131,7 +134,7 @@ auto LogEventView::get_capture_matches(Token const& root_var) const
     std::vector<Token::CaptureMatch> matches;
     matches.reserve(ordered_matches.size());
     auto const last_match{std::prev(ordered_matches.end())};
-    for (auto match = ordered_matches.begin(); match != last_match; ++match) {
+    for (auto match{ordered_matches.begin()}; match != last_match; ++match) {
         auto next_match{std::next(match)};
         auto leaf{false};
         if (match->m_pos.m_end <= next_match->m_pos.m_start) {
@@ -144,14 +147,14 @@ auto LogEventView::get_capture_matches(Token const& root_var) const
 }
 
 auto LogEventView::get_capture_position(
-        Token const& root_variable,
+        Token const& root_var,
         finite_automata::Capture const* const& capture
 ) const -> ystdlib::error_handling::Result<Token::CaptureMatchPosition> {
     auto const [start_reg_id, end_reg_id]{
             get_log_parser().m_lexer.get_reg_ids_from_capture(capture)
     };
-    auto const start_positions{root_variable.get_reversed_reg_positions(start_reg_id)};
-    auto const end_positions{root_variable.get_reversed_reg_positions(end_reg_id)};
+    auto const start_positions{root_var.get_reversed_reg_positions(start_reg_id)};
+    auto const end_positions{root_var.get_reversed_reg_positions(end_reg_id)};
     if (start_positions.empty() || 0 > start_positions[0] || end_positions.empty()
         || 0 > end_positions[0])
     {
