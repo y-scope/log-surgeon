@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/finite_automata/PrefixTree.hpp>
 #include <log_surgeon/finite_automata/RegisterHandler.hpp>
 #include <log_surgeon/types.hpp>
@@ -16,6 +17,35 @@
 namespace log_surgeon {
 class Token {
 public:
+    using position_t = finite_automata::PrefixTree::position_t;
+
+    /**
+     * Stores the position of a capture group's match within a `Token`.
+     */
+    struct CaptureMatchPosition {
+        CaptureMatchPosition(position_t start, position_t end) : m_start(start), m_end(end) {}
+
+        position_t m_start;
+        position_t m_end;
+    };
+
+    /**
+     * Stores information on a capture group's match within a `Token`.
+     *   - `m_capture`: reference to the type of capture
+     *   - `m_pos`: the position within the `Token`
+     *   - `m_leaf`: true if the match contains no nested capture group matches
+     */
+    struct CaptureMatch {
+        CaptureMatch(finite_automata::Capture const* capture, CaptureMatchPosition pos, bool leaf)
+                : m_capture(capture),
+                  m_pos(pos),
+                  m_leaf(leaf) {}
+
+        finite_automata::Capture const* m_capture;
+        CaptureMatchPosition m_pos;
+        bool m_leaf;
+    };
+
     Token() = default;
 
     Token(size_t start_pos,
@@ -75,7 +105,7 @@ public:
     [[nodiscard]] auto get_length() const -> size_t;
 
     [[nodiscard]] auto get_reversed_reg_positions(reg_id_t const reg_id) const
-            -> std::vector<finite_automata::PrefixTree::position_t> {
+            -> std::vector<position_t> {
         return m_reg_handler.get_reversed_positions(reg_id);
     }
 

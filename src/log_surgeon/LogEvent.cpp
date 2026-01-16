@@ -1,12 +1,20 @@
 #include "LogEvent.hpp"
 
+#include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <memory>
 #include <optional>
+#include <set>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
+#include <ystdlib/error_handling/ErrorCode.hpp>
+#include <ystdlib/error_handling/Result.hpp>
+
 #include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/LogParser.hpp>
 #include <log_surgeon/LogParserOutputBuffer.hpp>
 #include <log_surgeon/Token.hpp>
@@ -57,49 +65,102 @@ auto LogEventView::get_logtype() const -> std::string {
         auto token_view{m_log_output_buffer->get_mutable_token(i)};
         auto const rule_id{token_view.get_type_ids()->at(0)};
         if (static_cast<uint32_t>(SymbolId::TokenUncaughtString) == rule_id) {
-            logtype += token_view.to_string_view();
-        } else {
-            bool is_first_token;
-            if (m_log_output_buffer->has_header()) {
-                is_first_token = 0 == i;
-            } else {
-                is_first_token = 1 == i;
-            }
-            if (static_cast<uint32_t>(SymbolId::TokenNewline) != rule_id && false == is_first_token)
-            {
-                logtype += token_view.release_delimiter();
-            }
-            auto const& optional_captures{m_log_parser.m_lexer.get_captures_from_rule_id(rule_id)};
-            if (optional_captures.has_value()) {
-                auto capture_view{token_view};
-                auto const& captures{optional_captures.value()};
-                for (auto const capture : captures) {
-                    auto const [reg_start_id, reg_end_id]{
-                            m_log_parser.m_lexer.get_reg_ids_from_capture(capture)
-                    };
-                    auto const start_positions{
-                            capture_view.get_reversed_reg_positions(reg_start_id)
-                    };
-                    auto const end_positions{capture_view.get_reversed_reg_positions(reg_end_id)};
+            logtype.append(token_view.to_string_view());
+            continue;
+        }
 
-                    auto const& capture_name{capture->get_name()};
-                    if (false == start_positions.empty() && -1 < start_positions[0]
-                        && false == end_positions.empty() && -1 < end_positions[0])
-                    {
-                        capture_view.set_end_pos(start_positions[0]);
-                        logtype.append(capture_view.to_string_view());
-                        logtype.append("<" + capture_name + ">");
-                        capture_view.set_start_pos(end_positions[0]);
-                    }
-                }
-                capture_view.set_end_pos(token_view.get_end_pos());
-                logtype.append(capture_view.to_string_view());
-            } else {
-                logtype += "<" + m_log_parser.get_id_symbol(rule_id) + ">";
+        bool is_first_token{};
+        if (m_log_output_buffer->has_header()) {
+            is_first_token = 0 == i;
+        } else {
+            is_first_token = 1 == i;
+        }
+        if (static_cast<uint32_t>(SymbolId::TokenNewline) != rule_id && false == is_first_token) {
+            logtype += token_view.release_delimiter();
+        }
+
+        auto const matches{get_capture_matches(token_view)};
+        if (matches.has_error()) {
+            logtype.append("<" + m_log_parser.get_id_symbol(rule_id) + ">");
+            continue;
+        }
+        auto prev_end_pos{token_view.get_start_pos()};
+        for (auto const& match : matches.value()) {
+            if (match.m_leaf) {
+                logtype.append(
+                        token_view.get_sub_token(prev_end_pos, match.m_pos.m_start).to_string_view()
+                );
+                logtype.append("<" + match.m_capture->get_name() + ">");
+                prev_end_pos = match.m_pos.m_end;
             }
         }
+        logtype.append(
+                token_view.get_sub_token(prev_end_pos, token_view.get_end_pos()).to_string_view()
+        );
     }
     return logtype;
+}
+
+auto LogEventView::get_capture_matches(Token const& root_var) const
+        -> ystdlib::error_handling::Result<std::vector<Token::CaptureMatch>> {
+    auto captures{
+            get_log_parser().m_lexer.get_captures_from_rule_id(root_var.get_type_ids()->at(0))
+    };
+    if (false == captures.has_value()) {
+        return LogEventErrorCode{LogEventErrorCodeEnum::NoCaptureGroups};
+    }
+
+    auto cmp{[](Token::CaptureMatch const& a, Token::CaptureMatch const& b) -> bool {
+        if (a.m_pos.m_start != b.m_pos.m_start) {
+            return a.m_pos.m_start < b.m_pos.m_start;
+        }
+        return a.m_pos.m_end > b.m_pos.m_end;
+    }};
+    std::set<Token::CaptureMatch, decltype(cmp)> ordered_matches;
+    for (auto const* const capture : captures.value()) {
+        auto position{get_capture_position(root_var, capture)};
+        if (position.has_error()) {
+            if (LogEventErrorCode{LogEventErrorCodeEnum::NoCaptureGroupMatch} == position.error()) {
+                continue;
+            }
+            return position.error();
+        }
+        ordered_matches.emplace(capture, position.value(), true);
+    }
+    if (ordered_matches.empty()) {
+        return {{}};
+    }
+
+    std::vector<Token::CaptureMatch> matches;
+    matches.reserve(ordered_matches.size());
+    auto const last_match{std::prev(ordered_matches.end())};
+    for (auto match{ordered_matches.begin()}; match != last_match; ++match) {
+        auto next_match{std::next(match)};
+        auto leaf{false};
+        if (match->m_pos.m_end <= next_match->m_pos.m_start) {
+            leaf = true;
+        }
+        matches.emplace_back(match->m_capture, match->m_pos, leaf);
+    }
+    matches.emplace_back(last_match->m_capture, last_match->m_pos, true);
+    return matches;
+}
+
+auto LogEventView::get_capture_position(
+        Token const& root_var,
+        finite_automata::Capture const* const& capture
+) const -> ystdlib::error_handling::Result<Token::CaptureMatchPosition> {
+    auto const [start_reg_id, end_reg_id]{
+            get_log_parser().m_lexer.get_reg_ids_from_capture(capture)
+    };
+    auto const start_positions{root_var.get_reversed_reg_positions(start_reg_id)};
+    auto const end_positions{root_var.get_reversed_reg_positions(end_reg_id)};
+    if (start_positions.empty() || 0 > start_positions[0] || end_positions.empty()
+        || 0 > end_positions[0])
+    {
+        return LogEventErrorCode{LogEventErrorCodeEnum::NoCaptureGroupMatch};
+    }
+    return {start_positions[0], end_positions[0]};
 }
 
 LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()} {
@@ -147,3 +208,24 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
     }
 }
 }  // namespace log_surgeon
+
+using log_surgeon::LogEventErrorCodeEnum;
+
+using LogEventErrorCategory = ystdlib::error_handling::ErrorCategory<LogEventErrorCodeEnum>;
+
+template <>
+auto LogEventErrorCategory::name() const noexcept -> char const* {
+    return "log_surgeon::LogEvent";
+}
+
+template <>
+auto LogEventErrorCategory::message(LogEventErrorCodeEnum error_enum) const -> std::string {
+    switch (error_enum) {
+        case LogEventErrorCodeEnum::NoCaptureGroups:
+            return "LogEvent NoCaptureGroups";
+        case LogEventErrorCodeEnum::NoCaptureGroupMatch:
+            return "LogEvent NoCaptureGroupMatch";
+        default:
+            return "Unrecognized LogEventErrorCode";
+    }
+}

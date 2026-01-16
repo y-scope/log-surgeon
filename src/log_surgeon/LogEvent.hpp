@@ -1,10 +1,17 @@
 #ifndef LOG_SURGEON_LOG_EVENT_HPP
 #define LOG_SURGEON_LOG_EVENT_HPP
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include <ystdlib/error_handling/ErrorCode.hpp>
+#include <ystdlib/error_handling/Result.hpp>
+
+#include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/LogParserOutputBuffer.hpp>
 #include <log_surgeon/Token.hpp>
 
@@ -93,13 +100,16 @@ public:
     [[nodiscard]] auto to_string() const -> std::string;
 
     /**
-     * Constructs a user friendly/readable representation of the log event's
-     * logtype. A logtype is essentially the static text of a log event with the
-     * variable components replaced with their name. Therefore, two separate log
-     * events from the same logging source code may have the same logtype.
+     * Constructs a user friendly/readable representation of the log event's logtype. A logtype is
+     * essentially the static text of a log event with the variable components replaced with their
+     * name. Therefore, two separate log events from the same logging source code may have the same
+     * logtype.
+     *
+     * If a schema variable may contain capture groups, any leaf capture group matches will be
+     * replaced with their name while all other text is treated as static text.
      * @return The logtype of the log.
      */
-    auto get_logtype() const -> std::string;
+    [[nodiscard]] auto get_logtype() const -> std::string;
 
     /**
      * Adds a Token to the array of tokens of a particular token type.
@@ -114,6 +124,37 @@ public:
         // this function
         m_log_var_occurrences[token_type_id].push_back(token_ptr);
     }
+
+    /**
+     * Retrieves the position of match of type `capture` within `root_var`. `root_var` must be the
+     * root parent variable containing `capture`.
+     * @param root_var The parent log surgeon schema variable for `capture`.
+     * @param capture The capture group type.
+     * @return A result containing a `CapturePosition` on success, or an error code indicating the
+     * failure:
+     * - LogEventErrorCodeEnum::NoCaptureGroupMatch if `root_var` contains no valid match positions
+     *   for `capture`.
+     */
+    [[nodiscard]] auto get_capture_position(
+            Token const& root_var,
+            finite_automata::Capture const* const& capture
+    ) const -> ystdlib::error_handling::Result<Token::CaptureMatchPosition>;
+
+    /**
+     * Returns the capture group matches within `root_var` sorted by their appearance within the
+     * text, with parent capture groups appearing before their children. More formally, they are
+     * sorted by increasing start position and then by decreasing end position.
+     *
+     * Since capture groups can only overlap when nested and cannot span across the boundary of
+     * another group, a capture group is a leaf if its end position is less than the end position of
+     * the next capture group (or it is the last capture group).
+     * @param root_var The root variable to get the capture groups from.
+     * @return A result containing the sorted capture group matches (empty if no matches were
+     * found), or an error code indicating the failure:
+     * - LogEventErrorCodeEnum::NoCaptureGroups if no capture groups exist for `root_var`.
+     */
+    [[nodiscard]] auto get_capture_matches(log_surgeon::Token const& root_var) const
+            -> ystdlib::error_handling::Result<std::vector<Token::CaptureMatch>>;
 
     // TODO: have LogParser own the output buffer as a LogEventView is already
     // tied to a single log parser
@@ -143,6 +184,15 @@ public:
 private:
     std::vector<char> m_buffer;
 };
+
+enum class LogEventErrorCodeEnum : uint8_t {
+    NoCaptureGroups,
+    NoCaptureGroupMatch
+};
+
+using LogEventErrorCode = ystdlib::error_handling::ErrorCode<LogEventErrorCodeEnum>;
 }  // namespace log_surgeon
+
+YSTDLIB_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(log_surgeon::LogEventErrorCodeEnum);
 
 #endif  // LOG_SURGEON_LOG_EVENT_HPP
