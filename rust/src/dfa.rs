@@ -9,6 +9,7 @@ use crate::nfa::NfaIdx;
 use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tag;
+use crate::nfa::Variable;
 
 #[derive(Debug)]
 pub struct Dfa<'schema> {
@@ -96,11 +97,25 @@ struct PrefixTreeNode<'schema> {
 
 impl<'schema> Dfa<'schema> {
 	pub fn simulate(&self, input: &str) -> bool {
+		self.simulate_with_captures(input, |_, _| ()).is_some()
+	}
+
+	pub fn simulate_with_captures<'input, F>(
+		&self,
+		input: &'input str,
+		mut on_capture: F,
+	) -> Option<(usize, &'input str)>
+	where
+		F: FnMut(&'schema str, &'input str),
+	{
 		let mut current_state: usize = 0;
 		let mut registers: Vec<Vec<usize>> = vec![Vec::new(); self.number_of_registers];
 
+		let mut maybe_backup: Option<(usize, usize, Vec<Vec<usize>>)> = None;
+
 		for (i, ch) in input.char_indices() {
 			println!("=== step {i} (state {current_state}), ch {ch:?} ({})", u32::from(ch));
+			/*
 			let mut seen: BTreeSet<usize> = BTreeSet::new();
 			for config in self.states[current_state].kernel.0.iter() {
 				for (i, &r) in config.register_for_tag.iter().enumerate() {
@@ -109,6 +124,7 @@ impl<'schema> Dfa<'schema> {
 					}
 				}
 			}
+			*/
 			if let Some(transition) = self.states[current_state].transitions.lookup(u32::from(ch)) {
 				current_state = transition.destination;
 				self.apply_operations(
@@ -118,27 +134,57 @@ impl<'schema> Dfa<'schema> {
 					&self.states[current_state].tag_for_register,
 				);
 			} else {
-				println!("nope!");
-				return false;
+				break;
+			}
+			if self.states[current_state].is_final {
+				maybe_backup = Some((i, current_state, registers.clone()));
 			}
 		}
 
 		println!("ended at {current_state}");
-		if self.states[current_state].is_final {
-			self.apply_operations(
-				&mut registers,
-				input.len(),
-				&self.states[current_state].final_operations,
-				&self.states[current_state].tag_for_register,
-			);
-			for i in 0..self.tags.len() {
-				println!("- Tag {i} ({:?}): {:?}", self.tags[i], registers[self.tags.len() + i]);
+		let (consumed, state, mut registers): (usize, usize, Vec<Vec<usize>>) = maybe_backup?;
+		println!("had final at {state}");
+
+		self.apply_operations(
+			&mut registers,
+			consumed,
+			&self.states[state].final_operations,
+			&self.states[state].tag_for_register,
+		);
+
+		let mut variables: BTreeMap<Variable<'_>, (Vec<usize>, Vec<usize>)> = BTreeMap::new();
+		for i in 0..self.tags.len() {
+			match self.tags[i] {
+				Tag::StartCapture(variable) | Tag::EndCapture(variable) => {
+					let (starts, ends): &mut (Vec<usize>, Vec<usize>) =
+						variables.entry(variable).or_insert((Vec::new(), Vec::new()));
+					if matches!(self.tags[i], Tag::StartCapture(_)) {
+						*starts = registers[self.tags.len() + i].clone();
+					} else {
+						*ends = registers[self.tags.len() + i].clone();
+					}
+				},
 			}
-			return true;
 		}
 
-		println!("nope2");
-		false
+		let mut maybe_rule: Option<usize> = None;
+
+		for (var, (starts, ends)) in variables.into_iter() {
+			assert_eq!(starts.len(), ends.len());
+			if starts.is_empty() {
+				continue;
+			}
+			if let Some(rule) = maybe_rule {
+				assert_eq!(var.rule, rule);
+			} else {
+				maybe_rule = Some(var.rule);
+			}
+			for (&i, &j) in std::iter::zip(starts.iter(), ends.iter()) {
+				on_capture(var.name, &input[i..j]);
+			}
+		}
+
+		return Some((maybe_rule.unwrap(), &input[..consumed + 1]));
 	}
 
 	fn apply_operations(

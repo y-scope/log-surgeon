@@ -2,8 +2,8 @@ use std::ffi::c_char;
 use std::marker::PhantomData;
 use std::str::Utf8Error;
 
-use crate::log_event::LogComponent;
-use crate::nfa::Nfa;
+use crate::lexer::Lexer;
+use crate::lexer::LogComponent;
 use crate::regex::Regex;
 use crate::schema::Schema;
 
@@ -53,77 +53,47 @@ unsafe extern "C" fn clp_log_mechanic_schema_add_rule(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_nfa_for_schema<'schema>(schema: &'schema Schema) -> Option<Box<Nfa<'schema>>> {
-	let nfa: Nfa<'_> = Nfa::for_schema(schema).ok()?;
-	Some(Box::new(nfa))
+unsafe extern "C" fn clp_log_mechanic_lexer_new<'schema>(schema: &'schema Schema) -> Box<Lexer<'schema>> {
+	let lexer: Lexer<'_> = Lexer::new(schema).unwrap();
+	Box::new(lexer)
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_nfa_delete(nfa: Box<Nfa<'_>>) {
-	std::mem::drop(nfa);
+unsafe extern "C" fn clp_log_mechanic_lexer_delete(lexer: Box<Lexer<'_>>) {
+	std::mem::drop(lexer);
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_nfa_debug(nfa: &Nfa<'_>) {
-	println!("nfa: {nfa:#?}");
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_parse<'schema, 'input>(
-	nfa: &Nfa<'schema>,
-	input: *const u8,
-	len: usize,
+unsafe extern "C" fn clp_log_mechanic_lexer_next_token<'schema, 'lexer>(
+	lexer: &'lexer mut Lexer<'schema>,
+	input: CStringView<'_>,
 	pos: &mut usize,
-) -> Option<Box<LogComponent<'schema, 'input>>> {
-	let bytes: &[u8] = unsafe { std::slice::from_raw_parts(input, len) };
-	let bytes: &[u8] = &bytes[*pos..];
-	let input: &str = str::from_utf8(bytes).unwrap();
-	let (component, consumed): (LogComponent<'_, '_>, usize) = nfa.simulate(input)?;
-	*pos += consumed;
-	Some(Box::new(component))
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_component_delete(component: Box<LogComponent<'_, '_>>) {
-	std::mem::drop(component);
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_component_text(component: &LogComponent<'_, '_>, len: &mut usize) -> *const u8 {
-	*len = component.full_text.len();
-	component.full_text.as_ptr()
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_component_matches_count(component: &LogComponent<'_, '_>) -> usize {
-	component.matches.len()
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_component_matches_get(
-	component: &LogComponent<'_, '_>,
-	i: usize,
-	rule: &mut usize,
-	name: &mut *const u8,
-	name_len: &mut usize,
-	start: &mut usize,
-	end: &mut usize,
-) {
-	*rule = component.matches[i].0;
-	*name = component.matches[i].1.as_ptr();
-	*name_len = component.matches[i].1.len();
-	*start = component.matches[i].2;
-	*end = component.matches[i].3;
+	log_component: &mut LogComponent<'schema, 'lexer>,
+) -> bool {
+	if let Some(component) = lexer.next_token(input.as_utf8().unwrap(), pos) {
+		*log_component = component;
+		true
+	} else {
+		false
+	}
 }
 
 impl<'lifetime, T> CSlice<'lifetime, T> {
-	fn as_slice(&self) -> &'lifetime [T] {
+	pub fn as_slice(&self) -> &'lifetime [T] {
 		unsafe { std::slice::from_raw_parts(self.pointer, self.length) }
 	}
 }
 
-impl<'lifetime> CSlice<'lifetime, c_char> {
-	fn as_utf8(&self) -> Result<&'lifetime str, Utf8Error> {
+impl<'lifetime> CStringView<'lifetime> {
+	pub fn from_utf8(utf8: &'lifetime str) -> Self {
+		Self {
+			pointer: utf8.as_bytes().as_ptr().cast::<c_char>(),
+			length: utf8.as_bytes().len(),
+			_lifetime: PhantomData,
+		}
+	}
+
+	pub fn as_utf8(&self) -> Result<&'lifetime str, Utf8Error> {
 		let bytes: &[u8] = unsafe { std::slice::from_raw_parts(self.pointer.cast::<u8>(), self.length) };
 		str::from_utf8(bytes)
 	}

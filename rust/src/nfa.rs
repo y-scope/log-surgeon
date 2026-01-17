@@ -8,7 +8,6 @@ use std::slice::Iter;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
-use crate::log_event::LogComponent;
 use crate::regex::Regex;
 use crate::schema::Rule;
 use crate::schema::Schema;
@@ -57,13 +56,13 @@ pub enum Tag<'schema> {
 #[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Variable<'schema> {
 	/// Rule index from the schema.
-	rule: usize,
+	pub rule: usize,
 	/// Capture ID local to the rule/regex pattern.
 	/// It is `None` (i.e. `0`) iff it is the implicit top-level capture.
-	id: Option<NonZero<u32>>,
+	pub id: Option<NonZero<u32>>,
 	/// Capture name from the rule/regex pattern.
 	/// Technically redundant; exists for debugging.
-	name: &'schema str,
+	pub name: &'schema str,
 }
 
 impl std::fmt::Debug for Variable<'_> {
@@ -124,7 +123,7 @@ impl<'schema> Nfa<'schema> {
 	/// - <https://arxiv.org/abs/2206.01398>
 	///
 	/// Algorithm 1.
-	pub fn simulate<'input>(&self, input: &'input str) -> Option<(LogComponent<'schema, 'input>, usize)> {
+	pub fn simulate<'input>(&self, input: &'input str) -> Option<usize> {
 		let start: (NfaIdx, Vec<TagMatches>) = (
 			NfaIdx(0),
 			vec![TagMatches {
@@ -170,13 +169,7 @@ impl<'schema> Nfa<'schema> {
 						m.push((variable.rule, variable.name, x, y));
 					}
 				}
-				return Some((
-					LogComponent {
-						full_text: input,
-						matches: m,
-					},
-					input.len(),
-				));
+				return Some(input.len());
 			}
 		}
 
@@ -188,13 +181,7 @@ impl<'schema> Nfa<'schema> {
 					m.push((variable.rule, variable.name, x, y));
 				}
 			}
-			return Some((
-				LogComponent {
-					full_text: &input[0..pos],
-					matches: m,
-				},
-				pos,
-			));
+			return Some(pos);
 		}
 
 		None

@@ -4,7 +4,7 @@
 
 pub mod dfa;
 pub mod interval_tree;
-pub mod log_event;
+pub mod lexer;
 pub mod nfa;
 pub mod regex;
 pub mod schema;

@@ -47,7 +47,8 @@ impl Schema {
 
 	// TODO use generalized escapes
 	fn pattern_for_delimiters(delimiters: &str) -> Regex {
-		let pattern: String = format!("[^{delimiters}]+|delimiters");
+		// let pattern: String = format!("[^{delimiters}]+|({delimiters})");
+		let pattern: String = format!(".");
 		Regex::from_pattern(&pattern).unwrap()
 	}
 }
