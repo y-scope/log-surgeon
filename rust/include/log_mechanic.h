@@ -18,35 +18,37 @@ typedef struct CSlice_c_char {
 
 typedef struct CSlice_c_char CStringView;
 
-struct CSlice_c_char clp_log_surgeon_c_string_view(const char *pointer);
+struct CSlice_c_char clp_log_mechanic_c_string_view(const char *pointer);
 
-void clp_log_surgeon_component_delete(struct LogComponent *component);
+void clp_log_mechanic_component_delete(struct LogComponent *component);
 
-size_t clp_log_surgeon_component_matches_count(const struct LogComponent *component);
+size_t clp_log_mechanic_component_matches_count(const struct LogComponent *component);
 
-void clp_log_surgeon_component_matches_get(const struct LogComponent *component,
-                                           size_t i,
-                                           size_t *rule,
-                                           const uint8_t **name,
-                                           size_t *name_len,
-                                           size_t *start,
-                                           size_t *end);
+void clp_log_mechanic_component_matches_get(const struct LogComponent *component,
+                                            size_t i,
+                                            size_t *rule,
+                                            const uint8_t **name,
+                                            size_t *name_len,
+                                            size_t *start,
+                                            size_t *end);
 
-const uint8_t *clp_log_surgeon_component_text(const struct LogComponent *component, size_t *len);
+const uint8_t *clp_log_mechanic_component_text(const struct LogComponent *component, size_t *len);
 
-void clp_log_surgeon_nfa_debug(const struct Nfa *nfa);
+void clp_log_mechanic_nfa_debug(const struct Nfa *nfa);
 
-void clp_log_surgeon_nfa_delete(struct Nfa *nfa);
+void clp_log_mechanic_nfa_delete(struct Nfa *nfa);
 
-struct Nfa *clp_log_surgeon_nfa_for_schema(const struct Schema *schema);
+struct Nfa *clp_log_mechanic_nfa_for_schema(const struct Schema *schema);
 
-struct LogComponent *clp_log_surgeon_parse(const struct Nfa *nfa,
-                                           const uint8_t *input,
-                                           size_t len,
-                                           size_t *pos);
+struct LogComponent *clp_log_mechanic_parse(const struct Nfa *nfa,
+                                            const uint8_t *input,
+                                            size_t len,
+                                            size_t *pos);
 
-void clp_log_surgeon_schema_add_rule(struct Schema *schema, CStringView name, CStringView pattern);
+void clp_log_mechanic_schema_add_rule(struct Schema *schema, CStringView name, CStringView pattern);
 
-void clp_log_surgeon_schema_delete(struct Schema *schema);
+void clp_log_mechanic_schema_delete(struct Schema *schema);
 
-struct Schema *clp_log_surgeon_schema_new(void);
+struct Schema *clp_log_mechanic_schema_new(void);
+
+void clp_log_mechanic_schema_set_delimiters(struct Schema *schema, CStringView delimiters);

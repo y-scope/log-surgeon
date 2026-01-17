@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 
+/// I'm a tree!
 #[derive(Debug, Clone)]
 pub struct IntervalTree<T: Number, V: Clone> {
 	intervals: Vec<(Interval<T>, V)>,
@@ -11,7 +12,7 @@ pub struct Interval<T: Number> {
 	end: T,
 }
 
-pub trait Number: Ord {
+pub trait Number: Ord + std::fmt::Debug {
 	const MIN: Self;
 	const MAX: Self;
 
@@ -24,27 +25,21 @@ enum Intersection<T: Number> {
 	Disjoint {
 		lower_is: Side,
 	},
-	ContainsNeighbourhood {
-		lower: Interval<T>,
+	SameStartLeftExtendsRight {
 		overlap: Interval<T>,
-		upper: Interval<T>,
-		lower_is: Side,
+		remaining: Interval<T>,
 	},
-	SameStart {
+	SameStartRightExtendsLeft {
 		overlap: Interval<T>,
-		upper: Interval<T>,
-		lower_is: Side,
+		remaining: Interval<T>,
 	},
-	SameEnd {
-		lower: Interval<T>,
-		overlap: Interval<T>,
-		lower_is: Side,
+	LeftFirst {
+		before: Interval<T>,
+		overlap_start: T,
 	},
-	Partial {
-		lower: Interval<T>,
-		overlap: Interval<T>,
-		upper: Interval<T>,
-		lower_is: Side,
+	RightFirst {
+		before: Interval<T>,
+		overlap_start: T,
 	},
 }
 
@@ -68,108 +63,83 @@ where
 	T: Copy,
 {
 	pub fn lookup(&self, pos: T) -> Option<&V> {
-		self.invariants();
-		let index: usize = self.partition_point(pos);
-		if let Some((interval, value)) = self.intervals.get(index) {
-			assert!(pos <= interval.end);
-			if interval.start <= pos { Some(value) } else { None }
-		} else {
-			None
-		}
+		self.lookup_entry(pos).map(|(_, value)| value)
 	}
 
-	pub fn insert<Merge>(&mut self, interval: Interval<T>, value: V, merge: Merge)
+	pub fn lookup_interval(&self, pos: T) -> Option<Interval<T>> {
+		self.lookup_entry(pos).map(|(interval, _)| interval)
+	}
+
+	pub fn insert<Merge>(&mut self, mut new: Interval<T>, new_value: V, merge: Merge)
 	where
 		Merge: Fn(&V, &V) -> V,
 	{
-		let index: usize = self.partition_point(interval.start);
-		if let Some((other, other_value)) = self.intervals.get_mut(index) {
-			assert!(interval.start <= other.end);
-			match interval.intersection(other) {
-				Intersection::Same => {
-					*other_value = merge(other_value, &value);
-				},
-				Intersection::Disjoint { lower_is } => match lower_is {
-					Side::Left => {
-						self.intervals.insert(index, (interval, value));
+		// Existing intervals in the tree are disjoint,
+		// but the new interval being inserted may intersect with multiple existing intervals,
+		// so we process it iteratively.
+		// Ideally, this loop could be written in a way such that one can explicitly see that it terminates,
+		// e.g. `while new.start <= new.end` and `new.start` advances every iteration;
+		// unfortunately, for the case that `existing.start < new.start`,
+		// we split `existing` into `[existing.start, new.start)` and `[new.start, existing.end]` and loop again;
+		// the next iteration should be one of the `SameStart*` cases, which do advance or terminate,
+		// but can't think of a strictly "cleaner" way to model this invariant in code.
+		loop {
+			let index: usize = self.partition_point(new.start);
+			if let Some((existing, existing_value)) = self.intervals.get_mut(index) {
+				assert!(new.start <= existing.end);
+
+				// The explicit `break`s and `continue`s are intentional for readability.
+				match new.intersection(existing) {
+					Intersection::Same => {
+						*existing_value = merge(existing_value, &new_value);
+						break;
 					},
-					Side::Right => {
-						self.intervals.insert(index + 1, (interval, value));
+					Intersection::Disjoint { lower_is } => {
+						match lower_is {
+							Side::Left => {
+								self.intervals.insert(index, (new, new_value.clone()));
+							},
+							Side::Right => {
+								self.intervals.insert(index + 1, (new, new_value.clone()));
+							},
+						}
+						break;
 					},
-				},
-				Intersection::ContainsNeighbourhood {
-					lower,
-					overlap,
-					upper,
-					lower_is,
-				} => match lower_is {
-					Side::Left => {
-						*other_value = merge(other_value, &value);
-						self.intervals.insert(index + 1, (upper, value.clone()));
-						self.intervals.insert(index, (lower, value));
+					Intersection::SameStartLeftExtendsRight { overlap, remaining } => {
+						// The new interval extends longer.
+						*existing = overlap;
+						*existing_value = merge(existing_value, &new_value);
+						assert_eq!(remaining.end, new.end);
+						new = remaining;
+						continue;
 					},
-					Side::Right => {
-						let old_other_value: V = other_value.clone();
-						*other = interval;
-						*other_value = merge(other_value, &value);
-						self.intervals.insert(index + 1, (upper, old_other_value.clone()));
-						self.intervals.insert(index, (lower, old_other_value));
-					},
-				},
-				Intersection::SameStart {
-					overlap,
-					upper,
-					lower_is,
-				} => match lower_is {
-					Side::Left => {
-						let merged: V = merge(other_value, &value);
-						*other = upper;
+					Intersection::SameStartRightExtendsLeft { overlap, remaining } => {
+						// The existing interval extends longer.
+						*existing = remaining;
+						let merged: V = merge(existing_value, &new_value);
 						self.intervals.insert(index, (overlap, merged));
+						break;
 					},
-					Side::Right => {
-						*other_value = merge(other_value, &value);
-						self.intervals.insert(index + 1, (upper, value));
+					Intersection::LeftFirst { before, overlap_start } => {
+						// The new interval comes before.
+						self.intervals.insert(index, (before, new_value.clone()));
+						new.start = overlap_start;
+						continue;
 					},
-				},
-				Intersection::SameEnd {
-					lower,
-					overlap,
-					lower_is,
-				} => match lower_is {
-					Side::Left => {
-						*other_value = merge(&other_value, &value);
-						self.intervals.insert(index, (lower, value));
+					Intersection::RightFirst { before, overlap_start } => {
+						// The new interval comes after; split the existing interval.
+						existing.start = overlap_start;
+						let tmp: V = existing_value.clone();
+						self.intervals.insert(index, (before, tmp));
+						assert_eq!(overlap_start, new.start);
+						continue;
 					},
-					Side::Right => {
-						let merged: V = merge(other_value, &value);
-						*other = lower;
-						self.intervals.insert(index + 1, (overlap, merged));
-					},
-				},
-				Intersection::Partial {
-					lower,
-					overlap,
-					upper,
-					lower_is,
-				} => {
-					let merged: V = merge(other_value, &value);
-					match lower_is {
-						Side::Left => {
-							*other = upper;
-							self.intervals.insert(index, (overlap, merged));
-							self.intervals.insert(index, (lower, value));
-						},
-						Side::Right => {
-							*other = lower;
-							self.intervals.insert(index + 1, (upper, value));
-							self.intervals.insert(index + 1, (overlap, merged));
-						},
-					}
-				},
+				}
+			} else {
+				assert_eq!(index, self.intervals.len());
+				self.intervals.push((new, new_value));
+				break;
 			}
-		} else {
-			assert!(index == self.intervals.len());
-			self.intervals.push((interval, value));
 		}
 		self.invariants();
 	}
@@ -183,12 +153,28 @@ impl<T: Number, V: Clone> IntervalTree<T, V>
 where
 	T: Copy,
 {
+	fn lookup_entry(&self, pos: T) -> Option<(Interval<T>, &V)> {
+		self.invariants();
+		let index: usize = self.partition_point(pos);
+		if let Some((interval, value)) = self.intervals.get(index) {
+			assert!(pos <= interval.end);
+			if interval.start <= pos {
+				Some((*interval, value))
+			} else {
+				None
+			}
+		} else {
+			None
+		}
+	}
+
+	/// Informally, returns the location of the first interval that "goes past" `pos`.
+	/// If `pos` is "past" every interval, returns `self.intervals.len()`.
+	/// Otherwise, `self.intervals[pos].end >= pos`.
 	fn partition_point(&self, pos: T) -> usize {
 		self.invariants();
 		// `partition_point` assumes partitioning as `[true, ..., false]` and returns the index of the first `false`.
-		let index: usize = self.intervals.partition_point(|(interval, _)| interval.end < pos);
-		// `index` is the position of first interval that "goes past" `pos`; `interval.end >= pos`.
-		index
+		self.intervals.partition_point(|(interval, _)| interval.end < pos)
 	}
 
 	fn invariants(&self) {
@@ -202,6 +188,7 @@ where
 	}
 }
 
+// TODO this ends up being public..
 impl<T: Number, V: Clone> std::ops::Index<usize> for IntervalTree<T, V> {
 	type Output = (Interval<T>, V);
 
@@ -229,6 +216,10 @@ where
 		self.end
 	}
 
+	pub fn contains(&self, other: &Interval<T>) -> bool {
+		(self.start <= other.start) && (other.end <= self.end)
+	}
+
 	pub fn complement(intervals: &mut [Interval<T>]) -> Vec<Interval<T>> {
 		intervals.sort_unstable();
 
@@ -254,39 +245,29 @@ where
 	}
 
 	fn intersection(&self, other: &Self) -> Intersection<T> {
-		let (first, second, lower_is): (&Self, &Self, Side) = if self <= other {
-			(self, other, Side::Left)
-		} else {
-			(other, self, Side::Right)
-		};
-		if first.end < second.start {
-			return Intersection::Disjoint { lower_is };
+		if self.end < other.start {
+			return Intersection::Disjoint { lower_is: Side::Left };
+		} else if other.end < self.start {
+			return Intersection::Disjoint { lower_is: Side::Right };
 		}
+
 		match (self.start.cmp(&other.start), self.end.cmp(&other.end)) {
 			(Ordering::Equal, Ordering::Equal) => Intersection::Same,
-			(Ordering::Less, Ordering::Greater) | (Ordering::Greater, Ordering::Less) => {
-				Intersection::ContainsNeighbourhood {
-					lower: Interval::new(first.start, second.start.down()),
-					overlap: *second,
-					upper: Interval::new(second.end.up(), first.end),
-					lower_is,
-				}
+			(Ordering::Equal, Ordering::Less) => Intersection::SameStartRightExtendsLeft {
+				overlap: Interval::new(self.start, self.end),
+				remaining: Interval::new(self.end.up(), other.end),
 			},
-			(Ordering::Equal, _) => Intersection::SameStart {
-				overlap: *first,
-				upper: Interval::new(first.end.up(), second.end),
-				lower_is,
+			(Ordering::Equal, Ordering::Greater) => Intersection::SameStartLeftExtendsRight {
+				overlap: Interval::new(other.start, other.end),
+				remaining: Interval::new(other.end.up(), self.end),
 			},
-			(_, Ordering::Equal) => Intersection::SameEnd {
-				lower: Interval::new(first.start, second.start.down()),
-				overlap: *second,
-				lower_is,
+			(Ordering::Less, _) => Intersection::LeftFirst {
+				before: Interval::new(self.start, other.start.down()),
+				overlap_start: other.start,
 			},
-			(Ordering::Less, Ordering::Less) | (Ordering::Greater, Ordering::Greater) => Intersection::Partial {
-				lower: Interval::new(first.start, second.start.down()),
-				overlap: Interval::new(second.start, first.end),
-				upper: Interval::new(first.end.up(), second.end()),
-				lower_is,
+			(Ordering::Greater, _) => Intersection::RightFirst {
+				before: Interval::new(other.start, self.start.down()),
+				overlap_start: self.start,
 			},
 		}
 	}
@@ -343,6 +324,25 @@ mod test {
 			assert_eq!(tree.lookup(12), Some(&2));
 			assert_eq!(tree.lookup(15), Some(&5));
 			assert_eq!(tree.lookup(16), None);
+		}
+	}
+
+	#[test]
+	fn insert_across_multiple_intervals() {
+		{
+			let mut tree: IntervalTree<u32, u64> = IntervalTree::new();
+			tree.insert(Interval::new(119, 119), 1, merge);
+			tree.insert(Interval::new(120, 120), 1, merge);
+			tree.insert(Interval::new(117, u32::MAX), 1, merge);
+			assert_eq!(tree.len(), 4);
+			assert_eq!(tree[0].0, Interval::new(117, 118));
+			assert_eq!(tree[0].1, 1);
+			assert_eq!(tree[1].0, Interval::new(119, 119));
+			assert_eq!(tree[1].1, 2);
+			assert_eq!(tree[2].0, Interval::new(120, 120));
+			assert_eq!(tree[2].1, 2);
+			assert_eq!(tree[3].0, Interval::new(121, u32::MAX));
+			assert_eq!(tree[3].1, 1);
 		}
 	}
 

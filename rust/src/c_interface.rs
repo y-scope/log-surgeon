@@ -17,7 +17,7 @@ pub struct CSlice<'lifetime, T> {
 pub type CStringView<'lifetime> = CSlice<'lifetime, c_char>;
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_c_string_view<'unknown>(pointer: *const c_char) -> CSlice<'unknown, c_char> {
+unsafe extern "C" fn clp_log_mechanic_c_string_view<'unknown>(pointer: *const c_char) -> CSlice<'unknown, c_char> {
 	CSlice {
 		pointer,
 		length: unsafe { libc::strlen(pointer) },
@@ -26,17 +26,22 @@ unsafe extern "C" fn clp_log_surgeon_c_string_view<'unknown>(pointer: *const c_c
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn clp_log_surgeon_schema_new() -> Box<Schema> {
+extern "C" fn clp_log_mechanic_schema_new() -> Box<Schema> {
 	Box::new(Schema::new())
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_schema_delete(schema: Box<Schema>) {
+unsafe extern "C" fn clp_log_mechanic_schema_delete(schema: Box<Schema>) {
 	std::mem::drop(schema);
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_schema_add_rule(
+unsafe extern "C" fn clp_log_mechanic_schema_set_delimiters(schema: &mut Schema, delimiters: CStringView<'_>) {
+	schema.set_delimiters(delimiters.as_utf8().unwrap());
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn clp_log_mechanic_schema_add_rule(
 	schema: &mut Schema,
 	name: CStringView<'_>,
 	pattern: CStringView<'_>,
@@ -48,23 +53,23 @@ unsafe extern "C" fn clp_log_surgeon_schema_add_rule(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_nfa_for_schema<'schema>(schema: &'schema Schema) -> Option<Box<Nfa<'schema>>> {
+unsafe extern "C" fn clp_log_mechanic_nfa_for_schema<'schema>(schema: &'schema Schema) -> Option<Box<Nfa<'schema>>> {
 	let nfa: Nfa<'_> = Nfa::for_schema(schema).ok()?;
 	Some(Box::new(nfa))
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_nfa_delete(nfa: Box<Nfa<'_>>) {
+unsafe extern "C" fn clp_log_mechanic_nfa_delete(nfa: Box<Nfa<'_>>) {
 	std::mem::drop(nfa);
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_nfa_debug(nfa: &Nfa<'_>) {
+unsafe extern "C" fn clp_log_mechanic_nfa_debug(nfa: &Nfa<'_>) {
 	println!("nfa: {nfa:#?}");
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_parse<'schema, 'input>(
+unsafe extern "C" fn clp_log_mechanic_parse<'schema, 'input>(
 	nfa: &Nfa<'schema>,
 	input: *const u8,
 	len: usize,
@@ -79,23 +84,23 @@ unsafe extern "C" fn clp_log_surgeon_parse<'schema, 'input>(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_component_delete(component: Box<LogComponent<'_, '_>>) {
+unsafe extern "C" fn clp_log_mechanic_component_delete(component: Box<LogComponent<'_, '_>>) {
 	std::mem::drop(component);
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_component_text(component: &LogComponent<'_, '_>, len: &mut usize) -> *const u8 {
+unsafe extern "C" fn clp_log_mechanic_component_text(component: &LogComponent<'_, '_>, len: &mut usize) -> *const u8 {
 	*len = component.full_text.len();
 	component.full_text.as_ptr()
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_component_matches_count(component: &LogComponent<'_, '_>) -> usize {
+unsafe extern "C" fn clp_log_mechanic_component_matches_count(component: &LogComponent<'_, '_>) -> usize {
 	component.matches.len()
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_surgeon_component_matches_get(
+unsafe extern "C" fn clp_log_mechanic_component_matches_get(
 	component: &LogComponent<'_, '_>,
 	i: usize,
 	rule: &mut usize,

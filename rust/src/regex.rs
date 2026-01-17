@@ -1,4 +1,5 @@
 use std::num::NonZero;
+use std::str::Chars;
 
 use nom::Err as NomErr;
 use nom::IResult;
@@ -6,7 +7,7 @@ use nom::Parser;
 use nom::error::ErrorKind as NomErrorKind;
 use nom::error::ParseError;
 
-const SPECIAL_CHARACTERS: &str = "\\()[]{}<>*+?-.|^";
+const SPECIAL_CHARACTERS: &str = r"\()[]{}<>*+?-.|^";
 
 #[derive(Debug, Clone)]
 pub enum Regex {
@@ -52,6 +53,7 @@ pub enum RegexErrorKind {
 	MissingClose(char, char),
 	EmptyTerm,
 	InvalidLiteral,
+	InvalidEscape,
 	UnexpectedEnd,
 	NumberTooBig,
 	ExpectedNumber,
@@ -379,21 +381,48 @@ fn parse_literal_character(input: &str) -> ParsingResult<'_, char> {
 	.parse(input)
 }
 
-fn parse_escaped_character(input: &str) -> ParsingResult<'_, char> {
-	let (input, _): (&str, char) = parse_char::<'\\'>(input)?;
+fn parse_escaped_character(original_input: &str) -> ParsingResult<'_, char> {
+	use nom::branch::alt;
+	use nom::combinator::cut;
 
-	parse_special_character(input)
+	let (input, _): (&str, char) = parse_char::<'\\'>(original_input)?;
+
+	// Cut: if we parsed a '\\', we necessarily are looking for an escape character.
+	cut(alt((parse_one_char_of(SPECIAL_CHARACTERS), parse_standard_escape))
+		.or(|_| diagnostic(original_input, RegexErrorKind::InvalidEscape)))
+	.parse(input)
 }
 
-fn parse_special_character(input: &str) -> ParsingResult<'_, char> {
+// TODO: custom implementation
+fn parse_one_char_of<'a>(any: &'static str) -> impl Parser<&'a str, Output = char, Error = RegexParsingError<'a>> {
 	use nom::character::complete::one_of;
 
-	one_of(SPECIAL_CHARACTERS).parse(input)
+	one_of(any)
+}
+
+fn parse_standard_escape(input: &str) -> ParsingResult<'_, char> {
+	let mut chars: Chars = input.chars();
+
+	// We use the NUL character as a marker/equivalent to EOF;
+	// it's not a valid escape character.
+	let ch: char = chars.next().unwrap_or('\0');
+
+	let unescaped: char = match ch {
+		't' => '\t',
+		'r' => '\r',
+		'n' => '\n',
+		_ => {
+			return Err(NomErr::Error(RegexParsingError::new(
+				input,
+				RegexErrorKind::InvalidEscape,
+			)));
+		},
+	};
+
+	return Ok((chars.as_str(), ch));
 }
 
 fn parse_char<const CHAR: char>(input: &str) -> ParsingResult<'_, char> {
-	use std::str::Chars;
-
 	let mut chars: Chars = input.chars();
 
 	if let Some(ch) = chars.next() {
@@ -450,6 +479,10 @@ fn parse_digits(input: &str) -> ParsingResult<'_, u32> {
 
 // ==================================
 
+fn diagnostic(input: &str, kind: RegexErrorKind) -> ParsingResult<'_, char> {
+	Err(NomErr::Error(RegexParsingError::new(input, kind)))
+}
+
 fn diagnostic_empty_term(input: &str) -> ParsingResult<'_, Regex> {
 	Err(NomErr::Error(RegexParsingError::new(input, RegexErrorKind::EmptyTerm)))
 }
@@ -458,6 +491,13 @@ fn diagnostic_expected_literal(input: &str) -> ParsingResult<'_, char> {
 	Err(NomErr::Error(RegexParsingError::new(
 		input,
 		RegexErrorKind::InvalidLiteral,
+	)))
+}
+
+fn diagnostic_invalid_escape(input: &str) -> ParsingResult<'_, char> {
+	Err(NomErr::Failure(RegexParsingError::new(
+		input,
+		RegexErrorKind::InvalidEscape,
 	)))
 }
 
@@ -513,6 +553,8 @@ mod test {
 		Regex::from_pattern("abc|def.ghi*").unwrap();
 		Regex::from_pattern("abc|def(.ghi)*").unwrap();
 		Regex::from_pattern("abc|def(?<hello>.ghi)*").unwrap();
+
+		Regex::from_pattern(r"[ \t]").unwrap();
 	}
 
 	#[test]
@@ -644,6 +686,16 @@ mod test {
 			assert_eq!(e.kind, RegexErrorKind::InvalidLiteral);
 			assert_eq!(e.consumed, "[");
 			assert_eq!(e.remaining, "]");
+		}
+	}
+
+	#[test]
+	fn invalid_escapes() {
+		{
+			let e: RegexError<'_> = Regex::from_pattern(r"[ \a]").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::InvalidEscape);
+			assert_eq!(e.consumed, "[ ");
+			assert_eq!(e.remaining, r"\a]");
 		}
 	}
 }

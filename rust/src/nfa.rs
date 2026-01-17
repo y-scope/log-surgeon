@@ -1,13 +1,16 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::iter::Enumerate;
 // use std::marker::PhantomData;
 use std::num::NonZero;
+use std::slice::Iter;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
 use crate::log_event::LogComponent;
 use crate::regex::Regex;
+use crate::schema::Rule;
 use crate::schema::Schema;
 
 #[derive(Debug)]
@@ -102,8 +105,11 @@ impl<'schema> Nfa<'schema> {
 			current: start,
 		};
 		builder.current = start;
+		let mut rules: Enumerate<Iter<'_, Rule>> = schema.rules().iter().enumerate();
+		// "Static text" rule comes last in precedence.
+		let static_text: (usize, &Rule) = rules.next().unwrap();
 		let tags: BTreeSet<Tag<'_>> = builder.alternate(
-			schema.rules.iter().enumerate().map(|(i, rule)| {
+			rules.chain(std::iter::once(static_text)).map(|(i, rule)| {
 				move |builder: &mut NfaBuilder<'_, 'schema>, target| {
 					builder.capture(i, None, &*rule.name, &rule.regex, target)
 				}
@@ -114,8 +120,10 @@ impl<'schema> Nfa<'schema> {
 		Ok(nfa)
 	}
 
-	/// https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf
-	/// - Algorithm 1
+	/// - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
+	/// - <https://arxiv.org/abs/2206.01398>
+	///
+	/// Algorithm 1.
 	pub fn simulate<'input>(&self, input: &'input str) -> Option<(LogComponent<'schema, 'input>, usize)> {
 		let start: (NfaIdx, Vec<TagMatches>) = (
 			NfaIdx(0),
@@ -606,7 +614,7 @@ impl<'schema> NfaState<'schema> {
 
 /// Ideally, we could write:
 ///
-/// ```ignore
+/// ```rust,ignore
 /// type MergeFn = fn(&BTreeSet<NfaIdx>, &BTreeSet<NfaIdx>) -> BTreeSet<NfaIdx>;
 /// const MERGE_SETS: MergeFn = <&BTreeSet<NfaIdx> as std::ops::BitOr>::bitor;
 /// ```

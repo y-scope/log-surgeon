@@ -183,8 +183,10 @@ impl<'schema> Dfa<'schema> {
 }
 
 impl<'schema> Dfa<'schema> {
-	/// https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf
-	/// - Algorithm 3
+	/// - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
+	/// - <https://arxiv.org/abs/2206.01398>
+	///
+	/// Algorithm 3.
 	pub fn determinization(nfa: &Nfa<'schema>) -> Self {
 		let mut tag_ids: BTreeMap<Tag<'_>, DfaTag> = BTreeMap::new();
 		for (i, &tag) in nfa.tags().iter().enumerate() {
@@ -223,8 +225,8 @@ impl<'schema> Dfa<'schema> {
 				kernel.0.iter().map(|config| config.nfa_state).collect::<BTreeSet<_>>()
 			);
 
+			let mut register_action_tag: BTreeMap<(Tag<'_>, RegisterAction), usize> = BTreeMap::new();
 			for interval in kernel.nontrivial_transitions(nfa).iter() {
-				let mut register_action_tag: BTreeMap<(Tag<'_>, RegisterAction), usize> = BTreeMap::new();
 				let next: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>)> =
 					Self::step_on_interval(nfa, &kernel.0, *interval);
 				let next: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>)> =
@@ -293,7 +295,6 @@ impl<'schema> Dfa<'schema> {
 
 		for config in kernel.0.iter() {
 			for (i, &r) in config.register_for_tag.iter().enumerate() {
-				println!("inserting {r}: {:?}", self.tags[i]);
 				let old: Option<Tag<'_>> = tag_for_register.insert(r, self.tags[i]);
 				assert!(old.is_none() || (old == Some(self.tags[i])));
 			}
@@ -438,7 +439,13 @@ impl<'schema> Dfa<'schema> {
 		for config in configurations.iter() {
 			let nfa_state: &NfaState<'_> = &nfa[config.nfa_state];
 			if let Some(targets) = nfa_state.transitions().lookup(interval.start()) {
-				assert_eq!(Some(targets), nfa_state.transitions().lookup(interval.end()));
+				assert!(
+					nfa_state
+						.transitions()
+						.lookup_interval(interval.start())
+						.unwrap()
+						.contains(&interval)
+				);
 				for &next in targets.iter() {
 					next_states.insert((
 						Configuration {
@@ -530,7 +537,7 @@ impl<'schema> Dfa<'schema> {
 		Vec<RegisterOp>,
 	) {
 		let mut new_configurations: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>)> = BTreeSet::new();
-		let mut ops: Vec<RegisterOp> = Vec::new();
+		let mut ops: BTreeSet<RegisterOp> = BTreeSet::new();
 
 		for (mut config, inherited) in configurations.into_iter() {
 			for &tag in self.tag_ids.keys() {
@@ -539,23 +546,21 @@ impl<'schema> Dfa<'schema> {
 					continue;
 				}
 				let action: RegisterAction = self.operation_rhs(&config.register_for_tag, history, tag);
-				let r: usize = *register_action_tag
-					.entry((tag, action))
-					.or_insert_with_key(|(_, action)| {
-						let r: usize = self.number_of_registers;
-						self.number_of_registers += 1;
-						ops.push(RegisterOp {
-							target: r,
-							action: action.clone(),
+				let target: usize =
+					*register_action_tag
+						.entry((tag, action.clone()))
+						.or_insert_with_key(|(_, action)| {
+							let r: usize = self.number_of_registers;
+							self.number_of_registers += 1;
+							r
 						});
-						r
-					});
-				config.register_for_tag[self[tag]] = r;
+				ops.insert(RegisterOp { target, action });
+				config.register_for_tag[self[tag]] = target;
 			}
 			new_configurations.insert((config, inherited));
 		}
 
-		(new_configurations, ops)
+		(new_configurations, ops.into_iter().collect::<Vec<_>>())
 	}
 
 	fn final_operations(&self, registers: &[usize], history: &[(Tag<'schema>, SymbolicPosition)]) -> Vec<RegisterOp> {
