@@ -16,14 +16,14 @@ pub struct CSlice<'lifetime, T> {
 
 pub type CStringView<'lifetime> = CSlice<'lifetime, c_char>;
 
-#[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_c_string_view<'unknown>(pointer: *const c_char) -> CSlice<'unknown, c_char> {
-	CSlice {
-		pointer,
-		length: unsafe { libc::strlen(pointer) },
-		_lifetime: PhantomData,
-	}
-}
+// #[unsafe(no_mangle)]
+// unsafe extern "C" fn clp_log_mechanic_c_string_view<'unknown>(pointer: *const c_char) -> CSlice<'unknown, c_char> {
+// 	CSlice {
+// 		pointer,
+// 		length: unsafe { libc::strlen(pointer) },
+// 		_lifetime: PhantomData,
+// 	}
+// }
 
 #[unsafe(no_mangle)]
 extern "C" fn clp_log_mechanic_schema_new() -> Box<Schema> {
