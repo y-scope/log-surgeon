@@ -82,22 +82,23 @@ enum SymbolicPosition {
 	Nil,
 }
 
-/*
 #[derive(Debug)]
-pub struct PrefixTree<'schema> {
-	nodes: Vec<PrefixTreeNode<'schema>>,
+pub struct PrefixTree {
+	nodes: Vec<PrefixTreeNode>,
 }
 
 #[derive(Debug)]
-struct PrefixTreeNode<'schema> {
+struct PrefixTreeNode {
 	predecessor: usize,
-	tag: (Tag<'schema>, bool),
+	offset: usize,
 }
-*/
 
 impl<'schema> Dfa<'schema> {
 	pub fn simulate(&self, input: &str) -> bool {
-		self.simulate_with_captures(input, |_, _| ()).is_some()
+		self.simulate_with_captures(input, |name, lexeme| {
+			println!("- captured {name}, {lexeme}");
+		})
+		.is_some()
 	}
 
 	pub fn simulate_with_captures<'input, F>(
@@ -109,9 +110,12 @@ impl<'schema> Dfa<'schema> {
 		F: FnMut(&'schema str, &'input str),
 	{
 		let mut current_state: usize = 0;
-		let mut registers: Vec<Vec<usize>> = vec![Vec::new(); self.number_of_registers];
 
-		let mut maybe_backup: Option<(usize, usize, Vec<Vec<usize>>)> = None;
+		// Vector of prefix tree node indices.
+		let mut registers: Vec<usize> = vec![0; self.number_of_registers];
+		let mut prefix_tree: PrefixTree = PrefixTree::new();
+
+		let mut maybe_backup: Option<(usize, usize, Vec<usize>)> = None;
 
 		for (i, ch) in input.char_indices() {
 			println!("=== step {i} (state {current_state}), ch {ch:?} ({})", u32::from(ch));
@@ -129,6 +133,7 @@ impl<'schema> Dfa<'schema> {
 				current_state = transition.destination;
 				self.apply_operations(
 					&mut registers,
+					&mut prefix_tree,
 					i,
 					&transition.operations,
 					&self.states[current_state].tag_for_register,
@@ -142,29 +147,32 @@ impl<'schema> Dfa<'schema> {
 		}
 
 		println!("ended at {current_state}");
-		let (consumed, state, mut registers): (usize, usize, Vec<Vec<usize>>) = maybe_backup?;
+		let (consumed, state, mut registers): (usize, usize, Vec<usize>) = maybe_backup?;
 		println!("had final at {state}");
 
 		self.apply_operations(
 			&mut registers,
-			consumed,
+			&mut prefix_tree,
+			consumed + 1,
 			&self.states[state].final_operations,
 			&self.states[state].tag_for_register,
 		);
 
 		let mut variables: BTreeMap<Variable<'_>, (Vec<usize>, Vec<usize>)> = BTreeMap::new();
 		for i in 0..self.tags.len() {
-			match self.tags[i] {
-				Tag::StartCapture(variable) | Tag::EndCapture(variable) => {
-					let (starts, ends): &mut (Vec<usize>, Vec<usize>) =
-						variables.entry(variable).or_insert((Vec::new(), Vec::new()));
-					if matches!(self.tags[i], Tag::StartCapture(_)) {
-						*starts = registers[self.tags.len() + i].clone();
-					} else {
-						*ends = registers[self.tags.len() + i].clone();
-					}
-				},
+			let (Tag::StartCapture(variable) | Tag::EndCapture(variable)) = self.tags[i];
+			let (starts, ends): &mut (Vec<usize>, Vec<usize>) =
+				variables.entry(variable).or_insert((Vec::new(), Vec::new()));
+			let offsets: &mut Vec<usize> = match self.tags[i] {
+				Tag::StartCapture(_) => starts,
+				Tag::EndCapture(_) => ends,
+			};
+			let mut node: usize = registers[self.tags.len() + i];
+			while node != 0 {
+				offsets.push(prefix_tree.nodes[node].offset);
+				node = prefix_tree.nodes[node].predecessor;
 			}
+			offsets.reverse();
 		}
 
 		let mut maybe_rule: Option<usize> = None;
@@ -189,7 +197,8 @@ impl<'schema> Dfa<'schema> {
 
 	fn apply_operations(
 		&self,
-		registers: &mut [Vec<usize>],
+		registers: &mut [usize],
+		prefix_tree: &mut PrefixTree,
 		pos: usize,
 		ops: &[RegisterOp],
 		tag_for_register: &BTreeMap<usize, Tag<'schema>>,
@@ -205,7 +214,7 @@ impl<'schema> Dfa<'schema> {
 						*source,
 						tag_for_register.get(source)
 					);
-					registers[o.target] = registers[*source].clone();
+					registers[o.target] = registers[*source];
 				},
 				RegisterAction::Append { source, history } => {
 					println!(
@@ -216,10 +225,11 @@ impl<'schema> Dfa<'schema> {
 						tag_for_register.get(source),
 						history
 					);
-					registers[o.target] = registers[*source].clone();
+					registers[o.target] = registers[*source];
 					for &symbolic in history.iter() {
 						if symbolic == SymbolicPosition::Current {
-							registers[o.target].push(pos);
+							let node: usize = prefix_tree.add_node(registers[o.target], pos);
+							registers[o.target] = node;
 						}
 					}
 				},
@@ -656,6 +666,21 @@ impl<'schema> Dfa<'schema> {
 	}
 }
 
+// TODO this shows up publicly...
+impl<'schema> std::ops::Index<Tag<'schema>> for Dfa<'schema> {
+	type Output = usize;
+
+	fn index(&self, tag: Tag<'schema>) -> &Self::Output {
+		&self.tag_ids[&tag].0
+	}
+}
+
+impl<'schema> std::ops::IndexMut<Tag<'schema>> for Dfa<'schema> {
+	fn index_mut(&mut self, tag: Tag<'schema>) -> &mut Self::Output {
+		&mut self.tag_ids.get_mut(&tag).unwrap().0
+	}
+}
+
 impl<'schema> Kernel<'schema> {
 	fn nontrivial_transitions(&self, nfa: &Nfa<'schema>) -> Vec<Interval<u32>> {
 		let mut transitions: IntervalTree<u32, ()> = IntervalTree::new();
@@ -671,17 +696,21 @@ impl<'schema> Kernel<'schema> {
 	}
 }
 
-impl<'schema> std::ops::Index<Tag<'schema>> for Dfa<'schema> {
-	type Output = usize;
-
-	fn index(&self, tag: Tag<'schema>) -> &Self::Output {
-		&self.tag_ids[&tag].0
+impl PrefixTree {
+	fn new() -> Self {
+		Self {
+			nodes: vec![PrefixTreeNode {
+				predecessor: 0,
+				offset: 0,
+			}],
+		}
 	}
-}
 
-impl<'schema> std::ops::IndexMut<Tag<'schema>> for Dfa<'schema> {
-	fn index_mut(&mut self, tag: Tag<'schema>) -> &mut Self::Output {
-		&mut self.tag_ids.get_mut(&tag).unwrap().0
+	fn add_node(&mut self, predecessor: usize, offset: usize) -> usize {
+		assert!(predecessor < self.nodes.len());
+		let len: usize = self.nodes.len();
+		self.nodes.push(PrefixTreeNode { predecessor, offset });
+		len
 	}
 }
 

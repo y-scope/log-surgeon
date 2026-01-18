@@ -40,10 +40,11 @@ impl<'schema> Lexer<'schema> {
 	}
 
 	pub fn next_token(&mut self, input: &str, pos: &mut usize) -> Option<LogComponent<'schema, '_>> {
+		// TODO currently static text/delimiters are not handled properly.
 		self.captures_buffer.clear();
 
 		let start: usize = *pos;
-		let (rule, full_text_match): (usize, &str) = loop {
+		loop {
 			let maybe: Option<(usize, &str)> = self.dfa.simulate_with_captures(&input[*pos..], |name, capture| {
 				self.captures_buffer.push(Capture {
 					name: CStringView::from_utf8(name),
@@ -53,46 +54,41 @@ impl<'schema> Lexer<'schema> {
 			});
 			if let Some((rule, full_match_text)) = maybe {
 				if rule == 0 {
-					*pos += 1;
+					// TODO duplicated...
+					// [`str::len`] is already in bytes, but this is more explicit.
+					*pos += full_match_text.as_bytes().len();
 					continue;
-				} else if start != *pos {
+				} else if start == *pos {
+					// [`str::len`] is already in bytes, but this is more explicit.
+					*pos += full_match_text.as_bytes().len();
 					return Some(LogComponent {
-						rule: 0,
-						start: input[start..*pos].as_bytes().as_ptr_range().start,
-						end: input[start..*pos].as_bytes().as_ptr_range().end,
-						captures: std::ptr::null(),
-						captures_count: 0,
+						rule,
+						start: full_match_text.as_bytes().as_ptr_range().start,
+						end: full_match_text.as_bytes().as_ptr_range().end,
+						captures: self.captures_buffer.as_ptr(),
+						captures_count: self.captures_buffer.len(),
 						_captures_lifetime: PhantomData,
 					});
+				} else {
+					break;
 				}
-				break (rule, full_match_text);
 			} else {
 				if start == *pos {
 					return None;
-				} else {
-					return Some(LogComponent {
-						rule: 0,
-						start: input[start..*pos].as_bytes().as_ptr_range().start,
-						end: input[start..*pos].as_bytes().as_ptr_range().end,
-						captures: std::ptr::null(),
-						captures_count: 0,
-						_captures_lifetime: PhantomData,
-					});
 				}
+				assert_eq!(*pos, input.len());
+				break;
 			}
-		};
+		}
 
-		// [`str::len`] is already in bytes, but this is more explicit.
-		*pos += full_text_match.as_bytes().len();
-
-		Some(LogComponent {
-			rule,
-			start: full_text_match.as_bytes().as_ptr_range().start,
-			end: full_text_match.as_bytes().as_ptr_range().end,
-			captures: self.captures_buffer.as_ptr(),
-			captures_count: self.captures_buffer.len(),
+		return Some(LogComponent {
+			rule: 0,
+			start: input[start..*pos].as_bytes().as_ptr_range().start,
+			end: input[start..*pos].as_bytes().as_ptr_range().end,
+			captures: std::ptr::null(),
+			captures_count: 0,
 			_captures_lifetime: PhantomData,
-		})
+		});
 	}
 }
 
@@ -119,6 +115,7 @@ mod test {
 	#[test]
 	fn basic2() {
 		let mut schema: Schema = Schema::new();
+		schema.set_delimiters(" ");
 		schema.add_rule("hello", Regex::from_pattern("hello world").unwrap());
 		schema.add_rule("bye", Regex::from_pattern("goodbye").unwrap());
 
