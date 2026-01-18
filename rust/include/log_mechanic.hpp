@@ -4,7 +4,6 @@
 namespace clp::log_mechanic {
 
 	template<typename T> using Box = T*;
-
 }
 
 #include "log_mechanic.generated.hpp"

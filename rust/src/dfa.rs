@@ -23,6 +23,12 @@ pub struct Dfa<'schema> {
 	number_of_registers: usize,
 }
 
+#[derive(Debug, Clone)]
+pub struct GotRule<'input> {
+	pub rule: usize,
+	pub lexeme: &'input str,
+}
+
 #[derive(Debug)]
 struct DfaState<'schema> {
 	kernel: Kernel<'schema>,
@@ -98,14 +104,14 @@ impl<'schema> Dfa<'schema> {
 		self.simulate_with_captures(input, |name, lexeme| {
 			println!("- captured {name}, {lexeme}");
 		})
-		.is_some()
+		.is_ok()
 	}
 
 	pub fn simulate_with_captures<'input, F>(
 		&self,
 		input: &'input str,
 		mut on_capture: F,
-	) -> Option<(usize, &'input str)>
+	) -> Result<GotRule<'input>, usize>
 	where
 		F: FnMut(&'schema str, &'input str),
 	{
@@ -116,6 +122,8 @@ impl<'schema> Dfa<'schema> {
 		let mut prefix_tree: PrefixTree = PrefixTree::new();
 
 		let mut maybe_backup: Option<(usize, usize, Vec<usize>)> = None;
+
+		let mut consumed: usize = 0;
 
 		for (i, ch) in input.char_indices() {
 			println!("=== step {i} (state {current_state}), ch {ch:?} ({})", u32::from(ch));
@@ -130,6 +138,7 @@ impl<'schema> Dfa<'schema> {
 			}
 			*/
 			if let Some(transition) = self.states[current_state].transitions.lookup(u32::from(ch)) {
+				consumed = i;
 				current_state = transition.destination;
 				self.apply_operations(
 					&mut registers,
@@ -138,22 +147,20 @@ impl<'schema> Dfa<'schema> {
 					&transition.operations,
 					&self.states[current_state].tag_for_register,
 				);
+				if self.states[current_state].is_final {
+					maybe_backup = Some((consumed, current_state, registers.clone()));
+				}
 			} else {
 				break;
 			}
-			if self.states[current_state].is_final {
-				maybe_backup = Some((i, current_state, registers.clone()));
-			}
 		}
 
-		println!("ended at {current_state}");
-		let (consumed, state, mut registers): (usize, usize, Vec<usize>) = maybe_backup?;
-		println!("had final at {state}");
+		let (consumed, state, mut registers): (usize, usize, Vec<usize>) = maybe_backup.ok_or(consumed)?;
 
 		self.apply_operations(
 			&mut registers,
 			&mut prefix_tree,
-			consumed + 1,
+			consumed,
 			&self.states[state].final_operations,
 			&self.states[state].tag_for_register,
 		);
@@ -188,11 +195,14 @@ impl<'schema> Dfa<'schema> {
 				maybe_rule = Some(var.rule);
 			}
 			for (&i, &j) in std::iter::zip(starts.iter(), ends.iter()) {
-				on_capture(var.name, &input[i..j]);
+				on_capture(var.name, &input[i..=j]);
 			}
 		}
 
-		return Some((maybe_rule.unwrap(), &input[..consumed + 1]));
+		Ok(GotRule {
+			rule: maybe_rule.unwrap(),
+			lexeme: &input[..=consumed],
+		})
 	}
 
 	fn apply_operations(

@@ -75,6 +75,7 @@ renaming_overrides_prefixing = false
 
 [export.pre_body]
 "CSlice" = """
+// Custom
 CSlice(std::string_view const& view)
 	requires std::is_same_v<T, char>
 	: CSlice(view.data(), view.size())
@@ -84,10 +85,15 @@ CSlice(char const* c_str)
 	requires std::is_same_v<T, char>
 	: CSlice(std::string_view { c_str })
 	{}
+
+// Generated
 """
 
-"LogComponent" = """
-LogComponent() = default;
+"CLogFragment" = """
+// Custom
+CLogFragment() = default;
+
+// Generated
 """
 
 [export.body]

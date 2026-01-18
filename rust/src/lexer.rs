@@ -1,94 +1,91 @@
-use std::marker::PhantomData;
-
 use crate::c_interface::CStringView;
 use crate::dfa::Dfa;
+use crate::dfa::GotRule;
 use crate::nfa::Nfa;
 use crate::nfa::NfaError;
 use crate::schema::Schema;
 
-pub struct Lexer<'schema> {
+pub struct Lexer<'schema, 'input> {
+	schema: &'schema Schema,
 	dfa: Dfa<'schema>,
-	captures_buffer: Vec<Capture<'schema>>,
+	captures_buffer: Vec<Capture<'schema, 'input>>,
 }
 
-// TODO this is a little spicy, missing lifetime on input
-#[repr(C)]
-pub struct LogComponent<'schema, 'buffer> {
+pub struct Fragment<'schema, 'input, 'buffer> {
 	pub rule: usize,
-	pub start: *const u8,
-	pub end: *const u8,
-	pub captures: *const Capture<'schema>,
-	pub captures_count: usize,
-	pub _captures_lifetime: PhantomData<&'buffer [Capture<'schema>]>,
+	pub lexeme: &'input str,
+	pub captures: &'buffer [Capture<'schema, 'input>],
 }
 
 #[repr(C)]
-pub struct Capture<'schema> {
+pub struct Capture<'schema, 'input> {
 	pub name: CStringView<'schema>,
-	pub start: *const u8,
-	pub end: *const u8,
+	pub lexeme: CStringView<'input>,
 }
 
-impl<'schema> Lexer<'schema> {
+impl<'schema, 'input> Lexer<'schema, 'input> {
 	pub fn new(schema: &'schema Schema) -> Result<Self, NfaError> {
 		let nfa: Nfa<'_> = Nfa::for_schema(schema)?;
 		let dfa: Dfa<'_> = Dfa::determinization(&nfa);
 		Ok(Self {
+			schema,
 			dfa,
 			captures_buffer: Vec::new(),
 		})
 	}
 
-	pub fn next_token(&mut self, input: &str, pos: &mut usize) -> Option<LogComponent<'schema, '_>> {
-		// TODO currently static text/delimiters are not handled properly.
+	pub fn next_fragment(&mut self, input: &'input str, pos: &mut usize) -> Fragment<'schema, 'input, '_> {
 		self.captures_buffer.clear();
 
-		let start: usize = *pos;
-		loop {
-			let maybe: Option<(usize, &str)> = self.dfa.simulate_with_captures(&input[*pos..], |name, capture| {
+		while *pos < input.len() {
+			let static_text_end: usize = *pos;
+			match self.dfa.simulate_with_captures(&input[*pos..], |name, capture| {
 				self.captures_buffer.push(Capture {
 					name: CStringView::from_utf8(name),
-					start: capture.as_bytes().as_ptr_range().start,
-					end: capture.as_bytes().as_ptr_range().end,
+					lexeme: CStringView::from_utf8(capture),
 				});
-			});
-			if let Some((rule, full_match_text)) = maybe {
-				if rule == 0 {
-					// TODO duplicated...
-					// [`str::len`] is already in bytes, but this is more explicit.
-					*pos += full_match_text.as_bytes().len();
-					continue;
-				} else if start == *pos {
-					// [`str::len`] is already in bytes, but this is more explicit.
-					*pos += full_match_text.as_bytes().len();
-					return Some(LogComponent {
+			}) {
+				Ok(GotRule { rule, lexeme }) => {
+					*pos += lexeme.len();
+					if let Some(next) = input[*pos..].chars().next() {
+						*pos += next.len_utf8();
+						if !self.is_delimiter(next) {
+							self.glob_static_text(input, pos);
+							continue;
+						}
+					}
+					return Fragment {
 						rule,
-						start: full_match_text.as_bytes().as_ptr_range().start,
-						end: full_match_text.as_bytes().as_ptr_range().end,
-						captures: self.captures_buffer.as_ptr(),
-						captures_count: self.captures_buffer.len(),
-						_captures_lifetime: PhantomData,
-					});
-				} else {
-					break;
-				}
-			} else {
-				if start == *pos {
-					return None;
-				}
-				assert_eq!(*pos, input.len());
-				break;
+						lexeme,
+						captures: &self.captures_buffer,
+					};
+				},
+				Err(consumed) => {
+					*pos += consumed;
+					self.glob_static_text(input, pos);
+				},
 			}
 		}
 
-		return Some(LogComponent {
+		Fragment {
 			rule: 0,
-			start: input[start..*pos].as_bytes().as_ptr_range().start,
-			end: input[start..*pos].as_bytes().as_ptr_range().end,
-			captures: std::ptr::null(),
-			captures_count: 0,
-			_captures_lifetime: PhantomData,
-		});
+			lexeme: &input[*pos..],
+			captures: &[],
+		}
+	}
+
+	fn glob_static_text(&self, input: &'input str, pos: &mut usize) {
+		// TODO use automata?
+		for ch in input[*pos..].chars() {
+			*pos += ch.len_utf8();
+			if self.is_delimiter(ch) {
+				break;
+			}
+		}
+	}
+
+	fn is_delimiter(&self, ch: char) -> bool {
+		self.schema.delimiters.contains(ch)
 	}
 }
 
@@ -98,35 +95,20 @@ mod test {
 	use crate::regex::Regex;
 
 	#[test]
-	fn basic1() {
-		let mut schema: Schema = Schema::new();
-		schema.add_rule("hello", Regex::from_pattern("hello world").unwrap());
-		schema.add_rule("bye", Regex::from_pattern("goodbye").unwrap());
-
-		let mut lexer: Lexer<'_> = Lexer::new(&schema).unwrap();
-		let input: &str = "hello worldgoodbyehello world";
-		let mut pos: usize = 0;
-		assert_eq!(lexer.next_token(input, &mut pos).unwrap().rule, 1);
-		assert_eq!(lexer.next_token(input, &mut pos).unwrap().rule, 2);
-		assert_eq!(lexer.next_token(input, &mut pos).unwrap().rule, 1);
-		assert_eq!(pos, input.len());
-	}
-
-	#[test]
-	fn basic2() {
+	fn basic() {
 		let mut schema: Schema = Schema::new();
 		schema.set_delimiters(" ");
 		schema.add_rule("hello", Regex::from_pattern("hello world").unwrap());
 		schema.add_rule("bye", Regex::from_pattern("goodbye").unwrap());
 
-		let mut lexer: Lexer<'_> = Lexer::new(&schema).unwrap();
-		let input: &str = "hello world goodbye hello world";
+		let mut lexer: Lexer<'_, '_> = Lexer::new(&schema).unwrap();
+		let input: &str = "hello world goodbye hello world  goodbye  ";
 		let mut pos: usize = 0;
-		assert_eq!(lexer.next_token(input, &mut pos).unwrap().rule, 1);
-		assert_eq!(lexer.next_token(input, &mut pos).unwrap().rule, 0);
-		assert_eq!(lexer.next_token(input, &mut pos).unwrap().rule, 2);
-		assert_eq!(lexer.next_token(input, &mut pos).unwrap().rule, 0);
-		assert_eq!(lexer.next_token(input, &mut pos).unwrap().rule, 1);
+		assert_eq!(lexer.next_fragment(input, &mut pos).rule, 1);
+		assert_eq!(lexer.next_fragment(input, &mut pos).rule, 2);
+		assert_eq!(lexer.next_fragment(input, &mut pos).rule, 1);
+		assert_eq!(lexer.next_fragment(input, &mut pos).rule, 2);
+		assert_eq!(lexer.next_fragment(input, &mut pos).rule, 0);
 		assert_eq!(pos, input.len());
 	}
 }

@@ -1,15 +1,11 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::iter::Enumerate;
-// use std::marker::PhantomData;
 use std::num::NonZero;
-use std::slice::Iter;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
 use crate::regex::Regex;
-use crate::schema::Rule;
 use crate::schema::Schema;
 
 #[derive(Debug)]
@@ -104,11 +100,8 @@ impl<'schema> Nfa<'schema> {
 			current: start,
 		};
 		builder.current = start;
-		let mut rules: Enumerate<Iter<'_, Rule>> = schema.rules().iter().enumerate();
-		// "Static text" rule comes last in precedence.
-		let static_text: (usize, &Rule) = rules.next().unwrap();
 		let tags: BTreeSet<Tag<'_>> = builder.alternate(
-			rules.chain(std::iter::once(static_text)).map(|(i, rule)| {
+			schema.rules().iter().enumerate().skip(1).map(|(i, rule)| {
 				move |builder: &mut NfaBuilder<'_, 'schema>, target| {
 					builder.capture(i, None, &*rule.name, &rule.regex, target)
 				}
@@ -116,6 +109,7 @@ impl<'schema> Nfa<'schema> {
 			end,
 		)?;
 		nfa.tags = tags.into_iter().collect::<Vec<_>>();
+
 		Ok(nfa)
 	}
 

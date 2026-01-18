@@ -10,5 +10,4 @@ crate-type = ["lib", "staticlib"]
 cbindgen = "0.29"
 
 [dependencies]
-libc = "0.2"
 nom = "8"

@@ -3,6 +3,7 @@ use crate::regex::Regex;
 #[derive(Debug)]
 pub struct Schema {
 	rules: Vec<Rule>,
+	pub delimiters: String,
 }
 
 #[derive(Debug)]
@@ -22,11 +23,13 @@ impl Schema {
 				name: "static".to_owned(),
 				regex: Self::pattern_for_delimiters(Self::DEFAULT_DELIMITERS),
 			}],
+			delimiters: Self::DEFAULT_DELIMITERS.to_owned(),
 		}
 	}
 
 	pub fn set_delimiters(&mut self, delimiters: &str) {
 		self.rules[0].regex = Self::pattern_for_delimiters(delimiters);
+		self.delimiters = delimiters.to_owned();
 	}
 
 	pub fn add_rule<LikeString>(&mut self, name: LikeString, regex: Regex)
@@ -46,9 +49,9 @@ impl Schema {
 	}
 
 	// TODO use generalized escapes
-	fn pattern_for_delimiters(delimiters: &str) -> Regex {
-		// let pattern: String = format!("[^{delimiters}]+|({delimiters})");
-		let pattern: String = format!(".");
+	pub fn pattern_for_delimiters(delimiters: &str) -> Regex {
+		let pattern: String = format!("{delimiters}");
+		// let pattern: String = format!(".");
 		Regex::from_pattern(&pattern).unwrap()
 	}
 }

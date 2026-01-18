@@ -6,18 +6,17 @@
 using namespace clp::log_mechanic;
 
 int main() {
-	Schema* schema { clp_log_mechanic_schema_new() };
+	Box<Schema> schema { clp_log_mechanic_schema_new() };
 
 	clp_log_mechanic_schema_add_rule(schema, "hello", "abc|def");
 
-	Lexer* lexer { clp_log_mechanic_lexer_new(schema) };
+	Box<Lexer> lexer { clp_log_mechanic_lexer_new(schema) };
 
-	LogComponent component {};
 	size_t pos { 0 };
 
-	clp_log_mechanic_lexer_next_token(lexer, "def", &pos, &component);
-	assert(component.rule == 1);
-	assert(component.start + 3 == component.end);
+	CLogFragment fragment { clp_log_mechanic_lexer_next_fragment(lexer, "def", &pos) };
+	assert(fragment.rule == 1);
+	assert(fragment.start + 3 == fragment.end);
 
 	printf("good!\n");
 

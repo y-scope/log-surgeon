@@ -14,6 +14,7 @@ struct Schema;
 
 template<typename T>
 struct CSlice {
+// Custom
 CSlice(std::string_view const& view)
 	requires std::is_same_v<T, char>
 	: CSlice(view.data(), view.size())
@@ -23,6 +24,8 @@ CSlice(char const* c_str)
 	requires std::is_same_v<T, char>
 	: CSlice(std::string_view { c_str })
 	{}
+
+// Generated
   const T *pointer;
   size_t length;
 
@@ -38,28 +41,28 @@ using CStringView = CSlice<char>;
 
 struct Capture {
   CStringView name;
-  const uint8_t *start;
-  const uint8_t *end;
+  CStringView lexeme;
 
   Capture(CStringView const& name,
-          const uint8_t *const& start,
-          const uint8_t *const& end)
+          CStringView const& lexeme)
     : name(name),
-      start(start),
-      end(end)
+      lexeme(lexeme)
   {}
 
 };
 
-struct LogComponent {
-LogComponent() = default;
+struct CLogFragment {
+// Custom
+CLogFragment() = default;
+
+// Generated
   size_t rule;
   const uint8_t *start;
   const uint8_t *end;
   const Capture *captures;
   size_t captures_count;
 
-  LogComponent(size_t const& rule,
+  CLogFragment(size_t const& rule,
                const uint8_t *const& start,
                const uint8_t *const& end,
                const Capture *const& captures,
@@ -80,10 +83,13 @@ void clp_log_mechanic_lexer_delete(Box<Lexer> lexer);
 
 Box<Lexer> clp_log_mechanic_lexer_new(const Schema *schema);
 
-bool clp_log_mechanic_lexer_next_token(Lexer *lexer,
-                                       CStringView input,
-                                       size_t *pos,
-                                       LogComponent *log_component);
+/// Very unsafe!
+///
+/// The returned [`CLogFragment`] includes a hidden exclusive borrow of `lexer`
+/// (it contains a pointer into an interal buffer of `lexer`),
+/// so it is nolonger valid/you must not use it after a subsequent exclusive borrow of `lexer`
+/// (i.e. this borrow has ended).
+CLogFragment clp_log_mechanic_lexer_next_fragment(Lexer *lexer, CStringView input, size_t *pos);
 
 void clp_log_mechanic_schema_add_rule(Schema *schema, CStringView name, CStringView pattern);
 
