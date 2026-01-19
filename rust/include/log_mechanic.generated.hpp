@@ -56,10 +56,15 @@ struct CLogFragment {
 CLogFragment() = default;
 
 // Generated
+  /// `0` iff no variable found (static text until end of input).
   size_t rule;
+  /// Start of variable (if found).
   const uint8_t *start;
+  /// End of variable (if found).
   const uint8_t *end;
+  /// Pointer to an array of captures (if variable found).
   const Capture *captures;
+  /// Number of captures.
   size_t captures_count;
 
   CLogFragment(size_t const& rule,
@@ -87,7 +92,7 @@ Box<Lexer> clp_log_mechanic_lexer_new(const Schema *schema);
 ///
 /// The returned [`CLogFragment`] includes a hidden exclusive borrow of `lexer`
 /// (it contains a pointer into an interal buffer of `lexer`),
-/// so it is nolonger valid/you must not use it after a subsequent exclusive borrow of `lexer`
+/// so it is nolonger valid (you must not touch it) after any subsequent borrow of `lexer`
 /// (i.e. this borrow has ended).
 CLogFragment clp_log_mechanic_lexer_next_fragment(Lexer *lexer, CStringView input, size_t *pos);
 

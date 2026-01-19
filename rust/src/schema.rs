@@ -3,7 +3,7 @@ use crate::regex::Regex;
 #[derive(Debug)]
 pub struct Schema {
 	rules: Vec<Rule>,
-	pub delimiters: String,
+	delimiters: String,
 }
 
 #[derive(Debug)]
@@ -48,10 +48,16 @@ impl Schema {
 		&self.rules
 	}
 
-	// TODO use generalized escapes
+	pub fn delimiters(&self) -> &str {
+		&self.delimiters
+	}
+
 	pub fn pattern_for_delimiters(delimiters: &str) -> Regex {
-		let pattern: String = format!("{delimiters}");
-		// let pattern: String = format!(".");
+		let mut escaped: String = String::new();
+		for ch in delimiters.chars() {
+			escaped += &format!("\\u{{{:x}}}", u32::from(ch));
+		}
+		let pattern: String = format!("[{escaped}]");
 		Regex::from_pattern(&pattern).unwrap()
 	}
 }

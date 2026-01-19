@@ -19,12 +19,19 @@ pub struct CSlice<'lifetime, T> {
 pub type CStringView<'lifetime> = CSlice<'lifetime, c_char>;
 
 #[repr(C)]
-pub struct CLogFragment<'schema, 'input> {
+pub struct CLogFragment<'schema, 'input, 'buffer> {
+	/// `0` iff no variable found (static text until end of input).
 	pub rule: usize,
+	/// Start of variable (if found).
 	pub start: *const u8,
+	/// End of variable (if found).
 	pub end: *const u8,
+	/// Pointer to an array of captures (if variable found).
 	pub captures: *const Capture<'schema, 'input>,
+	/// Number of captures.
 	pub captures_count: usize,
+	/// Indicates that `captures` points into (borrows from) some external `'buffer`.
+	pub _captures_lifetime: PhantomData<&'buffer [Capture<'schema, 'input>]>,
 }
 
 #[unsafe(no_mangle)]
@@ -69,14 +76,14 @@ unsafe extern "C" fn clp_log_mechanic_lexer_delete<'a>(lexer: Box<Lexer<'_, 'a>>
 ///
 /// The returned [`CLogFragment`] includes a hidden exclusive borrow of `lexer`
 /// (it contains a pointer into an interal buffer of `lexer`),
-/// so it is nolonger valid/you must not use it after a subsequent exclusive borrow of `lexer`
+/// so it is nolonger valid (you must not touch it) after any subsequent borrow of `lexer`
 /// (i.e. this borrow has ended).
 #[unsafe(no_mangle)]
 unsafe extern "C" fn clp_log_mechanic_lexer_next_fragment<'schema, 'lexer, 'input>(
 	lexer: &'lexer mut Lexer<'schema, 'input>,
 	input: CStringView<'input>,
 	pos: &mut usize,
-) -> CLogFragment<'schema, 'input> {
+) -> CLogFragment<'schema, 'input, 'lexer> {
 	let fragment: Fragment<'_, '_, '_> = lexer.next_fragment(input.as_utf8().unwrap(), pos);
 	CLogFragment {
 		rule: fragment.rule,
@@ -84,6 +91,7 @@ unsafe extern "C" fn clp_log_mechanic_lexer_next_fragment<'schema, 'lexer, 'inpu
 		end: fragment.lexeme.as_bytes().as_ptr_range().end,
 		captures: fragment.captures.as_ptr(),
 		captures_count: fragment.captures.len(),
+		_captures_lifetime: PhantomData,
 	}
 }
 

@@ -5,6 +5,7 @@ use nom::Err as NomErr;
 use nom::IResult;
 use nom::Parser;
 use nom::error::ErrorKind as NomErrorKind;
+// use nom::error::FromExternalError;
 use nom::error::ParseError;
 
 const SPECIAL_CHARACTERS: &str = r"\()[]{}<>*+?-.|^";
@@ -54,11 +55,13 @@ pub enum RegexErrorKind {
 	EmptyTerm,
 	InvalidLiteral,
 	InvalidEscape,
-	UnexpectedEnd,
 	NumberTooBig,
 	ExpectedNumber,
+	ExpectedHexDigits,
+	InvalidCodePoint(u32),
 	ExpectedVariableName,
 	TooManyCaptures,
+	ExpectedOneOf(&'static str, bool),
 	Nom(NomErrorKind),
 }
 
@@ -81,6 +84,12 @@ impl<'a> ParseError<&'a str> for RegexParsingError<'a> {
 	}
 }
 
+// impl<'a> FromExternalError<&'a str, Self> for RegexParsingError<'a> {
+// 	fn from_external_error(_input: &'a str, _nom: NomErrorKind, e: Self) -> Self {
+// 		e
+// 	}
+// }
+
 impl<'a> RegexParsingError<'a> {
 	fn new(input: &'a str, kind: RegexErrorKind) -> Self {
 		Self { input, kind }
@@ -101,8 +110,7 @@ impl Regex {
 				Ok(regex)
 			},
 			Err(NomErr::Incomplete(_)) => {
-				// unexpected end
-				todo!();
+				panic!("We shouldn't be using anything that can return this!");
 			},
 			Err(NomErr::Error(err) | NomErr::Failure(err)) => {
 				// TODO unwrap
@@ -144,30 +152,67 @@ impl Regex {
 	}
 }
 
-fn parse_to_end(input: &str) -> ParsingResult<'_, Regex> {
-	use nom::combinator::eof;
+impl RegexErrorKind {
+	fn error(self, input: &str) -> NomErr<RegexParsingError<'_>> {
+		NomErr::Error(RegexParsingError::new(input, self))
+	}
 
-	let (input, regex): (&str, Regex) = parse_alternation(input)?;
-
-	// TODO type inference weirdness
-	// TODO handle incomplete more uniformly
-	match eof(input) {
-		Ok((input, _)) => Ok((input, regex)),
-		Err(err @ NomErr::Incomplete(_)) => Err(err),
-		Err(_) => Err(NomErr::Error(RegexParsingError::new(
-			input,
-			RegexErrorKind::UnexpectedEnd,
-		))),
+	fn diagnostic<'a, T>(self) -> impl Fn(&'a str) -> ParsingResult<'a, T> {
+		move |input| Err(self.error(input))
 	}
 }
 
-fn parse_alternation(input: &str) -> ParsingResult<'_, Regex> {
-	// use nom::combinator::cut;
-	use nom::multi::separated_list1;
+// ==================================
 
-	let (input, mut items): (&str, Vec<Regex>) =
-		// separated_list1(parse_char::<'|'>, cut(parse_sequence)).parse(input)?;
-		separated_list1(parse_char::<'|'>, parse_sequence).parse(input)?;
+fn parse_to_end(input: &str) -> ParsingResult<'_, Regex> {
+	// `parse_sequence` (and consequently `parse_alternation`) may swallow errors from
+	// `parse_suffixed`, since the former two are "lists" that simply terminate when
+	// no more elements (suffixed terms) can be parsed.
+	// `parse_alternation` is called at the top level (here), or inside parentheses (possibly a capture).
+	// Inside parentheses, after failing to parse a term (i.e. reaching the end of the list),
+	// we look for the closing parenthesis.
+	// Here, after reaching the end of the list, we ensure we're at the end of input,
+	// otherwise "reproduce" the invalid term error.
+	let (input, regex): (&str, Regex) = parse_alternation(input)?;
+
+	if !input.is_empty() {
+		return Err(RegexErrorKind::EmptyTerm.error(input));
+	}
+
+	Ok((input, regex))
+}
+
+fn parse_alternation(input: &str) -> ParsingResult<'_, Regex> {
+	use nom::combinator::cut;
+	use nom::combinator::opt;
+
+	// Cut: Any time we're "trying" to parse an alternation,
+	// we necessarily are expecting at least one item.
+	let (mut input, first): (&str, Regex) = cut(parse_sequence).parse(input)?;
+
+	let mut items: Vec<Regex> = vec![first];
+
+	loop {
+		let maybe_bar: Option<char>;
+		(input, maybe_bar) = opt(parse_char::<'|'>).parse(input)?;
+		if maybe_bar.is_none() {
+			break;
+		}
+
+		// Cut: After seeing a '|', we necessarily are expecting a sequence.
+		match cut(parse_sequence).parse(input) {
+			Ok((remaining, item)) => {
+				input = remaining;
+				items.push(item);
+			},
+			Err(NomErr::Error(_)) => {
+				break;
+			},
+			Err(err @ (NomErr::Incomplete(_) | NomErr::Failure(_))) => {
+				return Err(err);
+			},
+		}
+	}
 
 	if items.len() == 1 {
 		Ok((input, items.pop().unwrap()))
@@ -177,9 +222,10 @@ fn parse_alternation(input: &str) -> ParsingResult<'_, Regex> {
 }
 
 fn parse_sequence(input: &str) -> ParsingResult<'_, Regex> {
-	// use nom::multi::many1;
 	use nom::combinator::cut;
 
+	// Cut: Any time we're "trying" to parse a sequence,
+	// we necessarily are expecting at least one item.
 	let (mut input, first): (&str, Regex) = cut(parse_suffixed).parse(input)?;
 
 	let mut items: Vec<Regex> = vec![first];
@@ -199,9 +245,6 @@ fn parse_sequence(input: &str) -> ParsingResult<'_, Regex> {
 		}
 	}
 
-	// TODO many1 error
-	// let (input, mut items): (&str, Vec<Regex>) = many1(parse_suffixed).parse(input)?;
-
 	if items.len() == 1 {
 		Ok((input, items.pop().unwrap()))
 	} else {
@@ -219,7 +262,7 @@ fn parse_suffixed(input: &str) -> ParsingResult<'_, Regex> {
 		Plus,
 	}
 
-	let (input, regex): (&str, Regex) = parse_term.parse(input)?;
+	let (input, regex): (&str, Regex) = parse_term(input)?;
 
 	let (input, maybe_suffix): (&str, Option<Suffix>) = opt(alt((
 		parse_char::<'*'>.map(|_| Suffix::Star),
@@ -256,7 +299,8 @@ fn parse_repetition_bound(input: &str) -> ParsingResult<'_, (u32, u32)> {
 	use nom::sequence::separated_pair;
 
 	let (input, (min, max)): (&str, (u32, u32)) = combinator_surrounded_cut::<'{', '}', _, _>(alt((
-		separated_pair(parse_digits, parse_char::<','>, cut(parse_digits)).map(|(min, max)| (min, max)),
+		// Cut: After seeing a ',', we necessarily are expecting an upper bound.
+		separated_pair(parse_digits, parse_char::<','>, cut(parse_digits)),
 		parse_digits.map(|count| (count, count)),
 	)))
 	.parse(input)?;
@@ -272,7 +316,7 @@ fn parse_term(input: &str) -> ParsingResult<'_, Regex> {
 		parse_literal_character.map(|ch| Regex::Literal(ch)),
 		parse_parenthesized,
 		parse_group,
-		diagnostic_empty_term,
+		RegexErrorKind::EmptyTerm.diagnostic(),
 	))
 	.parse(input)
 }
@@ -280,34 +324,17 @@ fn parse_term(input: &str) -> ParsingResult<'_, Regex> {
 fn parse_parenthesized(input: &str) -> ParsingResult<'_, Regex> {
 	use nom::branch::alt;
 
-	// use nom::combinator::cut;
-	// use nom::sequence::delimited;
-
-	// delimited(
-	// 	parse_char::<'('>,
-	// 	cut(alt((parse_capture, parse_alternation))),
-	// 	parse_char::<')'>,
-	// )
-	// .parse(input)
-
 	combinator_surrounded_cut::<'(', ')', _, _>(alt((parse_capture, parse_alternation))).parse(input)
 }
 
 fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 	use nom::combinator::cut;
-	// use nom::sequence::delimited;
 
 	let remaining: usize = input.len();
 
 	let (input, _): (&str, char) = parse_char::<'?'>(input)?;
 
-	// let (input, name): (&str, &str) = cut(delimited(
-	// 	parse_char::<'<'>,
-	// 	cut(parse_variable_name),
-	// 	parse_char::<'>'>,
-	// ))
-	// .parse(input)?;
-
+	// Cut: After seeing a '?', we necessarily are expecting a capture.
 	let (input, name): (&str, &str) =
 		cut(combinator_surrounded_cut::<'<', '>', _, _>(parse_variable_name)).parse(input)?;
 
@@ -330,12 +357,8 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 // ========================================
 
 fn parse_group(input: &str) -> ParsingResult<'_, Regex> {
-	// use nom::combinator::cut;
-	// use nom::sequence::delimited;
-
 	let (input, (negated, items)): (&str, (bool, Vec<(char, char)>)) =
 		combinator_surrounded_cut::<'[', ']', _, _>(parse_group_inside).parse(input)?;
-	// 	delimited(parse_char::<'['>, cut(parse_group_inside), parse_char::<']'>).parse(input)?;
 
 	Ok((input, Regex::Group { negated, items }))
 }
@@ -371,12 +394,11 @@ fn parse_group_item(input: &str) -> ParsingResult<'_, (char, char)> {
 
 fn parse_literal_character(input: &str) -> ParsingResult<'_, char> {
 	use nom::branch::alt;
-	use nom::character::complete::none_of;
 
 	alt((
 		parse_escaped_character,
-		none_of(SPECIAL_CHARACTERS),
-		diagnostic_expected_literal,
+		parse_one_char_of::<true>(SPECIAL_CHARACTERS),
+		RegexErrorKind::InvalidLiteral.diagnostic(),
 	))
 	.parse(input)
 }
@@ -387,35 +409,53 @@ fn parse_escaped_character(original_input: &str) -> ParsingResult<'_, char> {
 
 	let (input, _): (&str, char) = parse_char::<'\\'>(original_input)?;
 
-	// Cut: if we parsed a '\\', we necessarily are looking for an escape character.
-	cut(alt((parse_one_char_of(SPECIAL_CHARACTERS), parse_standard_escape))
-		.or(|_| diagnostic(original_input, RegexErrorKind::InvalidEscape)))
+	// Cut: If we parsed a '\\', we necessarily are looking for an escape character.
+	cut(
+		alt((parse_one_char_of::<false>(SPECIAL_CHARACTERS), parse_standard_escape))
+			// Outside of the `alt` since the error starts at the original input.
+			.or(|_| Err(RegexErrorKind::InvalidEscape.error(original_input))),
+	)
 	.parse(input)
 }
 
-// TODO: custom implementation
-fn parse_one_char_of<'a>(any: &'static str) -> impl Parser<&'a str, Output = char, Error = RegexParsingError<'a>> {
-	use nom::character::complete::one_of;
+fn parse_one_char_of<'a, const NEGATE: bool>(
+	any: &'static str,
+) -> impl Parser<&'a str, Output = char, Error = RegexParsingError<'a>> {
+	move |input: &'a str| {
+		let mut chars: Chars<'_> = input.chars();
 
-	one_of(any)
+		if let Some(ch) = chars.next() {
+			if any.contains(ch) {
+				if !NEGATE {
+					return Ok((chars.as_str(), ch));
+				} else {
+					return Err(RegexErrorKind::ExpectedOneOf(any, NEGATE).error(input));
+				}
+			} else if NEGATE {
+				return Ok((chars.as_str(), ch));
+			}
+		}
+
+		Err(RegexErrorKind::ExpectedOneOf(any, NEGATE).error(input))
+	}
 }
 
 fn parse_standard_escape(input: &str) -> ParsingResult<'_, char> {
-	let mut chars: Chars = input.chars();
+	let mut chars: Chars<'_> = input.chars();
 
 	// We use the NUL character as a marker/equivalent to EOF;
-	// it's not a valid escape character.
+	// it's not a valid escape character, and will be caught in the default branch of the `match` block below.
 	let ch: char = chars.next().unwrap_or('\0');
 
 	let unescaped: char = match ch {
 		't' => '\t',
 		'r' => '\r',
 		'n' => '\n',
+		'u' => {
+			return combinator_surrounded_cut::<'{', '}', _, _>(parse_hex_code_point).parse(chars.as_str());
+		},
 		_ => {
-			return Err(NomErr::Error(RegexParsingError::new(
-				input,
-				RegexErrorKind::InvalidEscape,
-			)));
+			return Err(RegexErrorKind::InvalidEscape.error(input));
 		},
 	};
 
@@ -423,18 +463,17 @@ fn parse_standard_escape(input: &str) -> ParsingResult<'_, char> {
 }
 
 fn parse_char<const CHAR: char>(input: &str) -> ParsingResult<'_, char> {
-	let mut chars: Chars = input.chars();
+	let mut chars: Chars<'_> = input.chars();
 
 	if let Some(ch) = chars.next() {
 		if ch == CHAR {
 			return Ok((chars.as_str(), ch));
+		} else {
+			return Err(RegexErrorKind::ExpectedChar(CHAR).error(input));
 		}
 	}
 
-	Err(NomErr::Error(RegexParsingError::new(
-		input,
-		RegexErrorKind::ExpectedChar(CHAR),
-	)))
+	Err(RegexErrorKind::ExpectedChar(CHAR).error(input))
 }
 
 // =======================================
@@ -442,17 +481,9 @@ fn parse_char<const CHAR: char>(input: &str) -> ParsingResult<'_, char> {
 fn parse_variable_name(input: &str) -> ParsingResult<'_, &str> {
 	use nom::character::complete::alphanumeric1;
 
-	match alphanumeric1(input) {
-		output @ Ok(_) => output,
-		Err(err @ NomErr::Incomplete(_)) => {
-			// Propagate
-			Err(err)
-		},
-		Err(NomErr::Error(_) | NomErr::Failure(_)) => Err(NomErr::Error(RegexParsingError::new(
-			input,
-			RegexErrorKind::ExpectedVariableName,
-		))),
-	}
+	alphanumeric1
+		.or(RegexErrorKind::ExpectedVariableName.diagnostic())
+		.parse(input)
 }
 
 fn parse_digits(input: &str) -> ParsingResult<'_, u32> {
@@ -477,28 +508,65 @@ fn parse_digits(input: &str) -> ParsingResult<'_, u32> {
 	}
 }
 
-// ==================================
+fn parse_hex_code_point(input: &str) -> ParsingResult<'_, char> {
+	use nom::multi::fold_many_m_n;
 
-fn diagnostic(input: &str, kind: RegexErrorKind) -> ParsingResult<'_, char> {
-	Err(NomErr::Error(RegexParsingError::new(input, kind)))
+	// Sigh... rust const eval and casts...
+	const MAX_BYTES_PER_CODE_POINT: usize = (char::MAX as u32).ilog2() as usize + 1;
+
+	let (remaining, code_point): (&str, u32) = fold_many_m_n(
+		1,
+		MAX_BYTES_PER_CODE_POINT,
+		parse_hex_digit_pair,
+		|| 0,
+		|folded, b| (folded << u8::BITS) | b,
+	)
+	.parse(input)
+	.map_err(|_| RegexErrorKind::ExpectedHexDigits.error(input))?;
+
+	if let Some(ch) = char::from_u32(code_point) {
+		Ok((remaining, ch))
+	} else {
+		Err(RegexErrorKind::InvalidCodePoint(code_point).error(input))
+	}
+
+	// let original_input: &str = input;
+
+	// let mut value: u32 = 0;
+	// let mut x;
+	// for _ in 0..MAX_BYTES_PER_CODE_POINT {
+	// 	(input, x) = parse_hex_digit_pair(input).ok_or(NomErr::Error(RegexParsingError::new(
+	// 		original_input,
+	// 		RegexErrorKind::ExpectedHexDigits,
+	// 	)))?;
+	// 	value = (value << 8) | x;
+	// }
+
+	// if let Some(ch) = char::from_u32(value) {
+	// 	Ok((input, ch))
+	// } else {
+	// 	Err(NomErr::Error(RegexParsingError::new(
+	// 		original_input,
+	// 		RegexErrorKind::InvalidCodePoint(value),
+	// 	)))
+	// }
 }
 
-fn diagnostic_empty_term(input: &str) -> ParsingResult<'_, Regex> {
-	Err(NomErr::Error(RegexParsingError::new(input, RegexErrorKind::EmptyTerm)))
-}
+fn parse_hex_digit_pair(input: &str) -> ParsingResult<'_, u32> {
+	let mut chars: Chars<'_> = input.chars();
 
-fn diagnostic_expected_literal(input: &str) -> ParsingResult<'_, char> {
-	Err(NomErr::Error(RegexParsingError::new(
-		input,
-		RegexErrorKind::InvalidLiteral,
-	)))
-}
+	if let Some(upper) = chars.next() {
+		if let Some(lower) = chars.next() {
+			match (upper.to_digit(16), lower.to_digit(16)) {
+				(Some(upper), Some(lower)) => {
+					return Ok((chars.as_str(), (upper << 4) + lower));
+				},
+				_ => (),
+			}
+		}
+	}
 
-fn diagnostic_invalid_escape(input: &str) -> ParsingResult<'_, char> {
-	Err(NomErr::Failure(RegexParsingError::new(
-		input,
-		RegexErrorKind::InvalidEscape,
-	)))
+	Err(RegexErrorKind::ExpectedHexDigits.error(input))
 }
 
 // ==================================
@@ -508,6 +576,8 @@ fn combinator_surrounded_cut<'a, const OPEN: char, const CLOSE: char, O, F>(
 where
 	F: Parser<&'a str, Output = O, Error = RegexParsingError<'a>>,
 {
+	use nom::combinator::cut;
+
 	move |input| {
 		let (input, _): (&str, char) = parse_char::<OPEN>(input)?;
 
@@ -527,15 +597,8 @@ where
 		// TODO cut prevents fnmut
 		// let (input, output): (&str, O) = cut(inside).parse(input)?;
 
-		let (input, _): (&str, char) = match parse_char::<CLOSE>(input) {
-			Ok(ok) => ok,
-			Err(_) => {
-				return Err(NomErr::Failure(RegexParsingError::new(
-					input,
-					RegexErrorKind::MissingClose(OPEN, CLOSE),
-				)));
-			},
-		};
+		let (input, _): (&str, char) =
+			cut(parse_char::<CLOSE>.or(RegexErrorKind::MissingClose(OPEN, CLOSE).diagnostic())).parse(input)?;
 
 		Ok((input, output))
 	}
@@ -558,6 +621,29 @@ mod test {
 	}
 
 	#[test]
+	fn hex_code_points() {
+		{
+			Regex::from_pattern(r"\u{20}").unwrap();
+			Regex::from_pattern(r"\u{D7FF}").unwrap();
+			Regex::from_pattern(r"\u{d7ff}").unwrap();
+			Regex::from_pattern(r"\u{10FFFF}").unwrap();
+			Regex::from_pattern(r"\u{10ffff}").unwrap();
+		}
+		{
+			let e: RegexError<'_> = Regex::from_pattern(r"\u{z}").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::ExpectedHexDigits);
+			assert_eq!(e.consumed, r"\u{");
+			assert_eq!(e.remaining, "z}");
+		}
+		{
+			let e: RegexError<'_> = Regex::from_pattern(r"\u{D800}").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::InvalidCodePoint(0xD800));
+			assert_eq!(e.consumed, r"\u{");
+			assert_eq!(e.remaining, "D800}");
+		}
+	}
+
+	#[test]
 	fn empty_term() {
 		{
 			let e: RegexError<'_> = Regex::from_pattern("|abc").unwrap_err();
@@ -576,6 +662,18 @@ mod test {
 			assert_eq!(e.kind, RegexErrorKind::EmptyTerm);
 			assert_eq!(e.consumed, "a|");
 			assert_eq!(e.remaining, "|bc");
+		}
+		{
+			let e: RegexError<'_> = Regex::from_pattern("*").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::EmptyTerm);
+			assert_eq!(e.consumed, "");
+			assert_eq!(e.remaining, "*");
+		}
+		{
+			let e: RegexError<'_> = Regex::from_pattern("a**").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::EmptyTerm);
+			assert_eq!(e.consumed, "a*");
+			assert_eq!(e.remaining, "*");
 		}
 	}
 
@@ -651,25 +749,6 @@ mod test {
 			assert_eq!(e.kind, RegexErrorKind::ExpectedChar('<'));
 			assert_eq!(e.consumed, "(?");
 			assert_eq!(e.remaining, "a");
-		}
-	}
-
-	// TODO explain
-	#[test]
-	fn unexpected_char() {
-		{
-			let e: RegexError<'_> = Regex::from_pattern("*").unwrap_err();
-			// assert_eq!(e.kind, RegexErrorKind::UnexpectedChar('*'));
-			assert_eq!(e.kind, RegexErrorKind::EmptyTerm);
-			assert_eq!(e.consumed, "");
-			assert_eq!(e.remaining, "*");
-		}
-		{
-			let e: RegexError<'_> = Regex::from_pattern("a**").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::UnexpectedEnd);
-			// assert_eq!(e.kind, RegexErrorKind::EmptyTerm);
-			assert_eq!(e.consumed, "a*");
-			assert_eq!(e.remaining, "*");
 		}
 	}
 

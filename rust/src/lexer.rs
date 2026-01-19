@@ -75,7 +75,6 @@ impl<'schema, 'input> Lexer<'schema, 'input> {
 	}
 
 	fn glob_static_text(&self, input: &'input str, pos: &mut usize) {
-		// TODO use automata?
 		for ch in input[*pos..].chars() {
 			*pos += ch.len_utf8();
 			if self.is_delimiter(ch) {
@@ -85,7 +84,9 @@ impl<'schema, 'input> Lexer<'schema, 'input> {
 	}
 
 	fn is_delimiter(&self, ch: char) -> bool {
-		self.schema.delimiters.contains(ch)
+		// XXX: Needs benchmarking, but given a small set of delimiter characters,
+		// a linear search may be faster than a theoretically $O(1)$ hash lookup.
+		self.schema.delimiters().contains(ch)
 	}
 }
 
@@ -104,11 +105,17 @@ mod test {
 		let mut lexer: Lexer<'_, '_> = Lexer::new(&schema).unwrap();
 		let input: &str = "hello world goodbye hello world  goodbye  ";
 		let mut pos: usize = 0;
-		assert_eq!(lexer.next_fragment(input, &mut pos).rule, 1);
-		assert_eq!(lexer.next_fragment(input, &mut pos).rule, 2);
-		assert_eq!(lexer.next_fragment(input, &mut pos).rule, 1);
-		assert_eq!(lexer.next_fragment(input, &mut pos).rule, 2);
-		assert_eq!(lexer.next_fragment(input, &mut pos).rule, 0);
+		assert_eq!(lexer.next_fragment(input, &mut pos).projection(), (1, "hello world"));
+		assert_eq!(lexer.next_fragment(input, &mut pos).projection(), (2, "goodbye"));
+		assert_eq!(lexer.next_fragment(input, &mut pos).projection(), (1, "hello world"));
+		assert_eq!(lexer.next_fragment(input, &mut pos).projection(), (2, "goodbye"));
+		assert_eq!(lexer.next_fragment(input, &mut pos).projection(), (0, ""));
 		assert_eq!(pos, input.len());
+	}
+
+	impl<'schema, 'input, 'buffer> Fragment<'schema, 'input, 'buffer> {
+		fn projection(&self) -> (usize, &'input str) {
+			(self.rule, self.lexeme)
+		}
 	}
 }
