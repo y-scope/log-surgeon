@@ -9,6 +9,13 @@ cargo check
 cargo build
 cargo test
 
-# Run `src/bin/tester.rs`.
-cargo run --bin tester
+# Run `src/bin/playground.rs`.
+cargo run --bin playground
+
+# Python environment
+python3 -m venv .env
+source .env/bin/activate
+pip install maturin
+maturin develop
+./examples/python/usage.py
 ```

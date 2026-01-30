@@ -2,7 +2,6 @@ use std::ffi::c_char;
 use std::marker::PhantomData;
 use std::str::Utf8Error;
 
-use crate::lexer::Capture;
 use crate::lexer::Fragment;
 use crate::lexer::Lexer;
 use crate::regex::Regex;
@@ -19,20 +18,24 @@ pub struct CSlice<'lifetime, T> {
 pub type CStringView<'lifetime> = CSlice<'lifetime, c_char>;
 
 #[repr(C)]
-pub struct CLogFragment<'schema, 'input, 'buffer> {
+pub struct CLogFragment<'input> {
 	/// `0` iff no variable found (static text until end of input).
 	pub rule: usize,
 	/// Start of variable (if found).
 	pub start: *const u8,
 	/// End of variable (if found).
 	pub end: *const u8,
-	/// Pointer to an array of captures (if variable found).
-	pub captures: *const Capture<'schema, 'input>,
-	/// Number of captures.
-	pub captures_count: usize,
-	/// Indicates that `captures` points into (borrows from) some external `'buffer`.
-	pub _captures_lifetime: PhantomData<&'buffer [Capture<'schema, 'input>]>,
+	/// Lifetime of the matched text.
+	pub _marker: PhantomData<CStringView<'input>>,
 }
+
+#[repr(C)]
+pub struct CCapture<'lexer, 'input> {
+	pub name: CStringView<'lexer>,
+	pub lexeme: CStringView<'input>,
+}
+
+pub type LogFragmentOnCapture = Option<extern "C" fn(data: *const (), name: CStringView<'_>, lexeme: CStringView<'_>)>;
 
 #[unsafe(no_mangle)]
 extern "C" fn clp_log_mechanic_schema_new() -> Box<Schema> {
@@ -62,36 +65,38 @@ unsafe extern "C" fn clp_log_mechanic_schema_add_rule(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_lexer_new<'schema, 'a>(schema: &'schema Schema) -> Box<Lexer<'schema, 'a>> {
-	let lexer: Lexer<'_, '_> = Lexer::new(schema).unwrap();
+unsafe extern "C" fn clp_log_mechanic_lexer_new<'schema, 'a>(schema: &'schema Schema) -> Box<Lexer> {
+	let lexer: Lexer = Lexer::new(schema).unwrap();
 	Box::new(lexer)
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_lexer_delete<'a>(lexer: Box<Lexer<'_, 'a>>) {
+unsafe extern "C" fn clp_log_mechanic_lexer_delete<'a>(lexer: Box<Lexer>) {
 	std::mem::drop(lexer);
 }
 
-/// Very unsafe!
-///
-/// The returned [`CLogFragment`] includes a hidden exclusive borrow of `lexer`
-/// (it contains a pointer into an interal buffer of `lexer`),
-/// so it is nolonger valid (you must not touch it) after any subsequent borrow of `lexer`
-/// (i.e. this borrow has ended).
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_lexer_next_fragment<'schema, 'lexer, 'input>(
-	lexer: &'lexer mut Lexer<'schema, 'input>,
+unsafe extern "C" fn clp_log_mechanic_lexer_next_fragment<'lexer, 'input, 'buffer>(
+	lexer: &'lexer mut Lexer,
 	input: CStringView<'input>,
 	pos: &mut usize,
-) -> CLogFragment<'schema, 'input, 'lexer> {
-	let fragment: Fragment<'_, '_, '_> = lexer.next_fragment(input.as_utf8().unwrap(), pos);
+	maybe_closure: LogFragmentOnCapture,
+	data: *const (),
+) -> CLogFragment<'input> {
+	let fragment: Fragment<'_> = lexer.next_fragment(input.as_utf8().unwrap(), pos, |variable, lexeme| {
+		if let Some(closure) = maybe_closure {
+			closure(
+				data,
+				CStringView::from_utf8(&variable.name),
+				CStringView::from_utf8(lexeme),
+			);
+		}
+	});
 	CLogFragment {
 		rule: fragment.rule,
 		start: fragment.lexeme.as_bytes().as_ptr_range().start,
 		end: fragment.lexeme.as_bytes().as_ptr_range().end,
-		captures: fragment.captures.as_ptr(),
-		captures_count: fragment.captures.len(),
-		_captures_lifetime: PhantomData,
+		_marker: PhantomData,
 	}
 }
 
@@ -128,29 +133,29 @@ mod test {
 		schema.add_rule("hello", Regex::from_pattern("hello world").unwrap());
 		schema.add_rule("bye", Regex::from_pattern("goodbye").unwrap());
 
-		let mut lexer: Lexer<'_, '_> = Lexer::new(&schema).unwrap();
+		let mut lexer: Lexer = Lexer::new(&schema).unwrap();
 		let input: CStringView<'_> = CStringView::from_utf8("hello world goodbye hello world  goodbye  ");
 		let mut pos: usize = 0;
 
 		unsafe {
 			assert_eq!(
-				clp_log_mechanic_lexer_next_fragment(&mut lexer, input, &mut pos).rule,
+				clp_log_mechanic_lexer_next_fragment(&mut lexer, input, &mut pos, None, std::ptr::null()).rule,
 				1
 			);
 			assert_eq!(
-				clp_log_mechanic_lexer_next_fragment(&mut lexer, input, &mut pos).rule,
+				clp_log_mechanic_lexer_next_fragment(&mut lexer, input, &mut pos, None, std::ptr::null()).rule,
 				2
 			);
 			assert_eq!(
-				clp_log_mechanic_lexer_next_fragment(&mut lexer, input, &mut pos).rule,
+				clp_log_mechanic_lexer_next_fragment(&mut lexer, input, &mut pos, None, std::ptr::null()).rule,
 				1
 			);
 			assert_eq!(
-				clp_log_mechanic_lexer_next_fragment(&mut lexer, input, &mut pos).rule,
+				clp_log_mechanic_lexer_next_fragment(&mut lexer, input, &mut pos, None, std::ptr::null()).rule,
 				2
 			);
 			assert_eq!(
-				clp_log_mechanic_lexer_next_fragment(&mut lexer, input, &mut pos).rule,
+				clp_log_mechanic_lexer_next_fragment(&mut lexer, input, &mut pos, None, std::ptr::null()).rule,
 				0
 			);
 		}

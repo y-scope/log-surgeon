@@ -14,7 +14,7 @@ int main() {
 
 	size_t pos { 0 };
 
-	CLogFragment fragment { clp_log_mechanic_lexer_next_fragment(lexer, "def", &pos) };
+	CLogFragment fragment { clp_log_mechanic_lexer_next_fragment(lexer, "def", &pos, nullptr, nullptr) };
 	assert(fragment.rule == 1);
 	assert(fragment.start + 3 == fragment.end);
 

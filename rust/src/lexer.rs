@@ -1,63 +1,57 @@
-use crate::c_interface::CStringView;
 use crate::dfa::Dfa;
 use crate::dfa::GotRule;
-use crate::nfa::Nfa;
 use crate::nfa::NfaError;
+use crate::nfa::Variable;
 use crate::schema::Schema;
 
-pub struct Lexer<'schema, 'input> {
-	schema: &'schema Schema,
-	dfa: Dfa<'schema>,
-	captures_buffer: Vec<Capture<'schema, 'input>>,
+#[derive(Debug)]
+pub struct Lexer {
+	schema: Schema,
+	dfa: Dfa,
 }
 
-pub struct Fragment<'schema, 'input, 'buffer> {
+#[derive(Debug)]
+pub struct Fragment<'input> {
+	pub static_text: &'input str,
 	pub rule: usize,
 	pub lexeme: &'input str,
-	pub captures: &'buffer [Capture<'schema, 'input>],
 }
 
-#[repr(C)]
-pub struct Capture<'schema, 'input> {
-	pub name: CStringView<'schema>,
-	pub lexeme: CStringView<'input>,
-}
-
-impl<'schema, 'input> Lexer<'schema, 'input> {
-	pub fn new(schema: &'schema Schema) -> Result<Self, NfaError> {
-		let nfa: Nfa<'_> = Nfa::for_schema(schema)?;
-		let dfa: Dfa<'_> = Dfa::determinization(&nfa);
+impl Lexer {
+	pub fn new(schema: &Schema) -> Result<Self, NfaError> {
+		let dfa: Dfa = Dfa::for_schema(&schema)?;
 		Ok(Self {
-			schema,
+			schema: schema.clone(),
 			dfa,
-			captures_buffer: Vec::new(),
 		})
 	}
 
-	pub fn next_fragment(&mut self, input: &'input str, pos: &mut usize) -> Fragment<'schema, 'input, '_> {
-		self.captures_buffer.clear();
-
+	pub fn next_fragment<'input, F>(
+		&mut self,
+		input: &'input str,
+		pos: &mut usize,
+		mut on_capture: F,
+	) -> Fragment<'input>
+	where
+		F: FnMut(&Variable, &str),
+	{
+		let old_pos: usize = *pos;
 		while *pos < input.len() {
-			let static_text_end: usize = *pos;
-			match self.dfa.simulate_with_captures(&input[*pos..], |name, capture| {
-				self.captures_buffer.push(Capture {
-					name: CStringView::from_utf8(name),
-					lexeme: CStringView::from_utf8(capture),
-				});
-			}) {
+			match self.dfa.simulate_with_captures(&input[*pos..], &mut on_capture) {
 				Ok(GotRule { rule, lexeme }) => {
+					let static_text_end: usize = *pos;
 					*pos += lexeme.len();
 					if let Some(next) = input[*pos..].chars().next() {
-						*pos += next.len_utf8();
 						if !self.is_delimiter(next) {
+							*pos += next.len_utf8();
 							self.glob_static_text(input, pos);
 							continue;
 						}
 					}
 					return Fragment {
+						static_text: str::from_utf8(&input.as_bytes()[old_pos..static_text_end]).unwrap(),
 						rule,
 						lexeme,
-						captures: &self.captures_buffer,
 					};
 				},
 				Err(consumed) => {
@@ -68,13 +62,13 @@ impl<'schema, 'input> Lexer<'schema, 'input> {
 		}
 
 		Fragment {
+			static_text: str::from_utf8(&input.as_bytes()[old_pos..*pos]).unwrap(),
 			rule: 0,
 			lexeme: &input[*pos..],
-			captures: &[],
 		}
 	}
 
-	fn glob_static_text(&self, input: &'input str, pos: &mut usize) {
+	fn glob_static_text(&self, input: &str, pos: &mut usize) {
 		for ch in input[*pos..].chars() {
 			*pos += ch.len_utf8();
 			if self.is_delimiter(ch) {
@@ -102,20 +96,35 @@ mod test {
 		schema.add_rule("hello", Regex::from_pattern("hello world").unwrap());
 		schema.add_rule("bye", Regex::from_pattern("goodbye").unwrap());
 
-		let mut lexer: Lexer<'_, '_> = Lexer::new(&schema).unwrap();
+		let mut lexer: Lexer = Lexer::new(&schema).unwrap();
 		let input: &str = "hello world goodbye hello world  goodbye  ";
 		let mut pos: usize = 0;
-		assert_eq!(lexer.next_fragment(input, &mut pos).projection(), (1, "hello world"));
-		assert_eq!(lexer.next_fragment(input, &mut pos).projection(), (2, "goodbye"));
-		assert_eq!(lexer.next_fragment(input, &mut pos).projection(), (1, "hello world"));
-		assert_eq!(lexer.next_fragment(input, &mut pos).projection(), (2, "goodbye"));
-		assert_eq!(lexer.next_fragment(input, &mut pos).projection(), (0, ""));
+		assert_eq!(
+			lexer.next_fragment(input, &mut pos, ignore).projection(),
+			(1, "hello world")
+		);
+		assert_eq!(
+			lexer.next_fragment(input, &mut pos, ignore).projection(),
+			(2, "goodbye")
+		);
+		assert_eq!(
+			lexer.next_fragment(input, &mut pos, ignore).projection(),
+			(1, "hello world")
+		);
+		assert_eq!(
+			lexer.next_fragment(input, &mut pos, ignore).projection(),
+			(2, "goodbye")
+		);
+		assert_eq!(lexer.next_fragment(input, &mut pos, ignore).projection(), (0, ""));
 		assert_eq!(pos, input.len());
+		assert_eq!(lexer.next_fragment(input, &mut pos, ignore).projection(), (0, ""));
 	}
 
-	impl<'schema, 'input, 'buffer> Fragment<'schema, 'input, 'buffer> {
-		fn projection(&self) -> (usize, &'input str) {
+	impl Fragment<'_> {
+		fn projection(&self) -> (usize, &str) {
 			(self.rule, self.lexeme)
 		}
 	}
+
+	fn ignore(_: &Variable, _: &str) {}
 }

@@ -23,14 +23,14 @@ fn main() {
 		dbg!(&r);
 		let mut schema: Schema = Schema::new();
 		schema.add_rule("hello", r);
-		let nfa: Nfa<'_> = Nfa::for_schema(&schema).unwrap();
+		let nfa: Nfa = Nfa::for_schema(&schema).unwrap();
 		println!("nfa is {nfa:#?}");
 		// let b: bool = nfa.simulate("aabba").is_some();
 		// assert!(b);
 		// return;
 		// let b: bool = nfa.simulate("012a2b2cworld").is_some();
 		// assert!(b);
-		let dfa: Dfa<'_> = Dfa::determinization(&nfa);
+		let dfa: Dfa = Dfa::for_schema(&schema).unwrap();
 		dbg!(&dfa);
 		// let b: bool = dfa.simulate("aaaaa");
 		// println!("matched: {b}");

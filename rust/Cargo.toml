@@ -4,10 +4,17 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
-crate-type = ["lib", "staticlib"]
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[features]
+python = []
 
 [build-dependencies]
 cbindgen = "0.29"
 
 [dependencies]
 nom = "8"
+tracing = "0.1"
+
+[dependencies.pyo3]
+version = "0.27"

@@ -12,6 +12,28 @@ struct Lexer;
 
 struct Schema;
 
+struct CLogFragment {
+// Custom
+CLogFragment() = default;
+
+// Generated
+  /// `0` iff no variable found (static text until end of input).
+  size_t rule;
+  /// Start of variable (if found).
+  const uint8_t *start;
+  /// End of variable (if found).
+  const uint8_t *end;
+
+  CLogFragment(size_t const& rule,
+               const uint8_t *const& start,
+               const uint8_t *const& end)
+    : rule(rule),
+      start(start),
+      end(end)
+  {}
+
+};
+
 template<typename T>
 struct CSlice {
 // Custom
@@ -39,47 +61,7 @@ CSlice(char const* c_str)
 
 using CStringView = CSlice<char>;
 
-struct Capture {
-  CStringView name;
-  CStringView lexeme;
-
-  Capture(CStringView const& name,
-          CStringView const& lexeme)
-    : name(name),
-      lexeme(lexeme)
-  {}
-
-};
-
-struct CLogFragment {
-// Custom
-CLogFragment() = default;
-
-// Generated
-  /// `0` iff no variable found (static text until end of input).
-  size_t rule;
-  /// Start of variable (if found).
-  const uint8_t *start;
-  /// End of variable (if found).
-  const uint8_t *end;
-  /// Pointer to an array of captures (if variable found).
-  const Capture *captures;
-  /// Number of captures.
-  size_t captures_count;
-
-  CLogFragment(size_t const& rule,
-               const uint8_t *const& start,
-               const uint8_t *const& end,
-               const Capture *const& captures,
-               size_t const& captures_count)
-    : rule(rule),
-      start(start),
-      end(end),
-      captures(captures),
-      captures_count(captures_count)
-  {}
-
-};
+using LogFragmentOnCapture = void(*)(const void *data, CStringView name, CStringView lexeme);
 
 
 extern "C" {
@@ -88,13 +70,11 @@ void clp_log_mechanic_lexer_delete(Box<Lexer> lexer);
 
 Box<Lexer> clp_log_mechanic_lexer_new(const Schema *schema);
 
-/// Very unsafe!
-///
-/// The returned [`CLogFragment`] includes a hidden exclusive borrow of `lexer`
-/// (it contains a pointer into an interal buffer of `lexer`),
-/// so it is nolonger valid (you must not touch it) after any subsequent borrow of `lexer`
-/// (i.e. this borrow has ended).
-CLogFragment clp_log_mechanic_lexer_next_fragment(Lexer *lexer, CStringView input, size_t *pos);
+CLogFragment clp_log_mechanic_lexer_next_fragment(Lexer *lexer,
+                                                  CStringView input,
+                                                  size_t *pos,
+                                                  LogFragmentOnCapture maybe_closure,
+                                                  const void *data);
 
 void clp_log_mechanic_schema_add_rule(Schema *schema, CStringView name, CStringView pattern);
 

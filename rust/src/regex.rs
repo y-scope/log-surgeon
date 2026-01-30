@@ -5,7 +5,6 @@ use nom::Err as NomErr;
 use nom::IResult;
 use nom::Parser;
 use nom::error::ErrorKind as NomErrorKind;
-// use nom::error::FromExternalError;
 use nom::error::ParseError;
 
 const SPECIAL_CHARACTERS: &str = r"\()[]{}<>*+?-.|^";
@@ -83,12 +82,6 @@ impl<'a> ParseError<&'a str> for RegexParsingError<'a> {
 		other
 	}
 }
-
-// impl<'a> FromExternalError<&'a str, Self> for RegexParsingError<'a> {
-// 	fn from_external_error(_input: &'a str, _nom: NomErrorKind, e: Self) -> Self {
-// 		e
-// 	}
-// }
 
 impl<'a> RegexParsingError<'a> {
 	fn new(input: &'a str, kind: RegexErrorKind) -> Self {

@@ -1,12 +1,12 @@
 use crate::regex::Regex;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Schema {
 	rules: Vec<Rule>,
 	delimiters: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Rule {
 	pub idx: usize,
 	pub name: String,

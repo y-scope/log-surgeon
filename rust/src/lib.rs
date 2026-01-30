@@ -2,6 +2,9 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+#[macro_use(debug)]
+extern crate tracing;
+
 pub mod dfa;
 pub mod interval_tree;
 pub mod lexer;
@@ -10,3 +13,5 @@ pub mod regex;
 pub mod schema;
 
 pub mod c_interface;
+// #[cfg(feature = "python")]
+pub mod python_interface;
