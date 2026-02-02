@@ -121,10 +121,12 @@ auto Query::get_all_single_token_interpretations(
     }
 
     for (auto const variable_type_id : matching_var_type_ids) {
+        bool contains_captures{lexer.get_captures_from_rule_id(variable_type_id).has_value()};
         interpretations.emplace_back(
                 variable_type_id,
                 string{extended_view.get_search_string()},
-                contains_wildcard
+                contains_wildcard,
+                contains_captures
         );
         if (false == contains_wildcard) {
             break;

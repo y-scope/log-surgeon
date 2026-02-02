@@ -50,7 +50,7 @@ TEST_CASE("variable_query_interpretation", "[QueryInterpretation]") {
     constexpr uint32_t cHasNumberId{7};
     constexpr string_view cExpectedSerialization{"logtype='<7>(var123)', contains_wildcard='0'"};
 
-    QueryInterpretation const query_interpretation{cHasNumberId, "var123", false};
+    QueryInterpretation const query_interpretation{cHasNumberId, "var123", false, false};
     REQUIRE(query_interpretation.serialize() == cExpectedSerialization);
 }
 
@@ -62,7 +62,7 @@ TEST_CASE("wildcard_variable_query_interpretation", "[QueryInterpretation]") {
     constexpr uint32_t cFloatId{1};
     constexpr string_view cExpectedSerialization{"logtype='<1>(123.123*)', contains_wildcard='1'"};
 
-    QueryInterpretation const query_interpretation{cFloatId, "123.123*", true};
+    QueryInterpretation const query_interpretation{cFloatId, "123.123*", true, false};
     REQUIRE(query_interpretation.serialize() == cExpectedSerialization);
 }
 
@@ -87,7 +87,7 @@ TEST_CASE("append_empty_variable", "[QueryInterpretation]") {
     constexpr string_view cExpectedSerialization{"logtype='<0>()', contains_wildcard='0'"};
 
     QueryInterpretation query_interpretation;
-    query_interpretation.append_variable_token(cEmptyId, "", false);
+    query_interpretation.append_variable_token(cEmptyId, "", false, false);
     REQUIRE(query_interpretation.serialize() == cExpectedSerialization);
 }
 
@@ -117,9 +117,9 @@ TEST_CASE("append_tokens", "[QueryInterpretation]") {
 
     QueryInterpretation query_interpretation;
     query_interpretation.append_static_token("start ");
-    query_interpretation.append_variable_token(cIntId, "*123*", true);
+    query_interpretation.append_variable_token(cIntId, "*123*", true, false);
     query_interpretation.append_static_token(" middle ");
-    query_interpretation.append_variable_token(cFloatId, "12.3", false);
+    query_interpretation.append_variable_token(cFloatId, "12.3", false, false);
     query_interpretation.append_static_token(" end");
     REQUIRE(query_interpretation.serialize() == cExpectedSerialization);
 }
@@ -163,26 +163,26 @@ TEST_CASE("comparison_operators", "[QueryInterpretation]") {
     ordered_interpretations.emplace_back("a");
     // a<int>(123)
     ordered_interpretations.emplace_back("a");
-    ordered_interpretations.back().append_variable_token(cIntId, "123", false);
+    ordered_interpretations.back().append_variable_token(cIntId, "123", false, false);
     // b
     ordered_interpretations.emplace_back("b");
     // <int>(123)
-    ordered_interpretations.emplace_back(cIntId, "123", false);
+    ordered_interpretations.emplace_back(cIntId, "123", false, false);
     // <int>(123)a
-    ordered_interpretations.emplace_back(cIntId, "123", false);
+    ordered_interpretations.emplace_back(cIntId, "123", false, false);
     ordered_interpretations.back().append_static_token("a");
     // <int>(123*)
-    ordered_interpretations.emplace_back(cIntId, "123*", true);
+    ordered_interpretations.emplace_back(cIntId, "123*", true, false);
     // <int>(1234)
-    ordered_interpretations.emplace_back(cIntId, "1234", false);
+    ordered_interpretations.emplace_back(cIntId, "1234", false, false);
     // <int>(456)
-    ordered_interpretations.emplace_back(cIntId, "456", false);
+    ordered_interpretations.emplace_back(cIntId, "456", false, false);
     // <hasNumber>(123)
-    ordered_interpretations.emplace_back(cHasNumId, "123", false);
+    ordered_interpretations.emplace_back(cHasNumId, "123", false, false);
 
     // <hasNumber>(abc*123)
-    QueryInterpretation const interpretation{cHasNumId, "abc*123", true};
-    QueryInterpretation const duplicate_interpretation{cHasNumId, "abc*123", true};
+    QueryInterpretation const interpretation{cHasNumId, "abc*123", true, false};
+    QueryInterpretation const duplicate_interpretation{cHasNumId, "abc*123", true, false};
 
     pairwise_comparison_of_strictly_ascending_vector(ordered_interpretations);
     test_equal(interpretation, duplicate_interpretation);

@@ -16,7 +16,14 @@ auto VariableQueryToken::operator<=>(VariableQueryToken const& rhs) const -> str
         return query_substring_cmp;
     }
 
-    // bool does not have a <=> operator, so we have to manual order it:
-    return static_cast<int>(m_contains_wildcard) <=> static_cast<int>(rhs.m_contains_wildcard);
+    // bool does not have a <=> operator, so we have to manually order it:
+    auto const wildcard_cmp{
+            static_cast<int>(m_contains_wildcard) <=> static_cast<int>(rhs.m_contains_wildcard)
+    };
+    if (std::strong_ordering::equal != wildcard_cmp) {
+        return wildcard_cmp;
+    }
+
+    return static_cast<int>(m_contains_captures) <=> static_cast<int>(rhs.m_contains_captures);
 }
 }  // namespace log_surgeon::wildcard_query_parser

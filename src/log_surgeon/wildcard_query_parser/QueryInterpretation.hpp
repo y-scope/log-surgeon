@@ -42,9 +42,12 @@ public:
     QueryInterpretation(
             uint32_t const variable_type,
             std::string query_substring,
-            bool const contains_wildcard
+            bool const contains_wildcard,
+            bool const contains_captures
     ) {
-        append_variable_token(variable_type, std::move(query_substring), contains_wildcard);
+        append_variable_token(
+                variable_type, std::move(query_substring), contains_wildcard, contains_captures
+        );
     }
 
     // Must be defined if `operator<=>` is not defaulted.
@@ -93,11 +96,12 @@ public:
     auto append_variable_token(
             uint32_t const variable_type,
             std::string query_substring,
-            bool const contains_wildcard
+            bool const contains_wildcard,
+            bool const contains_captures
     ) -> void {
-        m_tokens.emplace_back(
-                VariableQueryToken(variable_type, std::move(query_substring), contains_wildcard)
-        );
+        m_tokens.emplace_back(VariableQueryToken(
+                variable_type, std::move(query_substring), contains_wildcard, contains_captures
+        ));
     }
 
     [[nodiscard]] auto get_logtype() const
