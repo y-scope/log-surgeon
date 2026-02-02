@@ -8,6 +8,7 @@
 #include <variant>
 #include <vector>
 
+#include <log_surgeon/wildcard_query_parser/CaptureQueryToken.hpp>
 #include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
 #include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
 
@@ -47,6 +48,16 @@ public:
     ) {
         append_variable_token(
                 variable_type, std::move(query_substring), contains_wildcard, contains_captures
+        );
+    }
+
+    QueryInterpretation(
+            std::string capture_name,
+            std::string query_substring,
+            bool const contains_wildcard
+    ) {
+        append_capture_token(
+                std::move(capture_name), std::move(query_substring), contains_wildcard
         );
     }
 
@@ -104,8 +115,18 @@ public:
         ));
     }
 
+    auto append_capture_token(
+            std::string capture_name,
+            std::string query_substring,
+            bool const contains_wildcard
+    ) -> void {
+        m_tokens.emplace_back(CaptureQueryToken(
+                std::move(capture_name), std::move(query_substring), contains_wildcard
+        ));
+    }
+
     [[nodiscard]] auto get_logtype() const
-            -> std::vector<std::variant<StaticQueryToken, VariableQueryToken>> {
+            -> std::vector<std::variant<StaticQueryToken, VariableQueryToken, CaptureQueryToken>> {
         return m_tokens;
     }
 
@@ -115,7 +136,7 @@ public:
     [[nodiscard]] auto serialize() const -> std::string;
 
 private:
-    std::vector<std::variant<StaticQueryToken, VariableQueryToken>> m_tokens;
+    std::vector<std::variant<StaticQueryToken, VariableQueryToken, CaptureQueryToken>> m_tokens;
     static_assert(
             IsStronglyThreeWayComparableVariant<decltype(m_tokens)::value_type>::cValue,
             "All variant types in `m_tokens` must have `operator<=>` returning "
