@@ -60,7 +60,9 @@ public:
             bool const contains_wildcard
     ) {
         append_capture_token(
-                std::move(capture_name), std::move(query_substring), contains_wildcard
+                std::move(capture_name),
+                std::move(query_substring),
+                contains_wildcard
         );
     }
 
@@ -127,7 +129,9 @@ public:
             bool const contains_wildcard
     ) -> void {
         m_tokens.emplace_back(CaptureQueryToken(
-                std::move(capture_name), std::move(query_substring), contains_wildcard
+                std::move(capture_name),
+                std::move(query_substring),
+                contains_wildcard
         ));
     }
 
