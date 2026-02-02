@@ -13,6 +13,7 @@ namespace log_surgeon::wildcard_query_parser {
  * Stores a substring from the query with metadata specifying:
  * 1. The variable type.
  * 2. If the variable contains a wildcard.
+ * 3. If the variable contains captures.
  */
 class VariableQueryToken {
 public:
