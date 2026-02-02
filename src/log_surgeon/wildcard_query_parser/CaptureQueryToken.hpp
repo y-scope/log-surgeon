@@ -16,11 +16,7 @@ namespace log_surgeon::wildcard_query_parser {
  */
 class CaptureQueryToken {
 public:
-    CaptureQueryToken(
-            std::string name,
-            std::string query_substring,
-            bool const contains_wildcard
-    )
+    CaptureQueryToken(std::string name, std::string query_substring, bool const contains_wildcard)
             : m_name(std::move(name)),
               m_query_substring(std::move(query_substring)),
               m_contains_wildcard(contains_wildcard) {}

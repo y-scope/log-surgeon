@@ -47,7 +47,10 @@ public:
             bool const contains_captures
     ) {
         append_variable_token(
-                variable_type, std::move(query_substring), contains_wildcard, contains_captures
+                variable_type,
+                std::move(query_substring),
+                contains_wildcard,
+                contains_captures
         );
     }
 
@@ -111,7 +114,10 @@ public:
             bool const contains_captures
     ) -> void {
         m_tokens.emplace_back(VariableQueryToken(
-                variable_type, std::move(query_substring), contains_wildcard, contains_captures
+                variable_type,
+                std::move(query_substring),
+                contains_wildcard,
+                contains_captures
         ));
     }
 
