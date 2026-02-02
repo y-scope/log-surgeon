@@ -86,6 +86,8 @@ set(SOURCE_FILES
     src/log_surgeon/finite_automata/TagOperation.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.hpp
     src/log_surgeon/finite_automata/UnicodeIntervalTree.tpp
+    src/log_surgeon/wildcard_query_parser/CaptureQueryToken.cpp
+    src/log_surgeon/wildcard_query_parser/CaptureQueryToken.hpp
     src/log_surgeon/wildcard_query_parser/Expression.cpp
     src/log_surgeon/wildcard_query_parser/Expression.hpp
     src/log_surgeon/wildcard_query_parser/ExpressionCharacter.hpp
