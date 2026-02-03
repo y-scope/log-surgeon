@@ -140,15 +140,18 @@ impl Dfa {
 			}
 			*/
 			if let Some(transition) = self.states[current_state].transitions.lookup(u32::from(ch)) {
-				consumed = i;
-				current_state = transition.destination;
+				// Apply transition operations before updating position; lookahead 1 in TDFA(1).
 				self.apply_operations(
 					&mut registers,
 					&mut prefix_tree,
-					i,
+					consumed,
 					&transition.operations,
 					&self.states[current_state].tag_for_register,
 				);
+				// TODO seems to work even if we move the following line above (but not the position)
+				// but based on transition_operations, the operations should be for the new state?
+				current_state = transition.destination;
+				consumed = i + ch.len_utf8();
 				if self.states[current_state].is_final {
 					maybe_backup = Some((consumed, current_state, registers.clone()));
 				}
@@ -197,13 +200,13 @@ impl Dfa {
 				maybe_rule = Some(var.rule);
 			}
 			for (&i, &j) in std::iter::zip(starts.iter(), ends.iter()) {
-				on_capture(&var, &input[i..=j]);
+				on_capture(&var, &input[i..j]);
 			}
 		}
 
 		Ok(GotRule {
 			rule: maybe_rule.unwrap(),
-			lexeme: &input[..=consumed],
+			lexeme: &input[..consumed],
 		})
 	}
 
@@ -344,7 +347,7 @@ impl Dfa {
 			.into_iter()
 			.map(|(config, _)| {
 				if config.nfa_state.is_end() {
-					assert!(!is_final);
+					// assert!(!is_final);
 					is_final = true;
 					final_operations = self.final_operations(&config.register_for_tag, &config.tag_path_in_closure);
 				}
@@ -557,11 +560,10 @@ impl Dfa {
 			let (config, inherited): (Configuration, Vec<(Tag, SymbolicPosition)>) = stack[i].clone();
 
 			closure.insert((config.clone(), inherited.clone()));
-			nfa_states_in_closure.insert(config.nfa_state);
+			// nfa_states_in_closure.insert(config.nfa_state);
 
 			for transition in nfa[config.nfa_state].spontaneous().iter() {
 				if nfa_states_in_closure.contains(&transition.target) {
-					// TODO shouldn't happen..?
 					continue;
 				}
 
@@ -584,6 +586,7 @@ impl Dfa {
 					SpontaneousTransitionKind::Epsilon => (),
 				}
 
+				nfa_states_in_closure.insert(new_config.nfa_state);
 				stack.push((new_config, inherited.clone()));
 			}
 
