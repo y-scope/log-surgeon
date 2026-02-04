@@ -16,6 +16,7 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Capture.hpp>
+#include <log_surgeon/finite_automata/NfaStatePair.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
 #include <log_surgeon/finite_automata/UnicodeIntervalTree.hpp>
 #include <log_surgeon/LexicalRule.hpp>
@@ -25,8 +26,27 @@
 namespace log_surgeon::finite_automata {
 /**
  * Represents a Non-Deterministic Finite Automaton (NFA) designed to recognize a language based on
- * a set of rules provided during initialization. This class serves as an intermediate
- * representation used for generating the corresponding Deterministic Finite Automaton (DFA).
+ * a set of rules provided during initialization.
+ *
+ * ## How to Use the NFA:
+ *
+ * The NFA has two use cases:
+ *
+ * ### 1. Intermediate Representation for Log Lexing
+ * - **Construction**: Create an tagged NFA from a set of regex rules.
+ * - **DFA Construction**: Create a tagged DFA from the tagged NFA, and use the TDFA for lexxing.
+ *
+ * ### 2. Search Query Lexing
+ * - **Construct Substring NFA**: Build an NFA for a substring of the query by converting wildcards
+ *   to regex-like expressions:
+ *   - `?` ->`.`
+ *   - `*` -> `.*`
+ * - **Analyze the Substring**: Build a TNFA from user-defined schema variables and intersect it
+ *   with the substring NFA.
+ *   - This provides information on which variable types matche the substring, and all
+ *     decompositions of that substring into the variable type's context and captures. If the
+ *     variable has no captures, this decomposition is simply the entire substring as a single
+ *     variable.
  *
  * NOTE: It is assumed that all capture groups have unique names, even across different rules.
  * @tparam TypedNfaState
@@ -104,6 +124,29 @@ public:
             -> std::unordered_map<Capture const*, std::pair<tag_id_t, tag_id_t>> const& {
         return m_capture_to_tag_id_pair;
     }
+
+    /**
+     * Compares the intersection between this NFA and a TNFA (`nfa_in`) to determine which schema
+     * variable types in this NFA are given any input accepted by `nfa_in`.
+     *
+     * A type is considered reachable if there exists at least one string such that:
+     * 1. This NFA would match the string and include the type in its set of possible variable
+     *    types.
+     * 2. The input TNFA (`nfa_in`) would match the string (i.e., returns a non-empty set of types).
+     *
+     * ## Decomposition Information
+     * Along with identifying reachable types, this function provides all possible decompositions of
+     * the substring for each variable type. A decomposition partitions the substring such that
+     * there is a segment corresponding to each context (non-capture) and capture in the variable
+     * type.
+     *
+     * The decomposition allows analysis of how each variable type could be realized by this NFA's
+     * query substring.
+     *
+     * @param nfa_in The TNFA with which to compute the intersection.
+     * @return The set of schema types reachable by `nfa_in`.
+     */
+    [[nodiscard]] auto get_intersect(Nfa const* nfa_in) const -> std::set<uint32_t>;
 
 private:
     /**
@@ -212,6 +255,25 @@ auto Nfa<TypedNfaState>::new_start_and_end_states_from_positive_capture(
     );
     auto* end_state{m_states.back().get()};
     return {start_state, end_state};
+}
+
+template <typename TypedNfaState>
+auto Nfa<TypedNfaState>::get_intersect(Nfa const* nfa_in) const -> std::set<uint32_t> {
+    std::set<uint32_t> schema_types;
+    std::set<NfaStatePair<TypedNfaState>> unvisited_pairs;
+    std::set<NfaStatePair<TypedNfaState>> visited_pairs;
+    unvisited_pairs.emplace(get_root(), nfa_in->get_root());
+    // TODO: Handle UTF-8 (multi-byte transitions) as well
+    while (false == unvisited_pairs.empty()) {
+        auto current_pair_it = unvisited_pairs.begin();
+        if (current_pair_it->is_accepting()) {
+            schema_types.insert(current_pair_it->get_matching_variable_id());
+        }
+        visited_pairs.insert(*current_pair_it);
+        current_pair_it->get_reachable_pairs(visited_pairs, unvisited_pairs);
+        unvisited_pairs.erase(current_pair_it);
+    }
+    return schema_types;
 }
 
 template <typename TypedNfaState>

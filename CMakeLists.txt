@@ -72,11 +72,11 @@ set(SOURCE_FILES
     src/log_surgeon/finite_automata/DeterminizationConfiguration.hpp
     src/log_surgeon/finite_automata/Dfa.hpp
     src/log_surgeon/finite_automata/DfaState.hpp
-    src/log_surgeon/finite_automata/DfaStatePair.hpp
     src/log_surgeon/finite_automata/DfaTransition.hpp
     src/log_surgeon/finite_automata/Nfa.hpp
     src/log_surgeon/finite_automata/NfaSpontaneousTransition.hpp
     src/log_surgeon/finite_automata/NfaState.hpp
+    src/log_surgeon/finite_automata/NfaStatePair.hpp
     src/log_surgeon/finite_automata/PrefixTree.cpp
     src/log_surgeon/finite_automata/PrefixTree.hpp
     src/log_surgeon/finite_automata/RegexAST.hpp

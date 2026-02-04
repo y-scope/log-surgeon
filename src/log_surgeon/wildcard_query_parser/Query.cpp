@@ -143,9 +143,8 @@ auto Query::get_matching_variable_types(string const& regex_string, ByteLexer co
     vector<ByteLexicalRule> rules;
     rules.emplace_back(0, std::move(rule_ast.m_regex_ptr));
     ByteNfa const nfa{rules};
-    ByteDfa const dfa{nfa};
 
-    auto var_types = lexer.get_dfa()->get_intersect(&dfa);
+    auto var_types = lexer.get_nfa()->get_intersect(&nfa);
     return var_types;
 }
 }  // namespace log_surgeon::wildcard_query_parser
