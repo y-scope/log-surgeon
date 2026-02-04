@@ -21,12 +21,10 @@
 
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/DeterminizationConfiguration.hpp>
-#include <log_surgeon/finite_automata/DfaStatePair.hpp>
 #include <log_surgeon/finite_automata/Nfa.hpp>
 #include <log_surgeon/finite_automata/RegisterHandler.hpp>
 #include <log_surgeon/finite_automata/RegisterOperation.hpp>
 #include <log_surgeon/finite_automata/TagOperation.hpp>
-#include <log_surgeon/Token.hpp>
 
 namespace log_surgeon::finite_automata {
 /**
@@ -41,29 +39,20 @@ namespace log_surgeon::finite_automata {
  * Each tag is associated with intermediate registers that collect possible positions during lexing.
  * Upon match finalization, the selected register is copied into a final register mapped to the tag.
  *
- * ## How to Use the DFA
- * This DFA can be used in two primary scenarios: log lexing and search query lexing.
- *
- * ### 1. Log Lexing
- * - **Construction**: Create a tagged DFA from a tagged NFA.
- * - **Lexing Procedure**:
- * a. Call `get_root()` to get the initial DFA state, and track it as the current state.
- * b. Use the state's `get_transition()` method to transition:
- * - If it returns `std::nullopt`, terminate lexing.
- * - If it returns a new state, update the current state.
- * c. If the current state is accepting, record its match as a candidate for the longest match.
- * d. Repeat steps (b) and (c) until no more input remains or a transition fails.
- * - **Result**: Return the longest match found. This match may contain several possibly variable
- * types. If the variable type of interest contains captures, use the mapping `capture → {start_tag,
- * end_tag} → {final_start_reg_id, final_end_reg_id}` to extract the substring. This can be done
- * using `get_tag_id_to_final_reg_id`.
- *
- * ### 2. Search Query Lexing
- * - Follows the same procedure as log lexing.
- * - Additionally:
- * a. Interpret `?` as a `.` regex and `*` as `.*` when processing wildcards.
- * b. For CLP, build the set of logtypes the search query can match by applying `get_intersect()` to
- * substrings of the query to determine compatible variable types.
+ * ## How to Use the DFA for Log Lexing
+ * 1. **Construction**: Create a tagged DFA from a tagged NFA.
+ * 2. **Lexing Procedure**:
+ *    a. Call `get_root()` to get the initial DFA state, and track it as the current state.
+ *    b. Use the state's `get_transition()` method to move to the next state:
+ *       - If it returns `std::nullopt`, terminate lexing.
+ *       - If it returns a new state, update the current state.
+ *    c. If the current state is accepting, record its match as a candidate for the longest match.
+ *    d. Repeat steps (b) and (c) until no more input remains or a transition fails.
+ * 3. **Result**: Return the longest match found.
+ *    This match may contain several possible variable types. If one of the variable types contains
+ *    captures, use the mapping `capture → {start_tag, end_tag} → {final_start_reg_id,
+ *    final_end_reg_id}` to extract the substring. This can be done using
+ *    `get_tag_id_to_final_reg_id`.
  *
  * @tparam TypedDfaState The type representing a DFA state.
  * @tparam TypedNfaState The type representing an NFA state.
@@ -91,17 +80,6 @@ public:
     [[nodiscard]] auto serialize() const -> std::optional<std::string>;
 
     [[nodiscard]] auto get_root() const -> TypedDfaState const* { return m_states.at(0).get(); }
-
-    /**
-     * Compares this DFA with `dfa_in` to determine the set of schema types in this DFA that are
-     * reachable by any type in `dfa_in`. A type is considered reachable if there is at least one
-     * string for which: (1) this DFA returns a set of types containing the type, and (2) `dfa_in`
-     * returns any non-empty set of types.
-     *
-     * @param dfa_in The DFA with which to compute the intersection.
-     * @return The set of schema types reachable by `dfa_in`.
-     */
-    [[nodiscard]] auto get_intersect(Dfa const* dfa_in) const -> std::set<uint32_t>;
 
     [[nodiscard]] auto get_tag_id_to_final_reg_id() const -> std::map<tag_id_t, reg_id_t> const& {
         return m_tag_id_to_final_reg_id;
@@ -540,27 +518,6 @@ auto Dfa<TypedDfaState, TypedNfaState>::new_state(
         }
     }
     return dfa_state;
-}
-
-template <typename TypedDfaState, typename TypedNfaState>
-auto Dfa<TypedDfaState, TypedNfaState>::get_intersect(Dfa const* dfa_in) const
-        -> std::set<uint32_t> {
-    std::set<uint32_t> schema_types;
-    std::set<DfaStatePair<TypedDfaState>> unvisited_pairs;
-    std::set<DfaStatePair<TypedDfaState>> visited_pairs;
-    unvisited_pairs.emplace(get_root(), dfa_in->get_root());
-    // TODO: Handle UTF-8 (multi-byte transitions) as well
-    while (false == unvisited_pairs.empty()) {
-        auto current_pair_it = unvisited_pairs.begin();
-        if (current_pair_it->is_accepting()) {
-            auto const& matching_variable_ids = current_pair_it->get_matching_variable_ids();
-            schema_types.insert(matching_variable_ids.cbegin(), matching_variable_ids.cend());
-        }
-        visited_pairs.insert(*current_pair_it);
-        current_pair_it->get_reachable_pairs(visited_pairs, unvisited_pairs);
-        unvisited_pairs.erase(current_pair_it);
-    }
-    return schema_types;
 }
 
 template <typename TypedDfaState, typename TypedNfaState>

@@ -446,12 +446,12 @@ void Lexer<TypedNfaState, TypedDfaState>::generate() {
         }
     }
 
-    finite_automata::Nfa<TypedNfaState> nfa{m_rules};
-    for (auto const& [capture, tag_id_pair] : nfa.get_capture_to_tag_id_pair()) {
+    m_nfa = std::make_unique<finite_automata::Nfa<TypedNfaState>>(m_rules);
+    for (auto const& [capture, tag_id_pair] : m_nfa->get_capture_to_tag_id_pair()) {
         m_capture_to_tag_id_pair.emplace(capture, tag_id_pair);
     }
 
-    m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState, TypedNfaState>>(nfa);
+    m_dfa = std::make_unique<finite_automata::Dfa<TypedDfaState, TypedNfaState>>(*m_nfa);
 
     auto const* state = m_dfa->get_root();
     for (uint32_t i = 0; i < cSizeOfByte; i++) {

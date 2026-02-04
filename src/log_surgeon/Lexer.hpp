@@ -161,6 +161,11 @@ public:
         return m_is_delimiter[byte];
     }
 
+    [[nodiscard]] auto get_nfa() const
+            -> std::unique_ptr<finite_automata::Nfa<TypedNfaState>> const& {
+        return m_nfa;
+    }
+
     [[nodiscard]] auto get_dfa() const
             -> std::unique_ptr<finite_automata::Dfa<TypedDfaState, TypedNfaState>> const& {
         return m_dfa;
@@ -262,6 +267,7 @@ private:
     // For performance, `m_has_delimiters` caches whether any element in `m_is_delimiter` is true.
     bool m_has_delimiters{false};
 
+    std::unique_ptr<finite_automata::Nfa<TypedNfaState>> m_nfa;
     std::unique_ptr<finite_automata::Dfa<TypedDfaState, TypedNfaState>> m_dfa;
     std::optional<uint32_t> m_first_delimiter_pos{std::nullopt};
     bool m_asked_for_more_data{false};

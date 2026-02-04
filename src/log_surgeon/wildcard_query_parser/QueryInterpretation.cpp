@@ -9,6 +9,7 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
+#include <log_surgeon/wildcard_query_parser/CaptureQueryToken.hpp>
 #include <log_surgeon/wildcard_query_parser/StaticQueryToken.hpp>
 #include <log_surgeon/wildcard_query_parser/VariableQueryToken.hpp>
 
@@ -81,12 +82,18 @@ auto QueryInterpretation::serialize() const -> string {
         if (std::holds_alternative<StaticQueryToken>(token)) {
             token_strings.emplace_back(std::get<StaticQueryToken>(token).get_query_substring());
             contains_wildcard_strings.emplace_back("0");
-        } else {
-            auto const& var = std::get<VariableQueryToken>(token);
+        } else if (std::holds_alternative<VariableQueryToken>(token)) {
+            auto const& var{std::get<VariableQueryToken>(token)};
             token_strings.emplace_back(
                     fmt::format("<{}>({})", var.get_variable_type(), var.get_query_substring())
             );
             contains_wildcard_strings.emplace_back(var.get_contains_wildcard() ? "1" : "0");
+        } else {
+            auto const& capture{std::get<CaptureQueryToken>(token)};
+            token_strings.emplace_back(
+                    fmt::format("<{}>({})", capture.get_name(), capture.get_query_substring())
+            );
+            contains_wildcard_strings.emplace_back(capture.get_contains_wildcard() ? "1" : "0");
         }
     }
 
