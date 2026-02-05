@@ -15,15 +15,13 @@ pub struct Nfa {
 }
 
 #[derive(Debug)]
-pub struct NfaError {}
-
-#[derive(Debug)]
 pub struct NfaState {
 	idx: usize,
-	/// Just to be cute and for debugging, in that order.
-	name: Cow<'static, str>,
 	transitions: IntervalTree<u32, BTreeSet<NfaIdx>>,
 	spontaneous: Vec<SpontaneousTransition>,
+	/// Just to be cute, and for debugging, in that order.
+	/// See [`Nfa::new_state`].
+	name: Cow<'static, str>,
 }
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
@@ -45,29 +43,29 @@ pub enum SpontaneousTransitionKind {
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Tag {
-	StartCapture(Variable),
-	EndCapture(Variable),
+	Start(Capture),
+	End(Capture),
 }
 
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub struct Variable {
+pub struct Capture {
 	/// Rule index from the schema.
 	pub rule: usize,
 	/// Capture ID local to the rule/regex pattern.
 	/// It is `None` (i.e. `0`) iff it is the implicit top-level capture.
 	pub id: Option<NonZero<u32>>,
 	/// Capture name from the rule/regex pattern.
-	/// Technically redundant; exists for debugging.
+	/// Technically redundant (given a schema); exists for debugging.
 	pub name: String,
 }
 
-impl std::fmt::Debug for Variable {
+impl std::fmt::Debug for Capture {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		if !fmt.alternate() {
-			fmt.debug_tuple("Variable").field(&self.rule).field(&self.name).finish()
+			fmt.write_fmt(format_args!("Capture({}, {})", self.rule, self.name))
 		} else {
 			fmt.write_fmt(format_args!(
-				"Variable({}, {}, {})",
+				"Capture({}, {}, {})",
 				self.rule,
 				self.id.map_or(0, NonZero::get),
 				self.name
@@ -82,12 +80,12 @@ struct NfaBuilder<'a> {
 }
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-struct TagMatches {
-	offsets: BTreeMap<Variable, (Vec<usize>, Vec<usize>)>,
+struct CaptureIndices {
+	offsets: BTreeMap<Capture, (Vec<usize>, Vec<usize>)>,
 }
 
 impl Nfa {
-	pub fn for_schema(schema: &Schema) -> Result<Self, NfaError> {
+	pub fn for_schema(schema: &Schema) -> Self {
 		let mut nfa: Self = Nfa {
 			states: Vec::new(),
 			tags: Vec::new(),
@@ -107,29 +105,29 @@ impl Nfa {
 				}
 			}),
 			end,
-		)?;
+		);
 		nfa.tags = tags.into_iter().collect::<Vec<_>>();
 
-		Ok(nfa)
+		nfa
 	}
 
 	/// - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
 	/// - <https://arxiv.org/abs/2206.01398>
 	///
 	/// Algorithm 1.
-	pub fn simulate<'input>(&self, input: &'input str) -> Option<usize> {
-		let start: (NfaIdx, Vec<TagMatches>) = (
+	pub fn simulate(&self, input: &str) -> Option<usize> {
+		let start: (NfaIdx, Vec<CaptureIndices>) = (
 			NfaIdx(0),
-			vec![TagMatches {
+			vec![CaptureIndices {
 				offsets: BTreeMap::new(),
 			}],
 		);
 
-		let mut state_set: BTreeSet<(NfaIdx, Vec<TagMatches>)> = BTreeSet::new();
+		let mut state_set: BTreeSet<(NfaIdx, Vec<CaptureIndices>)> = BTreeSet::new();
 		state_set.insert(start);
 		state_set = self.epsilon_closure(state_set, 0);
 
-		let mut maybe_last_match: Option<(usize, Vec<TagMatches>)> = None;
+		let mut maybe_last_match: Option<(usize, Vec<CaptureIndices>)> = None;
 
 		for (i, ch) in input.char_indices() {
 			debug!("=== step {i}, ch {}", u32::from(ch));
@@ -157,10 +155,10 @@ impl Nfa {
 				debug!("=== got match!");
 				assert_eq!(matches.len(), 1);
 				let mut m: Vec<(usize, &str, usize, usize)> = Vec::new();
-				for (variable, (starts, ends)) in matches.last().unwrap().offsets.iter() {
-					debug!("[matched variable {variable:?} {starts:?} {ends:?}");
+				for (capture, (starts, ends)) in matches.last().unwrap().offsets.iter() {
+					debug!("[matched] {capture:?} {starts:?} {ends:?}");
 					for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
-						m.push((variable.rule, &variable.name, x, y));
+						m.push((capture.rule, &capture.name, x, y));
 					}
 				}
 				return Some(input.len());
@@ -169,10 +167,10 @@ impl Nfa {
 
 		if let Some((pos, last_match)) = maybe_last_match {
 			let mut m: Vec<(usize, &str, usize, usize)> = Vec::new();
-			for (variable, (starts, ends)) in last_match.last().unwrap().offsets.iter() {
-				debug!("[matched variable {variable:?} {starts:?} {ends:?}");
+			for (capture, (starts, ends)) in last_match.last().unwrap().offsets.iter() {
+				debug!("[matched] {capture:?} {starts:?} {ends:?}");
 				for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
-					m.push((variable.rule, &variable.name, x, y));
+					m.push((capture.rule, &capture.name, x, y));
 				}
 			}
 			return Some(pos);
@@ -183,13 +181,13 @@ impl Nfa {
 
 	fn epsilon_closure(
 		&self,
-		state_set: BTreeSet<(NfaIdx, Vec<TagMatches>)>,
+		state_set: BTreeSet<(NfaIdx, Vec<CaptureIndices>)>,
 		pos: usize,
-	) -> BTreeSet<(NfaIdx, Vec<TagMatches>)> {
-		let mut closure: BTreeSet<(NfaIdx, Vec<TagMatches>)> = BTreeSet::new();
+	) -> BTreeSet<(NfaIdx, Vec<CaptureIndices>)> {
+		let mut closure: BTreeSet<(NfaIdx, Vec<CaptureIndices>)> = BTreeSet::new();
 		let mut states_in_closure: BTreeSet<NfaIdx> = BTreeSet::new();
 
-		let mut stack: Vec<(NfaIdx, Vec<TagMatches>)> = state_set.into_iter().collect::<Vec<_>>();
+		let mut stack: Vec<(NfaIdx, Vec<CaptureIndices>)> = state_set.into_iter().collect::<Vec<_>>();
 
 		while let Some((state, matches)) = stack.pop() {
 			closure.insert((state, matches.clone()));
@@ -202,25 +200,26 @@ impl Nfa {
 					continue;
 				}
 
-				let mut matches: Vec<TagMatches> = matches.clone();
+				// TODO always paired?
+				let mut matches: Vec<CaptureIndices> = matches.clone();
 				match &transition.kind {
 					SpontaneousTransitionKind::Positive(tag) => match tag {
-						Tag::StartCapture(variable) => {
+						Tag::Start(capture) => {
 							matches
 								.last_mut()
 								.unwrap()
 								.offsets
-								.entry(variable.clone())
+								.entry(capture.clone())
 								.or_insert((Vec::new(), Vec::new()))
 								.0
 								.push(pos);
 						},
-						Tag::EndCapture(variable) => {
+						Tag::End(capture) => {
 							matches
 								.last_mut()
 								.unwrap()
 								.offsets
-								.entry(variable.clone())
+								.entry(capture.clone())
 								.or_insert((Vec::new(), Vec::new()))
 								.1
 								.push(pos);
@@ -238,10 +237,10 @@ impl Nfa {
 
 	fn step_on_symbol(
 		&self,
-		state_set: &BTreeSet<(NfaIdx, Vec<TagMatches>)>,
+		state_set: &BTreeSet<(NfaIdx, Vec<CaptureIndices>)>,
 		ch: char,
-	) -> BTreeSet<(NfaIdx, Vec<TagMatches>)> {
-		let mut next_states: BTreeSet<(NfaIdx, Vec<TagMatches>)> = BTreeSet::new();
+	) -> BTreeSet<(NfaIdx, Vec<CaptureIndices>)> {
+		let mut next_states: BTreeSet<(NfaIdx, Vec<CaptureIndices>)> = BTreeSet::new();
 
 		for (state, matches) in state_set.iter() {
 			if let Some(targets) = self[*state].transitions.lookup(u32::from(ch)) {
@@ -277,7 +276,7 @@ impl Nfa {
 }
 
 impl NfaBuilder<'_> {
-	fn build(&mut self, rule: usize, regex: &Regex, target: NfaIdx) -> Result<BTreeSet<Tag>, NfaError> {
+	fn build(&mut self, rule: usize, regex: &Regex, target: NfaIdx) -> BTreeSet<Tag> {
 		match regex {
 			Regex::AnyChar => {
 				self.current().transitions.insert(
@@ -285,7 +284,7 @@ impl NfaBuilder<'_> {
 					BTreeSet::from([target]),
 					merge_sets,
 				);
-				Ok(BTreeSet::new())
+				BTreeSet::new()
 			},
 			&Regex::Literal(ch) => {
 				self.current().transitions.insert(
@@ -293,7 +292,7 @@ impl NfaBuilder<'_> {
 					BTreeSet::from([target]),
 					merge_sets,
 				);
-				Ok(BTreeSet::new())
+				BTreeSet::new()
 			},
 			Regex::Capture { name, item, meta } => {
 				// TODO report unwrap fails if number_captures not called
@@ -325,7 +324,7 @@ impl NfaBuilder<'_> {
 						);
 					}
 				}
-				Ok(BTreeSet::new())
+				BTreeSet::new()
 			},
 			Regex::KleeneClosure(item) => {
 				let item_start: NfaIdx = self.nfa.new_state("kleene item start");
@@ -344,7 +343,7 @@ impl NfaBuilder<'_> {
 				});
 
 				self.current = item_start;
-				let tags: BTreeSet<Tag> = self.build(rule, item, item_end)?;
+				let tags: BTreeSet<Tag> = self.build(rule, item, item_end);
 
 				self.current = item_end;
 				self.current().spontaneous.push(SpontaneousTransition {
@@ -361,7 +360,7 @@ impl NfaBuilder<'_> {
 				self.current = item_skip;
 				self.negative_tags(tags.iter().cloned(), target);
 
-				Ok(tags)
+				tags
 			},
 			Regex::BoundedRepetition { start, end, item } => {
 				if start > end {
@@ -374,7 +373,7 @@ impl NfaBuilder<'_> {
 				for i in 0..*start {
 					// let sub_target: usize = if i + 1 < *start { self.nfa.new_state() } else { pre_end };
 					let sub_target: NfaIdx = self.nfa.new_state("bounded sub 1/2 target");
-					tags.append(&mut self.build(rule, item, sub_target)?);
+					tags.append(&mut self.build(rule, item, sub_target));
 					self.current = sub_target;
 				}
 
@@ -402,7 +401,7 @@ impl NfaBuilder<'_> {
 						priority: 0,
 						target,
 					});
-					tags.append(&mut self.build(rule, item, sub_target)?);
+					tags.append(&mut self.build(rule, item, sub_target));
 					self.current = sub_target;
 				}
 				// self.current = pre_end;
@@ -412,7 +411,7 @@ impl NfaBuilder<'_> {
 				// 	target,
 				// });
 				// self.current = target;
-				Ok(tags)
+				tags
 			},
 			Regex::Sequence(items) => {
 				let mut tags: BTreeSet<Tag> = BTreeSet::new();
@@ -422,10 +421,10 @@ impl NfaBuilder<'_> {
 					} else {
 						target
 					};
-					tags.append(&mut self.build(rule, sub_item, sub_target)?);
+					tags.append(&mut self.build(rule, sub_item, sub_target));
 					self.current = sub_target;
 				}
-				Ok(tags)
+				tags
 			},
 			Regex::Alternation(items) => self.alternate(
 				items
@@ -443,11 +442,11 @@ impl NfaBuilder<'_> {
 		name: String,
 		item: &Regex,
 		target: NfaIdx,
-	) -> Result<BTreeSet<Tag>, NfaError> {
-		let variable: Variable = Variable { rule, id, name };
+	) -> BTreeSet<Tag> {
+		let capture: Capture = Capture { rule, id, name };
 
-		let start_capture: Tag = Tag::StartCapture(variable.clone());
-		let end_capture: Tag = Tag::EndCapture(variable);
+		let start_capture: Tag = Tag::Start(capture.clone());
+		let end_capture: Tag = Tag::End(capture);
 
 		let sub_start: NfaIdx = self.nfa.new_state("capture started");
 		let sub_end: NfaIdx = self.nfa.new_state("capture before end");
@@ -459,7 +458,7 @@ impl NfaBuilder<'_> {
 		});
 
 		self.current = sub_start;
-		let mut tags: BTreeSet<Tag> = self.build(rule, item, sub_end)?;
+		let mut tags: BTreeSet<Tag> = self.build(rule, item, sub_end);
 
 		self.current = sub_end;
 		self.current().spontaneous.push(SpontaneousTransition {
@@ -471,13 +470,13 @@ impl NfaBuilder<'_> {
 		tags.insert(start_capture);
 		tags.insert(end_capture);
 
-		Ok(tags)
+		tags
 	}
 
-	fn alternate<I, F>(&mut self, items: I, target: NfaIdx) -> Result<BTreeSet<Tag>, NfaError>
+	fn alternate<I, F>(&mut self, items: I, target: NfaIdx) -> BTreeSet<Tag>
 	where
 		I: Iterator<Item = F>,
-		F: Fn(&mut Self, NfaIdx) -> Result<BTreeSet<Tag>, NfaError>,
+		F: Fn(&mut Self, NfaIdx) -> BTreeSet<Tag>,
 	{
 		let orig_start: NfaIdx = self.current;
 
@@ -496,7 +495,7 @@ impl NfaBuilder<'_> {
 			});
 
 			self.current = sub_start;
-			intermediate_states.push((sub_target, sub_item(self, sub_target)?));
+			intermediate_states.push((sub_target, sub_item(self, sub_target)));
 		}
 
 		for (i, (sub_state, sub_tags)) in intermediate_states.iter().enumerate() {
@@ -523,7 +522,7 @@ impl NfaBuilder<'_> {
 			tags = &tags | sub_tags;
 		}
 
-		Ok(tags)
+		tags
 	}
 
 	fn negative_tags(&mut self, tags: impl Iterator<Item = Tag>, target: NfaIdx) {
@@ -609,7 +608,7 @@ mod test {
 		let r: Regex = Regex::from_pattern("0((?<foobar>1(2[a-zA-Z])*)|(?<baz>xyz))world").unwrap();
 		let mut schema: Schema = Schema::new();
 		schema.add_rule("hello", r);
-		let nfa: Nfa = Nfa::for_schema(&schema).unwrap();
+		let nfa: Nfa = Nfa::for_schema(&schema);
 		let b: bool = nfa.simulate("012a2b2cworld").is_some();
 		assert!(b);
 		let b: bool = nfa.simulate("0xyzworld").is_some();

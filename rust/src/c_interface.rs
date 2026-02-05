@@ -66,7 +66,7 @@ unsafe extern "C" fn clp_log_mechanic_schema_add_rule(
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn clp_log_mechanic_lexer_new<'schema, 'a>(schema: &'schema Schema) -> Box<Lexer> {
-	let lexer: Lexer = Lexer::new(schema).unwrap();
+	let lexer: Lexer = Lexer::new(schema);
 	Box::new(lexer)
 }
 
@@ -133,7 +133,7 @@ mod test {
 		schema.add_rule("hello", Regex::from_pattern("hello world").unwrap());
 		schema.add_rule("bye", Regex::from_pattern("goodbye").unwrap());
 
-		let mut lexer: Lexer = Lexer::new(&schema).unwrap();
+		let mut lexer: Lexer = Lexer::new(&schema);
 		let input: CStringView<'_> = CStringView::from_utf8("hello world goodbye hello world  goodbye  ");
 		let mut pos: usize = 0;
 

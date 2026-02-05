@@ -58,7 +58,7 @@ pub enum RegexErrorKind {
 	ExpectedNumber,
 	ExpectedHexDigits,
 	InvalidCodePoint(u32),
-	ExpectedVariableName,
+	ExpectedCaptureName,
 	TooManyCaptures,
 	ExpectedOneOf(&'static str, bool),
 	Nom(NomErrorKind),
@@ -95,11 +95,14 @@ impl Regex {
 	pub fn from_pattern(pattern: &str) -> Result<Self, RegexError<'_>> {
 		match parse_to_end(pattern) {
 			Ok((remaining, mut regex)) => {
-				assert!(remaining.is_empty(), "Remaining is {remaining:?}");
-				// TODO unwrap
+				assert_eq!(remaining, "");
 				regex
 					.number_captures(&mut { NonZero::<u32>::MIN }, &mut Vec::new())
-					.unwrap();
+					.ok_or(RegexError {
+						consumed: pattern,
+						remaining: "",
+						kind: RegexErrorKind::TooManyCaptures,
+					})?;
 				Ok(regex)
 			},
 			Err(NomErr::Incomplete(_)) => {
@@ -329,7 +332,7 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 
 	// Cut: After seeing a '?', we necessarily are expecting a capture.
 	let (input, name): (&str, &str) =
-		cut(combinator_surrounded_cut::<'<', '>', _, _>(parse_variable_name)).parse(input)?;
+		cut(combinator_surrounded_cut::<'<', '>', _, _>(parse_capture_name)).parse(input)?;
 
 	let (input, regex): (&str, Regex) = parse_alternation(input)?;
 
@@ -471,11 +474,11 @@ fn parse_char<const CHAR: char>(input: &str) -> ParsingResult<'_, char> {
 
 // =======================================
 
-fn parse_variable_name(input: &str) -> ParsingResult<'_, &str> {
+fn parse_capture_name(input: &str) -> ParsingResult<'_, &str> {
 	use nom::character::complete::alphanumeric1;
 
 	alphanumeric1
-		.or(RegexErrorKind::ExpectedVariableName.diagnostic())
+		.or(RegexErrorKind::ExpectedCaptureName.diagnostic())
 		.parse(input)
 }
 
@@ -726,10 +729,10 @@ mod test {
 	}
 
 	#[test]
-	fn variable_name() {
+	fn capture_name() {
 		{
 			let e: RegexError<'_> = Regex::from_pattern("(?< ").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::ExpectedVariableName);
+			assert_eq!(e.kind, RegexErrorKind::ExpectedCaptureName);
 			assert_eq!(e.consumed, "(?<");
 			assert_eq!(e.remaining, " ");
 		}

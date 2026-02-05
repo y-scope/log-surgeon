@@ -1,7 +1,6 @@
 use crate::dfa::Dfa;
-use crate::dfa::GotRule;
-use crate::nfa::NfaError;
-use crate::nfa::Variable;
+use crate::dfa::MatchedRule;
+use crate::nfa::Capture;
 use crate::schema::Schema;
 
 #[derive(Debug)]
@@ -18,12 +17,12 @@ pub struct Fragment<'input> {
 }
 
 impl Lexer {
-	pub fn new(schema: &Schema) -> Result<Self, NfaError> {
-		let dfa: Dfa = Dfa::for_schema(&schema)?;
-		Ok(Self {
+	pub fn new(schema: &Schema) -> Self {
+		let dfa: Dfa = Dfa::for_schema(&schema);
+		Self {
 			schema: schema.clone(),
 			dfa,
-		})
+		}
 	}
 
 	pub fn next_fragment<'input, F>(
@@ -33,12 +32,12 @@ impl Lexer {
 		mut on_capture: F,
 	) -> Fragment<'input>
 	where
-		F: FnMut(&Variable, &str),
+		F: FnMut(&Capture, &str),
 	{
 		let old_pos: usize = *pos;
 		while *pos < input.len() {
 			match self.dfa.simulate_with_captures(&input[*pos..], &mut on_capture) {
-				Ok(GotRule { rule, lexeme }) => {
+				Ok(MatchedRule { rule, lexeme }) => {
 					let static_text_end: usize = *pos;
 					*pos += lexeme.len();
 					if let Some(next) = input[*pos..].chars().next() {
@@ -96,7 +95,7 @@ mod test {
 		schema.add_rule("hello", Regex::from_pattern("hello world").unwrap());
 		schema.add_rule("bye", Regex::from_pattern("goodbye").unwrap());
 
-		let mut lexer: Lexer = Lexer::new(&schema).unwrap();
+		let mut lexer: Lexer = Lexer::new(&schema);
 		let input: &str = "hello world goodbye hello world  goodbye  ";
 		let mut pos: usize = 0;
 		assert_eq!(
@@ -126,5 +125,5 @@ mod test {
 		}
 	}
 
-	fn ignore(_: &Variable, _: &str) {}
+	fn ignore(_: &Capture, _: &str) {}
 }

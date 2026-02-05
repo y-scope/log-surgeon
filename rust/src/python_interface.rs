@@ -72,10 +72,7 @@ impl ReaderParser {
 	}
 
 	fn compile(&mut self) -> PyResult<()> {
-		self.maybe_lexer = Some(
-			Lexer::new(&self.schema)
-				.map_err(|err| LogMechInvalidRegexPattern::new_err(format!("Ill-formed pattern: {err:?}")))?,
-		);
+		self.maybe_lexer = Some(Lexer::new(&self.schema));
 		Ok(())
 	}
 

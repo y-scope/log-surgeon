@@ -4,13 +4,12 @@ use std::collections::btree_map::Entry;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
+use crate::nfa::Capture;
 use crate::nfa::Nfa;
-use crate::nfa::NfaError;
 use crate::nfa::NfaIdx;
 use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tag;
-use crate::nfa::Variable;
 use crate::schema::Schema;
 
 #[derive(Debug)]
@@ -25,8 +24,8 @@ pub struct Dfa {
 	number_of_registers: usize,
 }
 
-#[derive(Debug, Clone)]
-pub struct GotRule<'input> {
+#[derive(Debug)]
+pub struct MatchedRule<'input> {
 	pub rule: usize,
 	pub lexeme: &'input str,
 }
@@ -35,7 +34,7 @@ pub struct GotRule<'input> {
 struct DfaState {
 	kernel: Kernel,
 	transitions: IntervalTree<u32, Transition>,
-	is_final: bool,
+	final_for_rule: Option<usize>,
 	final_operations: Vec<RegisterOp>,
 	tag_for_register: BTreeMap<usize, Tag>,
 }
@@ -103,8 +102,8 @@ struct PrefixTreeNode {
 
 impl Dfa {
 	pub fn simulate(&self, input: &str) -> bool {
-		self.simulate_with_captures(input, |variable, lexeme| {
-			debug!("- captured {variable:?}, {lexeme}");
+		self.simulate_with_captures(input, |capture, lexeme| {
+			debug!("- captured {capture:?}, {lexeme}");
 		})
 		.is_ok()
 	}
@@ -113,9 +112,9 @@ impl Dfa {
 		&'me self,
 		input: &'input str,
 		mut on_capture: F,
-	) -> Result<GotRule<'input>, usize>
+	) -> Result<MatchedRule<'input>, usize>
 	where
-		F: FnMut(&'me Variable, &'input str),
+		F: FnMut(&'me Capture, &'input str),
 	{
 		let mut current_state: usize = 0;
 
@@ -152,7 +151,7 @@ impl Dfa {
 				// but based on transition_operations, the operations should be for the new state?
 				current_state = transition.destination;
 				consumed = i + ch.len_utf8();
-				if self.states[current_state].is_final {
+				if self.states[current_state].final_for_rule.is_some() {
 					maybe_backup = Some((consumed, current_state, registers.clone()));
 				}
 			} else {
@@ -170,14 +169,14 @@ impl Dfa {
 			&self.states[state].tag_for_register,
 		);
 
-		let mut variables: BTreeMap<&Variable, (Vec<usize>, Vec<usize>)> = BTreeMap::new();
+		let mut captures: BTreeMap<&Capture, (Vec<usize>, Vec<usize>)> = BTreeMap::new();
 		for i in 0..self.tags.len() {
-			let (Tag::StartCapture(variable) | Tag::EndCapture(variable)) = &self.tags[i];
+			let (Tag::Start(capture) | Tag::End(capture)) = &self.tags[i];
 			let (starts, ends): &mut (Vec<usize>, Vec<usize>) =
-				variables.entry(variable).or_insert((Vec::new(), Vec::new()));
+				captures.entry(capture).or_insert((Vec::new(), Vec::new()));
 			let offsets: &mut Vec<usize> = match self.tags[i] {
-				Tag::StartCapture(_) => starts,
-				Tag::EndCapture(_) => ends,
+				Tag::Start(_) => starts,
+				Tag::End(_) => ends,
 			};
 			let mut node: usize = registers[self.tags.len() + i];
 			while node != 0 {
@@ -189,22 +188,22 @@ impl Dfa {
 
 		let mut maybe_rule: Option<usize> = None;
 
-		for (var, (starts, ends)) in variables.into_iter() {
+		for (capture, (starts, ends)) in captures.into_iter() {
 			assert_eq!(starts.len(), ends.len());
 			if starts.is_empty() {
 				continue;
 			}
 			if let Some(rule) = maybe_rule {
-				assert_eq!(var.rule, rule);
+				assert_eq!(capture.rule, rule);
 			} else {
-				maybe_rule = Some(var.rule);
+				maybe_rule = Some(capture.rule);
 			}
 			for (&i, &j) in std::iter::zip(starts.iter(), ends.iter()) {
-				on_capture(&var, &input[i..j]);
+				on_capture(&capture, &input[i..j]);
 			}
 		}
 
-		Ok(GotRule {
+		Ok(MatchedRule {
 			rule: maybe_rule.unwrap(),
 			lexeme: &input[..consumed],
 		})
@@ -254,10 +253,10 @@ impl Dfa {
 }
 
 impl Dfa {
-	pub fn for_schema(schema: &Schema) -> Result<Self, NfaError> {
-		let nfa: Nfa = Nfa::for_schema(schema)?;
+	pub fn for_schema(schema: &Schema) -> Self {
+		let nfa: Nfa = Nfa::for_schema(schema);
 		let dfa: Self = Self::determinization(&nfa);
-		Ok(dfa)
+		dfa
 	}
 
 	/// - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
@@ -340,7 +339,7 @@ impl Dfa {
 		configurations: BTreeSet<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
 		ops: &mut Vec<RegisterOp>,
 	) -> usize {
-		let mut is_final: bool = false;
+		let mut is_final: Option<usize> = None;
 		let mut final_operations: Vec<RegisterOp> = Vec::new();
 		let mut tag_for_register: BTreeMap<usize, Tag> = BTreeMap::new();
 		let configurations: BTreeSet<Configuration> = configurations
@@ -348,7 +347,7 @@ impl Dfa {
 			.map(|(config, _)| {
 				if config.nfa_state.is_end() {
 					// assert!(!is_final);
-					is_final = true;
+					is_final = Some(0); // TODO
 					final_operations = self.final_operations(&config.register_for_tag, &config.tag_path_in_closure);
 				}
 				config
@@ -378,7 +377,7 @@ impl Dfa {
 		self.states.push(DfaState {
 			kernel: kernel.clone(),
 			transitions: IntervalTree::new(),
-			is_final,
+			final_for_rule: is_final,
 			final_operations,
 			tag_for_register,
 		});
@@ -574,11 +573,19 @@ impl Dfa {
 
 				match &transition.kind {
 					SpontaneousTransitionKind::Positive(tag) => {
+						println!(
+							"pushing positive {tag:?} in state {:?} to {:?}",
+							config.nfa_state, transition.target
+						);
 						new_config
 							.tag_path_in_closure
 							.push((tag.clone(), SymbolicPosition::Current));
 					},
 					SpontaneousTransitionKind::Negative(tag) => {
+						println!(
+							"pushing negative {tag:?} in state {:?} to {:?}",
+							config.nfa_state, transition.target
+						);
 						new_config
 							.tag_path_in_closure
 							.push((tag.clone(), SymbolicPosition::Nil));
@@ -742,7 +749,7 @@ mod test {
 			let r: Regex = Regex::from_pattern("0((?<foobar>1(2[a-zA-Z])*)*|(?<baz>xyz))*world").unwrap();
 			let mut schema: Schema = Schema::new();
 			schema.add_rule("hello", r);
-			let dfa: Dfa = Dfa::for_schema(&schema).unwrap();
+			let dfa: Dfa = Dfa::for_schema(&schema);
 			dbg!(&dfa);
 			let b: bool = dfa.simulate("012a2b2c12z12zxyzxyzxyzworld");
 			assert!(b);
