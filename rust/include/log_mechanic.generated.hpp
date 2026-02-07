@@ -66,17 +66,21 @@ CLogFragment() = default;
   const Capture *captures;
   /// Number of captures.
   size_t captures_count;
+  /// Whether this fragment starts a new log event (timestamp at start of line).
+  bool is_event_start;
 
   CLogFragment(size_t const& rule,
                const uint8_t *const& start,
                const uint8_t *const& end,
                const Capture *const& captures,
-               size_t const& captures_count)
+               size_t const& captures_count,
+               bool const& is_event_start)
     : rule(rule),
       start(start),
       end(end),
       captures(captures),
-      captures_count(captures_count)
+      captures_count(captures_count),
+      is_event_start(is_event_start)
   {}
 
 };
@@ -97,6 +101,10 @@ Lexer *clp_log_mechanic_lexer_new(const Schema *schema);
 CLogFragment clp_log_mechanic_lexer_next_fragment(Lexer *lexer, CStringView input, size_t *pos);
 
 bool clp_log_mechanic_schema_add_rule(Schema *schema, CStringView name, CStringView pattern);
+
+bool clp_log_mechanic_schema_add_timestamp_rule(Schema *schema,
+                                                CStringView name,
+                                                CStringView pattern);
 
 void clp_log_mechanic_schema_delete(Box<Schema> schema);
 

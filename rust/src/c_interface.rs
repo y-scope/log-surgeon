@@ -30,6 +30,8 @@ pub struct CLogFragment<'schema, 'input, 'buffer> {
 	pub captures: *const Capture<'schema, 'input>,
 	/// Number of captures.
 	pub captures_count: usize,
+	/// Whether this fragment starts a new log event (timestamp at start of line).
+	pub is_event_start: bool,
 	/// Indicates that `captures` points into (borrows from) some external `'buffer`.
 	pub _captures_lifetime: PhantomData<&'buffer [Capture<'schema, 'input>]>,
 }
@@ -78,6 +80,25 @@ unsafe extern "C" fn clp_log_mechanic_schema_add_rule(
 }
 
 #[unsafe(no_mangle)]
+unsafe extern "C" fn clp_log_mechanic_schema_add_timestamp_rule(
+	schema: &mut Schema,
+	name: CStringView<'_>,
+	pattern: CStringView<'_>,
+) -> bool {
+	let Ok(name) = name.as_utf8() else {
+		return false;
+	};
+	let Ok(pattern) = pattern.as_utf8() else {
+		return false;
+	};
+	let Ok(regex) = Regex::from_pattern(pattern) else {
+		return false;
+	};
+	schema.add_timestamp_rule(name, regex);
+	true
+}
+
+#[unsafe(no_mangle)]
 unsafe extern "C" fn clp_log_mechanic_schema_rule_count(schema: &Schema) -> usize {
 	schema.rules().len()
 }
@@ -121,6 +142,7 @@ unsafe extern "C" fn clp_log_mechanic_lexer_next_fragment<'schema, 'lexer, 'inpu
 		end: fragment.lexeme.as_bytes().as_ptr_range().end,
 		captures: fragment.captures.as_ptr(),
 		captures_count: fragment.captures.len(),
+		is_event_start: fragment.is_event_start,
 		_captures_lifetime: PhantomData,
 	}
 }
