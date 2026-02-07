@@ -35,6 +35,11 @@ pub struct CLogFragment<'schema, 'input, 'buffer> {
 }
 
 #[unsafe(no_mangle)]
+extern "C" fn clp_log_mechanic_set_debug(enable: bool) {
+	crate::debug::set_debug(enable);
+}
+
+#[unsafe(no_mangle)]
 extern "C" fn clp_log_mechanic_schema_new() -> Box<Schema> {
 	Box::new(Schema::new())
 }
@@ -45,8 +50,12 @@ unsafe extern "C" fn clp_log_mechanic_schema_delete(schema: Box<Schema>) {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_schema_set_delimiters(schema: &mut Schema, delimiters: CStringView<'_>) {
-	schema.set_delimiters(delimiters.as_utf8().unwrap());
+unsafe extern "C" fn clp_log_mechanic_schema_set_delimiters(schema: &mut Schema, delimiters: CStringView<'_>) -> bool {
+	let Ok(delimiters) = delimiters.as_utf8() else {
+		return false;
+	};
+	schema.set_delimiters(delimiters);
+	true
 }
 
 #[unsafe(no_mangle)]
@@ -54,29 +63,50 @@ unsafe extern "C" fn clp_log_mechanic_schema_add_rule(
 	schema: &mut Schema,
 	name: CStringView<'_>,
 	pattern: CStringView<'_>,
-) {
-	let name: &str = name.as_utf8().unwrap();
-	let pattern: &str = pattern.as_utf8().unwrap();
-	let regex: Regex = Regex::from_pattern(pattern).unwrap();
+) -> bool {
+	let Ok(name) = name.as_utf8() else {
+		return false;
+	};
+	let Ok(pattern) = pattern.as_utf8() else {
+		return false;
+	};
+	let Ok(regex) = Regex::from_pattern(pattern) else {
+		return false;
+	};
 	schema.add_rule(name, regex);
+	true
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_lexer_new<'schema, 'a>(schema: &'schema Schema) -> Box<Lexer<'schema, 'a>> {
-	let lexer: Lexer<'_, '_> = Lexer::new(schema).unwrap();
-	Box::new(lexer)
+unsafe extern "C" fn clp_log_mechanic_schema_rule_count(schema: &Schema) -> usize {
+	schema.rules().len()
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_lexer_delete<'a>(lexer: Box<Lexer<'_, 'a>>) {
-	std::mem::drop(lexer);
+unsafe extern "C" fn clp_log_mechanic_schema_rule_name<'schema>(schema: &'schema Schema, index: usize) -> CStringView<'schema> {
+	CStringView::from_utf8(&schema.rules()[index].name)
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn clp_log_mechanic_lexer_new<'schema, 'a>(schema: &'schema Schema) -> *mut Lexer<'schema, 'a> {
+	match Lexer::new(schema) {
+		Ok(lexer) => Box::into_raw(Box::new(lexer)),
+		Err(_) => std::ptr::null_mut(),
+	}
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn clp_log_mechanic_lexer_delete<'a>(lexer: *mut Lexer<'_, 'a>) {
+	if !lexer.is_null() {
+		drop(unsafe { Box::from_raw(lexer) });
+	}
 }
 
 /// Very unsafe!
 ///
 /// The returned [`CLogFragment`] includes a hidden exclusive borrow of `lexer`
-/// (it contains a pointer into an interal buffer of `lexer`),
-/// so it is nolonger valid (you must not touch it) after any subsequent borrow of `lexer`
+/// (it contains a pointer into an internal buffer of `lexer`),
+/// so it is no longer valid (you must not touch it) after any subsequent borrow of `lexer`
 /// (i.e. this borrow has ended).
 #[unsafe(no_mangle)]
 unsafe extern "C" fn clp_log_mechanic_lexer_next_fragment<'schema, 'lexer, 'input>(
