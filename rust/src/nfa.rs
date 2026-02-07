@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::num::NonZero;
 
+use crate::debug_println;
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
 use crate::regex::Regex;
@@ -132,19 +133,19 @@ impl<'schema> Nfa<'schema> {
 		let mut maybe_last_match: Option<(usize, Vec<TagMatches>)> = None;
 
 		for (i, ch) in input.char_indices() {
-			println!("=== step {i}, ch {}", u32::from(ch));
-			println!("state set is {state_set:#?}");
+			debug_println!("=== step {i}, ch {}", u32::from(ch));
+			debug_println!("state set is {state_set:#?}");
 			state_set = self.step_on_symbol(&state_set, ch);
-			println!("after step is {state_set:#?}");
+			debug_println!("after step is {state_set:#?}");
 			state_set = self.epsilon_closure(state_set, i + 1);
-			println!("after closure is {state_set:#?}");
+			debug_println!("after closure is {state_set:#?}");
 			if state_set.is_empty() {
 				break;
 			}
 			for (state, matches) in state_set.iter() {
 				// TODO more general
 				if state.0 == 1 {
-					println!("=== got match!");
+					debug_println!("=== got match!");
 					assert_eq!(matches.len(), 1);
 					maybe_last_match = Some((i, matches.clone()));
 				}
@@ -154,11 +155,11 @@ impl<'schema> Nfa<'schema> {
 		for (state, matches) in state_set.iter() {
 			// TODO more general
 			if state.0 == 1 {
-				println!("=== got match!");
+				debug_println!("=== got match!");
 				assert_eq!(matches.len(), 1);
 				let mut m: Vec<(usize, &str, usize, usize)> = Vec::new();
 				for (variable, (starts, ends)) in matches.last().unwrap().offsets.iter() {
-					println!("[matched variable {variable:?} {starts:?} {ends:?}");
+					debug_println!("[matched variable {variable:?} {starts:?} {ends:?}");
 					for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
 						m.push((variable.rule, variable.name, x, y));
 					}
@@ -170,7 +171,7 @@ impl<'schema> Nfa<'schema> {
 		if let Some((pos, last_match)) = maybe_last_match {
 			let mut m: Vec<(usize, &str, usize, usize)> = Vec::new();
 			for (variable, (starts, ends)) in last_match.last().unwrap().offsets.iter() {
-				println!("[matched variable {variable:?} {starts:?} {ends:?}");
+				debug_println!("[matched variable {variable:?} {starts:?} {ends:?}");
 				for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
 					m.push((variable.rule, variable.name, x, y));
 				}

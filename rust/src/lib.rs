@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+pub mod debug;
 pub mod dfa;
 pub mod interval_tree;
 pub mod lexer;
