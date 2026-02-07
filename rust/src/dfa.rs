@@ -125,6 +125,9 @@ impl<'schema> Dfa<'schema> {
 		let mut maybe_backup: Option<(usize, usize, Vec<usize>)> = None;
 
 		let mut consumed: usize = 0;
+		// consumed_end tracks the exclusive byte offset after the last consumed char.
+		// Assigned inside the loop before first use.
+		let mut consumed_end: usize;
 
 		for (i, ch) in input.char_indices() {
 			debug_println!("=== step {i} (state {current_state}), ch {ch:?} ({})", u32::from(ch));
@@ -133,13 +136,14 @@ impl<'schema> Dfa<'schema> {
 			for config in self.states[current_state].kernel.0.iter() {
 				for (i, &r) in config.register_for_tag.iter().enumerate() {
 					if seen.insert(r) {
-						debug_println!("- tag ({:?}) -> {r} -> {:?}", self.tags[i], registers[r]);
+						println!("- tag ({:?}) -> {r} -> {:?}", self.tags[i], registers[r]);
 					}
 				}
 			}
 			*/
 			if let Some(transition) = self.states[current_state].transitions.lookup(u32::from(ch)) {
 				consumed = i;
+				consumed_end = i + ch.len_utf8();
 				current_state = transition.destination;
 				self.apply_operations(
 					&mut registers,
@@ -149,19 +153,19 @@ impl<'schema> Dfa<'schema> {
 					&self.states[current_state].tag_for_register,
 				);
 				if self.states[current_state].is_final {
-					maybe_backup = Some((consumed, current_state, registers.clone()));
+					maybe_backup = Some((consumed_end, current_state, registers.clone()));
 				}
 			} else {
 				break;
 			}
 		}
 
-		let (consumed, state, mut registers): (usize, usize, Vec<usize>) = maybe_backup.ok_or(consumed)?;
+		let (consumed_end, state, mut registers): (usize, usize, Vec<usize>) = maybe_backup.ok_or(consumed)?;
 
 		self.apply_operations(
 			&mut registers,
 			&mut prefix_tree,
-			consumed,
+			consumed_end,
 			&self.states[state].final_operations,
 			&self.states[state].tag_for_register,
 		);
@@ -196,13 +200,13 @@ impl<'schema> Dfa<'schema> {
 				maybe_rule = Some(var.rule);
 			}
 			for (&i, &j) in std::iter::zip(starts.iter(), ends.iter()) {
-				on_capture(var.name, &input[i..=j]);
+				on_capture(var.name, &input[i..j]);
 			}
 		}
 
 		Ok(GotRule {
 			rule: maybe_rule.unwrap(),
-			lexeme: &input[..=consumed],
+			lexeme: &input[..consumed_end],
 		})
 	}
 

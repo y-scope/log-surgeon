@@ -113,6 +113,28 @@ mod test {
 		assert_eq!(pos, input.len());
 	}
 
+	#[test]
+	fn capture_boundaries() {
+		let mut schema: Schema = Schema::new();
+		schema.set_delimiters(" ");
+		schema.add_rule("kv", Regex::from_pattern("(?<key>[a-z]+)=(?<val>[0-9]+)").unwrap());
+
+		let mut lexer: Lexer<'_, '_> = Lexer::new(&schema).unwrap();
+		let input: &str = "foo=123 bar=456 ";
+		let mut pos: usize = 0;
+
+		let f1 = lexer.next_fragment(input, &mut pos);
+		assert_eq!(f1.lexeme, "foo=123");
+		let user_caps: Vec<(&str, &str)> = f1.captures.iter()
+			.map(|c| (c.name.as_utf8().unwrap(), c.lexeme.as_utf8().unwrap()))
+			.filter(|(name, _)| *name != "kv") // skip whole-match capture
+			.collect();
+		assert!(user_caps.contains(&("key", "foo")),
+			"Expected key='foo', got: {user_caps:?}");
+		assert!(user_caps.contains(&("val", "123")),
+			"Expected val='123', got: {user_caps:?}");
+	}
+
 	impl<'schema, 'input, 'buffer> Fragment<'schema, 'input, 'buffer> {
 		fn projection(&self) -> (usize, &'input str) {
 			(self.rule, self.lexeme)

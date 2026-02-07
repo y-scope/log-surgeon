@@ -55,7 +55,7 @@ impl Schema {
 	pub fn pattern_for_delimiters(delimiters: &str) -> Regex {
 		let mut escaped: String = String::new();
 		for ch in delimiters.chars() {
-			escaped += &format!("\\u{{{:x}}}", u32::from(ch));
+			escaped += &format!("\\u{{{:02x}}}", u32::from(ch));
 		}
 		let pattern: String = format!("[{escaped}]");
 		Regex::from_pattern(&pattern).unwrap()
