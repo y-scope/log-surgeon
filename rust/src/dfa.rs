@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::btree_map::Entry;
 
+use crate::debug_println;
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
 use crate::nfa::Nfa;
@@ -102,7 +103,7 @@ struct PrefixTreeNode {
 impl<'schema> Dfa<'schema> {
 	pub fn simulate(&self, input: &str) -> bool {
 		self.simulate_with_captures(input, |name, lexeme| {
-			println!("- captured {name}, {lexeme}");
+			debug_println!("- captured {name}, {lexeme}");
 		})
 		.is_ok()
 	}
@@ -124,9 +125,12 @@ impl<'schema> Dfa<'schema> {
 		let mut maybe_backup: Option<(usize, usize, Vec<usize>)> = None;
 
 		let mut consumed: usize = 0;
+		// consumed_end tracks the exclusive byte offset after the last consumed char.
+		// Assigned inside the loop before first use.
+		let mut consumed_end: usize;
 
 		for (i, ch) in input.char_indices() {
-			println!("=== step {i} (state {current_state}), ch {ch:?} ({})", u32::from(ch));
+			debug_println!("=== step {i} (state {current_state}), ch {ch:?} ({})", u32::from(ch));
 			/*
 			let mut seen: BTreeSet<usize> = BTreeSet::new();
 			for config in self.states[current_state].kernel.0.iter() {
@@ -139,6 +143,7 @@ impl<'schema> Dfa<'schema> {
 			*/
 			if let Some(transition) = self.states[current_state].transitions.lookup(u32::from(ch)) {
 				consumed = i;
+				consumed_end = i + ch.len_utf8();
 				current_state = transition.destination;
 				self.apply_operations(
 					&mut registers,
@@ -148,19 +153,19 @@ impl<'schema> Dfa<'schema> {
 					&self.states[current_state].tag_for_register,
 				);
 				if self.states[current_state].is_final {
-					maybe_backup = Some((consumed, current_state, registers.clone()));
+					maybe_backup = Some((consumed_end, current_state, registers.clone()));
 				}
 			} else {
 				break;
 			}
 		}
 
-		let (consumed, state, mut registers): (usize, usize, Vec<usize>) = maybe_backup.ok_or(consumed)?;
+		let (consumed_end, state, mut registers): (usize, usize, Vec<usize>) = maybe_backup.ok_or(consumed)?;
 
 		self.apply_operations(
 			&mut registers,
 			&mut prefix_tree,
-			consumed,
+			consumed_end,
 			&self.states[state].final_operations,
 			&self.states[state].tag_for_register,
 		);
@@ -195,13 +200,13 @@ impl<'schema> Dfa<'schema> {
 				maybe_rule = Some(var.rule);
 			}
 			for (&i, &j) in std::iter::zip(starts.iter(), ends.iter()) {
-				on_capture(var.name, &input[i..=j]);
+				on_capture(var.name, &input[i..j]);
 			}
 		}
 
 		Ok(GotRule {
 			rule: maybe_rule.unwrap(),
-			lexeme: &input[..=consumed],
+			lexeme: &input[..consumed_end],
 		})
 	}
 
@@ -213,11 +218,11 @@ impl<'schema> Dfa<'schema> {
 		ops: &[RegisterOp],
 		tag_for_register: &BTreeMap<usize, Tag<'schema>>,
 	) {
-		println!("tags: {tag_for_register:#?}");
+		debug_println!("tags: {tag_for_register:#?}");
 		for o in ops.iter() {
 			match &o.action {
 				RegisterAction::CopyFrom { source } => {
-					println!(
+					debug_println!(
 						"copying {} ({:?}) <- {} ({:?})",
 						o.target,
 						tag_for_register.get(&o.target),
@@ -227,7 +232,7 @@ impl<'schema> Dfa<'schema> {
 					registers[o.target] = registers[*source];
 				},
 				RegisterAction::Append { source, history } => {
-					println!(
+					debug_println!(
 						"appending {} ({:?}) <- {} ({:?}) with history {:?}",
 						o.target,
 						tag_for_register.get(&o.target),
@@ -286,7 +291,7 @@ impl<'schema> Dfa<'schema> {
 		while i < dfa.states.len() {
 			// TODO explain why need clone, borrowed in loop
 			let kernel: Kernel<'_> = dfa.states[i].kernel.clone();
-			println!(
+			debug_println!(
 				"== On DFA state {i} {:?}",
 				kernel.0.iter().map(|config| config.nfa_state).collect::<BTreeSet<_>>()
 			);
@@ -298,14 +303,14 @@ impl<'schema> Dfa<'schema> {
 				let next: BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>)> =
 					Self::epsilon_closure(nfa, next);
 
-				println!("dfa {i} on {interval:?} transition ops...");
+				debug_println!("dfa {i} on {interval:?} transition ops...");
 				let (next, mut operations): (
 					BTreeSet<(Configuration<'_>, Vec<(Tag<'_>, SymbolicPosition)>)>,
 					Vec<RegisterOp>,
 				) = dfa.transition_operations(next, &mut register_action_tag);
 
 				let next: usize = dfa.add_state(next, &mut operations);
-				println!("stepping from {i} to {next} on {interval:?} has ops {operations:#?}");
+				debug_println!("stepping from {i} to {next} on {interval:?} has ops {operations:#?}");
 				dfa.states[i].transitions.insert(
 					*interval,
 					Transition {
@@ -366,7 +371,7 @@ impl<'schema> Dfa<'schema> {
 			}
 		}
 		let idx: usize = self.states.len();
-		println!("- adding state {idx} ({ops:?}): {:#?}", &kernel.0);
+		debug_println!("- adding state {idx} ({ops:?}): {:#?}", &kernel.0);
 		self.states.push(DfaState {
 			kernel: kernel.clone(),
 			transitions: IntervalTree::new(),

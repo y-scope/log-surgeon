@@ -66,17 +66,21 @@ CLogFragment() = default;
   const Capture *captures;
   /// Number of captures.
   size_t captures_count;
+  /// Whether this fragment starts a new log event (timestamp at start of line).
+  bool is_event_start;
 
   CLogFragment(size_t const& rule,
                const uint8_t *const& start,
                const uint8_t *const& end,
                const Capture *const& captures,
-               size_t const& captures_count)
+               size_t const& captures_count,
+               bool const& is_event_start)
     : rule(rule),
       start(start),
       end(end),
       captures(captures),
-      captures_count(captures_count)
+      captures_count(captures_count),
+      is_event_start(is_event_start)
   {}
 
 };
@@ -84,25 +88,35 @@ CLogFragment() = default;
 
 extern "C" {
 
-void clp_log_mechanic_lexer_delete(Box<Lexer> lexer);
+void clp_log_mechanic_lexer_delete(Lexer *lexer);
 
-Box<Lexer> clp_log_mechanic_lexer_new(const Schema *schema);
+Lexer *clp_log_mechanic_lexer_new(const Schema *schema);
 
 /// Very unsafe!
 ///
 /// The returned [`CLogFragment`] includes a hidden exclusive borrow of `lexer`
-/// (it contains a pointer into an interal buffer of `lexer`),
-/// so it is nolonger valid (you must not touch it) after any subsequent borrow of `lexer`
+/// (it contains a pointer into an internal buffer of `lexer`),
+/// so it is no longer valid (you must not touch it) after any subsequent borrow of `lexer`
 /// (i.e. this borrow has ended).
 CLogFragment clp_log_mechanic_lexer_next_fragment(Lexer *lexer, CStringView input, size_t *pos);
 
-void clp_log_mechanic_schema_add_rule(Schema *schema, CStringView name, CStringView pattern);
+bool clp_log_mechanic_schema_add_rule(Schema *schema, CStringView name, CStringView pattern);
+
+bool clp_log_mechanic_schema_add_timestamp_rule(Schema *schema,
+                                                CStringView name,
+                                                CStringView pattern);
 
 void clp_log_mechanic_schema_delete(Box<Schema> schema);
 
 Box<Schema> clp_log_mechanic_schema_new();
 
-void clp_log_mechanic_schema_set_delimiters(Schema *schema, CStringView delimiters);
+size_t clp_log_mechanic_schema_rule_count(const Schema *schema);
+
+CStringView clp_log_mechanic_schema_rule_name(const Schema *schema, size_t index);
+
+bool clp_log_mechanic_schema_set_delimiters(Schema *schema, CStringView delimiters);
+
+void clp_log_mechanic_set_debug(bool enable);
 
 }  // extern "C"
 

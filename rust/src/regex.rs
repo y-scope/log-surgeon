@@ -479,9 +479,9 @@ fn parse_char<const CHAR: char>(input: &str) -> ParsingResult<'_, char> {
 // =======================================
 
 fn parse_variable_name(input: &str) -> ParsingResult<'_, &str> {
-	use nom::character::complete::alphanumeric1;
+	use nom::bytes::complete::take_while1;
 
-	alphanumeric1
+	take_while1(|c: char| c.is_alphanumeric() || c == '_')
 		.or(RegexErrorKind::ExpectedVariableName.diagnostic())
 		.parse(input)
 }

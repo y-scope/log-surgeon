@@ -11,6 +11,7 @@ pub struct Rule {
 	pub idx: usize,
 	pub name: String,
 	pub regex: Regex,
+	pub is_timestamp: bool,
 }
 
 impl Schema {
@@ -22,6 +23,7 @@ impl Schema {
 				idx: 0,
 				name: "static".to_owned(),
 				regex: Self::pattern_for_delimiters(Self::DEFAULT_DELIMITERS),
+				is_timestamp: false,
 			}],
 			delimiters: Self::DEFAULT_DELIMITERS.to_owned(),
 		}
@@ -41,6 +43,20 @@ impl Schema {
 			idx,
 			name: name.into(),
 			regex,
+			is_timestamp: false,
+		});
+	}
+
+	pub fn add_timestamp_rule<LikeString>(&mut self, name: LikeString, regex: Regex)
+	where
+		LikeString: Into<String>,
+	{
+		let idx: usize = self.rules.len();
+		self.rules.push(Rule {
+			idx,
+			name: name.into(),
+			regex,
+			is_timestamp: true,
 		});
 	}
 
@@ -55,7 +71,7 @@ impl Schema {
 	pub fn pattern_for_delimiters(delimiters: &str) -> Regex {
 		let mut escaped: String = String::new();
 		for ch in delimiters.chars() {
-			escaped += &format!("\\u{{{:x}}}", u32::from(ch));
+			escaped += &format!("\\u{{{:02x}}}", u32::from(ch));
 		}
 		let pattern: String = format!("[{escaped}]");
 		Regex::from_pattern(&pattern).unwrap()

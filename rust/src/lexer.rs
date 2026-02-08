@@ -15,6 +15,7 @@ pub struct Fragment<'schema, 'input, 'buffer> {
 	pub rule: usize,
 	pub lexeme: &'input str,
 	pub captures: &'buffer [Capture<'schema, 'input>],
+	pub is_event_start: bool,
 }
 
 #[repr(C)]
@@ -54,10 +55,14 @@ impl<'schema, 'input> Lexer<'schema, 'input> {
 							continue;
 						}
 					}
+					let at_line_start = static_text_end == 0
+						|| input.as_bytes().get(static_text_end - 1) == Some(&b'\n');
+					let is_event_start = at_line_start && self.schema.rules()[rule].is_timestamp;
 					return Fragment {
 						rule,
 						lexeme,
 						captures: &self.captures_buffer,
+						is_event_start,
 					};
 				},
 				Err(consumed) => {
@@ -71,6 +76,7 @@ impl<'schema, 'input> Lexer<'schema, 'input> {
 			rule: 0,
 			lexeme: &input[*pos..],
 			captures: &[],
+			is_event_start: false,
 		}
 	}
 
@@ -111,6 +117,56 @@ mod test {
 		assert_eq!(lexer.next_fragment(input, &mut pos).projection(), (2, "goodbye"));
 		assert_eq!(lexer.next_fragment(input, &mut pos).projection(), (0, ""));
 		assert_eq!(pos, input.len());
+	}
+
+	#[test]
+	fn event_boundary() {
+		let mut schema: Schema = Schema::new();
+		schema.set_delimiters(" \n");
+		schema.add_timestamp_rule("ts", Regex::from_pattern("[0-9][0-9][0-9][0-9]\\-[0-9][0-9]\\-[0-9][0-9]").unwrap());
+		schema.add_rule("word", Regex::from_pattern("[a-zA-Z]+").unwrap());
+
+		let mut lexer: Lexer<'_, '_> = Lexer::new(&schema).unwrap();
+		let input: &str = "2024-01-15 hello\n2024-01-16 world\n";
+		let mut pos: usize = 0;
+
+		let f1 = lexer.next_fragment(input, &mut pos);
+		assert_eq!(f1.rule, 1); // ts
+		assert!(f1.is_event_start); // at start of input
+
+		let f2 = lexer.next_fragment(input, &mut pos);
+		assert_eq!(f2.rule, 2); // word "hello"
+		assert!(!f2.is_event_start);
+
+		let f3 = lexer.next_fragment(input, &mut pos);
+		assert_eq!(f3.rule, 1); // ts
+		assert!(f3.is_event_start); // after \n
+
+		let f4 = lexer.next_fragment(input, &mut pos);
+		assert_eq!(f4.rule, 2); // word "world"
+		assert!(!f4.is_event_start);
+	}
+
+	#[test]
+	fn capture_boundaries() {
+		let mut schema: Schema = Schema::new();
+		schema.set_delimiters(" ");
+		schema.add_rule("kv", Regex::from_pattern("(?<key>[a-z]+)=(?<val>[0-9]+)").unwrap());
+
+		let mut lexer: Lexer<'_, '_> = Lexer::new(&schema).unwrap();
+		let input: &str = "foo=123 bar=456 ";
+		let mut pos: usize = 0;
+
+		let f1 = lexer.next_fragment(input, &mut pos);
+		assert_eq!(f1.lexeme, "foo=123");
+		let user_caps: Vec<(&str, &str)> = f1.captures.iter()
+			.map(|c| (c.name.as_utf8().unwrap(), c.lexeme.as_utf8().unwrap()))
+			.filter(|(name, _)| *name != "kv") // skip whole-match capture
+			.collect();
+		assert!(user_caps.contains(&("key", "foo")),
+			"Expected key='foo', got: {user_caps:?}");
+		assert!(user_caps.contains(&("val", "123")),
+			"Expected val='123', got: {user_caps:?}");
 	}
 
 	impl<'schema, 'input, 'buffer> Fragment<'schema, 'input, 'buffer> {
