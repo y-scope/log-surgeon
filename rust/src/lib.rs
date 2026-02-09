@@ -8,9 +8,10 @@ pub mod dfa;
 pub mod interval_tree;
 pub mod lexer;
 pub mod nfa;
+pub mod parser;
 pub mod regex;
 pub mod schema;
 
 pub mod c_interface;
-// #[cfg(feature = "python")]
+#[cfg(feature = "python")]
 pub mod python_interface;

@@ -12,4 +12,4 @@ include/log_mechanic.generated.hpp: FORCE
 	cbindgen --config cbindgen.toml --crate log-mechanic > $@
 
 target/debug/liblog_mechanic.a: FORCE
-	cargo build
+	cargo build --no-default-features

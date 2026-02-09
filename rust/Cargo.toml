@@ -4,10 +4,20 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
-crate-type = ["lib", "staticlib", "cdylib"]
+crate-type = [
+	"lib",
+	"staticlib",
+	"cdylib"
+]
 
 [features]
-python = []
+default = [
+	"python",
+]
+python = [
+	"pyo3/extension-module",
+	"pyo3/macros",
+]
 
 [build-dependencies]
 cbindgen = "0.29"
@@ -18,3 +28,4 @@ tracing = "0.1"
 
 [dependencies.pyo3]
 version = "0.27"
+default-features = false

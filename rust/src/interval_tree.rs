@@ -49,7 +49,7 @@ enum Side {
 }
 
 impl<T: Number, V: Clone> IntervalTree<T, V> {
-	pub fn new() -> Self {
+	pub const fn new() -> Self {
 		Self { intervals: Vec::new() }
 	}
 

@@ -25,12 +25,18 @@ pub enum Regex {
 	},
 	KleeneClosure(Box<Regex>),
 	BoundedRepetition {
-		start: u32,
-		end: u32,
+		lo: u32,
+		hi: u32,
 		item: Box<Regex>,
 	},
 	Sequence(Vec<Regex>),
 	Alternation(Vec<Regex>),
+}
+
+#[derive(Debug)]
+pub enum Literals {
+	Single(char),
+	Group(Vec<(char, char)>),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -61,6 +67,7 @@ pub enum RegexErrorKind {
 	ExpectedCaptureName,
 	TooManyCaptures,
 	ExpectedOneOf(&'static str, bool),
+	EscapeClassInGroupRange,
 	Nom(NomErrorKind),
 }
 
@@ -256,6 +263,7 @@ fn parse_suffixed(input: &str) -> ParsingResult<'_, Regex> {
 		Range(u32, u32),
 		Star,
 		Plus,
+		Question,
 	}
 
 	let (input, regex): (&str, Regex) = parse_term(input)?;
@@ -263,17 +271,18 @@ fn parse_suffixed(input: &str) -> ParsingResult<'_, Regex> {
 	let (input, maybe_suffix): (&str, Option<Suffix>) = opt(alt((
 		parse_char::<'*'>.map(|_| Suffix::Star),
 		parse_char::<'+'>.map(|_| Suffix::Plus),
+		parse_char::<'?'>.map(|_| Suffix::Question),
 		parse_repetition_bound.map(|(start, end)| Suffix::Range(start, end)),
 	)))
 	.parse(input)?;
 
 	if let Some(suffix) = maybe_suffix {
 		match suffix {
-			Suffix::Range(start, end) => Ok((
+			Suffix::Range(lo, hi) => Ok((
 				input,
 				Regex::BoundedRepetition {
-					start,
-					end,
+					lo,
+					hi,
 					item: Box::new(regex),
 				},
 			)),
@@ -283,6 +292,14 @@ fn parse_suffixed(input: &str) -> ParsingResult<'_, Regex> {
 				let star: Regex = Regex::KleeneClosure(Box::new(regex));
 				Ok((input, Regex::Sequence(vec![one, star])))
 			},
+			Suffix::Question => Ok((
+				input,
+				Regex::BoundedRepetition {
+					lo: 0,
+					hi: 1,
+					item: Box::new(regex),
+				},
+			)),
 		}
 	} else {
 		Ok((input, regex))
@@ -309,7 +326,10 @@ fn parse_term(input: &str) -> ParsingResult<'_, Regex> {
 
 	alt((
 		parse_char::<'.'>.map(|_| Regex::AnyChar),
-		parse_literal_character.map(|ch| Regex::Literal(ch)),
+		parse_literal_character.map(|literal| match literal {
+			Literals::Single(ch) => Regex::Literal(ch),
+			Literals::Group(items) => Regex::Group { negated: false, items },
+		}),
 		parse_parenthesized,
 		parse_group,
 		RegexErrorKind::EmptyTerm.diagnostic(),
@@ -365,52 +385,84 @@ fn parse_group_inside(input: &str) -> ParsingResult<'_, (bool, Vec<(char, char)>
 
 	let (input, negated): (&str, Option<char>) = opt(parse_char::<'^'>).parse(input)?;
 
-	let (input, items): (&str, Vec<(char, char)>) = many1(parse_group_item).parse(input)?;
+	// let (input, items): (&str, Vec<(char, char)>) = many1(parse_group_item).parse(input)?;
+
+	let (mut input, mut items): (&str, Vec<(char, char)>) = parse_group_item(input)?;
+	loop {
+		match parse_group_item(input) {
+			Ok((new_input, new_items)) => {
+				input = new_input;
+				items.extend(&new_items);
+			},
+			Err(NomErr::Error(_)) => {
+				break;
+			},
+			Err(err @ NomErr::Failure(_) | err @ NomErr::Incomplete(_)) => {
+				return Err(err);
+			},
+		}
+	}
 
 	Ok((input, (negated.is_some(), items)))
 }
 
-fn parse_group_item(input: &str) -> ParsingResult<'_, (char, char)> {
+fn parse_group_item(original_input: &str) -> ParsingResult<'_, Vec<(char, char)>> {
 	use nom::combinator::cut;
 	use nom::combinator::opt;
 
-	let (input, start): (&str, char) = parse_literal_character(input)?;
+	let (input, start): (&str, Literals) = parse_literal_character(original_input)?;
 
-	let (input, maybe_dash): (&str, Option<char>) = opt(parse_char::<'-'>).parse(input)?;
+	let (input_after_dash, maybe_dash): (&str, Option<char>) = opt(parse_char::<'-'>).parse(input)?;
 
 	if maybe_dash.is_some() {
-		let (input, end): (&str, char) = cut(parse_literal_character).parse(input)?;
-		Ok((input, (start, end)))
+		match start {
+			Literals::Single(start) => {
+				let (input, end): (&str, Literals) = cut(parse_literal_character).parse(input_after_dash)?;
+				match end {
+					Literals::Single(end) => Ok((input, vec![(start, end)])),
+					Literals::Group(items) => {
+						return Err(RegexErrorKind::EscapeClassInGroupRange.error(input_after_dash));
+					},
+				}
+			},
+			Literals::Group(items) => {
+				return Err(RegexErrorKind::EscapeClassInGroupRange.error(original_input));
+			},
+		}
 	} else {
-		Ok((input, (start, start)))
+		match start {
+			Literals::Single(ch) => Ok((input, vec![(ch, ch)])),
+			Literals::Group(items) => Ok((input, items)),
+		}
 	}
 }
 
 // ========================================
 
-fn parse_literal_character(input: &str) -> ParsingResult<'_, char> {
+fn parse_literal_character(input: &str) -> ParsingResult<'_, Literals> {
 	use nom::branch::alt;
 
 	alt((
 		parse_escaped_character,
-		parse_one_char_of::<true>(SPECIAL_CHARACTERS),
+		parse_one_char_of::<true>(SPECIAL_CHARACTERS).map(Literals::Single),
 		RegexErrorKind::InvalidLiteral.diagnostic(),
 	))
 	.parse(input)
 }
 
-fn parse_escaped_character(original_input: &str) -> ParsingResult<'_, char> {
+fn parse_escaped_character(original_input: &str) -> ParsingResult<'_, Literals> {
 	use nom::branch::alt;
 	use nom::combinator::cut;
 
 	let (input, _): (&str, char) = parse_char::<'\\'>(original_input)?;
 
 	// Cut: If we parsed a '\\', we necessarily are looking for an escape character.
-	cut(
-		alt((parse_one_char_of::<false>(SPECIAL_CHARACTERS), parse_standard_escape))
-			// Outside of the `alt` since the error starts at the original input.
-			.or(|_| Err(RegexErrorKind::InvalidEscape.error(original_input))),
-	)
+	cut(alt((
+		parse_one_char_of::<false>(SPECIAL_CHARACTERS).map(Literals::Single),
+		parse_standard_escape,
+	))
+	// Outside of the `alt` since the error starts at the original input.
+	.or(|_| Err(RegexErrorKind::InvalidEscape.error(original_input))))
 	.parse(input)
 }
 
@@ -436,7 +488,7 @@ fn parse_one_char_of<'a, const NEGATE: bool>(
 	}
 }
 
-fn parse_standard_escape(input: &str) -> ParsingResult<'_, char> {
+fn parse_standard_escape(input: &str) -> ParsingResult<'_, Literals> {
 	let mut chars: Chars<'_> = input.chars();
 
 	// We use the NUL character as a marker/equivalent to EOF;
@@ -448,14 +500,30 @@ fn parse_standard_escape(input: &str) -> ParsingResult<'_, char> {
 		'r' => '\r',
 		'n' => '\n',
 		'u' => {
-			return combinator_surrounded_cut::<'{', '}', _, _>(parse_hex_code_point).parse(chars.as_str());
+			return combinator_surrounded_cut::<'{', '}', _, _>(parse_hex_code_point)
+				.map(Literals::Single)
+				.parse(chars.as_str());
+		},
+		'd' | 's' | 'w' => {
+			return Ok((
+				chars.as_str(),
+				Literals::Group(match ch {
+					'd' => vec![('0', '9')],
+					's' => vec![(' ', ' '), ('\t', '\t'), ('\r', '\r'), ('\n', '\n')],
+					'w' => vec![('0', '9'), ('a', 'z'), ('A', 'Z')],
+					_ => {
+						// TODO better message
+						unreachable!();
+					},
+				}),
+			));
 		},
 		_ => {
 			return Err(RegexErrorKind::InvalidEscape.error(input));
 		},
 	};
 
-	return Ok((chars.as_str(), ch));
+	return Ok((chars.as_str(), Literals::Single(unescaped)));
 }
 
 fn parse_char<const CHAR: char>(input: &str) -> ParsingResult<'_, char> {
@@ -475,9 +543,11 @@ fn parse_char<const CHAR: char>(input: &str) -> ParsingResult<'_, char> {
 // =======================================
 
 fn parse_capture_name(input: &str) -> ParsingResult<'_, &str> {
-	use nom::character::complete::alphanumeric1;
+	// use nom::character::complete::alphanumeric1;
+	use nom::AsChar;
+	use nom::bytes::take_while1;
 
-	alphanumeric1
+	take_while1(|ch| AsChar::is_alphanum(ch) || ch == '_')
 		.or(RegexErrorKind::ExpectedCaptureName.diagnostic())
 		.parse(input)
 }
@@ -614,6 +684,7 @@ mod test {
 		Regex::from_pattern("abc|def(?<hello>.ghi)*").unwrap();
 
 		Regex::from_pattern(r"[ \t]").unwrap();
+		Regex::from_pattern(r" ~?").unwrap();
 	}
 
 	#[test]

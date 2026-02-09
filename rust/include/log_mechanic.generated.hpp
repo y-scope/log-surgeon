@@ -8,31 +8,13 @@
 
 namespace clp::log_mechanic {
 
-struct Lexer;
+struct LogEvent;
+
+struct Parser;
 
 struct Schema;
 
-struct CLogFragment {
-// Custom
-CLogFragment() = default;
-
-// Generated
-  /// `0` iff no variable found (static text until end of input).
-  size_t rule;
-  /// Start of variable (if found).
-  const uint8_t *start;
-  /// End of variable (if found).
-  const uint8_t *end;
-
-  CLogFragment(size_t const& rule,
-               const uint8_t *const& start,
-               const uint8_t *const& end)
-    : rule(rule),
-      start(start),
-      end(end)
-  {}
-
-};
+struct Token;
 
 template<typename T>
 struct CSlice {
@@ -61,20 +43,26 @@ CSlice(char const* c_str)
 
 using CStringView = CSlice<char>;
 
-using LogFragmentOnCapture = void(*)(const void *data, CStringView name, CStringView lexeme);
-
 
 extern "C" {
 
-void clp_log_mechanic_lexer_delete(Box<Lexer> lexer);
+CStringView clp_log_mecahnic_event_token_name(const Token *token);
 
-Box<Lexer> clp_log_mechanic_lexer_new(const Schema *schema);
+void clp_log_mechanic_event_delete(Box<LogEvent> event);
 
-CLogFragment clp_log_mechanic_lexer_next_fragment(Lexer *lexer,
-                                                  CStringView input,
-                                                  size_t *pos,
-                                                  LogFragmentOnCapture maybe_closure,
-                                                  const void *data);
+const Token *clp_log_mechanic_event_token(const LogEvent *event, size_t i);
+
+size_t clp_log_mechanic_event_token_count(const LogEvent *event);
+
+size_t clp_log_mechanic_event_token_rule(const Token *token);
+
+void clp_log_mechanic_parser_delete(Box<Parser> parser);
+
+Box<Parser> clp_log_mechanic_parser_new(const Schema *schema);
+
+Option<Box<LogEvent>> clp_log_mechanic_parser_next_event(Parser *parser,
+                                                         CStringView input,
+                                                         size_t *pos);
 
 void clp_log_mechanic_schema_add_rule(Schema *schema, CStringView name, CStringView pattern);
 

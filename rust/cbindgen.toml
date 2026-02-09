@@ -62,7 +62,10 @@ include = [
 	"type_traits",
 	"string_view",
 ]
-exclude = ["Box"]
+exclude = [
+	"Box",
+	"Option",
+]
 # prefix = "CAPI_"
 item_types = []
 renaming_overrides_prefixing = false
