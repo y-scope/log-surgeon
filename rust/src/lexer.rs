@@ -1,6 +1,6 @@
 use crate::dfa::Dfa;
 use crate::dfa::MatchedRule;
-use crate::nfa::Capture;
+use crate::nfa::CaptureInfo;
 use crate::schema::Schema;
 
 #[derive(Debug)]
@@ -11,22 +11,14 @@ pub struct Lexer {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Token<'schema, 'input> {
-	Variable(Variable<'schema, 'input>),
+	Variable {
+		rule: usize,
+		name: &'schema str,
+		lexeme: &'input str,
+		// fragments: Vec<Fragment<'schema, 'input>>,
+	},
 	StaticText(&'input str),
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct Variable<'schema, 'input> {
-	pub rule: usize,
-	pub name: &'schema str,
-	pub lexeme: &'input str,
-	pub fragments: Vec<Fragment<'schema, 'input>>,
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct Fragment<'schema, 'input> {
-	pub name: &'schema str,
-	pub lexeme: &'input str,
+	EndOfInput,
 }
 
 impl Lexer {
@@ -35,40 +27,42 @@ impl Lexer {
 		Self { schema, dfa }
 	}
 
-	pub fn next_token<'input>(
-		&self,
-		input: &'input str,
-		pos: &mut usize,
-	) -> Result<Variable<'_, 'input>, Option<&'input str>> {
+	pub fn next_token<'input, F>(&self, input: &'input str, pos: &mut usize, mut on_capture: F) -> Token<'_, 'input>
+	where
+		F: FnMut(usize, usize, usize),
+	{
 		if *pos == input.len() {
-			return Err(None);
+			return Token::EndOfInput;
 		}
 
 		let start: usize = *pos;
 
-		let mut fragments: Vec<Fragment<'_, '_>> = Vec::new();
-
-		match self.dfa.simulate_with_captures(&input[*pos..], |capture, lexeme| {
-			fragments.push(Fragment {
-				name: &capture.name,
-				lexeme,
-			})
-		}) {
+		match self
+			.dfa
+			.simulate_with_captures(&input[*pos..], |_, t, _, i, j| on_capture(t, i, j))
+		{
 			Ok(MatchedRule { rule, lexeme }) => {
 				*pos += lexeme.len();
-				Ok(Variable {
+				Token::Variable {
 					rule,
 					name: &self.schema.rules()[rule].name,
 					lexeme,
-					fragments,
-				})
+				}
 			},
 			Err(consumed) => {
 				*pos += consumed;
 				self.glob_static_text(input, pos);
-				Err(Some(&input[start..*pos]))
+				Token::StaticText(&input[start..*pos])
 			},
 		}
+	}
+
+	pub fn rule_name(&self, i: usize) -> &str {
+		&self.schema.rules()[i].name
+	}
+
+	pub fn capture_name(&self, i: usize) -> &str {
+		self.dfa.capture_name(i)
 	}
 
 	fn glob_static_text(&self, input: &str, pos: &mut usize) {
@@ -201,5 +195,5 @@ mod test {
 		*/
 	}
 
-	fn ignore(_: &Capture, _: &str) {}
+	fn ignore(_: &CaptureInfo, _: &str) {}
 }

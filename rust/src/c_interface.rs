@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::str::Utf8Error;
 
 use crate::lexer::Token;
-use crate::parser::LogEvent;
+use crate::parser::LogEventView;
 use crate::parser::Parser;
 use crate::regex::Regex;
 use crate::schema::Schema;
@@ -76,6 +76,7 @@ unsafe extern "C" fn clp_log_mechanic_parser_delete<'a>(parser: Box<Parser>) {
 	std::mem::drop(parser);
 }
 
+/*
 #[unsafe(no_mangle)]
 extern "C" fn clp_log_mechanic_parser_next_event<'parser, 'input>(
 	parser: &'parser mut Parser,
@@ -120,6 +121,7 @@ extern "C" fn clp_log_mecahnic_event_token_name<'schema>(token: &Token<'schema, 
 		Token::StaticText(_) => "static",
 	})
 }
+*/
 
 impl<'lifetime, T> CSlice<'lifetime, T> {
 	pub fn as_slice(&self) -> &'lifetime [T] {

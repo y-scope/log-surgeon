@@ -27,10 +27,10 @@ while True:
 	if event is None:
 		break
 
-	print(f"header is: '{event.header!r}'")
-	print(f"tokens are:")
-	for t in event.tokens:
-		# print(f"- ({t!r}): {t.rule}, '{t.text}', {t.captures}")
-		print(f"- {t.rule}, '{t.text}'")
+	# print(f"header is: '{event.header!r}'")
+	print(f"log type is '{event.log_type}'")
+	print(f"variables are:")
+	for v in event.variables:
+		print(f"- {v.name}, '{v.text}'")
 
 	print()

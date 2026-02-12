@@ -1,10 +1,8 @@
-// use pyo3::PyErrArguments;
 use std::collections::BTreeMap;
 
 use pyo3::buffer::PyBuffer;
 use pyo3::exceptions::PyIndexError;
 use pyo3::exceptions::PyKeyError;
-// use pyo3::conversion::IntoPyObjectExt;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::exceptions::PyUnicodeEncodeError;
 use pyo3::prelude::*;
@@ -15,12 +13,11 @@ use pyo3::types::PyList;
 use pyo3::types::PyListMethods;
 use pyo3::types::PyString;
 
-use crate::lexer::Fragment;
-use crate::lexer::Token;
-use crate::parser::LogEvent;
+use crate::log_type::LogType;
+use crate::parser::LogEventView;
 use crate::parser::Parser;
+use crate::parser::Variable;
 use crate::regex::Regex;
-// use crate::regex::RegexError;
 use crate::schema::Schema;
 
 pyo3::create_exception!(logmech, LogMechException, PyRuntimeError);
@@ -40,22 +37,25 @@ struct ReaderParser {
 #[pyclass]
 #[derive(Debug)]
 struct PyLogEvent {
-	#[pyo3(name = "header", get)]
-	maybe_header: Option<Py<PyToken>>,
 	#[pyo3(get)]
-	tokens: Py<PyList>,
+	log_type: Py<PyLogType>,
+	#[pyo3(get)]
+	variables: Py<PyList>,
+	have_header: bool,
 }
 
 #[pyclass]
 #[derive(Debug)]
-struct PyToken {
-	/// `None` for static text.
-	#[pyo3(name = "rule", get)]
-	maybe_rule: Option<Py<PyString>>,
+struct PyLogType(LogType);
+
+#[pyclass]
+#[derive(Debug)]
+struct PyVariable {
+	#[pyo3(name = "name", get)]
+	name: Py<PyString>,
 	#[pyo3(name = "text", get)]
 	lexeme: Py<PyString>,
 	#[pyo3(get)]
-	// captures: BTreeMap<String, Py<PyList>>,
 	captures: Py<PyDict>,
 }
 
@@ -107,38 +107,23 @@ impl ReaderParser {
 			return Err(LogMechException::new_err("Parser has no input set"));
 		};
 
-		let Some(event): Option<LogEvent<'_, '_>> = lexer.next_event(&self.buffer, &mut self.pos) else {
+		let Some(event): Option<LogEventView<'_>> = lexer.next_event(&self.buffer, &mut self.pos) else {
 			return Ok(None);
 		};
 
 		Python::attach(|py| {
-			let tokens: Bound<'_, PyList> = PyList::empty(py);
+			let variables: Bound<'_, PyList> = PyList::empty(py);
 
-			for token in event.tokens.into_iter() {
-				tokens.append(PyToken::new(py, token)?)?;
+			for variable in event.variables.iter() {
+				variables.append(PyVariable::new(py, variable)?)?;
 			}
 
 			Ok(Some(PyLogEvent {
-				maybe_header: None,
-				tokens: tokens.unbind(),
+				log_type: Py::new(py, PyLogType(event.log_type.clone()))?,
+				variables: variables.unbind(),
+				have_header: event.have_header,
 			}))
 		})
-
-		// Ok(Some(PyLogEvent {
-		// 	header: event.maybe_header.map(|(lexeme, captures)| {
-		// 		let mut combined: BTreeMap<String, Vec<String>> = BTreeMap::new();
-		// 		for (key, value) in captures.into_iter() {
-		// 			combined.entry(key).or_insert_with(Vec::new).push(value);
-		// 		}
-
-		// 		PyToken {
-		// 			maybe_rule: Some("header".to_owned()),
-		// 			lexeme,
-		// 			captures: combined,
-		// 		}
-		// 	}),
-		// 	tokens: tokens.unbind(),
-		// }))
 	}
 
 	fn done(&self) -> bool {
@@ -173,7 +158,20 @@ impl PyLogEvent {
 }
 
 #[pymethods]
-impl PyToken {
+impl PyLogType {
+	#[pyo3(name = "__str__")]
+	fn to_str(&self) -> String {
+		self.0.to_string()
+	}
+
+	#[pyo3(name = "__repr__")]
+	fn repr(&self) -> String {
+		format!("{self:?}")
+	}
+}
+
+#[pymethods]
+impl PyVariable {
 	// #[pyo3(name = "__getitem__")]
 	// fn get_item(&self, key: &str) -> PyResult<Vec<String>> {
 	// 	if let Some(captures) = self.captures.get(key) {
@@ -189,48 +187,30 @@ impl PyToken {
 	// }
 
 	#[pyo3(name = "__repr__")]
-	fn repr(this: PyRef<'_, Self>) -> PyResult<String> {
-		Ok(format!(
-			"PyToken {{ rule: {}, lexeme: {:?} }}",
-			if let Some(rule) = &this.maybe_rule {
-				rule.to_str(this.py())?
-			} else {
-				"None"
-			},
-			this.lexeme.to_str(this.py())?,
-		))
-		// format!("{self:?}")
+	fn repr(&self) -> String {
+		format!("{self:?}")
 	}
 }
 
-impl PyToken {
-	fn new(py: Python<'_>, token: Token<'_, '_>) -> PyResult<Self> {
-		match token {
-			Token::Variable(variable) => {
-				let mut captures1: BTreeMap<String, Vec<String>> = BTreeMap::new();
-				for capture in variable.fragments.into_iter() {
-					captures1
-						.entry(capture.name.to_owned())
-						.or_insert_with(Vec::new)
-						.push(capture.lexeme.to_owned());
-				}
-				let captures2: Bound<'_, PyDict> = PyDict::new(py);
-				for (key, values) in captures1.into_iter() {
-					captures2.set_item(PyString::new(py, &key), PyList::new(py, values)?)?;
-				}
-
-				Ok(PyToken {
-					maybe_rule: Some(PyString::new(py, variable.name).unbind()),
-					lexeme: PyString::new(py, variable.lexeme).unbind(),
-					captures: captures2.unbind(),
-				})
-			},
-			Token::StaticText(lexeme) => Ok(PyToken {
-				maybe_rule: None,
-				lexeme: PyString::new(py, lexeme).unbind(),
-				captures: PyDict::new(py).unbind(),
-			}),
+impl PyVariable {
+	fn new(py: Python<'_>, variable: &Variable<'_>) -> PyResult<Self> {
+		let mut captures1: BTreeMap<String, Vec<String>> = BTreeMap::new();
+		for capture in variable.captures.iter() {
+			captures1
+				.entry(capture.name.to_owned())
+				.or_insert_with(Vec::new)
+				.push(capture.lexeme.to_owned());
 		}
+		let captures2: Bound<'_, PyDict> = PyDict::new(py);
+		for (key, values) in captures1.into_iter() {
+			captures2.set_item(PyString::new(py, &key), PyList::new(py, values)?)?;
+		}
+
+		Ok(Self {
+			name: PyString::new(py, variable.name).unbind(),
+			lexeme: PyString::new(py, variable.lexeme).unbind(),
+			captures: captures2.unbind(),
+		})
 	}
 }
 
@@ -287,20 +267,9 @@ mod logmech {
 	#[pymodule_export]
 	use super::PyLogEvent;
 	#[pymodule_export]
-	use super::PyToken;
+	use super::PyLogType;
+	#[pymodule_export]
+	use super::PyVariable;
 	#[pymodule_export]
 	use super::ReaderParser;
 }
-
-/*
-impl PyErrArguments for RegexError<'_> {
-	fn arguments(self, py: Python<'_>) -> Py<PyAny> {
-		// https://docs.rs/pyo3/0.27.2/src/pyo3/err/impls.rs.html#108
-		format!("Invalid regex pattern: {self:?}")
-			.into_pyobject(py)
-			.unwrap()
-			.into_any()
-			.unbind()
-	}
-}
-*/

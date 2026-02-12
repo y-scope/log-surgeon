@@ -17,7 +17,7 @@ fn main() {
 	schema.add_rule("hello", r);
 	let dfa: Dfa = schema.build_dfa();
 	let b: bool = dfa
-		.simulate_with_captures("bbbbbb", |var, lexeme| {
+		.simulate_with_captures("bbbbbb", |var, _, lexeme, _, _| {
 			println!("got {var:?}: {lexeme:?}");
 		})
 		.is_ok();
@@ -30,7 +30,7 @@ fn main3() {
 	schema.add_rule("hello", r);
 	let dfa: Dfa = schema.build_dfa();
 	let b: bool = dfa
-		.simulate_with_captures("xyaxyzxya", |var, lexeme| {
+		.simulate_with_captures("xyaxyzxya", |var, _, lexeme, _, _| {
 			println!("got {var:?}: {lexeme:?}");
 		})
 		.is_ok();

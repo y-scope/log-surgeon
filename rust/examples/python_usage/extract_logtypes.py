@@ -22,25 +22,19 @@ with open(log_file) as f:
 		template = ""
 		variables = []
 
-		for token in event.tokens:
-			if token.rule is None:
-				template += token.text
-			else:
-				template += f"%{token.rule}%"
-				variables.append((token.text, token.captures))
-
+		template = str(event.log_type)
 		if template in log_types:
 			x = log_types[template]
 		else:
 			x = len(log_types)
 			log_types[template] = x
 
-		logs.append((x, variables))
+		logs.append((x, event.variables))
 
 templates = list(log_types.items())
 templates.sort(key= lambda x: x[1])
 
 for i in range(len(templates)):
-	print(f"{i}. {templates[i]}")
+	print(f"{i}. {templates[i][0]}")
 
 print(f"{len(logs)} logs, {len(log_types)} log types")

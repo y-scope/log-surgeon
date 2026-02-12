@@ -8,13 +8,9 @@
 
 namespace clp::log_mechanic {
 
-struct LogEvent;
-
 struct Parser;
 
 struct Schema;
-
-struct Token;
 
 template<typename T>
 struct CSlice {
@@ -46,23 +42,9 @@ using CStringView = CSlice<char>;
 
 extern "C" {
 
-CStringView clp_log_mecahnic_event_token_name(const Token *token);
-
-void clp_log_mechanic_event_delete(Box<LogEvent> event);
-
-const Token *clp_log_mechanic_event_token(const LogEvent *event, size_t i);
-
-size_t clp_log_mechanic_event_token_count(const LogEvent *event);
-
-size_t clp_log_mechanic_event_token_rule(const Token *token);
-
 void clp_log_mechanic_parser_delete(Box<Parser> parser);
 
 Box<Parser> clp_log_mechanic_parser_new(const Schema *schema);
-
-Option<Box<LogEvent>> clp_log_mechanic_parser_next_event(Parser *parser,
-                                                         CStringView input,
-                                                         size_t *pos);
 
 void clp_log_mechanic_schema_add_rule(Schema *schema, CStringView name, CStringView pattern);
 

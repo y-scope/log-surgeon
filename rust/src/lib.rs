@@ -7,6 +7,7 @@ extern crate tracing;
 pub mod dfa;
 pub mod interval_tree;
 pub mod lexer;
+pub mod log_type;
 pub mod nfa;
 pub mod parser;
 pub mod regex;

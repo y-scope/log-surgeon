@@ -4,7 +4,7 @@ use std::collections::btree_map::Entry;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
-use crate::nfa::Capture;
+use crate::nfa::CaptureInfo;
 use crate::nfa::Nfa;
 use crate::nfa::NfaIdx;
 use crate::nfa::NfaState;
@@ -101,7 +101,7 @@ struct PrefixTreeNode {
 
 impl Dfa {
 	pub fn simulate(&self, input: &str) -> bool {
-		self.simulate_with_captures(input, |capture, lexeme| {
+		self.simulate_with_captures(input, |capture, _, lexeme, _, _| {
 			debug!("- captured {capture:?}, {lexeme}");
 		})
 		.is_ok()
@@ -113,7 +113,7 @@ impl Dfa {
 		mut on_capture: F,
 	) -> Result<MatchedRule<'input>, usize>
 	where
-		F: FnMut(&'me Capture, &'input str),
+		F: FnMut(&'me CaptureInfo, usize, &'input str, usize, usize),
 	{
 		let mut current_state: usize = 0;
 
@@ -123,7 +123,7 @@ impl Dfa {
 
 		let mut maybe_backup: Option<(usize, usize, usize, Vec<usize>)> = None;
 
-		let mut consumed: usize = 0;
+		let mut last_successful_pos: usize = 0;
 
 		for (i, ch) in input.char_indices() {
 			debug!("=== step {i} (state {current_state}), ch {ch:?} ({})", u32::from(ch));
@@ -138,28 +138,29 @@ impl Dfa {
 			}
 			*/
 			if let Some(transition) = self.states[current_state].transitions.lookup(u32::from(ch)) {
-				let next: usize = i + ch.len_utf8();
+				last_successful_pos = i;
+				let consumed: usize = i + ch.len_utf8();
 				// Apply transition operations before updating position; lookahead 1 in TDFA(1).
 				self.apply_operations(
 					&mut registers,
 					&mut prefix_tree,
-					next,
+					consumed,
 					&transition.operations,
 					&self.states[current_state].tag_for_register,
 				);
 				// TODO seems to work even if we move the following line above (but not the position)
 				// but based on transition_operations, the operations should be for the new state?
 				current_state = transition.destination;
-				consumed = i;
 				if let Some(rule) = self.states[current_state].final_rule {
-					maybe_backup = Some((next, current_state, rule, registers.clone()));
+					maybe_backup = Some((consumed, current_state, rule, registers.clone()));
 				}
 			} else {
 				break;
 			}
 		}
 
-		let (consumed, state, rule, mut registers): (usize, usize, usize, Vec<usize>) = maybe_backup.ok_or(consumed)?;
+		let (consumed, state, rule, mut registers): (usize, usize, usize, Vec<usize>) =
+			maybe_backup.ok_or(last_successful_pos)?;
 
 		self.apply_operations(
 			&mut registers,
@@ -169,11 +170,11 @@ impl Dfa {
 			&self.states[state].tag_for_register,
 		);
 
-		let mut captures: BTreeMap<&Capture, (Vec<usize>, Vec<usize>)> = BTreeMap::new();
+		let mut captures: BTreeMap<&CaptureInfo, (usize, Vec<usize>, Vec<usize>)> = BTreeMap::new();
 		for i in 0..self.tags.len() {
 			let (Tag::Start(capture) | Tag::End(capture)) = &self.tags[i];
-			let (starts, ends): &mut (Vec<usize>, Vec<usize>) =
-				captures.entry(capture).or_insert((Vec::new(), Vec::new()));
+			let (_, starts, ends): &mut (usize, Vec<usize>, Vec<usize>) =
+				captures.entry(capture).or_insert((i, Vec::new(), Vec::new()));
 			let offsets: &mut Vec<usize> = match self.tags[i] {
 				Tag::Start(_) => starts,
 				Tag::End(_) => ends,
@@ -186,20 +187,13 @@ impl Dfa {
 			offsets.reverse();
 		}
 
-		// let mut maybe_rule: Option<usize> = None;
-
-		for (capture, (starts, ends)) in captures.into_iter() {
+		for (capture, (tag, starts, ends)) in captures.into_iter() {
 			assert_eq!(starts.len(), ends.len());
 			if starts.is_empty() {
 				continue;
 			}
-			// if let Some(rule) = maybe_rule {
-			// 	assert_eq!(capture.rule, rule);
-			// } else {
-			// 	maybe_rule = Some(capture.rule);
-			// }
 			for (&i, &j) in std::iter::zip(starts.iter(), ends.iter()) {
-				on_capture(&capture, &input[i..j]);
+				on_capture(&capture, tag, &input, i, j);
 			}
 		}
 
@@ -249,6 +243,13 @@ impl Dfa {
 				},
 			}
 		}
+	}
+}
+
+impl Dfa {
+	pub fn capture_name(&self, i: usize) -> &str {
+		let (Tag::Start(capture) | Tag::End(capture)) = &self.tags[i];
+		&capture.name
 	}
 }
 

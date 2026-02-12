@@ -48,12 +48,12 @@ pub enum SpontaneousTransitionKind {
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Tag {
-	Start(Capture),
-	End(Capture),
+	Start(CaptureInfo),
+	End(CaptureInfo),
 }
 
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub struct Capture {
+pub struct CaptureInfo {
 	/// Rule index from the schema.
 	pub rule: usize,
 	/// Capture ID local to the rule/regex pattern.
@@ -64,13 +64,13 @@ pub struct Capture {
 	pub name: String,
 }
 
-impl std::fmt::Debug for Capture {
+impl std::fmt::Debug for CaptureInfo {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		if !fmt.alternate() {
-			fmt.write_fmt(format_args!("Capture({}, {})", self.rule, self.name))
+			fmt.write_fmt(format_args!("CaptureInfo({}, {})", self.rule, self.name))
 		} else {
 			fmt.write_fmt(format_args!(
-				"Capture({}, {}, {})",
+				"CaptureInfo({}, {}, {})",
 				self.rule,
 				self.id.map_or(0, NonZero::get),
 				self.name
@@ -81,7 +81,7 @@ impl std::fmt::Debug for Capture {
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 struct CaptureIndices {
-	offsets: BTreeMap<Capture, (Vec<usize>, Vec<usize>)>,
+	offsets: BTreeMap<CaptureInfo, (Vec<usize>, Vec<usize>)>,
 }
 
 impl Nfa {
@@ -418,7 +418,7 @@ impl Nfa {
 		current: NfaIdx,
 		target: NfaIdx,
 	) -> BTreeSet<Tag> {
-		let capture: Capture = Capture { rule, id, name };
+		let capture: CaptureInfo = CaptureInfo { rule, id, name };
 
 		let start_capture: Tag = Tag::Start(capture.clone());
 		let end_capture: Tag = Tag::End(capture);
