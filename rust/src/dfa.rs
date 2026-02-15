@@ -4,7 +4,7 @@ use std::collections::btree_map::Entry;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
-use crate::nfa::CaptureInfo;
+use crate::nfa::AutomataCapture;
 use crate::nfa::Nfa;
 use crate::nfa::NfaIdx;
 use crate::nfa::NfaState;
@@ -101,19 +101,20 @@ struct PrefixTreeNode {
 
 impl Dfa {
 	pub fn simulate(&self, input: &str) -> bool {
-		self.simulate_with_captures(input, |capture, _, lexeme, _, _| {
+		self.simulate_with_captures(input, |capture, lexeme, _, _| {
+			let capture: &AutomataCapture = self.capture_info(capture);
 			debug!("- captured {capture:?}, {lexeme}");
 		})
 		.is_ok()
 	}
 
-	pub fn simulate_with_captures<'me, 'input, F>(
-		&'me self,
+	pub fn simulate_with_captures<'input, F>(
+		&self,
 		input: &'input str,
 		mut on_capture: F,
 	) -> Result<MatchedRule<'input>, usize>
 	where
-		F: FnMut(&'me CaptureInfo, usize, &'input str, usize, usize),
+		F: FnMut(usize, &'input str, usize, usize),
 	{
 		let mut current_state: usize = 0;
 
@@ -121,7 +122,7 @@ impl Dfa {
 		let mut registers: Vec<usize> = vec![0; self.number_of_registers];
 		let mut prefix_tree: PrefixTree = PrefixTree::new();
 
-		let mut maybe_backup: Option<(usize, usize, usize, Vec<usize>)> = None;
+		let mut maybe_backup: Option<((usize, usize), usize, usize, Vec<usize>)> = None;
 
 		let mut last_successful_pos: usize = 0;
 
@@ -138,13 +139,16 @@ impl Dfa {
 			}
 			*/
 			if let Some(transition) = self.states[current_state].transitions.lookup(u32::from(ch)) {
+				// TODO check/explain:
+				// tags are executed on outgoing transitions, so they get the "previous" char boundary
+				// the total lexeme includes the "currently consumed" char
 				last_successful_pos = i;
 				let consumed: usize = i + ch.len_utf8();
 				// Apply transition operations before updating position; lookahead 1 in TDFA(1).
 				self.apply_operations(
 					&mut registers,
 					&mut prefix_tree,
-					consumed,
+					i,
 					&transition.operations,
 					&self.states[current_state].tag_for_register,
 				);
@@ -152,32 +156,32 @@ impl Dfa {
 				// but based on transition_operations, the operations should be for the new state?
 				current_state = transition.destination;
 				if let Some(rule) = self.states[current_state].final_rule {
-					maybe_backup = Some((consumed, current_state, rule, registers.clone()));
+					maybe_backup = Some(((i, consumed), current_state, rule, registers.clone()));
 				}
 			} else {
 				break;
 			}
 		}
 
-		let (consumed, state, rule, mut registers): (usize, usize, usize, Vec<usize>) =
+		let ((i, consumed), state, rule, mut registers): ((usize, usize), usize, usize, Vec<usize>) =
 			maybe_backup.ok_or(last_successful_pos)?;
 
 		self.apply_operations(
 			&mut registers,
 			&mut prefix_tree,
-			consumed,
+			i,
 			&self.states[state].final_operations,
 			&self.states[state].tag_for_register,
 		);
 
-		let mut captures: BTreeMap<&CaptureInfo, (usize, Vec<usize>, Vec<usize>)> = BTreeMap::new();
+		let mut captures: BTreeMap<&AutomataCapture, (usize, Vec<usize>, Vec<usize>)> = BTreeMap::new();
 		for i in 0..self.tags.len() {
-			let (Tag::Start(capture) | Tag::End(capture)) = &self.tags[i];
+			let (Tag::StartCapture(capture) | Tag::StopCapture(capture)) = &self.tags[i];
 			let (_, starts, ends): &mut (usize, Vec<usize>, Vec<usize>) =
 				captures.entry(capture).or_insert((i, Vec::new(), Vec::new()));
 			let offsets: &mut Vec<usize> = match self.tags[i] {
-				Tag::Start(_) => starts,
-				Tag::End(_) => ends,
+				Tag::StartCapture(_) => starts,
+				Tag::StopCapture(_) => ends,
 			};
 			let mut node: usize = registers[self.tags.len() + i];
 			while node != 0 {
@@ -187,13 +191,13 @@ impl Dfa {
 			offsets.reverse();
 		}
 
-		for (capture, (tag, starts, ends)) in captures.into_iter() {
+		for (_, (tag, starts, ends)) in captures.into_iter() {
 			assert_eq!(starts.len(), ends.len());
 			if starts.is_empty() {
 				continue;
 			}
 			for (&i, &j) in std::iter::zip(starts.iter(), ends.iter()) {
-				on_capture(&capture, tag, &input, i, j);
+				on_capture(tag, &input, i, j);
 			}
 		}
 
@@ -247,9 +251,9 @@ impl Dfa {
 }
 
 impl Dfa {
-	pub fn capture_name(&self, i: usize) -> &str {
-		let (Tag::Start(capture) | Tag::End(capture)) = &self.tags[i];
-		&capture.name
+	pub fn capture_info(&self, i: usize) -> &AutomataCapture {
+		let (Tag::StartCapture(capture) | Tag::StopCapture(capture)) = &self.tags[i];
+		capture
 	}
 }
 

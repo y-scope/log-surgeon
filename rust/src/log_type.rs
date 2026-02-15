@@ -2,6 +2,7 @@
 pub struct LogType {
 	static_text: String,
 	variable_indices: Vec<(usize, String)>,
+	cached: String,
 }
 
 struct EscapePercent<'a> {
@@ -10,6 +11,8 @@ struct EscapePercent<'a> {
 
 impl std::fmt::Display for LogType {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		fmt.write_str(&self.cached)
+		/*
 		let mut last_pos: usize = 0;
 		for (i, (pos, variable_type)) in self.variable_indices.iter().enumerate() {
 			let pos: usize = *pos;
@@ -23,16 +26,40 @@ impl std::fmt::Display for LogType {
 			fmt.write_str(s)?;
 		}
 		Ok(())
+		*/
 	}
 }
 
 impl LogType {
 	pub fn new(static_text: String, variable_indices: Vec<(usize, String)>) -> Self {
+		let cached: String = to_string(&static_text, &variable_indices);
 		Self {
 			static_text,
 			variable_indices,
+			cached,
 		}
 	}
+
+	pub fn as_str(&self) -> &str {
+		&self.cached
+	}
+}
+
+fn to_string(static_text: &str, variable_indices: &[(usize, String)]) -> String {
+	let mut buf: String = String::new();
+	let mut last_pos: usize = 0;
+	for (i, (pos, variable_type)) in variable_indices.iter().enumerate() {
+		let pos: usize = *pos;
+		for s in escape(&static_text[last_pos..pos]) {
+			buf.push_str(s);
+		}
+		buf.push_str(&format!("%{i}:{variable_type}%"));
+		last_pos = pos;
+	}
+	for s in escape(&static_text[last_pos..]) {
+		buf.push_str(s);
+	}
+	buf
 }
 
 impl<'a> Iterator for EscapePercent<'a> {
@@ -67,10 +94,10 @@ mod test {
 
 	#[test]
 	fn basic() {
-		let t: LogType = LogType {
-			static_text: "hello % world".to_owned(),
-			variable_indices: vec![(3, "int".to_owned()), (6, "float".to_owned())],
-		};
+		let t: LogType = LogType::new(
+			"hello % world".to_owned(),
+			vec![(3, "int".to_owned()), (6, "float".to_owned())],
+		);
 		assert_eq!(t.to_string(), "hel%0:int%lo %1:float%%% world");
 	}
 }

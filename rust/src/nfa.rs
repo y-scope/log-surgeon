@@ -6,6 +6,7 @@ use std::num::NonZero;
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
 use crate::regex::Regex;
+use crate::regex::RegexCapture;
 use crate::schema::Rule;
 
 #[derive(Debug)]
@@ -16,7 +17,7 @@ pub struct Nfa {
 
 #[derive(Debug)]
 pub struct NfaState {
-	idx: usize,
+	idx: NfaIdx,
 	transitions: IntervalTree<u32, BTreeSet<NfaIdx>>,
 	spontaneous: Vec<SpontaneousTransition>,
 	/// Just to be cute, and for debugging, in that order.
@@ -48,40 +49,38 @@ pub enum SpontaneousTransitionKind {
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Tag {
-	Start(CaptureInfo),
-	End(CaptureInfo),
-}
-
-#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub struct CaptureInfo {
-	/// Rule index from the schema.
-	pub rule: usize,
-	/// Capture ID local to the rule/regex pattern.
-	/// It is `None` (i.e. `0`) iff it is the implicit top-level capture.
-	pub id: Option<NonZero<u32>>,
-	/// Capture name from the rule/regex pattern.
-	/// Technically redundant (given a schema); exists for debugging.
-	pub name: String,
-}
-
-impl std::fmt::Debug for CaptureInfo {
-	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		if !fmt.alternate() {
-			fmt.write_fmt(format_args!("CaptureInfo({}, {})", self.rule, self.name))
-		} else {
-			fmt.write_fmt(format_args!(
-				"CaptureInfo({}, {}, {})",
-				self.rule,
-				self.id.map_or(0, NonZero::get),
-				self.name
-			))
-		}
-	}
+	StartCapture(AutomataCapture),
+	StopCapture(AutomataCapture),
 }
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-struct CaptureIndices {
-	offsets: BTreeMap<CaptureInfo, (Vec<usize>, Vec<usize>)>,
+pub struct AutomataCapture {
+	/// Rule index from the schema.
+	pub rule: usize,
+	// /// Capture name from the rule/regex pattern.
+	// /// Technically redundant (given a schema); exists for debugging.
+	// pub name: String,
+	pub regex: RegexCapture,
+}
+
+// impl std::fmt::Debug for AutomataCapture {
+// 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+// 		if !fmt.alternate() {
+// 			fmt.write_fmt(format_args!("CaptureInfo({}, {})", self.rule, self.name))
+// 		} else {
+// 			fmt.write_fmt(format_args!(
+// 				"CaptureInfo({}, {}, {})",
+// 				self.rule,
+// 				self.id.map_or(0, NonZero::get),
+// 				self.name
+// 			))
+// 		}
+// 	}
+// }
+
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+struct NfaSimulationData {
+	captures: BTreeMap<AutomataCapture, (Vec<usize>, Vec<usize>)>,
 }
 
 impl Nfa {
@@ -122,18 +121,18 @@ impl Nfa {
 	///
 	/// Algorithm 1.
 	pub fn simulate(&self, input: &str) -> Option<usize> {
-		let start: (NfaIdx, Vec<CaptureIndices>) = (
+		let start: (NfaIdx, Vec<NfaSimulationData>) = (
 			NfaIdx(0),
-			vec![CaptureIndices {
-				offsets: BTreeMap::new(),
+			vec![NfaSimulationData {
+				captures: BTreeMap::new(),
 			}],
 		);
 
-		let mut state_set: BTreeSet<(NfaIdx, Vec<CaptureIndices>)> = BTreeSet::new();
+		let mut state_set: BTreeSet<(NfaIdx, Vec<NfaSimulationData>)> = BTreeSet::new();
 		state_set.insert(start);
 		state_set = self.epsilon_closure(state_set, 0);
 
-		let mut maybe_last_match: Option<(usize, Vec<CaptureIndices>)> = None;
+		let mut maybe_last_match: Option<(usize, Vec<(NfaIdx, Vec<NfaSimulationData>)>)> = None;
 
 		for (i, ch) in input.char_indices() {
 			debug!("=== step {i}, ch {}", u32::from(ch));
@@ -145,24 +144,30 @@ impl Nfa {
 			if state_set.is_empty() {
 				break;
 			}
-			for (state, matches) in state_set.iter() {
+			for (state, data) in state_set.iter() {
+				let mut any_final_states: Vec<(NfaIdx, Vec<NfaSimulationData>)> = Vec::new();
 				if state.is_end() {
 					debug!("=== got match!");
-					assert_eq!(matches.len(), 1);
-					maybe_last_match = Some((i, matches.clone()));
+					// TODO pretty sure this nolonger true
+					assert_eq!(data.len(), 1);
+					any_final_states.push((*state, data.clone()));
+				}
+				if !any_final_states.is_empty() {
+					maybe_last_match = Some((i + ch.len_utf8(), any_final_states));
 				}
 			}
 		}
 
-		for (state, matches) in state_set.iter() {
+		for (state, data) in state_set.iter() {
 			if state.is_end() {
 				debug!("=== got match!");
-				assert_eq!(matches.len(), 1);
+				// TODO pretty sure nolonger true
+				assert_eq!(data.len(), 1);
 				let mut m: Vec<(usize, &str, usize, usize)> = Vec::new();
-				for (capture, (starts, ends)) in matches.last().unwrap().offsets.iter() {
+				for (capture, (starts, ends)) in data.last().unwrap().captures.iter() {
 					debug!("[matched] {capture:?} {starts:?} {ends:?}");
 					for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
-						m.push((capture.rule, &capture.name, x, y));
+						m.push((capture.rule, &capture.regex.name, x, y));
 					}
 				}
 				return Some(input.len());
@@ -171,10 +176,14 @@ impl Nfa {
 
 		if let Some((pos, last_match)) = maybe_last_match {
 			let mut m: Vec<(usize, &str, usize, usize)> = Vec::new();
-			for (capture, (starts, ends)) in last_match.last().unwrap().offsets.iter() {
-				debug!("[matched] {capture:?} {starts:?} {ends:?}");
-				for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
-					m.push((capture.rule, &capture.name, x, y));
+			for (state, last_match) in last_match.iter() {
+				for data in last_match.iter() {
+					for (capture, (starts, ends)) in data.captures.iter() {
+						debug!("[matched] {capture:?} {starts:?} {ends:?}");
+						for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
+							m.push((capture.rule, &capture.regex.name, x, y));
+						}
+					}
 				}
 			}
 			return Some(pos);
@@ -185,16 +194,16 @@ impl Nfa {
 
 	fn epsilon_closure(
 		&self,
-		state_set: BTreeSet<(NfaIdx, Vec<CaptureIndices>)>,
+		state_set: BTreeSet<(NfaIdx, Vec<NfaSimulationData>)>,
 		pos: usize,
-	) -> BTreeSet<(NfaIdx, Vec<CaptureIndices>)> {
-		let mut closure: BTreeSet<(NfaIdx, Vec<CaptureIndices>)> = BTreeSet::new();
+	) -> BTreeSet<(NfaIdx, Vec<NfaSimulationData>)> {
+		let mut closure: BTreeSet<(NfaIdx, Vec<NfaSimulationData>)> = BTreeSet::new();
 		let mut states_in_closure: BTreeSet<NfaIdx> = BTreeSet::new();
 
-		let mut stack: Vec<(NfaIdx, Vec<CaptureIndices>)> = state_set.into_iter().collect::<Vec<_>>();
+		let mut stack: Vec<(NfaIdx, Vec<NfaSimulationData>)> = state_set.into_iter().collect::<Vec<_>>();
 
-		while let Some((state, matches)) = stack.pop() {
-			closure.insert((state, matches.clone()));
+		while let Some((state, data)) = stack.pop() {
+			closure.insert((state, data.clone()));
 			states_in_closure.insert(state);
 
 			if state.is_end() {
@@ -207,35 +216,26 @@ impl Nfa {
 					continue;
 				}
 
-				// TODO always paired?
-				let mut matches: Vec<CaptureIndices> = matches.clone();
+				let mut data: Vec<NfaSimulationData> = data.clone();
 				match &transition.kind {
-					SpontaneousTransitionKind::Positive(tag) => match tag {
-						Tag::Start(capture) => {
-							matches
-								.last_mut()
-								.unwrap()
-								.offsets
-								.entry(capture.clone())
-								.or_insert((Vec::new(), Vec::new()))
-								.0
-								.push(pos);
-						},
-						Tag::End(capture) => {
-							matches
-								.last_mut()
-								.unwrap()
-								.offsets
-								.entry(capture.clone())
-								.or_insert((Vec::new(), Vec::new()))
-								.1
-								.push(pos);
-						},
+					SpontaneousTransitionKind::Positive(tag) => {
+						let (Tag::StartCapture(capture) | Tag::StopCapture(capture)): &Tag = tag;
+						let (starts, ends): &mut (Vec<usize>, Vec<usize>) = data
+							.last_mut()
+							.unwrap()
+							.captures
+							.entry(capture.clone())
+							.or_insert((Vec::new(), Vec::new()));
+						let indices: &mut Vec<usize> = match tag {
+							Tag::StartCapture(_) => starts,
+							Tag::StopCapture(_) => ends,
+						};
+						indices.push(pos);
 					},
 					SpontaneousTransitionKind::Negative(_) => (),
 					SpontaneousTransitionKind::Epsilon => (),
 				}
-				stack.push((transition.target, matches));
+				stack.push((transition.target, data));
 			}
 		}
 
@@ -244,10 +244,10 @@ impl Nfa {
 
 	fn step_on_symbol(
 		&self,
-		state_set: &BTreeSet<(NfaIdx, Vec<CaptureIndices>)>,
+		state_set: &BTreeSet<(NfaIdx, Vec<NfaSimulationData>)>,
 		ch: char,
-	) -> BTreeSet<(NfaIdx, Vec<CaptureIndices>)> {
-		let mut next_states: BTreeSet<(NfaIdx, Vec<CaptureIndices>)> = BTreeSet::new();
+	) -> BTreeSet<(NfaIdx, Vec<NfaSimulationData>)> {
+		let mut next_states: BTreeSet<(NfaIdx, Vec<NfaSimulationData>)> = BTreeSet::new();
 
 		for (state, matches) in state_set.iter() {
 			if let Some(targets) = self[*state].transitions.lookup(u32::from(ch)) {
@@ -264,15 +264,15 @@ impl Nfa {
 	where
 		LikeString: Into<Cow<'static, str>>,
 	{
-		let n: usize = self.states.len();
+		let idx: NfaIdx = NfaIdx(self.states.len());
 		let state: NfaState = NfaState {
-			idx: n,
+			idx,
 			name: name.into(),
 			transitions: IntervalTree::new(),
 			spontaneous: Vec::new(),
 		};
 		self.states.push(state);
-		NfaIdx(n)
+		idx
 	}
 
 	fn build(&mut self, rule: usize, regex: &Regex, mut current: NfaIdx, target: NfaIdx) -> BTreeSet<Tag> {
@@ -293,10 +293,7 @@ impl Nfa {
 				);
 				BTreeSet::new()
 			},
-			Regex::Capture { name, item, meta } => {
-				assert!(meta.id.is_some());
-				self.capture(rule, meta.id, name.clone(), item, current, target)
-			},
+			Regex::Capture(capture) => self.capture(rule, capture.clone(), &capture.item, current, target),
 			Regex::Group { negated, items } => {
 				if *negated {
 					let mut intervals: Vec<Interval<u32>> = Vec::with_capacity(items.len());
@@ -412,16 +409,15 @@ impl Nfa {
 	fn capture(
 		&mut self,
 		rule: usize,
-		id: Option<NonZero<u32>>,
-		name: String,
+		capture: RegexCapture,
 		item: &Regex,
 		current: NfaIdx,
 		target: NfaIdx,
 	) -> BTreeSet<Tag> {
-		let capture: CaptureInfo = CaptureInfo { rule, id, name };
+		let capture: AutomataCapture = AutomataCapture { rule, regex: capture };
 
-		let start_capture: Tag = Tag::Start(capture.clone());
-		let end_capture: Tag = Tag::End(capture);
+		let start_capture: Tag = Tag::StartCapture(capture.clone());
+		let end_capture: Tag = Tag::StopCapture(capture);
 
 		let sub_start: NfaIdx = self.new_state("capture started");
 		let sub_end: NfaIdx = self.new_state("capture before end");
@@ -526,6 +522,31 @@ impl std::ops::IndexMut<NfaIdx> for Nfa {
 	}
 }
 
+impl NfaState {
+	const BEGIN: Self = Self {
+		idx: NfaIdx::BEGIN,
+		name: Cow::Borrowed("begin"),
+		transitions: IntervalTree::new(),
+		spontaneous: Vec::new(),
+	};
+
+	const END: Self = Self {
+		idx: NfaIdx::END,
+		name: Cow::Borrowed("end"),
+		transitions: IntervalTree::new(),
+		spontaneous: Vec::new(),
+	};
+
+	pub fn transitions(&self) -> &IntervalTree<u32, BTreeSet<NfaIdx>> {
+		&self.transitions
+	}
+
+	pub fn spontaneous(&self) -> &[SpontaneousTransition] {
+		&self.spontaneous
+	}
+}
+
+// TODO explain isize/usize
 impl NfaIdx {
 	const BEGIN: Self = Self(0);
 	const END: Self = Self::end(0);
@@ -540,30 +561,6 @@ impl NfaIdx {
 
 	pub fn is_end(&self) -> bool {
 		self.0 > (isize::MAX as usize)
-	}
-}
-
-impl NfaState {
-	const BEGIN: Self = Self {
-		idx: 0,
-		name: Cow::Borrowed("begin"),
-		transitions: IntervalTree::new(),
-		spontaneous: Vec::new(),
-	};
-
-	const END: Self = Self {
-		idx: usize::MAX,
-		name: Cow::Borrowed("end"),
-		transitions: IntervalTree::new(),
-		spontaneous: Vec::new(),
-	};
-
-	pub fn transitions(&self) -> &IntervalTree<u32, BTreeSet<NfaIdx>> {
-		&self.transitions
-	}
-
-	pub fn spontaneous(&self) -> &[SpontaneousTransition] {
-		&self.spontaneous
 	}
 }
 

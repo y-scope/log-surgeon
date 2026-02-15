@@ -82,19 +82,24 @@ renaming_overrides_prefixing = false
 CSlice(std::string_view const& view)
 	requires std::is_same_v<T, char>
 	: CSlice(view.data(), view.size())
-	{}
+{}
 
 CSlice(char const* c_str)
 	requires std::is_same_v<T, char>
 	: CSlice(std::string_view { c_str })
-	{}
+{}
 
-// Generated
-"""
+operator std::string_view() const
+	requires std::is_same_v<T, char>
+{
+	return this->as_cpp_view();
+}
 
-"CLogFragment" = """
-// Custom
-CLogFragment() = default;
+std::string_view as_cpp_view() const
+	requires std::is_same_v<T, char>
+{
+	return { this->pointer, this->length };
+}
 
 // Generated
 """
@@ -183,7 +188,7 @@ extra_bindings = []
 
 
 [parse.expand]
-crates = []
+crates = ["log-mechanic"]
 all_features = false
-default_features = true
+default_features = false
 features = []

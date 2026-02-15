@@ -14,7 +14,7 @@ use pyo3::types::PyListMethods;
 use pyo3::types::PyString;
 
 use crate::log_type::LogType;
-use crate::parser::LogEventView;
+use crate::parser::LogEvent;
 use crate::parser::Parser;
 use crate::parser::Variable;
 use crate::regex::Regex;
@@ -104,10 +104,10 @@ impl ReaderParser {
 		}
 
 		let Some(lexer): Option<&mut Parser> = self.maybe_parser.as_mut() else {
-			return Err(LogMechException::new_err("Parser has no input set"));
+			return Err(LogMechException::new_err("Parser has not been compiled"));
 		};
 
-		let Some(event): Option<LogEventView<'_>> = lexer.next_event(&self.buffer, &mut self.pos) else {
+		let Some(event): Option<LogEvent<'_>> = lexer.next_event(&self.buffer, &mut self.pos) else {
 			return Ok(None);
 		};
 

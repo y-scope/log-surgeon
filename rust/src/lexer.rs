@@ -1,6 +1,6 @@
 use crate::dfa::Dfa;
 use crate::dfa::MatchedRule;
-use crate::nfa::CaptureInfo;
+use crate::nfa::AutomataCapture;
 use crate::schema::Schema;
 
 #[derive(Debug)]
@@ -15,7 +15,6 @@ pub enum Token<'schema, 'input> {
 		rule: usize,
 		name: &'schema str,
 		lexeme: &'input str,
-		// fragments: Vec<Fragment<'schema, 'input>>,
 	},
 	StaticText(&'input str),
 	EndOfInput,
@@ -27,9 +26,9 @@ impl Lexer {
 		Self { schema, dfa }
 	}
 
-	pub fn next_token<'input, F>(&self, input: &'input str, pos: &mut usize, mut on_capture: F) -> Token<'_, 'input>
+	pub fn next_token<'input, F>(&self, input: &'input str, pos: &mut usize, on_capture: F) -> Token<'_, 'input>
 	where
-		F: FnMut(usize, usize, usize),
+		F: FnMut(usize, &'input str, usize, usize),
 	{
 		if *pos == input.len() {
 			return Token::EndOfInput;
@@ -37,10 +36,7 @@ impl Lexer {
 
 		let start: usize = *pos;
 
-		match self
-			.dfa
-			.simulate_with_captures(&input[*pos..], |_, t, _, i, j| on_capture(t, i, j))
-		{
+		match self.dfa.simulate_with_captures(&input[*pos..], on_capture) {
 			Ok(MatchedRule { rule, lexeme }) => {
 				*pos += lexeme.len();
 				Token::Variable {
@@ -61,8 +57,8 @@ impl Lexer {
 		&self.schema.rules()[i].name
 	}
 
-	pub fn capture_name(&self, i: usize) -> &str {
-		self.dfa.capture_name(i)
+	pub fn capture_info(&self, i: usize) -> &AutomataCapture {
+		self.dfa.capture_info(i)
 	}
 
 	fn glob_static_text(&self, input: &str, pos: &mut usize) {
@@ -194,6 +190,4 @@ mod test {
 		assert_eq!(lexer.next_token(input, &mut pos), Err(None));
 		*/
 	}
-
-	fn ignore(_: &CaptureInfo, _: &str) {}
 }

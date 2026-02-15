@@ -9,40 +9,28 @@ use nom::error::ParseError;
 
 const SPECIAL_CHARACTERS: &str = r"\()[]{}<>*+?-.|^";
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Regex {
 	AnyChar,
 	Literal(char),
-	Capture {
-		name: String,
-		item: Box<Regex>,
-		meta: CaptureMeta,
-	},
+	Capture(RegexCapture),
 	// TODO flatten group like in nfa?
-	Group {
-		negated: bool,
-		items: Vec<(char, char)>,
-	},
+	Group { negated: bool, items: Vec<(char, char)> },
 	KleeneClosure(Box<Regex>),
-	BoundedRepetition {
-		lo: u32,
-		hi: u32,
-		item: Box<Regex>,
-	},
+	BoundedRepetition { lo: u32, hi: u32, item: Box<Regex> },
 	Sequence(Vec<Regex>),
 	Alternation(Vec<Regex>),
 }
 
-#[derive(Debug)]
-pub enum Literals {
-	Single(char),
-	Group(Vec<(char, char)>),
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct CaptureMeta {
-	pub id: Option<NonZero<u32>>,
-	pub parent: Option<NonZero<u32>>,
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub struct RegexCapture {
+	pub name: String,
+	pub item: Box<Regex>,
+	/// Capture ID local to the rule/regex pattern.
+	pub id: NonZero<u32>,
+	/// ID of parent capture, if any.
+	pub parent_id: Option<NonZero<u32>>,
+	/// Number of contained nested captures; it is `0` iff this is a "leaf" capture.
 	pub descendents: usize,
 }
 
@@ -75,6 +63,12 @@ pub enum RegexErrorKind {
 struct RegexParsingError<'a> {
 	pub input: &'a str,
 	pub kind: RegexErrorKind,
+}
+
+#[derive(Debug)]
+enum Literals {
+	Single(char),
+	Group(Vec<(char, char)>),
 }
 
 impl<'a> ParseError<&'a str> for RegexParsingError<'a> {
@@ -129,17 +123,22 @@ impl Regex {
 }
 
 impl Regex {
+	/// [`RegexCapture::id`] defaults to [`NonZero::<u32>::MAX`];
+	/// if we actually reach this, `next_id` will overflow,
+	/// so it naturally works as a placeholder/invalid value.
 	fn number_captures(&mut self, id: &mut NonZero<u32>, stack: &mut Vec<NonZero<u32>>) -> Option<usize> {
 		let mut bread: usize = 0;
 		match self {
 			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
-			Self::Capture { name: _, item, meta } => {
-				meta.parent = stack.last().copied();
-				meta.id = Some(*id);
+			Self::Capture(capture) => {
+				capture.parent_id = stack.last().copied();
+				capture.id = *id;
 				stack.push(*id);
+				// `id` is `u32`.
 				*id = id.checked_add(1)?;
-				meta.descendents = item.number_captures(id, stack)?;
-				bread = 1 + meta.descendents;
+				capture.descendents = capture.item.number_captures(id, stack)?;
+				// `bread` is `usize`.
+				bread = 1 + capture.descendents;
 				stack.pop();
 			},
 			Self::KleeneClosure(item) | Self::BoundedRepetition { item, .. } => {
@@ -358,15 +357,14 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 
 	Ok((
 		input,
-		Regex::Capture {
+		Regex::Capture(RegexCapture {
 			name: name.to_owned(),
 			item: Box::new(regex),
-			meta: CaptureMeta {
-				id: None,
-				parent: None,
-				descendents: 0,
-			},
-		},
+			// See note for [`Regex::number_captures`].
+			id: NonZero::<u32>::MAX,
+			parent_id: None,
+			descendents: 0,
+		}),
 	))
 }
 

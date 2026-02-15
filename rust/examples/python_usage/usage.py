@@ -16,6 +16,12 @@ bar
 baz
 """
 
+a = ReaderParser()
+a.add_variable_pattern("hello", "abc|d(?<foo>[a-z])f")
+text = "def foobarbaz"
+
+a.compile()
+
 a.set_input_stream(text)
 
 print(f"py: input [{text}]")
@@ -32,5 +38,7 @@ while True:
 	print(f"variables are:")
 	for v in event.variables:
 		print(f"- {v.name}, '{v.text}'")
+		for k, v in v.captures.items():
+			print(f"\t- {k}: {v}")
 
 	print()
