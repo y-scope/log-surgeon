@@ -1,5 +1,6 @@
 use std::ffi::c_char;
 use std::marker::PhantomData;
+use std::num::NonZero;
 use std::str::Utf8Error;
 
 use crate::lexer::Token;
@@ -33,6 +34,7 @@ pub struct CCapture<'parser> {
 	pub name: CStringView<'parser>,
 	pub lexeme: CStringView<'parser>,
 	pub id: u32,
+	pub parent_id: u32,
 	pub is_leaf: bool,
 }
 
@@ -137,7 +139,8 @@ mod log_event {
 				return CCapture {
 					name: CStringView::from_utf8(capture.name),
 					lexeme: CStringView::from_utf8(capture.lexeme),
-					id: capture.id,
+					id: capture.id.get(),
+					parent_id: capture.parent_id.map_or(0, NonZero::get),
 					is_leaf: capture.is_leaf,
 				};
 			}
@@ -146,6 +149,7 @@ mod log_event {
 			name: CStringView::null(),
 			lexeme: CStringView::null(),
 			id: 0,
+			parent_id: 0,
 			is_leaf: false,
 		}
 	}

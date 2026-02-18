@@ -59,15 +59,18 @@ struct CCapture {
   CStringView name;
   CStringView lexeme;
   uint32_t id;
+  uint32_t parent_id;
   bool is_leaf;
 
   CCapture(CStringView const& name,
            CStringView const& lexeme,
            uint32_t const& id,
+           uint32_t const& parent_id,
            bool const& is_leaf)
     : name(name),
       lexeme(lexeme),
       id(id),
+      parent_id(parent_id),
       is_leaf(is_leaf)
   {}
 

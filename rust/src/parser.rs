@@ -1,3 +1,4 @@
+use std::num::NonZero;
 use std::ops::Range;
 
 use crate::lexer::Lexer;
@@ -35,8 +36,8 @@ pub struct Variable<'parser> {
 pub struct Capture<'a> {
 	pub name: &'a str,
 	pub lexeme: &'a str,
-	/// Note: ID from [`crate::regex::RegexCapture`]; will never be `0`.
-	pub id: u32,
+	pub id: NonZero<u32>,
+	pub parent_id: Option<NonZero<u32>>,
 	pub is_leaf: bool,
 }
 
@@ -190,7 +191,8 @@ impl Parser {
 						Capture {
 							name: &info.regex.name,
 							lexeme: &self.current_log[capture.range.clone()],
-							id: info.regex.id.get(),
+							id: info.regex.id,
+							parent_id: info.regex.parent_id,
 							is_leaf: info.regex.descendents == 0,
 						}
 					})
@@ -327,7 +329,8 @@ impl Parser {
 						Capture {
 							name: &info.regex.name,
 							lexeme: &self.current_log[capture.range.clone()],
-							id: info.regex.id.get(),
+							id: info.regex.id,
+							parent_id: info.regex.parent_id,
 							is_leaf: info.regex.descendents == 0,
 						}
 					})
