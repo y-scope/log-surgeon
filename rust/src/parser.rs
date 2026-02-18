@@ -47,13 +47,6 @@ struct PendingHeader {
 	captures: Vec<WorkingCapture>,
 }
 
-// #[derive(Debug)]
-// struct WorkingData {
-// 	log: String,
-// 	captures: Vec<WorkingCapture>,
-// 	variables: Vec<WorkingVariable>,
-// }
-
 #[derive(Debug)]
 struct WorkingVariable {
 	rule: usize,
@@ -122,7 +115,10 @@ impl Parser {
 			let old_pos: usize = *pos;
 			let old_captures: usize = self.working_captures.len();
 			match self.lexer.next_token(input, pos, |tag, _, start, end| {
-				self.working_captures.push(WorkingCapture { tag, range: start..end });
+				self.working_captures.push(WorkingCapture {
+					tag,
+					range: (old_pos - original_pos + start)..(old_pos - original_pos + end),
+				});
 			}) {
 				Token::Variable { rule, name, lexeme } => {
 					if name == "newline" {

@@ -29,3 +29,5 @@ tracing = "0.1"
 [dependencies.pyo3]
 version = "0.27"
 default-features = false
+
+[workspace]

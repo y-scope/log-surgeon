@@ -169,7 +169,7 @@ impl Dfa {
 		self.apply_operations(
 			&mut registers,
 			&mut prefix_tree,
-			i,
+			consumed,
 			&self.states[state].final_operations,
 			&self.states[state].tag_for_register,
 		);

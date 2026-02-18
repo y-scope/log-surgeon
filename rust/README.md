@@ -9,6 +9,9 @@ cargo check
 cargo build
 cargo test
 
+# Check/build/test without Python C extension module
+cargo build --no-default-features
+
 # Run `src/bin/playground.rs`.
 cargo run --bin playground
 
