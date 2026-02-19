@@ -3,7 +3,7 @@ use crate::dfa::MatchedRule;
 use crate::nfa::AutomataCapture;
 use crate::schema::Schema;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Lexer {
 	schema: Schema,
 	dfa: Dfa,

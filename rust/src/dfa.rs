@@ -11,7 +11,7 @@ use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tag;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Dfa {
 	states: Vec<DfaState>,
 	kernels: BTreeMap<Kernel, usize>,
@@ -29,7 +29,7 @@ pub struct MatchedRule<'input> {
 	pub lexeme: &'input str,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct DfaState {
 	kernel: Kernel,
 	transitions: IntervalTree<u32, Transition>,

@@ -10,51 +10,49 @@ use crate::regex::Regex;
 use crate::regex::RegexError;
 use crate::schema::Schema;
 
+/// Represents a C `T const*` pointer + `size_t` length as a single ABI-stable value.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub struct CSlice<'lifetime, T> {
+pub struct CArray<'lifetime, T> {
 	pointer: *const T,
 	length: usize,
 	_lifetime: PhantomData<&'lifetime [T]>,
 }
 
-pub type CStringView<'lifetime> = CSlice<'lifetime, c_char>;
+pub type CCharArray<'lifetime> = CArray<'lifetime, c_char>;
 
 #[repr(C)]
 pub struct CVariable<'event> {
 	pub rule: usize,
-	pub name: CStringView<'event>,
-	pub lexeme: CStringView<'event>,
-	// pub event: *const LogEvent<'event>,
-	// pub index: usize,
+	pub name: CCharArray<'event>,
+	pub lexeme: CCharArray<'event>,
 }
 
 #[repr(C)]
 pub struct CCapture<'parser> {
-	pub name: CStringView<'parser>,
-	pub lexeme: CStringView<'parser>,
+	pub name: CCharArray<'parser>,
+	pub lexeme: CCharArray<'parser>,
+	/// Nonzero for a valid capture.
 	pub id: u32,
 	pub parent_id: u32,
 	pub is_leaf: bool,
 }
 
-pub type LogFragmentOnCapture = Option<extern "C" fn(data: *const (), name: CStringView<'_>, lexeme: CStringView<'_>)>;
-
 #[unsafe(no_mangle)]
-extern "C" fn clp_log_mechanic_schema_new() -> Box<Schema> {
+extern "C" fn logmech_schema_new() -> Box<Schema> {
 	Box::new(Schema::new())
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_schema_set_delimiters(schema: &mut Schema, delimiters: CStringView<'_>) {
+unsafe extern "C" fn logmech_schema_set_delimiters(schema: &mut Schema, delimiters: CCharArray<'_>) {
 	schema.set_delimiters(delimiters.as_utf8().unwrap());
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_schema_add_rule<'pattern>(
+unsafe extern "C" fn logmech_schema_add_rule<'pattern>(
 	schema: &mut Schema,
-	name: CStringView<'_>,
-	pattern: CStringView<'pattern>,
+	name: CCharArray<'_>,
+	pattern: CCharArray<'pattern>,
 ) -> Option<Box<RegexError<'pattern>>> {
 	let name: &str = name.as_utf8().unwrap();
 	let pattern: &str = pattern.as_utf8().unwrap();
@@ -69,20 +67,20 @@ unsafe extern "C" fn clp_log_mechanic_schema_add_rule<'pattern>(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn clp_log_mechanic_parser_new(schema: &Schema) -> Box<Parser> {
+unsafe extern "C" fn logmech_parser_new(schema: &Schema) -> Box<Parser> {
 	let parser: Parser = Parser::new(schema.clone());
 	Box::new(parser)
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn clp_log_mechanic_log_event_new<'a>() -> Box<LogEvent<'a>> {
+extern "C" fn logmech_log_event_new<'a>() -> Box<LogEvent<'a>> {
 	Box::new(LogEvent::blank())
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn clp_log_mechanic_parser_next<'parser, 'input>(
+extern "C" fn logmech_parser_next<'parser, 'input>(
 	parser: &'parser mut Parser,
-	input: CStringView<'input>,
+	input: CCharArray<'input>,
 	pos: &mut usize,
 	out: &mut LogEvent<'parser>,
 ) -> bool {
@@ -99,46 +97,38 @@ mod log_event {
 	use super::*;
 
 	#[unsafe(no_mangle)]
-	extern "C" fn clp_log_mechanic_log_event_log_type<'a>(log_event: &'a LogEvent<'_>) -> CStringView<'a> {
-		CStringView::from_utf8(log_event.log_type.as_str())
+	extern "C" fn logmech_log_event_log_type<'a>(log_event: &'a LogEvent<'_>) -> CCharArray<'a> {
+		CCharArray::from_utf8(log_event.log_type.as_str())
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn clp_log_mechanic_log_event_have_header<'a>(log_event: &'a LogEvent<'_>) -> bool {
+	extern "C" fn logmech_log_event_have_header<'a>(log_event: &'a LogEvent<'_>) -> bool {
 		log_event.have_header
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn clp_log_mechanic_log_event_variable<'a>(log_event: &LogEvent<'a>, i: usize) -> CVariable<'a> {
+	extern "C" fn logmech_log_event_variable<'a>(log_event: &LogEvent<'a>, i: usize) -> CVariable<'a> {
 		if let Some(variable) = log_event.variables.get(i) {
 			return CVariable {
 				rule: variable.rule,
-				name: CStringView::from_utf8(variable.name),
-				lexeme: CStringView::from_utf8(variable.lexeme),
-				// event: std::ptr::from_ref(log_event),
-				// index: i,
+				name: CCharArray::from_utf8(variable.name),
+				lexeme: CCharArray::from_utf8(variable.lexeme),
 			};
 		}
 		CVariable {
 			rule: 0,
-			name: CStringView::null(),
-			lexeme: CStringView::null(),
-			// event: std::ptr::null(),
-			// index: 0,
+			name: CCharArray::null(),
+			lexeme: CCharArray::null(),
 		}
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn clp_log_mechanic_log_event_capture<'a>(
-		log_event: &'a LogEvent<'_>,
-		i: usize,
-		j: usize,
-	) -> CCapture<'a> {
+	extern "C" fn logmech_log_event_capture<'a>(log_event: &'a LogEvent<'_>, i: usize, j: usize) -> CCapture<'a> {
 		if let Some(variable) = log_event.variables.get(i) {
 			if let Some(capture) = variable.captures.get(j) {
 				return CCapture {
-					name: CStringView::from_utf8(capture.name),
-					lexeme: CStringView::from_utf8(capture.lexeme),
+					name: CCharArray::from_utf8(capture.name),
+					lexeme: CCharArray::from_utf8(capture.lexeme),
 					id: capture.id.get(),
 					parent_id: capture.parent_id.map_or(0, NonZero::get),
 					is_leaf: capture.is_leaf,
@@ -146,8 +136,8 @@ mod log_event {
 			}
 		}
 		CCapture {
-			name: CStringView::null(),
-			lexeme: CStringView::null(),
+			name: CCharArray::null(),
+			lexeme: CCharArray::null(),
 			id: 0,
 			parent_id: 0,
 			is_leaf: false,
@@ -155,7 +145,7 @@ mod log_event {
 	}
 }
 
-impl<'lifetime, T> CSlice<'lifetime, T> {
+impl<'lifetime, T> CArray<'lifetime, T> {
 	pub fn null() -> Self {
 		Self {
 			pointer: std::ptr::null(),
@@ -169,7 +159,7 @@ impl<'lifetime, T> CSlice<'lifetime, T> {
 	}
 }
 
-impl<'lifetime> CStringView<'lifetime> {
+impl<'lifetime> CCharArray<'lifetime> {
 	pub fn from_utf8(utf8: &'lifetime str) -> Self {
 		Self {
 			pointer: utf8.as_bytes().as_ptr().cast::<c_char>(),
@@ -184,30 +174,14 @@ impl<'lifetime> CStringView<'lifetime> {
 	}
 }
 
-// /// cbindgen doesn't work with macros; need to write out all destructors.
-// mod destructors {
-// 	use super::*;
-
-// 	#[unsafe(no_mangle)]
-// 	unsafe extern "C" fn clp_log_mechanic_schema_drop(value: Box<Schema>) {
-// 		std::mem::drop(value);
-// 	}
-
-// 	#[unsafe(no_mangle)]
-// 	unsafe extern "C" fn clp_log_mechanic_regex_error_drop(value: Box<RegexError<'_>>) {
-// 		std::mem::drop(value);
-// 	}
-
-// 	#[unsafe(no_mangle)]
-// 	unsafe extern "C" fn clp_log_mechanic_parser_drop(value: Box<Parser>) {
-// 		std::mem::drop(value);
-// 	}
-
-// 	#[unsafe(no_mangle)]
-// 	unsafe extern "C" fn clp_log_mechanic_log_event_drop(value: Box<LogEvent<'_>>) {
-// 		std::mem::drop(value);
-// 	}
-// }
+macro_rules! clone {
+	($name:ident, $ty:ty) => {
+		#[unsafe(no_mangle)]
+		extern "C" fn $name(value: &$ty) -> Box<$ty> {
+			Box::new(value.clone())
+		}
+	};
+}
 
 macro_rules! destructor {
 	($name:ident, $ty:ty) => {
@@ -218,10 +192,17 @@ macro_rules! destructor {
 	};
 }
 
-destructor!(clp_log_mechanic_schema_drop, Schema);
-destructor!(clp_log_mechanic_regex_error_drop, RegexError<'_>);
-destructor!(clp_log_mechanic_parser_drop, Parser);
-destructor!(clp_log_mechanic_log_event_drop, LogEvent<'_>);
+clone!(logmech_parser_clone, Parser);
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn logmech_log_event_clone<'a>(value: &LogEvent<'a>) -> Box<LogEvent<'a>> {
+	Box::new(value.clone())
+}
+
+destructor!(logmech_schema_drop, Schema);
+destructor!(logmech_regex_error_drop, RegexError<'_>);
+destructor!(logmech_parser_drop, Parser);
+destructor!(logmech_log_event_drop, LogEvent<'_>);
 
 #[cfg(test)]
 mod test {
@@ -236,14 +217,14 @@ mod test {
 		schema.add_rule("bye", Regex::from_pattern("goodbye").unwrap());
 
 		let mut parser: Parser = Parser::new(schema);
-		let input: CStringView<'_> = CStringView::from_utf8("hello world goodbye hello world  goodbye  ");
+		let input: CCharArray<'_> = CCharArray::from_utf8("hello world goodbye hello world  goodbye  ");
 		let mut pos: usize = 0;
 
 		let mut event: LogEvent<'_> = LogEvent::blank();
 
-		assert!(clp_log_mechanic_parser_next(&mut parser, input, &mut pos, &mut event));
+		assert!(logmech_parser_next(&mut parser, input, &mut pos, &mut event));
 		// Rust doesn't allow this since it doesn't know that this function simply overwrites event,
 		// and that the destructor (when overwriting the old event) doesn't touch the borrow on the parser.
-		//assert!(clp_log_mechanic_parser_next(&mut parser, input, &mut pos, &mut event));
+		//assert!(logmech_parser_next(&mut parser, input, &mut pos, &mut event));
 	}
 }

@@ -7,7 +7,7 @@ use crate::log_type::LogType;
 use crate::nfa::AutomataCapture;
 use crate::schema::Schema;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Parser {
 	lexer: Lexer,
 	maybe_pending_header: Option<PendingHeader>,
@@ -17,7 +17,7 @@ pub struct Parser {
 	// working_data: WorkingData,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LogEvent<'parser> {
 	pub log_type: LogType,
 	pub variables: Vec<Variable<'parser>>,
@@ -41,21 +41,21 @@ pub struct Capture<'a> {
 	pub is_leaf: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct PendingHeader {
 	rule: usize,
 	lexeme: String,
 	captures: Vec<WorkingCapture>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct WorkingVariable {
 	rule: usize,
 	range: Range<usize>,
 	captures: Range<usize>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct WorkingCapture {
 	tag: usize,
 	range: Range<usize>,
