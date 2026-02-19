@@ -293,7 +293,7 @@ impl Nfa {
 				);
 				BTreeSet::new()
 			},
-			Regex::Capture(capture) => self.capture(rule, capture.clone(), &capture.item, current, target),
+			Regex::Capture { info, item } => self.capture(rule, info.clone(), item, current, target),
 			Regex::Group { negated, items } => {
 				if *negated {
 					let mut intervals: Vec<Interval<u32>> = Vec::with_capacity(items.len());
@@ -351,14 +351,15 @@ impl Nfa {
 
 				tags
 			},
-			Regex::BoundedRepetition { lo, hi, item } => {
-				if lo > hi {
-					todo!("warn invalid repetition");
-				}
+			Regex::BoundedRepetition { min, max, item } => {
+				// Should have been verified during regex pattern parsing.
+				assert!(*max > 0);
+				assert!(min <= max);
+
 				let middle: NfaIdx = self.new_state("bounded middle");
 
 				let mut tags: BTreeSet<Tag> = BTreeSet::new();
-				for i in 0..*lo {
+				for i in 0..*min {
 					let sub_target: NfaIdx = self.new_state("bounded sub 1/2 target");
 					tags.append(&mut self.build(rule, item, current, sub_target));
 					current = sub_target;
@@ -374,8 +375,8 @@ impl Nfa {
 				});
 
 				current = middle;
-				for i in *lo..*hi {
-					let sub_target: NfaIdx = if i + 1 < *hi {
+				for i in *min..*max {
+					let sub_target: NfaIdx = if i + 1 < *max {
 						self.new_state("bounded sub 2/2 target")
 					} else {
 						target
