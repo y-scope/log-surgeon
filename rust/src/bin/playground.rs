@@ -18,7 +18,7 @@ fn main() {
 	let dfa: Dfa = schema.build_dfa();
 	let b: bool = dfa
 		.simulate_with_captures("bbbbbb", |t, lexeme, _, _| {
-			let var: &str = &dfa.capture_info(t).regex.name;
+			let var: &str = &dfa.capture_info(t).capture_info.name;
 			println!("got {var:?}: {lexeme:?}");
 		})
 		.is_ok();
@@ -32,7 +32,7 @@ fn main3() {
 	let dfa: Dfa = schema.build_dfa();
 	let b: bool = dfa
 		.simulate_with_captures("xyaxyzxya", |t, lexeme, _, _| {
-			let var: &str = &dfa.capture_info(t).regex.name;
+			let var: &str = &dfa.capture_info(t).capture_info.name;
 			println!("got {var:?}: {lexeme:?}");
 		})
 		.is_ok();

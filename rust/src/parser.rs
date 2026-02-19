@@ -189,11 +189,11 @@ impl Parser {
 					.map(|capture| {
 						let info: &AutomataCapture = self.lexer.capture_info(capture.tag);
 						Capture {
-							name: &info.regex.name,
+							name: &info.capture_info.name,
 							lexeme: &self.current_log[capture.range.clone()],
-							id: info.regex.id,
-							parent_id: info.regex.parent_id,
-							is_leaf: info.regex.descendents == 0,
+							id: info.capture_info.id,
+							parent_id: info.capture_info.parent_id,
+							is_leaf: info.capture_info.descendents == 0,
 						}
 					})
 					.collect::<Vec<_>>(),
@@ -327,11 +327,11 @@ impl Parser {
 					.map(|capture| {
 						let info: &AutomataCapture = self.lexer.capture_info(capture.tag);
 						Capture {
-							name: &info.regex.name,
+							name: &info.capture_info.name,
 							lexeme: &self.current_log[capture.range.clone()],
-							id: info.regex.id,
-							parent_id: info.regex.parent_id,
-							is_leaf: info.regex.descendents == 0,
+							id: info.capture_info.id,
+							parent_id: info.capture_info.parent_id,
+							is_leaf: info.capture_info.descendents == 0,
 						}
 					})
 					.collect::<Vec<_>>(),

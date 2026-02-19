@@ -52,6 +52,8 @@ pub enum RegexErrorKind {
 	/// A valid literal character was expected but not found;
 	/// should only appear from an invalid group.
 	InvalidLiteral,
+	/// Group range `min > max`.
+	InvalidGroupRange(char, char),
 	/// Invalid escape character.
 	InvalidEscape,
 	/// Invalid repetition bound; `min > max` or `max == 0`.
@@ -474,7 +476,12 @@ fn parse_group_item(original_input: &str) -> ParsingResult<'_, Vec<(char, char)>
 			Literals::Single(start) => {
 				let (input, end): (&str, Literals) = cut(parse_literal_character).parse(input_after_dash)?;
 				match end {
-					Literals::Single(end) => Ok((input, vec![(start, end)])),
+					Literals::Single(end) => {
+						if start > end {
+							return Err(RegexErrorKind::InvalidGroupRange(start, end).error(input_after_dash));
+						}
+						Ok((input, vec![(start, end)]))
+					},
 					Literals::Group { .. } => {
 						return Err(RegexErrorKind::EscapeClassInGroupRange.error(input_after_dash));
 					},
@@ -968,6 +975,16 @@ mod test {
 			assert_eq!(e.kind, RegexErrorKind::InvalidRepetitionBound(0, 0));
 			assert_eq!(e.consumed, r"a{");
 			assert_eq!(e.remaining, r"0}");
+		}
+	}
+
+	#[test]
+	fn group_range() {
+		{
+			let e: RegexError<'_> = Regex::from_pattern(r"[z-a]").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::InvalidGroupRange('z', 'a'));
+			assert_eq!(e.consumed, r"[z-");
+			assert_eq!(e.remaining, r"a]");
 		}
 	}
 }

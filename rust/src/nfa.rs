@@ -17,6 +17,7 @@ pub struct Nfa {
 
 #[derive(Debug)]
 pub struct NfaState {
+	/// ID and also an index into an [`Nfa`]'s list of states.
 	idx: NfaIdx,
 	transitions: IntervalTree<u32, BTreeSet<NfaIdx>>,
 	spontaneous: Vec<SpontaneousTransition>,
@@ -57,26 +58,8 @@ pub enum Tag {
 pub struct AutomataCapture {
 	/// Rule index from the schema.
 	pub rule: usize,
-	// /// Capture name from the rule/regex pattern.
-	// /// Technically redundant (given a schema); exists for debugging.
-	// pub name: String,
-	pub regex: RegexCapture,
+	pub capture_info: RegexCapture,
 }
-
-// impl std::fmt::Debug for AutomataCapture {
-// 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-// 		if !fmt.alternate() {
-// 			fmt.write_fmt(format_args!("CaptureInfo({}, {})", self.rule, self.name))
-// 		} else {
-// 			fmt.write_fmt(format_args!(
-// 				"CaptureInfo({}, {}, {})",
-// 				self.rule,
-// 				self.id.map_or(0, NonZero::get),
-// 				self.name
-// 			))
-// 		}
-// 	}
-// }
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 struct NfaSimulationData {
@@ -135,19 +118,14 @@ impl Nfa {
 		let mut maybe_last_match: Option<(usize, Vec<(NfaIdx, Vec<NfaSimulationData>)>)> = None;
 
 		for (i, ch) in input.char_indices() {
-			debug!("=== step {i}, ch {}", u32::from(ch));
-			debug!("state set is {state_set:#?}");
 			state_set = self.step_on_symbol(&state_set, ch);
-			debug!("after step is {state_set:#?}");
 			state_set = self.epsilon_closure(state_set, i + 1);
-			debug!("after closure is {state_set:#?}");
 			if state_set.is_empty() {
 				break;
 			}
 			for (state, data) in state_set.iter() {
 				let mut any_final_states: Vec<(NfaIdx, Vec<NfaSimulationData>)> = Vec::new();
 				if state.is_end() {
-					debug!("=== got match!");
 					// TODO pretty sure this nolonger true
 					assert_eq!(data.len(), 1);
 					any_final_states.push((*state, data.clone()));
@@ -160,14 +138,12 @@ impl Nfa {
 
 		for (state, data) in state_set.iter() {
 			if state.is_end() {
-				debug!("=== got match!");
 				// TODO pretty sure nolonger true
 				assert_eq!(data.len(), 1);
 				let mut m: Vec<(usize, &str, usize, usize)> = Vec::new();
 				for (capture, (starts, ends)) in data.last().unwrap().captures.iter() {
-					debug!("[matched] {capture:?} {starts:?} {ends:?}");
 					for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
-						m.push((capture.rule, &capture.regex.name, x, y));
+						m.push((capture.rule, &capture.capture_info.name, x, y));
 					}
 				}
 				return Some(input.len());
@@ -179,9 +155,8 @@ impl Nfa {
 			for (state, last_match) in last_match.iter() {
 				for data in last_match.iter() {
 					for (capture, (starts, ends)) in data.captures.iter() {
-						debug!("[matched] {capture:?} {starts:?} {ends:?}");
 						for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
-							m.push((capture.rule, &capture.regex.name, x, y));
+							m.push((capture.rule, &capture.capture_info.name, x, y));
 						}
 					}
 				}
@@ -298,9 +273,9 @@ impl Nfa {
 				if *negated {
 					let mut intervals: Vec<Interval<u32>> = Vec::with_capacity(items.len());
 					for &(start, end) in items.iter() {
-						if start > end {
-							todo!("warn invalid range");
-						}
+						// Should have been verified during regex pattern parsing.
+						assert!(start <= end);
+
 						intervals.push(Interval::new(u32::from(start), u32::from(end)));
 					}
 					for interval in Interval::complement(&mut intervals).into_iter() {
@@ -310,9 +285,9 @@ impl Nfa {
 					}
 				} else {
 					for &(start, end) in items.iter() {
-						if start > end {
-							todo!("warn invalid range");
-						}
+						// Should have been verified during regex pattern parsing.
+						assert!(start <= end);
+
 						self[current].transitions.insert(
 							Interval::new(u32::from(start), u32::from(end)),
 							BTreeSet::from([target]),
@@ -410,12 +385,12 @@ impl Nfa {
 	fn capture(
 		&mut self,
 		rule: usize,
-		capture: RegexCapture,
+		capture_info: RegexCapture,
 		item: &Regex,
 		current: NfaIdx,
 		target: NfaIdx,
 	) -> BTreeSet<Tag> {
-		let capture: AutomataCapture = AutomataCapture { rule, regex: capture };
+		let capture: AutomataCapture = AutomataCapture { rule, capture_info };
 
 		let start_capture: Tag = Tag::StartCapture(capture.clone());
 		let end_capture: Tag = Tag::StopCapture(capture);
@@ -475,8 +450,8 @@ impl Nfa {
 				target,
 			});
 
-			// `&BTreeSet<_>` implements `BitOr`.
-			// `sub_tags` is already a reference from the iteration.
+			// `&BTreeSet<_>` implements `BitOr`, `BTreeSet<_>` does not.
+			// `sub_tags` from the loop is already a `&BTreeSet<_>`.
 			tags = &tags | sub_tags;
 		}
 
@@ -547,7 +522,37 @@ impl NfaState {
 	}
 }
 
-// TODO explain isize/usize
+/// Morally, `NfaIdx` is
+///
+/// ```rust
+/// enum NfaIdx {
+/// 	ValidState { index: usize },
+/// 	EndState { rule: usize },
+/// }
+/// ```
+///
+/// where `NfaIdx::ValidState` is an `Nfa` state index
+/// and `NfaIdx::EndState` is a Schema rule index indicating that this rule has been matched.
+///
+/// However, such a type would be larger than a `usize` (realistically, it would be `2 * size_of::<usize>`).
+/// Unfortunately, Rust doesn't have a way to define custom bit-width integer types,
+/// **and** Rust's integer casting options are absolutely god awful,
+/// because apparently getting rid of subtle integer overflow/promotion/truncating/etc. bugs is _too much_ safety,
+/// so we're left with this archaic hack.
+///
+/// `NfaIdx` wraps a `usize`:
+/// positive values correspond to valid state indices,
+/// negative values correspond to schema rule indices.
+///
+/// Note that "overflow" is **not possible**, in the sense that:
+///
+/// 1. Rust's only real implementation is rustc,
+/// 2. rustc is built on LLVM,
+/// 3. LLVM fundamentally assumes that pointer subtraction returns a value in the C `ptrdiff_t` type,
+/// 4. so objects/arrays are at most half the address space,
+/// 5. and an array/vector of length `(isize::MAX as usize) + 1` would violate this.
+///
+/// Of course, `usize::MAX / 2` states is also massive and for practical purposes we simply wouldn't reach that length of computation.
 impl NfaIdx {
 	const BEGIN: Self = Self(0);
 	const END: Self = Self::end(0);
