@@ -1,5 +1,6 @@
 use crate::dfa::Dfa;
 use crate::nfa::Nfa;
+use crate::regex::IntoRegex;
 use crate::regex::Regex;
 
 #[derive(Debug, Clone)]
@@ -37,17 +38,25 @@ impl Schema {
 		self.delimiters = delimiters.into();
 	}
 
-	pub fn add_rule<LikeString>(&mut self, name: LikeString, regex: Regex)
+	pub fn add_rule<LikeString, RegexOrPattern>(
+		&mut self,
+		name: LikeString,
+		regex: RegexOrPattern,
+	) -> Result<(), RegexOrPattern::Error>
 	where
 		LikeString: Into<String>,
+		RegexOrPattern: IntoRegex,
 	{
 		let name: String = name.into();
 		assert_ne!(name, "newline");
 		assert_ne!(name, "static");
 		assert_ne!(name, "delimiters");
 
+		let regex: Regex = regex.into()?;
+
 		let idx: usize = self.rules.len();
 		self.rules.push(Rule { idx, name, regex });
+		Ok(())
 	}
 }
 

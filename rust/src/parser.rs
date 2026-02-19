@@ -17,14 +17,14 @@ pub struct Parser {
 	// working_data: WorkingData,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LogEvent<'parser> {
 	pub log_type: LogType,
 	pub variables: Vec<Variable<'parser>>,
 	pub have_header: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Variable<'parser> {
 	pub rule: usize,
 	pub name: &'parser str,
@@ -32,7 +32,7 @@ pub struct Variable<'parser> {
 	pub captures: Vec<Capture<'parser>>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Capture<'a> {
 	pub name: &'a str,
 	pub lexeme: &'a str,
@@ -360,14 +360,93 @@ mod test {
 	#[test]
 	fn hmmm() {
 		let mut schema: Schema = Schema::new();
-		schema.set_delimiters(" ");
-		schema.add_rule("hello", Regex::from_pattern("hello world").unwrap());
-		schema.add_rule("bye", Regex::from_pattern("goodbye").unwrap());
+		schema.add_rule("hello", "abc|d(?<foo>[a-z])f").unwrap();
 
 		let mut parser: Parser = Parser::new(schema);
+		let mut pos: usize = 0;
 
-		parser.next_event("hello", &mut 0);
-		parser.next_event("hello", &mut 0);
-		parser.next_event("hello", &mut 0);
+		let input: &str = "def foobarbaz";
+
+		{
+			let event: LogEvent<'_> = parser.next_event(input, &mut pos).unwrap();
+			assert_eq!(pos, input.len());
+
+			assert_eq!(event.variables[0].name, "hello");
+			assert_eq!(event.variables[0].lexeme, "def");
+			assert_eq!(event.variables[0].captures[0].name, "foo");
+			assert_eq!(event.variables[0].captures[0].lexeme, "e");
+		}
+		{
+			assert_eq!(parser.next_event(input, &mut pos), None);
+		}
+	}
+
+	#[test]
+	fn hmmm2() {
+		let mut schema: Schema = Schema::new();
+		schema.add_rule("number", "[0-9]+").unwrap();
+		schema
+			.add_rule(
+				"username",
+				r"@(?<inside>[a-z]+)(?<parts>(?<dot>\.)[a-z]*(?<end>[a-z]))*",
+			)
+			.unwrap();
+
+		let mut parser: Parser = Parser::new(schema);
+		let mut pos: usize = 0;
+
+		let input: &str = "\n123 awesrgesrgesrg 6346346 @someone foo@username @someone.foo.bar.baz\n";
+
+		{
+			let event: LogEvent<'_> = parser.next_event(input, &mut pos).unwrap();
+			assert_eq!(pos, 1);
+
+			assert_eq!(event.log_type.as_str(), "\n");
+			assert_eq!(event.variables.len(), 0);
+		}
+		{
+			let event: LogEvent<'_> = parser.next_event(input, &mut pos).unwrap();
+			assert_eq!(pos, input.len());
+
+			assert_eq!(
+				event.log_type.as_str(),
+				"%number% awesrgesrgesrg %number% %username% foo@username %username%\n"
+			);
+
+			assert_eq!(event.variables[0].name, "number");
+			assert_eq!(event.variables[0].lexeme, "123");
+
+			assert_eq!(event.variables[1].name, "number");
+			assert_eq!(event.variables[1].lexeme, "6346346");
+
+			assert_eq!(event.variables[2].name, "username");
+			assert_eq!(event.variables[2].lexeme, "@someone");
+
+			assert_eq!(event.variables[3].name, "username");
+			assert_eq!(event.variables[3].lexeme, "@someone.foo.bar.baz");
+			assert_eq!(event.variables[3].captures[0].name, "inside");
+			assert_eq!(event.variables[3].captures[0].lexeme, "someone");
+			assert_eq!(event.variables[3].captures[1].name, "parts");
+			assert_eq!(event.variables[3].captures[1].lexeme, ".foo");
+			assert_eq!(event.variables[3].captures[2].name, "parts");
+			assert_eq!(event.variables[3].captures[2].lexeme, ".bar");
+			assert_eq!(event.variables[3].captures[3].name, "parts");
+			assert_eq!(event.variables[3].captures[3].lexeme, ".baz");
+			assert_eq!(event.variables[3].captures[4].name, "dot");
+			assert_eq!(event.variables[3].captures[4].lexeme, ".");
+			assert_eq!(event.variables[3].captures[5].name, "dot");
+			assert_eq!(event.variables[3].captures[5].lexeme, ".");
+			assert_eq!(event.variables[3].captures[6].name, "dot");
+			assert_eq!(event.variables[3].captures[6].lexeme, ".");
+			assert_eq!(event.variables[3].captures[7].name, "end");
+			assert_eq!(event.variables[3].captures[7].lexeme, "o");
+			assert_eq!(event.variables[3].captures[8].name, "end");
+			assert_eq!(event.variables[3].captures[8].lexeme, "r");
+			assert_eq!(event.variables[3].captures[9].name, "end");
+			assert_eq!(event.variables[3].captures[9].lexeme, "z");
+		}
+		{
+			assert_eq!(parser.next_event(input, &mut pos), None);
+		}
 	}
 }

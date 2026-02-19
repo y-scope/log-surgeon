@@ -1,4 +1,5 @@
 use crate::dfa::Dfa;
+use crate::dfa::DfaResult;
 use crate::dfa::MatchedRule;
 use crate::nfa::AutomataCapture;
 use crate::schema::Schema;
@@ -37,7 +38,7 @@ impl Lexer {
 		let start: usize = *pos;
 
 		match self.dfa.simulate_with_captures(&input[*pos..], on_capture) {
-			Ok(MatchedRule { rule, lexeme }) => {
+			DfaResult::MatchedRule { rule, lexeme } => {
 				*pos += lexeme.len();
 				Token::Variable {
 					rule,
@@ -45,7 +46,7 @@ impl Lexer {
 					lexeme,
 				}
 			},
-			Err(consumed) => {
+			DfaResult::StoppedAfter(consumed) => {
 				*pos += consumed;
 				self.glob_static_text(input, pos);
 				Token::StaticText(&input[start..*pos])
@@ -66,7 +67,6 @@ impl Lexer {
 			if ch == '\n' {
 				break;
 			}
-			*pos += ch.len_utf8();
 			if self.is_delimiter(ch) {
 				for ch in input[*pos..].chars() {
 					if ch == '\n' {
@@ -77,8 +77,9 @@ impl Lexer {
 						break;
 					}
 				}
-				break;
+				return;
 			}
+			*pos += ch.len_utf8();
 		}
 	}
 

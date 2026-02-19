@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LogType {
 	static_text: String,
 	variable_indices: Vec<(usize, String)>,
@@ -48,12 +48,14 @@ impl LogType {
 fn to_string(static_text: &str, variable_indices: &[(usize, String)]) -> String {
 	let mut buf: String = String::new();
 	let mut last_pos: usize = 0;
-	for (i, (pos, variable_type)) in variable_indices.iter().enumerate() {
+	for (pos, variable_type) in variable_indices.iter() {
 		let pos: usize = *pos;
 		for s in escape(&static_text[last_pos..pos]) {
 			buf.push_str(s);
 		}
-		buf.push_str(&format!("%{i}:{variable_type}%"));
+		buf.push_str("%");
+		buf.push_str(variable_type);
+		buf.push_str("%");
 		last_pos = pos;
 	}
 	for s in escape(&static_text[last_pos..]) {
@@ -98,6 +100,6 @@ mod test {
 			"hello % world".to_owned(),
 			vec![(3, "int".to_owned()), (6, "float".to_owned())],
 		);
-		assert_eq!(t.to_string(), "hel%0:int%lo %1:float%%% world");
+		assert_eq!(t.to_string(), "hel%int%lo %float%%% world");
 	}
 }

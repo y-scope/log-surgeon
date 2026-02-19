@@ -99,10 +99,9 @@ impl Nfa {
 		nfa
 	}
 
+	/// Algorithm 1 from Angelo Borsotti and Ulya Trafimovich. 2022. A closer look at TDFA.
 	/// - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
 	/// - <https://arxiv.org/abs/2206.01398>
-	///
-	/// Algorithm 1.
 	pub fn simulate(&self, input: &str) -> Option<usize> {
 		let start: (NfaIdx, Vec<NfaSimulationData>) = (
 			NfaIdx(0),
@@ -552,7 +551,8 @@ impl NfaState {
 /// 4. so objects/arrays are at most half the address space,
 /// 5. and an array/vector of length `(isize::MAX as usize) + 1` would violate this.
 ///
-/// Of course, `usize::MAX / 2` states is also massive and for practical purposes we simply wouldn't reach that length of computation.
+/// Of course, `usize::MAX / 2` states is also massive
+/// and for practical purposes we simply wouldn't reach that length of computation.
 impl NfaIdx {
 	const BEGIN: Self = Self(0);
 	const END: Self = Self::end(0);

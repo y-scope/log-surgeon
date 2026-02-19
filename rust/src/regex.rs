@@ -10,6 +10,15 @@ use nom::error::ParseError;
 
 const SPECIAL_CHARACTERS: &str = r"\()[]{}<>*+?-.|^";
 
+/// This is morally just `Into<Regex>`,
+/// since we can't have `impl<'a> From<&'a str> for Result<Regex, RegexError<'a>`
+/// because of Rust's forsake orphan rules.
+pub trait IntoRegex {
+	type Error;
+
+	fn into(self) -> Result<Regex, Self::Error>;
+}
+
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Regex {
 	AnyChar,
@@ -22,7 +31,7 @@ pub enum Regex {
 	Alternation(Vec<Regex>),
 }
 
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Eq)]
 pub struct RegexCapture {
 	pub name: String,
 	/// Capture ID local to the rule/regex pattern.
@@ -32,6 +41,24 @@ pub struct RegexCapture {
 	/// Total number of nested captures (arbitrarily deep);
 	/// it is `0` iff this is a "leaf" capture.
 	pub descendents: usize,
+}
+
+impl Ord for RegexCapture {
+	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+		self.id.cmp(&other.id)
+	}
+}
+
+impl PartialOrd for RegexCapture {
+	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+		Some(self.cmp(other))
+	}
+}
+
+impl PartialEq for RegexCapture {
+	fn eq(&self, other: &Self) -> bool {
+		self.cmp(other).is_eq()
+	}
 }
 
 #[derive(Debug)]
@@ -122,6 +149,22 @@ impl<'a> RegexParsingError<'a> {
 }
 
 type ParsingResult<'a, T> = IResult<&'a str, T, RegexParsingError<'a>>;
+
+impl IntoRegex for Regex {
+	type Error = std::convert::Infallible;
+
+	fn into(self) -> Result<Regex, Self::Error> {
+		Ok(self)
+	}
+}
+
+impl<'a> IntoRegex for &'a str {
+	type Error = RegexError<'a>;
+
+	fn into(self) -> Result<Regex, Self::Error> {
+		Regex::from_pattern(self)
+	}
+}
 
 impl Regex {
 	pub fn from_pattern(pattern: &str) -> Result<Self, RegexError<'_>> {

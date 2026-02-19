@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::btree_map::Entry;
+use std::num::NonZero;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
@@ -21,6 +22,16 @@ pub struct Dfa {
 	/// During construction, this is the "current" count;
 	/// after construction, this is the "total required".
 	number_of_registers: usize,
+}
+
+#[derive(Debug)]
+pub enum DfaResult<'input> {
+	MatchedRule {
+		rule: usize,
+		lexeme: &'input str,
+	},
+	/// Bytes consumed before failing to match a rule.
+	StoppedAfter(usize),
 }
 
 #[derive(Debug)]
@@ -89,14 +100,22 @@ enum SymbolicPosition {
 }
 
 #[derive(Debug)]
-pub struct PrefixTree {
+struct PrefixTree {
 	nodes: Vec<PrefixTreeNode>,
 }
 
 #[derive(Debug)]
 struct PrefixTreeNode {
-	predecessor: usize,
-	offset: usize,
+	maybe_predecessor: Option<NonZero<usize>>,
+	lexeme_position: usize,
+}
+
+#[derive(Debug)]
+struct SimulationData {
+	bytes_consumed: usize,
+	dfa_state: usize,
+	rule: usize,
+	registers: Vec<Option<NonZero<usize>>>,
 }
 
 impl Dfa {
@@ -108,23 +127,19 @@ impl Dfa {
 		.is_ok()
 	}
 
-	pub fn simulate_with_captures<'input, F>(
-		&self,
-		input: &'input str,
-		mut on_capture: F,
-	) -> Result<MatchedRule<'input>, usize>
+	pub fn simulate_with_captures<'input, F>(&self, input: &'input str, mut on_capture: F) -> DfaResult<'input>
 	where
 		F: FnMut(usize, &'input str, usize, usize),
 	{
 		let mut current_state: usize = 0;
 
 		// Vector of prefix tree node indices.
-		let mut registers: Vec<usize> = vec![0; self.number_of_registers];
+		let mut registers: Vec<Option<NonZero<usize>>> = vec![None; self.number_of_registers];
 		let mut prefix_tree: PrefixTree = PrefixTree::new();
 
-		let mut maybe_backup: Option<((usize, usize), usize, usize, Vec<usize>)> = None;
+		let mut maybe_backup: Option<SimulationData> = None;
 
-		let mut last_successful_pos: usize = 0;
+		let mut consumed: usize = 0;
 
 		for (i, ch) in input.char_indices() {
 			debug!("=== step {i} (state {current_state}), ch {ch:?} ({})", u32::from(ch));
@@ -142,8 +157,7 @@ impl Dfa {
 				// TODO check/explain:
 				// tags are executed on outgoing transitions, so they get the "previous" char boundary
 				// the total lexeme includes the "currently consumed" char
-				last_successful_pos = i;
-				let consumed: usize = i + ch.len_utf8();
+				consumed = i + ch.len_utf8();
 				// Apply transition operations before updating position; lookahead 1 in TDFA(1).
 				self.apply_operations(
 					&mut registers,
@@ -156,22 +170,28 @@ impl Dfa {
 				// but based on transition_operations, the operations should be for the new state?
 				current_state = transition.destination;
 				if let Some(rule) = self.states[current_state].final_rule {
-					maybe_backup = Some(((i, consumed), current_state, rule, registers.clone()));
+					maybe_backup = Some(SimulationData {
+						bytes_consumed: consumed,
+						dfa_state: current_state,
+						rule,
+						registers: registers.clone(),
+					});
 				}
 			} else {
 				break;
 			}
 		}
 
-		let ((i, consumed), state, rule, mut registers): ((usize, usize), usize, usize, Vec<usize>) =
-			maybe_backup.ok_or(last_successful_pos)?;
+		let Some(data): Option<SimulationData> = maybe_backup else {
+			return DfaResult::StoppedAfter(consumed);
+		};
 
 		self.apply_operations(
 			&mut registers,
 			&mut prefix_tree,
 			consumed,
-			&self.states[state].final_operations,
-			&self.states[state].tag_for_register,
+			&self.states[data.dfa_state].final_operations,
+			&self.states[data.dfa_state].tag_for_register,
 		);
 
 		let mut captures: BTreeMap<&AutomataCapture, (usize, Vec<usize>, Vec<usize>)> = BTreeMap::new();
@@ -183,10 +203,10 @@ impl Dfa {
 				Tag::StartCapture(_) => starts,
 				Tag::StopCapture(_) => ends,
 			};
-			let mut node: usize = registers[self.tags.len() + i];
-			while node != 0 {
-				offsets.push(prefix_tree.nodes[node].offset);
-				node = prefix_tree.nodes[node].predecessor;
+			let mut maybe_node: Option<NonZero<usize>> = registers[self.tags.len() + i];
+			while let Some(node) = maybe_node {
+				offsets.push(prefix_tree[node].lexeme_position);
+				maybe_node = prefix_tree[node].maybe_predecessor;
 			}
 			offsets.reverse();
 		}
@@ -201,21 +221,20 @@ impl Dfa {
 			}
 		}
 
-		Ok(MatchedRule {
-			rule,
+		DfaResult::MatchedRule {
+			rule: data.rule,
 			lexeme: &input[..consumed],
-		})
+		}
 	}
 
 	fn apply_operations(
 		&self,
-		registers: &mut [usize],
+		registers: &mut [Option<NonZero<usize>>],
 		prefix_tree: &mut PrefixTree,
 		pos: usize,
 		ops: &[RegisterOp],
 		tag_for_register: &BTreeMap<usize, Tag>,
 	) {
-		debug!("tags: {tag_for_register:#?}");
 		for o in ops.iter() {
 			match &o.action {
 				RegisterAction::CopyFrom { source } => {
@@ -240,8 +259,8 @@ impl Dfa {
 					registers[o.target] = registers[*source];
 					for &symbolic in history.iter() {
 						if symbolic == SymbolicPosition::Current {
-							let node: usize = prefix_tree.add_node(registers[o.target], pos);
-							registers[o.target] = node;
+							let node: NonZero<usize> = prefix_tree.add_node(registers[o.target], pos);
+							registers[o.target] = Some(node);
 						}
 					}
 				},
@@ -258,10 +277,9 @@ impl Dfa {
 }
 
 impl Dfa {
+	/// Algorithm 3 from Angelo Borsotti and Ulya Trafimovich. 2022. A closer look at TDFA.
 	/// - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
 	/// - <https://arxiv.org/abs/2206.01398>
-	///
-	/// Algorithm 3.
 	pub fn determinization(nfa: &Nfa) -> Self {
 		let mut tag_ids: BTreeMap<Tag, DfaTag> = BTreeMap::new();
 		for (i, tag) in nfa.tags().iter().enumerate() {
@@ -289,15 +307,14 @@ impl Dfa {
 
 		dfa.add_state(initial, &mut Vec::new());
 
-		// TODO explain why instead of stack
+		// Note: New states may be created and appended to `dfa.states` inside the loop;
+		// `dfa.states.len()` is not constant.
 		let mut i: usize = 0;
 		while i < dfa.states.len() {
-			// TODO explain why need clone, borrowed in loop
+			// Since we may append to `dfa.states`, it may resize
+			// and a reference to `dfa.states[i]` here would become invalid
+			// (borrow checker will complain without the `.clone()`.
 			let kernel: Kernel = dfa.states[i].kernel.clone();
-			debug!(
-				"== On DFA state {i} {:?}",
-				kernel.0.iter().map(|config| config.nfa_state).collect::<BTreeSet<_>>()
-			);
 
 			let mut register_action_tag: BTreeMap<(Tag, RegisterAction), usize> = BTreeMap::new();
 			for &interval in kernel.nontrivial_transitions(nfa).iter() {
@@ -305,12 +322,10 @@ impl Dfa {
 					Self::step_on_interval(nfa, kernel.0.clone(), interval);
 				let next: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Self::epsilon_closure(nfa, next);
 
-				debug!("dfa {i} on {interval:?} transition ops...");
 				let (next, mut operations): (Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>, Vec<RegisterOp>) =
 					dfa.transition_operations(next, &mut register_action_tag);
 
 				let next: usize = dfa.add_state(next, &mut operations);
-				debug!("stepping from {i} to {next} on {interval:?} has ops {operations:#?}");
 				dfa.states[i].transitions.insert(
 					interval,
 					Transition {
@@ -372,7 +387,6 @@ impl Dfa {
 			}
 		}
 		let idx: usize = self.states.len();
-		debug!("- adding state {idx} ({ops:?}): {:#?}", &kernel.0);
 		self.states.push(DfaState {
 			kernel: kernel.clone(),
 			transitions: IntervalTree::new(),
@@ -696,7 +710,7 @@ impl Dfa {
 	}
 }
 
-// TODO this shows up publicly...
+// TODO I don't think we want this to show up in the public interface?
 impl std::ops::Index<&Tag> for Dfa {
 	type Output = usize;
 
@@ -708,6 +722,12 @@ impl std::ops::Index<&Tag> for Dfa {
 impl std::ops::IndexMut<&Tag> for Dfa {
 	fn index_mut(&mut self, tag: &Tag) -> &mut Self::Output {
 		&mut self.tag_ids.get_mut(tag).unwrap().0
+	}
+}
+
+impl DfaResult<'_> {
+	pub fn is_ok(&self) -> bool {
+		matches!(self, Self::MatchedRule { .. })
 	}
 }
 
@@ -734,17 +754,29 @@ impl PrefixTree {
 	fn new() -> Self {
 		Self {
 			nodes: vec![PrefixTreeNode {
-				predecessor: 0,
-				offset: 0,
+				maybe_predecessor: None,
+				lexeme_position: 0,
 			}],
 		}
 	}
 
-	fn add_node(&mut self, predecessor: usize, offset: usize) -> usize {
-		assert!(predecessor < self.nodes.len());
-		let len: usize = self.nodes.len();
-		self.nodes.push(PrefixTreeNode { predecessor, offset });
+	fn add_node(&mut self, maybe_predecessor: Option<NonZero<usize>>, lexeme_position: usize) -> NonZero<usize> {
+		assert!(maybe_predecessor.map_or(0, NonZero::get) < self.nodes.len());
+		let len: NonZero<usize> =
+			NonZero::new(self.nodes.len()).expect("prefix tree should always be constructed with a root node");
+		self.nodes.push(PrefixTreeNode {
+			maybe_predecessor,
+			lexeme_position,
+		});
 		len
+	}
+}
+
+impl std::ops::Index<NonZero<usize>> for PrefixTree {
+	type Output = PrefixTreeNode;
+
+	fn index(&self, i: NonZero<usize>) -> &Self::Output {
+		&self.nodes[i.get()]
 	}
 }
 

@@ -23,7 +23,7 @@ int main() {
 	assert(pos == input.length());
 
 	EventHandle event { *maybe_event };
-	assert(event.log_type() == "%0:hello% foobarbaz");
+	assert(event.log_type() == "%hello% foobarbaz");
 
 	std::optional<Variable> maybe_var { event[0] };
 	assert(maybe_var.has_value());

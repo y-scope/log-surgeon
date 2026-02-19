@@ -16,7 +16,7 @@ namespace log_mechanic {
 		std::string_view name;
 		std::string_view lexeme;
 
-		using CaptureIterator = std::vector<uint32_t>::const_reverse_iterator;
+		using CaptureIterator = std::vector<uint32_t>::const_iterator;
 
 		Variable(LogEvent& event, size_t index, CVariable variable)
 			: rule(variable.rule)
@@ -47,11 +47,11 @@ namespace log_mechanic {
 		}
 
 		CaptureIterator begin() const {
-			return this->m_captures.rbegin();
+			return this->m_captures.begin();
 		}
 
 		CaptureIterator end() const {
-			return this->m_captures.rend();
+			return this->m_captures.end();
 		}
 
 		std::vector<CCapture> const& operator[](uint32_t id) const {
