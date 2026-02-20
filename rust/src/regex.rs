@@ -63,8 +63,11 @@ impl PartialEq for RegexCapture {
 
 #[derive(Debug)]
 pub struct RegexError<'a> {
+	#[allow(unused)]
 	consumed: &'a str,
+	#[allow(unused)]
 	remaining: &'a str,
+	#[allow(unused)]
 	kind: RegexErrorKind,
 }
 
@@ -131,13 +134,13 @@ impl<'a> ParseError<&'a str> for RegexParsingError<'a> {
 		}
 	}
 
-	fn append(input: &'a str, kind: NomErrorKind, other: Self) -> Self {
+	fn append(_input: &'a str, _kind: NomErrorKind, other: Self) -> Self {
 		other
 	}
 }
 
 impl<'a> FromExternalError<&'a str, Self> for RegexParsingError<'a> {
-	fn from_external_error(input: &'a str, _kind: NomErrorKind, e: Self) -> Self {
+	fn from_external_error(_input: &'a str, _kind: NomErrorKind, e: Self) -> Self {
 		e
 	}
 }
@@ -380,9 +383,6 @@ fn parse_suffixed(input: &str) -> ParsingResult<'_, Regex> {
 }
 
 fn parse_repetition_suffix_modifier(original_input: &str) -> ParsingResult<'_, (u32, u32)> {
-	use nom::branch::alt;
-	use nom::sequence::separated_pair;
-
 	let (input, (min, max)): (&str, (u32, u32)) =
 		combinator_surrounded_cut::<'{', '}', _, _>(parse_repetition_bounds).parse(original_input)?;
 
@@ -445,8 +445,6 @@ fn parse_parenthesized(input: &str) -> ParsingResult<'_, Regex> {
 fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 	use nom::combinator::cut;
 
-	let remaining: usize = input.len();
-
 	let (input, _): (&str, char) = parse_char::<'?'>(input)?;
 
 	// Cut: After seeing a '?', we necessarily are expecting a capture.
@@ -481,7 +479,6 @@ fn parse_group(input: &str) -> ParsingResult<'_, Regex> {
 
 fn parse_group_inside(input: &str) -> ParsingResult<'_, (bool, Vec<(char, char)>)> {
 	use nom::combinator::opt;
-	use nom::multi::many1;
 
 	let (input, negated): (&str, Option<char>) = opt(parse_char::<'^'>).parse(input)?;
 

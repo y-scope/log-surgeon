@@ -1,5 +1,5 @@
 // Internal wip code that has been requested to be made public... please forgive me.
-#![allow(unused)]
+// #![allow(unused)]
 
 #[macro_use(debug)]
 extern crate tracing;

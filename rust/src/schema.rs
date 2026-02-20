@@ -80,6 +80,8 @@ impl Schema {
 }
 
 // Nolonger needed?
+// TODO
+#[allow(unused)]
 impl Schema {
 	fn pattern_for_delimiters(delimiters: &str) -> Regex {
 		let escaped: String = delimiters

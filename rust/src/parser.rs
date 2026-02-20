@@ -61,12 +61,6 @@ struct WorkingCapture {
 	range: Range<usize>,
 }
 
-#[derive(Debug)]
-struct WorkingVariableType {
-	rule: String,
-	offset: usize,
-}
-
 impl Parser {
 	pub fn new(schema: Schema) -> Self {
 		let lexer: Lexer = Lexer::new(schema);
@@ -207,7 +201,8 @@ impl Parser {
 		})
 	}
 
-	fn next_event_internal<D, F, G, H, R>(
+	// TODO
+	fn _next_event_internal<D, F, G, H, R>(
 		&mut self,
 		input: &str,
 		pos: &mut usize,
@@ -355,7 +350,6 @@ impl<'a> LogEvent<'a> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::regex::Regex;
 
 	#[test]
 	fn hmmm() {

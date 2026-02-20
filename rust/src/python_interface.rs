@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use pyo3::buffer::PyBuffer;
-use pyo3::exceptions::PyIndexError;
-use pyo3::exceptions::PyKeyError;
+// use pyo3::exceptions::PyIndexError;
+// use pyo3::exceptions::PyKeyError;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::exceptions::PyUnicodeEncodeError;
 use pyo3::prelude::*;
@@ -31,6 +31,7 @@ struct ReaderParser {
 	maybe_parser: Option<Parser>,
 	buffer: String,
 	pos: usize,
+	#[allow(unused)]
 	debug: bool,
 }
 
@@ -41,7 +42,6 @@ struct PyLogEvent {
 	log_type: Py<PyLogType>,
 	#[pyo3(get)]
 	variables: Py<PyList>,
-	have_header: bool,
 }
 
 #[pyclass]
@@ -121,7 +121,6 @@ impl ReaderParser {
 			Ok(Some(PyLogEvent {
 				log_type: Py::new(py, PyLogType(event.log_type.clone()))?,
 				variables: variables.unbind(),
-				have_header: event.have_header,
 			}))
 		})
 	}

@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::num::NonZero;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
@@ -18,11 +17,13 @@ pub struct Nfa {
 #[derive(Debug)]
 pub struct NfaState {
 	/// ID and also an index into an [`Nfa`]'s list of states.
+	#[allow(unused)]
 	idx: NfaIdx,
 	transitions: IntervalTree<u32, BTreeSet<NfaIdx>>,
 	spontaneous: Vec<SpontaneousTransition>,
 	/// Just to be cute, and for debugging, in that order.
 	/// See [`Nfa::new_state`].
+	#[allow(unused)]
 	name: Cow<'static, str>,
 }
 
@@ -151,7 +152,7 @@ impl Nfa {
 
 		if let Some((pos, last_match)) = maybe_last_match {
 			let mut m: Vec<(usize, &str, usize, usize)> = Vec::new();
-			for (state, last_match) in last_match.iter() {
+			for (_state, last_match) in last_match.iter() {
 				for data in last_match.iter() {
 					for (capture, (starts, ends)) in data.captures.iter() {
 						for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
@@ -333,7 +334,7 @@ impl Nfa {
 				let middle: NfaIdx = self.new_state("bounded middle");
 
 				let mut tags: BTreeSet<Tag> = BTreeSet::new();
-				for i in 0..*min {
+				for _ in 0..*min {
 					let sub_target: NfaIdx = self.new_state("bounded sub 1/2 target");
 					tags.append(&mut self.build(rule, item, current, sub_target));
 					current = sub_target;
@@ -419,7 +420,7 @@ impl Nfa {
 		let mut tags: BTreeSet<Tag> = BTreeSet::new();
 		let mut intermediate_states: Vec<(NfaIdx, BTreeSet<Tag>)> = Vec::new();
 
-		for (i, sub_item) in items.iter().enumerate() {
+		for sub_item in items.iter() {
 			let sub_start: NfaIdx = self.new_state("alternate sub start");
 			let sub_target: NfaIdx = self.new_state("alternate sub target");
 
@@ -505,13 +506,6 @@ impl NfaState {
 		spontaneous: Vec::new(),
 	};
 
-	const END: Self = Self {
-		idx: NfaIdx::END,
-		name: Cow::Borrowed("end"),
-		transitions: IntervalTree::new(),
-		spontaneous: Vec::new(),
-	};
-
 	pub fn transitions(&self) -> &IntervalTree<u32, BTreeSet<NfaIdx>> {
 		&self.transitions
 	}
@@ -555,7 +549,6 @@ impl NfaState {
 /// and for practical purposes we simply wouldn't reach that length of computation.
 impl NfaIdx {
 	const BEGIN: Self = Self(0);
-	const END: Self = Self::end(0);
 
 	const fn end(n: usize) -> Self {
 		Self(usize::MAX - n)

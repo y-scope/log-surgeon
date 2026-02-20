@@ -102,7 +102,6 @@ struct PrefixTreeNode {
 
 #[derive(Debug)]
 struct SimulationData {
-	bytes_consumed: usize,
 	dfa_state: usize,
 	rule: usize,
 	registers: Vec<Option<NonZero<usize>>>,
@@ -165,7 +164,6 @@ impl Dfa {
 				current_state = transition.destination;
 				if let Some(rule) = self.states[current_state].final_rule {
 					maybe_backup = Some(SimulationData {
-						bytes_consumed: consumed,
 						dfa_state: current_state,
 						rule,
 						registers: registers.clone(),
@@ -176,10 +174,10 @@ impl Dfa {
 			}
 		}
 
-		let data: SimulationData = maybe_backup?;
+		let mut data: SimulationData = maybe_backup?;
 
 		self.apply_operations(
-			&mut registers,
+			&mut data.registers,
 			&mut prefix_tree,
 			consumed,
 			&self.states[data.dfa_state].final_operations,
@@ -195,7 +193,7 @@ impl Dfa {
 				Tag::StartCapture(_) => starts,
 				Tag::StopCapture(_) => ends,
 			};
-			let mut maybe_node: Option<NonZero<usize>> = registers[self.tags.len() + i];
+			let mut maybe_node: Option<NonZero<usize>> = data.registers[self.tags.len() + i];
 			while let Some(node) = maybe_node {
 				offsets.push(prefix_tree[node].lexeme_position);
 				maybe_node = prefix_tree[node].maybe_predecessor;
@@ -641,7 +639,7 @@ impl Dfa {
 				let action: RegisterAction = self.operation_rhs(&config.register_for_tag, history, tag);
 				let target: usize = *register_action_tag
 					.entry((tag.clone(), action.clone()))
-					.or_insert_with_key(|(_, action)| {
+					.or_insert_with_key(|(_, _)| {
 						let r: usize = self.number_of_registers;
 						self.number_of_registers += 1;
 						r

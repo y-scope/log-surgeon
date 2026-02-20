@@ -130,60 +130,8 @@ mod test {
 		schema.add_rule("hello", Regex::from_pattern("hello world").unwrap());
 		schema.add_rule("bye", Regex::from_pattern("goodbye").unwrap());
 
-		let mut lexer: Lexer = Lexer::new(schema);
-		let input: &str = "hello world goodbye hello world  goodbye  ";
-		let mut pos: usize = 0;
-
-		/*
-		// TODO use assert_matches once stabilized
-		assert_eq!(
-			lexer.next_token(input, &mut pos),
-			Ok(Variable {
-				rule: 1,
-				name: "hello",
-				lexeme: "hello world",
-				fragments: Vec::new(),
-			})
-		);
-
-		assert_eq!(lexer.next_token(input, &mut pos), Err(Some(" ")));
-
-		assert_eq!(
-			lexer.next_token(input, &mut pos),
-			Ok(Variable {
-				rule: 2,
-				name: "bye",
-				lexeme: "goodbye",
-				fragments: Vec::new(),
-			})
-		);
-
-		assert_eq!(lexer.next_token(input, &mut pos), Err(Some(" ")));
-
-		assert_eq!(
-			lexer.next_token(input, &mut pos),
-			Ok(Variable {
-				rule: 1,
-				name: "hello",
-				lexeme: "hello world",
-				fragments: Vec::new(),
-			})
-		);
-
-		assert_eq!(lexer.next_token(input, &mut pos), Err(Some("  ")));
-
-		assert_eq!(
-			lexer.next_token(input, &mut pos),
-			Ok(Variable {
-				rule: 2,
-				name: "bye",
-				lexeme: "goodbye",
-				fragments: Vec::new(),
-			})
-		);
-
-		assert_eq!(lexer.next_token(input, &mut pos), Err(Some("  ")));
-		assert_eq!(lexer.next_token(input, &mut pos), Err(None));
-		*/
+		let _lexer: Lexer = Lexer::new(schema);
+		let _input: &str = "hello world goodbye hello world  goodbye  ";
+		let _pos: usize = 0;
 	}
 }

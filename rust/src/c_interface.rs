@@ -3,7 +3,6 @@ use std::marker::PhantomData;
 use std::num::NonZero;
 use std::str::Utf8Error;
 
-use crate::lexer::Token;
 use crate::parser::LogEvent;
 use crate::parser::Parser;
 use crate::regex::Regex;
