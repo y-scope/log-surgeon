@@ -3,20 +3,6 @@
 from logmech import ReaderParser
 
 a = ReaderParser()
-
-a.add_variable_pattern("number", r"[0-9]+")
-a.add_variable_pattern("username", r"@(?<inside>[a-z]+)(?<parts>\.[a-z]+)*")
-
-a.compile()
-
-text = """
-123 awesrgesrgesrg 6346346 @someone foo@username @someone.foo.bar.baz
-foo
-bar
-baz
-"""
-
-a = ReaderParser()
 a.add_variable_pattern("hello", "abc|d(?<foo>[a-z])f")
 text = "def foobarbaz"
 

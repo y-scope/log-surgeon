@@ -188,15 +188,6 @@ where
 	}
 }
 
-// TODO this ends up being public..
-impl<T: Number, V: Clone> std::ops::Index<usize> for IntervalTree<T, V> {
-	type Output = (Interval<T>, V);
-
-	fn index(&self, i: usize) -> &Self::Output {
-		&self.intervals[i]
-	}
-}
-
 impl<T: Number> Interval<T> {
 	pub fn new(start: T, end: T) -> Self {
 		assert!(start <= end);
@@ -309,14 +300,14 @@ mod test {
 			tree.insert(Interval::new(5, 15), 2, merge);
 			tree.insert(Interval::new(15, 15), 3, merge);
 			assert_eq!(tree.len(), 4);
-			assert_eq!(tree[0].0, Interval::new(0, 4));
-			assert_eq!(tree[0].1, 1);
-			assert_eq!(tree[1].0, Interval::new(5, 10));
-			assert_eq!(tree[1].1, 3);
-			assert_eq!(tree[2].0, Interval::new(11, 14));
-			assert_eq!(tree[2].1, 2);
-			assert_eq!(tree[3].0, Interval::new(15, 15));
-			assert_eq!(tree[3].1, 5);
+			assert_eq!(tree.intervals[0].0, Interval::new(0, 4));
+			assert_eq!(tree.intervals[0].1, 1);
+			assert_eq!(tree.intervals[1].0, Interval::new(5, 10));
+			assert_eq!(tree.intervals[1].1, 3);
+			assert_eq!(tree.intervals[2].0, Interval::new(11, 14));
+			assert_eq!(tree.intervals[2].1, 2);
+			assert_eq!(tree.intervals[3].0, Interval::new(15, 15));
+			assert_eq!(tree.intervals[3].1, 5);
 			assert_eq!(tree.lookup(3), Some(&1));
 			assert_eq!(tree.lookup(4), Some(&1));
 			assert_eq!(tree.lookup(5), Some(&3));
@@ -335,14 +326,14 @@ mod test {
 			tree.insert(Interval::new(120, 120), 1, merge);
 			tree.insert(Interval::new(117, u32::MAX), 1, merge);
 			assert_eq!(tree.len(), 4);
-			assert_eq!(tree[0].0, Interval::new(117, 118));
-			assert_eq!(tree[0].1, 1);
-			assert_eq!(tree[1].0, Interval::new(119, 119));
-			assert_eq!(tree[1].1, 2);
-			assert_eq!(tree[2].0, Interval::new(120, 120));
-			assert_eq!(tree[2].1, 2);
-			assert_eq!(tree[3].0, Interval::new(121, u32::MAX));
-			assert_eq!(tree[3].1, 1);
+			assert_eq!(tree.intervals[0].0, Interval::new(117, 118));
+			assert_eq!(tree.intervals[0].1, 1);
+			assert_eq!(tree.intervals[1].0, Interval::new(119, 119));
+			assert_eq!(tree.intervals[1].1, 2);
+			assert_eq!(tree.intervals[2].0, Interval::new(120, 120));
+			assert_eq!(tree.intervals[2].1, 2);
+			assert_eq!(tree.intervals[3].0, Interval::new(121, u32::MAX));
+			assert_eq!(tree.intervals[3].1, 1);
 		}
 	}
 

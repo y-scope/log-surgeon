@@ -13,6 +13,7 @@ cargo-test:
 
 test: cargo-test examples
 	./examples/cpp_usage/usage.o
+	source .env/bin/activate && maturin develop && python3 -m unittest discover tests/python
 
 include/log_mechanic.generated.hpp: FORCE
 	cbindgen --config cbindgen.toml --crate log-mechanic > $@

@@ -21,4 +21,5 @@ source .env/bin/activate
 pip install maturin
 maturin develop
 ./examples/python/usage.py
+python3 -m unittest discover tests/python
 ```
