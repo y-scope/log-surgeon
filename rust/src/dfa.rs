@@ -25,16 +25,6 @@ pub struct Dfa {
 }
 
 #[derive(Debug)]
-pub enum DfaResult<'input> {
-	MatchedRule {
-		rule: usize,
-		lexeme: &'input str,
-	},
-	/// Bytes consumed before failing to match a rule.
-	StoppedAfter(usize),
-}
-
-#[derive(Debug)]
 pub struct MatchedRule<'input> {
 	pub rule: usize,
 	pub lexeme: &'input str,
@@ -124,10 +114,14 @@ impl Dfa {
 			let capture: &AutomataCapture = self.capture_info(capture);
 			debug!("- captured {capture:?}, {lexeme}");
 		})
-		.is_ok()
+		.is_some()
 	}
 
-	pub fn simulate_with_captures<'input, F>(&self, input: &'input str, mut on_capture: F) -> DfaResult<'input>
+	pub fn simulate_with_captures<'input, F>(
+		&self,
+		input: &'input str,
+		mut on_capture: F,
+	) -> Option<MatchedRule<'input>>
 	where
 		F: FnMut(usize, &'input str, usize, usize),
 	{
@@ -182,9 +176,7 @@ impl Dfa {
 			}
 		}
 
-		let Some(data): Option<SimulationData> = maybe_backup else {
-			return DfaResult::StoppedAfter(consumed);
-		};
+		let data: SimulationData = maybe_backup?;
 
 		self.apply_operations(
 			&mut registers,
@@ -221,10 +213,10 @@ impl Dfa {
 			}
 		}
 
-		DfaResult::MatchedRule {
+		Some(MatchedRule {
 			rule: data.rule,
 			lexeme: &input[..consumed],
-		}
+		})
 	}
 
 	fn apply_operations(
@@ -722,12 +714,6 @@ impl std::ops::Index<&Tag> for Dfa {
 impl std::ops::IndexMut<&Tag> for Dfa {
 	fn index_mut(&mut self, tag: &Tag) -> &mut Self::Output {
 		&mut self.tag_ids.get_mut(tag).unwrap().0
-	}
-}
-
-impl DfaResult<'_> {
-	pub fn is_ok(&self) -> bool {
-		matches!(self, Self::MatchedRule { .. })
 	}
 }
 

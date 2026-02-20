@@ -1,4 +1,4 @@
-.PHONY: default FORCE examples
+.PHONY: default FORCE examples cargo-test test
 
 default:
 
@@ -7,6 +7,12 @@ FORCE:
 
 examples: target/debug/liblog_mechanic.a
 	$(MAKE) --directory $@
+
+cargo-test:
+	cargo test
+
+test: cargo-test examples
+	./examples/cpp_usage/usage.o
 
 include/log_mechanic.generated.hpp: FORCE
 	cbindgen --config cbindgen.toml --crate log-mechanic > $@

@@ -21,7 +21,7 @@ fn main() {
 			let var: &str = &dfa.capture_info(t).capture_info.name;
 			println!("got {var:?}: {lexeme:?}");
 		})
-		.is_ok();
+		.is_some();
 	println!("matched: {b}");
 }
 
@@ -35,7 +35,7 @@ fn main3() {
 			let var: &str = &dfa.capture_info(t).capture_info.name;
 			println!("got {var:?}: {lexeme:?}");
 		})
-		.is_ok();
+		.is_some();
 	println!("matched: {b}");
 }
 
