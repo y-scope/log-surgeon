@@ -15,7 +15,7 @@ fn main() {
 	let r: Regex = Regex::from_pattern("(?<bar>b*)|(?<foo>b)*").unwrap();
 	let mut schema: Schema = Schema::new();
 	schema.add_rule("hello", r);
-	let dfa: Dfa = schema.build_dfa();
+	let dfa: Tdfa = schema.build_dfa();
 	let b: bool = dfa
 		.simulate_with_captures("bbbbbb", |t, lexeme, _, _| {
 			let var: &str = &dfa.capture_info(t).capture_info.name;
@@ -29,7 +29,7 @@ fn main3() {
 	let r: Regex = Regex::from_pattern("((?<foo>xyz)|(?<bar>xya))+").unwrap();
 	let mut schema: Schema = Schema::new();
 	schema.add_rule("hello", r);
-	let dfa: Dfa = schema.build_dfa();
+	let dfa: Tdfa = schema.build_dfa();
 	let b: bool = dfa
 		.simulate_with_captures("xyaxyzxya", |t, lexeme, _, _| {
 			let var: &str = &dfa.capture_info(t).capture_info.name;
@@ -59,14 +59,14 @@ fn main2() {
 		dbg!(&r);
 		let mut schema: Schema = Schema::new();
 		schema.add_rule("hello", r);
-		let nfa: Nfa = Nfa::for_rules(schema.rules());
+		let nfa: Tnfa = Tnfa::for_rules(schema.rules());
 		println!("nfa is {nfa:#?}");
 		// let b: bool = nfa.simulate("aabba").is_some();
 		// assert!(b);
 		// return;
 		// let b: bool = nfa.simulate("012a2b2cworld").is_some();
 		// assert!(b);
-		let dfa: Dfa = schema.build_dfa();
+		let dfa: Tdfa = schema.build_dfa();
 		dbg!(&dfa);
 		// let b: bool = dfa.simulate("aaaaa");
 		// println!("matched: {b}");

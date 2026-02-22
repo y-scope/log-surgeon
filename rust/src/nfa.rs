@@ -9,7 +9,7 @@ use crate::regex::RegexCapture;
 use crate::schema::Rule;
 
 #[derive(Debug)]
-pub struct Nfa {
+pub struct Tnfa {
 	states: Vec<NfaState>,
 	tags: Vec<Tag>,
 }
@@ -27,6 +27,38 @@ pub struct NfaState {
 	name: Cow<'static, str>,
 }
 
+/// Morally, `NfaIdx` is
+///
+/// ```rust
+/// enum NfaIdx {
+/// 	ValidState { index: usize },
+/// 	EndState { rule: usize },
+/// }
+/// ```
+///
+/// where `NfaIdx::ValidState` is an `Nfa` state index
+/// and `NfaIdx::EndState` is a Schema rule index indicating that this rule has been matched.
+///
+/// However, such a type would be larger than a `usize` (realistically, it would be `2 * size_of::<usize>`).
+/// Unfortunately, Rust doesn't have a way to define custom bit-width integer types,
+/// **and** Rust's integer casting options are absolutely god awful,
+/// because apparently getting rid of subtle integer overflow/promotion/truncating/etc. bugs is _too much_ safety,
+/// so we're left with this archaic hack.
+///
+/// `NfaIdx` wraps a `usize`:
+/// positive values correspond to valid state indices,
+/// negative values correspond to schema rule indices.
+///
+/// Note that "overflow" is **not possible**, in the sense that:
+///
+/// 1. Rust's only real implementation is rustc,
+/// 2. rustc is built on LLVM,
+/// 3. LLVM fundamentally assumes that pointer subtraction returns a value in the C `ptrdiff_t` type,
+/// 4. so objects/arrays are at most half the address space,
+/// 5. and an array/vector of length `(isize::MAX as usize) + 1` would violate this.
+///
+/// Of course, `usize::MAX / 2` states is also massive
+/// and for practical purposes we simply wouldn't reach that length of computation.
 #[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub struct NfaIdx(usize);
 
@@ -67,7 +99,7 @@ struct NfaSimulationData {
 	captures: BTreeMap<AutomataCapture, (Vec<usize>, Vec<usize>)>,
 }
 
-impl Nfa {
+impl Tnfa {
 	pub fn new() -> Self {
 		Self {
 			states: vec![NfaState::BEGIN],
@@ -474,7 +506,7 @@ impl Nfa {
 	}
 }
 
-impl Nfa {
+impl Tnfa {
 	pub fn tags(&self) -> &[Tag] {
 		&self.tags
 	}
@@ -484,7 +516,7 @@ impl Nfa {
 	}
 }
 
-impl std::ops::Index<NfaIdx> for Nfa {
+impl std::ops::Index<NfaIdx> for Tnfa {
 	type Output = NfaState;
 
 	fn index(&self, i: NfaIdx) -> &Self::Output {
@@ -492,7 +524,7 @@ impl std::ops::Index<NfaIdx> for Nfa {
 	}
 }
 
-impl std::ops::IndexMut<NfaIdx> for Nfa {
+impl std::ops::IndexMut<NfaIdx> for Tnfa {
 	fn index_mut(&mut self, i: NfaIdx) -> &mut Self::Output {
 		&mut self.states[i.0]
 	}
@@ -515,38 +547,6 @@ impl NfaState {
 	}
 }
 
-/// Morally, `NfaIdx` is
-///
-/// ```rust
-/// enum NfaIdx {
-/// 	ValidState { index: usize },
-/// 	EndState { rule: usize },
-/// }
-/// ```
-///
-/// where `NfaIdx::ValidState` is an `Nfa` state index
-/// and `NfaIdx::EndState` is a Schema rule index indicating that this rule has been matched.
-///
-/// However, such a type would be larger than a `usize` (realistically, it would be `2 * size_of::<usize>`).
-/// Unfortunately, Rust doesn't have a way to define custom bit-width integer types,
-/// **and** Rust's integer casting options are absolutely god awful,
-/// because apparently getting rid of subtle integer overflow/promotion/truncating/etc. bugs is _too much_ safety,
-/// so we're left with this archaic hack.
-///
-/// `NfaIdx` wraps a `usize`:
-/// positive values correspond to valid state indices,
-/// negative values correspond to schema rule indices.
-///
-/// Note that "overflow" is **not possible**, in the sense that:
-///
-/// 1. Rust's only real implementation is rustc,
-/// 2. rustc is built on LLVM,
-/// 3. LLVM fundamentally assumes that pointer subtraction returns a value in the C `ptrdiff_t` type,
-/// 4. so objects/arrays are at most half the address space,
-/// 5. and an array/vector of length `(isize::MAX as usize) + 1` would violate this.
-///
-/// Of course, `usize::MAX / 2` states is also massive
-/// and for practical purposes we simply wouldn't reach that length of computation.
 impl NfaIdx {
 	const BEGIN: Self = Self(0);
 
@@ -585,7 +585,7 @@ mod test {
 		let r: Regex = Regex::from_pattern("0((?<foobar>1(2[a-zA-Z])*)|(?<baz>xyz))world").unwrap();
 		let mut schema: Schema = Schema::new();
 		schema.add_rule("hello", r);
-		let nfa: Nfa = Nfa::for_rules(schema.rules());
+		let nfa: Tnfa = Tnfa::for_rules(schema.rules());
 		let b: bool = nfa.simulate("012a2b2cworld").is_some();
 		assert!(b);
 		let b: bool = nfa.simulate("0xyzworld").is_some();

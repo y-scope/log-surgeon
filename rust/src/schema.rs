@@ -1,5 +1,5 @@
-use crate::dfa::Dfa;
-use crate::nfa::Nfa;
+use crate::dfa::Tdfa;
+use crate::nfa::Tnfa;
 use crate::regex::IntoRegex;
 use crate::regex::Regex;
 
@@ -61,9 +61,9 @@ impl Schema {
 }
 
 impl Schema {
-	pub fn build_dfa(&self) -> Dfa {
-		let nfa: Nfa = Nfa::for_rules(&self.rules);
-		let dfa: Dfa = Dfa::determinization(&nfa);
+	pub fn build_dfa(&self) -> Tdfa {
+		let nfa: Tnfa = Tnfa::for_rules(&self.rules);
+		let dfa: Tdfa = Tdfa::determinization(&nfa);
 		dfa
 	}
 }

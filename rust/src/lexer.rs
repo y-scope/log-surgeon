@@ -1,12 +1,12 @@
-use crate::dfa::Dfa;
 use crate::dfa::MatchedRule;
+use crate::dfa::Tdfa;
 use crate::nfa::AutomataCapture;
 use crate::schema::Schema;
 
 #[derive(Debug, Clone)]
 pub struct Lexer {
 	schema: Schema,
-	dfa: Dfa,
+	dfa: Tdfa,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -22,7 +22,7 @@ pub enum Token<'schema, 'input> {
 
 impl Lexer {
 	pub fn new(schema: Schema) -> Self {
-		let dfa: Dfa = schema.build_dfa();
+		let dfa: Tdfa = schema.build_dfa();
 		Self { schema, dfa }
 	}
 
