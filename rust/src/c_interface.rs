@@ -21,6 +21,7 @@ pub struct CArray<'lifetime, T> {
 pub type CCharArray<'lifetime> = CArray<'lifetime, c_char>;
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct CVariable<'event> {
 	pub rule: usize,
 	pub name: CCharArray<'event>,
@@ -28,6 +29,7 @@ pub struct CVariable<'event> {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct CCapture<'parser> {
 	pub name: CCharArray<'parser>,
 	pub lexeme: CCharArray<'parser>,

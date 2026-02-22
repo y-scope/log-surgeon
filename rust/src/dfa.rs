@@ -37,6 +37,8 @@ struct DfaState {
 	final_rule: Option<usize>,
 	final_operations: Vec<RegisterOp>,
 	tag_for_register: BTreeMap<usize, Tag>,
+	registers_clobbered: BTreeSet<usize>,
+	ascii_cache: [Transition; 0x80],
 }
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
@@ -51,6 +53,7 @@ struct Configuration {
 
 #[derive(Debug, Clone)]
 struct Transition {
+	/// `usize::MAX` for invalid.
 	destination: usize,
 	operations: Vec<RegisterOp>,
 }
@@ -104,7 +107,6 @@ struct PrefixTreeNode {
 struct SimulationData {
 	dfa_state: usize,
 	rule: usize,
-	registers: Vec<Option<NonZero<usize>>>,
 }
 
 impl Dfa {
@@ -146,7 +148,7 @@ impl Dfa {
 				}
 			}
 			*/
-			if let Some(transition) = self.states[current_state].transitions.lookup(u32::from(ch)) {
+			if let Some(transition) = self.lookup_transition(current_state, ch) {
 				// TODO check/explain:
 				// tags are executed on outgoing transitions, so they get the "previous" char boundary
 				// the total lexeme includes the "currently consumed" char
@@ -166,7 +168,6 @@ impl Dfa {
 					maybe_backup = Some(SimulationData {
 						dfa_state: current_state,
 						rule,
-						registers: registers.clone(),
 					});
 				}
 			} else {
@@ -174,10 +175,10 @@ impl Dfa {
 			}
 		}
 
-		let mut data: SimulationData = maybe_backup?;
+		let data: SimulationData = maybe_backup?;
 
 		self.apply_operations(
-			&mut data.registers,
+			&mut registers,
 			&mut prefix_tree,
 			consumed,
 			&self.states[data.dfa_state].final_operations,
@@ -193,7 +194,7 @@ impl Dfa {
 				Tag::StartCapture(_) => starts,
 				Tag::StopCapture(_) => ends,
 			};
-			let mut maybe_node: Option<NonZero<usize>> = data.registers[self.tags.len() + i];
+			let mut maybe_node: Option<NonZero<usize>> = registers[self.tags.len() + i];
 			while let Some(node) = maybe_node {
 				offsets.push(prefix_tree[node].lexeme_position);
 				maybe_node = prefix_tree[node].maybe_predecessor;
@@ -215,6 +216,21 @@ impl Dfa {
 			rule: data.rule,
 			lexeme: &input[..consumed],
 		})
+	}
+
+	fn lookup_transition(&self, current_state: usize, ch: char) -> Option<&Transition> {
+		let ch: u32 = u32::from(ch);
+		let current_state: &DfaState = &self.states[current_state];
+		if ch < 0x80 {
+			let transition: &Transition = &current_state.ascii_cache[ch as usize];
+			if transition.destination != usize::MAX {
+				Some(transition)
+			} else {
+				None
+			}
+		} else {
+			current_state.transitions.lookup(ch)
+		}
 	}
 
 	fn apply_operations(
@@ -330,9 +346,16 @@ impl Dfa {
 					},
 				);
 			}
+			for ch in 0u8..0x80u8 {
+				if let Some(transition) = dfa.states[i].transitions.lookup(u32::from(ch)) {
+					dfa.states[i].ascii_cache[usize::from(ch)] = transition.clone();
+				}
+			}
 
 			i += 1;
 		}
+
+		dfa.fallback_regops();
 
 		dfa
 	}
@@ -383,6 +406,11 @@ impl Dfa {
 			final_rule,
 			final_operations,
 			tag_for_register,
+			registers_clobbered: BTreeSet::new(),
+			ascii_cache: std::array::from_fn(|_| Transition {
+				destination: usize::MAX,
+				operations: Vec::new(),
+			}),
 		});
 		self.kernels.insert(kernel, idx);
 		idx
@@ -700,6 +728,68 @@ impl Dfa {
 	}
 }
 
+impl Dfa {
+	fn fallback_regops(&mut self) {
+		for i in 0..self.states.len() {
+			self.states[i].registers_clobbered = self.clobbered_registers(i);
+		}
+		for i in 0..self.states.len() {
+			let mut backup_ops: Vec<RegisterOp> = Vec::new();
+			let mut transitions: IntervalTree<u32, Transition> = self.states[i].transitions.clone();
+			for (_, transition) in transitions.iter_mut() {
+				if self.states[transition.destination].final_rule.is_some() {
+					continue;
+				}
+				for final_op in self.states[i].final_operations.iter() {
+					if self.states[transition.destination]
+						.registers_clobbered
+						.contains(&final_op.action.source())
+					{
+						transition.operations.push(RegisterOp {
+							target: final_op.target,
+							action: RegisterAction::CopyFrom {
+								source: final_op.action.source(),
+							},
+						});
+						if let RegisterAction::Append { source, history } = &final_op.action {
+							backup_ops.push(RegisterOp {
+								target: final_op.target,
+								action: RegisterAction::Append {
+									source: *source,
+									history: history.clone(),
+								},
+							});
+						}
+					}
+				}
+			}
+			self.states[i].transitions = transitions;
+			std::mem::swap(&mut self.states[i].final_operations, &mut backup_ops);
+			self.states[i].final_operations.extend_from_slice(&backup_ops);
+		}
+	}
+
+	fn clobbered_registers(&self, state: usize) -> BTreeSet<usize> {
+		let mut clobbered: BTreeSet<usize> = BTreeSet::new();
+		let mut visited: BTreeSet<usize> = BTreeSet::new();
+		let mut stack: Vec<usize> = vec![state];
+		while let Some(state) = stack.pop() {
+			for (_, transition) in self.states[state].transitions.iter() {
+				for op in transition.operations.iter() {
+					if self.states[transition.destination].final_rule.is_some() {
+						continue;
+					}
+					clobbered.insert(op.target);
+					if visited.insert(transition.destination) {
+						stack.push(transition.destination);
+					}
+				}
+			}
+		}
+		clobbered
+	}
+}
+
 // TODO I don't think we want this to show up in the public interface?
 impl std::ops::Index<&Tag> for Dfa {
 	type Output = usize;
@@ -731,6 +821,15 @@ impl Kernel {
 		}
 
 		transitions.iter().map(|(interval, _)| interval).collect::<Vec<_>>()
+	}
+}
+
+impl RegisterAction {
+	fn source(&self) -> usize {
+		match self {
+			&Self::CopyFrom { source } => source,
+			Self::Append { source, .. } => *source,
+		}
 	}
 }
 

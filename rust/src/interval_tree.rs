@@ -147,6 +147,10 @@ where
 	pub fn iter(&self) -> impl Iterator<Item = (Interval<T>, &V)> {
 		self.intervals.iter().map(|(interval, value)| (*interval, value))
 	}
+
+	pub fn iter_mut(&mut self) -> impl Iterator<Item = (Interval<T>, &mut V)> {
+		self.intervals.iter_mut().map(|(interval, value)| (*interval, value))
+	}
 }
 
 impl<T: Number, V: Clone> IntervalTree<T, V>

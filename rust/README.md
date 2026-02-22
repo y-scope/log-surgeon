@@ -19,7 +19,7 @@ cargo run --bin playground
 python3 -m venv .env
 source .env/bin/activate
 pip install maturin
-maturin develop
+maturin develop --release
 ./examples/python/usage.py
 python3 -m unittest discover tests/python
 ```
