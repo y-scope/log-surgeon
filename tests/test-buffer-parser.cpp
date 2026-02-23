@@ -1537,17 +1537,43 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
     );
 }
 
-TEST_CASE("backtracking_at_newline_1", "[ReaderParser]") {
+/**
+ * @ingroup test_buffer_parser_newline_vars
+ * @brief Tests a schema with variables containing delimiters.
+ *
+ * This test verifies that a buffer_parser will correctly backtrack to the first delimiter upon
+ * hitting a newline, and will not backtrack if the delimiter is the newline itself.
+ *
+ * ### Schema Definition
+ * @code
+ * delimiters:=\n,
+ * kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*
+ * int:1234
+ * @endcode
+ *
+ * ### Input Example
+ * @code
+ * "key=123\n"
+ *
+ * @endcode
+ *
+ * ### Expected Logtype
+ * @code
+ * "key=123<newLine>"
+ * ""
+ * @endcode
+ */
+TEST_CASE("backtracking_at_newline_without_match", "[BufferParser]") {
   constexpr string_view cDelimitersSchema{R"(delimiters:=\n)"};
   constexpr string_view cUndesiredVar{R"(kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*)"};
-  constexpr string_view cDesiredVar{R"(int:\d+)"};
+  constexpr string_view cDesiredVar{R"(int:1234)"};
 
-  constexpr string_view cInput{"key=***\n"};
+  constexpr string_view cInput{"key=123\n"};
 
   ExpectedEvent const expected_event1{
-    .m_logtype{"key=***<newLine>"},
+    .m_logtype{"key=123<newLine>"},
     .m_timestamp_raw{""},
-    .m_tokens{{{"key", "", {}}, {"=***", "", {}}, {"\n", "newLine", {}}}}
+    .m_tokens{{{"key", "", {}}, {"=123", "", {}}, {"\n", "newLine", {}}}}
   };
 
   ExpectedEvent const expected_event2{.m_logtype{""}, .m_timestamp_raw{""}, .m_tokens{}};
@@ -1561,7 +1587,33 @@ TEST_CASE("backtracking_at_newline_1", "[ReaderParser]") {
   parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
 }
 
-TEST_CASE("backtracking_at_newline_2", "[ReaderParser]") {
+/**
+ * @ingroup test_buffer_parser_newline_vars
+ * @brief Tests a schema with variables containing delimiters.
+ *
+ * This test verifies that a buffer_parser will correctly backtrack to the first delimiter upon
+ * hitting a newline, and will not backtrack if there is a match.
+ *
+ * ### Schema Definition
+ * @code
+ * delimiters:=\n,
+ * kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*
+ * int:1234
+ * @endcode
+ *
+ * ### Input Example
+ * @code
+ * "key=123\n"
+ *
+ * @endcode
+ *
+ * ### Expected Logtype
+ * @code
+ * "key=123<newLine>"
+ * ""
+ * @endcode
+ */
+TEST_CASE("backtracking_at_newline_with_match", "[BufferParser]") {
   constexpr string_view cDelimitersSchema{R"(delimiters:=\n)"};
   constexpr string_view cUndesiredVar{R"(kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*)"};
   constexpr string_view cDesiredVar{R"(int:\d+)"};
