@@ -36,7 +36,7 @@ impl Lexer {
 
 		let start: usize = *pos;
 
-		if let Some(MatchedRule { rule, lexeme }) = self.dfa.simulate_with_captures(&input[*pos..], on_capture) {
+		if let Some(MatchedRule { rule, lexeme }) = self.dfa.execute_with_captures(&input[*pos..], on_capture) {
 			*pos += lexeme.len();
 			Token::Variable {
 				rule,

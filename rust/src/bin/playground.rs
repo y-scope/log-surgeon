@@ -17,7 +17,7 @@ fn main() {
 	schema.add_rule("hello", r);
 	let dfa: Tdfa = schema.build_dfa();
 	let b: bool = dfa
-		.simulate_with_captures("bbbbbb", |t, lexeme, _, _| {
+		.execute_with_captures("bbbbbb", |t, lexeme, _, _| {
 			let var: &str = &dfa.capture_info(t).capture_info.name;
 			println!("got {var:?}: {lexeme:?}");
 		})
@@ -31,7 +31,7 @@ fn main3() {
 	schema.add_rule("hello", r);
 	let dfa: Tdfa = schema.build_dfa();
 	let b: bool = dfa
-		.simulate_with_captures("xyaxyzxya", |t, lexeme, _, _| {
+		.execute_with_captures("xyaxyzxya", |t, lexeme, _, _| {
 			let var: &str = &dfa.capture_info(t).capture_info.name;
 			println!("got {var:?}: {lexeme:?}");
 		})
@@ -70,7 +70,7 @@ fn main2() {
 		dbg!(&dfa);
 		// let b: bool = dfa.simulate("aaaaa");
 		// println!("matched: {b}");
-		let b: bool = dfa.simulate("012a2b2c12z12zxyzxyzxyzworld");
+		let b: bool = dfa.execute("012a2b2c12z12zxyzxyzxyzworld");
 		// let b: bool = dfa.simulate("1a1ab1a");
 		println!("matched: {b}");
 		// let b: bool = dfa.simulate("0xyzworld");

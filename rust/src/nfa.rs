@@ -135,7 +135,7 @@ impl Tnfa {
 	/// Algorithm 1 from Angelo Borsotti and Ulya Trafimovich. 2022. A closer look at TDFA.
 	/// - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
 	/// - <https://arxiv.org/abs/2206.01398>
-	pub fn simulate(&self, input: &str) -> Option<usize> {
+	pub fn execute(&self, input: &str) -> Option<usize> {
 		let start: (NfaIdx, Vec<NfaSimulationData>) = (
 			NfaIdx(0),
 			vec![NfaSimulationData {
@@ -586,9 +586,9 @@ mod test {
 		let mut schema: Schema = Schema::new();
 		schema.add_rule("hello", r);
 		let nfa: Tnfa = Tnfa::for_rules(schema.rules());
-		let b: bool = nfa.simulate("012a2b2cworld").is_some();
+		let b: bool = nfa.execute("012a2b2cworld").is_some();
 		assert!(b);
-		let b: bool = nfa.simulate("0xyzworld").is_some();
+		let b: bool = nfa.execute("0xyzworld").is_some();
 		assert!(b);
 	}
 }

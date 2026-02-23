@@ -84,10 +84,9 @@ struct Configuration {
 	nfa_state: NfaIdx,
 	/// A mapping "tag (by ID/index) -> register"; answers "which register holds this tag?".
 	register_for_tag: Vec<usize>,
-	/// Tags accumulated (along some prioritized path) during [`Tdfa::epsilon_closure`];
-	/// these are tags that need to be "applied" on an actual symbol transition.
+	/// Sequence of tags accumulated to reach this state during [`Dfa::epsilon_closure`]
+	/// (corresponding to the execution of positive/negative tags during NFA simulation).
 	tag_path_in_closure: Vec<(Tag, SymbolicPosition)>,
-	inherited_tags: Vec<(Tag, SymbolicPosition)>,
 }
 
 #[derive(Debug, Clone)]
@@ -146,26 +145,22 @@ struct PrefixTreeNode {
 }
 
 #[derive(Debug)]
-struct SimulationData {
+struct ExecutionData {
 	dfa_state: usize,
 	rule: usize,
 	consumed: usize,
 }
 
 impl Tdfa {
-	pub fn simulate(&self, input: &str) -> bool {
-		self.simulate_with_captures(input, |capture, lexeme, _, _| {
+	pub fn execute(&self, input: &str) -> bool {
+		self.execute_with_captures(input, |capture, lexeme, _, _| {
 			let capture: &AutomataCapture = self.capture_info(capture);
 			debug!("- captured {capture:?}, {lexeme}");
 		})
 		.is_some()
 	}
 
-	pub fn simulate_with_captures<'input, F>(
-		&self,
-		input: &'input str,
-		mut on_capture: F,
-	) -> Option<MatchedRule<'input>>
+	pub fn execute_with_captures<'input, F>(&self, input: &'input str, mut on_capture: F) -> Option<MatchedRule<'input>>
 	where
 		F: FnMut(usize, &'input str, usize, usize),
 	{
@@ -175,7 +170,7 @@ impl Tdfa {
 		let mut registers: Vec<Option<NonZero<usize>>> = vec![None; self.number_of_registers];
 		let mut prefix_tree: PrefixTree = PrefixTree::new();
 
-		let mut maybe_backup: Option<SimulationData> = None;
+		let mut maybe_backup: Option<ExecutionData> = None;
 
 		for (i, ch) in input.char_indices() {
 			if let Some(transition) = self.lookup_transition(current_state, ch) {
@@ -189,7 +184,7 @@ impl Tdfa {
 				);
 				current_state = transition.target;
 				if let Some(rule) = self.states[current_state].final_rule {
-					maybe_backup = Some(SimulationData {
+					maybe_backup = Some(ExecutionData {
 						dfa_state: current_state,
 						rule,
 						consumed: i + ch.len_utf8(),
@@ -200,7 +195,7 @@ impl Tdfa {
 			}
 		}
 
-		let data: SimulationData = maybe_backup?;
+		let data: ExecutionData = maybe_backup?;
 
 		self.apply_operations(
 			&mut registers,
@@ -310,14 +305,16 @@ impl Tdfa {
 			number_of_registers: 2 * nfa.tags().len(),
 		};
 
-		let initial: Configuration = Configuration {
-			nfa_state: nfa.begin(),
-			register_for_tag: (0..dfa.tag_ids.len()).collect::<Vec<_>>(),
-			tag_path_in_closure: Vec::new(),
-			inherited_tags: Vec::new(),
-		};
+		let initial: (Configuration, Vec<(Tag, SymbolicPosition)>) = (
+			Configuration {
+				nfa_state: nfa.begin(),
+				register_for_tag: (0..dfa.tag_ids.len()).collect::<Vec<_>>(),
+				tag_path_in_closure: Vec::new(),
+			},
+			Vec::new(),
+		);
 
-		let initial: Kernel = Self::epsilon_closure(nfa, Kernel(vec![initial]));
+		let initial: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Self::epsilon_closure(nfa, vec![initial]);
 
 		dfa.add_state(initial, &mut Vec::new());
 
@@ -332,11 +329,14 @@ impl Tdfa {
 
 			let mut register_action_tag: BTreeMap<(Tag, RegisterAction), usize> = BTreeMap::new();
 			for &interval in kernel.nontrivial_transitions(nfa).iter() {
-				let next: Kernel = Self::step_on_interval(nfa, kernel.clone(), interval);
-				let mut next: Kernel = Self::epsilon_closure(nfa, next);
+				let next: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> =
+					Self::step_on_interval(nfa, kernel.0.clone(), interval);
+				let next: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Self::epsilon_closure(nfa, next);
 
-				let mut operations: Vec<RegisterOperation> =
-					dfa.transition_operations(&mut next, &mut register_action_tag);
+				let (next, mut operations): (
+					Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
+					Vec<RegisterOperation>,
+				) = dfa.transition_operations(next, &mut register_action_tag);
 
 				let next: usize = dfa.add_state(next, &mut operations);
 				dfa.states[i].transitions.insert(
@@ -375,19 +375,27 @@ impl Tdfa {
 		dfa
 	}
 
-	fn add_state(&mut self, kernel: Kernel, ops: &mut Vec<RegisterOperation>) -> usize {
+	fn add_state(
+		&mut self,
+		configurations: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
+		ops: &mut Vec<RegisterOperation>,
+	) -> usize {
 		let mut final_rule: Option<usize> = None;
 		let mut final_operations: Vec<RegisterOperation> = Vec::new();
 		let mut tag_for_register: BTreeMap<usize, Tag> = BTreeMap::new();
-
-		for config in kernel.0.iter() {
-			if let Some(rule) = config.nfa_state.final_rule() {
-				if final_rule.is_none() {
-					final_rule = Some(rule);
+		let configurations: Vec<Configuration> = configurations
+			.into_iter()
+			.map(|(config, _)| {
+				if let Some(rule) = config.nfa_state.final_rule() {
+					if final_rule.is_none() {
+						final_rule = Some(rule);
+					}
+					final_operations = self.final_operations(&config.register_for_tag, &config.tag_path_in_closure);
 				}
-				final_operations = self.final_operations(&config.register_for_tag, &config.tag_path_in_closure);
-			}
-		}
+				config
+			})
+			.collect::<Vec<_>>();
+		let kernel: Kernel = Kernel(configurations);
 
 		if let Some(&idx) = self.kernels.get(&kernel) {
 			return idx;
@@ -542,12 +550,16 @@ impl Tdfa {
 		(!nontrivial_cycle).then_some(new_ops)
 	}
 
-	fn step_on_interval(nfa: &Tnfa, mut kernel: Kernel, interval: Interval<u32>) -> Kernel {
-		let mut next_states: Kernel = Kernel(Vec::new());
+	fn step_on_interval(
+		nfa: &Tnfa,
+		mut configurations: Vec<Configuration>,
+		interval: Interval<u32>,
+	) -> Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> {
+		let mut next_states: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Vec::new();
 
-		kernel.0.sort_by_key(|config| config.nfa_state);
+		configurations.sort_by_key(|config| config.nfa_state);
 
-		for config in kernel.0.iter() {
+		for config in configurations.iter() {
 			if config.nfa_state.is_end() {
 				continue;
 			}
@@ -562,31 +574,38 @@ impl Tdfa {
 						.contains(&interval)
 				);
 				for &next in targets.iter() {
-					next_states.0.push(Configuration {
-						nfa_state: next,
-						register_for_tag: config.register_for_tag.clone(),
-						tag_path_in_closure: Vec::new(),
-						inherited_tags: config.tag_path_in_closure.clone(),
-					});
+					next_states.push((
+						Configuration {
+							nfa_state: next,
+							register_for_tag: config.register_for_tag.clone(),
+							tag_path_in_closure: Vec::new(),
+						},
+						config.tag_path_in_closure.clone(),
+					));
 				}
 			}
 		}
 
-		next_states.invariants();
+		Kernel::invariants(&next_states);
 		next_states
 	}
 
-	fn epsilon_closure(nfa: &Tnfa, kernel: Kernel) -> Kernel {
-		let mut closure: Kernel = Kernel(Vec::new());
+	fn epsilon_closure(
+		nfa: &Tnfa,
+		configurations: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
+	) -> Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> {
+		let mut closure: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Vec::new();
 
-		let mut nfa_states_on_stack: BTreeSet<NfaIdx> =
-			kernel.0.iter().map(|config| config.nfa_state).collect::<BTreeSet<_>>();
+		let mut nfa_states_on_stack: BTreeSet<NfaIdx> = configurations
+			.iter()
+			.map(|(config, _)| config.nfa_state)
+			.collect::<BTreeSet<_>>();
 
-		let mut stack: Vec<Configuration> = kernel.0.clone();
+		let mut stack: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = configurations.clone();
 		stack.reverse();
 
-		while let Some(config) = stack.pop() {
-			closure.0.push(config.clone());
+		while let Some((config, inherited)) = stack.pop() {
+			closure.push((config.clone(), inherited.clone()));
 
 			if config.nfa_state.is_end() {
 				continue;
@@ -617,25 +636,28 @@ impl Tdfa {
 				}
 
 				nfa_states_on_stack.insert(new_config.nfa_state);
-				stack.push(new_config);
+				stack.push((new_config, inherited.clone()));
 			}
 		}
 
-		closure.invariants();
+		Kernel::invariants(&closure);
 		closure
 	}
 
 	fn transition_operations(
 		&mut self,
-		kernel: &mut Kernel,
+		configurations: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
 		register_action_tag: &mut BTreeMap<(Tag, RegisterAction), usize>,
-	) -> Vec<RegisterOperation> {
-		// let mut new_configurations: Kernel = Kernel(Vec::new());
+	) -> (
+		Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
+		Vec<RegisterOperation>,
+	) {
+		let mut new_configurations: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Vec::new();
 		let mut ops: BTreeSet<RegisterOperation> = BTreeSet::new();
 
-		for config in kernel.0.iter_mut() {
+		for (mut config, inherited) in configurations.into_iter() {
 			for (tag_idx, tag) in self.tags.iter().enumerate() {
-				let history: Vec<SymbolicPosition> = Self::filter_history_for_tag(&config.inherited_tags, tag);
+				let history: Vec<SymbolicPosition> = Self::filter_history_for_tag(&inherited, tag);
 				if history.is_empty() {
 					continue;
 				}
@@ -653,9 +675,10 @@ impl Tdfa {
 				});
 				config.register_for_tag[tag_idx] = target;
 			}
+			new_configurations.push((config, inherited));
 		}
 
-		ops.into_iter().collect::<Vec<_>>()
+		(new_configurations, ops.into_iter().collect::<Vec<_>>())
 	}
 
 	fn final_operations(&self, registers: &[usize], history: &[(Tag, SymbolicPosition)]) -> Vec<RegisterOperation> {
@@ -759,12 +782,12 @@ impl Tdfa {
 
 impl Kernel {
 	/// There should be no duplicate NFA states; see comment above on [`Kernel`].
-	fn invariants(&self) {
+	fn invariants(configurations: &[(Configuration, Vec<(Tag, SymbolicPosition)>)]) {
 		assert_eq!(
-			self.0.len(),
-			self.0
+			configurations.len(),
+			configurations
 				.iter()
-				.map(|config| config.nfa_state)
+				.map(|(config, _)| config.nfa_state)
 				.collect::<BTreeSet<_>>()
 				.len()
 		);
@@ -854,7 +877,7 @@ mod test {
 			schema.add_rule("hello", r);
 			let dfa: Tdfa = schema.build_dfa();
 			dbg!(&dfa);
-			let b: bool = dfa.simulate("012a2b2c12z12zxyzxyzxyzworld");
+			let b: bool = dfa.execute("012a2b2c12z12zxyzxyzxyzworld");
 			assert!(b);
 		}
 	}
