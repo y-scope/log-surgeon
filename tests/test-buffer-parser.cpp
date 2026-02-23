@@ -1536,3 +1536,51 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
              expected_event9}
     );
 }
+
+TEST_CASE("backtracking_at_newline_1", "[ReaderParser]") {
+  constexpr string_view cDelimitersSchema{R"(delimiters:=\n)"};
+  constexpr string_view cUndesiredVar{R"(kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*)"};
+  constexpr string_view cDesiredVar{R"(int:\d+)"};
+
+  constexpr string_view cInput{"key=***\n"};
+
+  ExpectedEvent const expected_event1{
+    .m_logtype{"key=***<newLine>"},
+    .m_timestamp_raw{""},
+    .m_tokens{{{"key", "", {}}, {"=***", "", {}}, {"\n", "newLine", {}}}}
+  };
+
+  ExpectedEvent const expected_event2{.m_logtype{""}, .m_timestamp_raw{""}, .m_tokens{}};
+
+  Schema schema;
+  schema.add_delimiters(cDelimitersSchema);
+  schema.add_variable(cUndesiredVar, -1);
+  schema.add_variable(cDesiredVar, -1);
+  BufferParser buffer_parser(std::move(schema.release_schema_ast_ptr()));
+
+  parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
+}
+
+TEST_CASE("backtracking_at_newline_2", "[ReaderParser]") {
+  constexpr string_view cDelimitersSchema{R"(delimiters:=\n)"};
+  constexpr string_view cUndesiredVar{R"(kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*)"};
+  constexpr string_view cDesiredVar{R"(int:\d+)"};
+
+  constexpr string_view cInput{"key=123\n"};
+
+  ExpectedEvent const expected_event1{
+    .m_logtype{"key=<int><newLine>"},
+    .m_timestamp_raw{""},
+    .m_tokens{{{"key", "", {}}, {"=123", "int", {}}, {"\n", "newLine", {}}}}
+  };
+
+  ExpectedEvent const expected_event2{.m_logtype{""}, .m_timestamp_raw{""}, .m_tokens{}};
+
+  Schema schema;
+  schema.add_delimiters(cDelimitersSchema);
+  schema.add_variable(cUndesiredVar, -1);
+  schema.add_variable(cDesiredVar, -1);
+  BufferParser buffer_parser(std::move(schema.release_schema_ast_ptr()));
+
+  parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
+}
