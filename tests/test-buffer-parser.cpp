@@ -909,27 +909,27 @@ TEST_CASE("multi_line_with_delim_newline_var_sequence", "[BufferParser]") {
  * @endcode
  */
 TEST_CASE("backtracking_at_newline_without_match", "[BufferParser]") {
-  constexpr string_view cDelimitersSchema{R"(delimiters:=\n)"};
-  constexpr string_view cUndesiredVar{R"(kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*)"};
-  constexpr string_view cDesiredVar{R"(int:1234)"};
+    constexpr string_view cDelimitersSchema{R"(delimiters:=\n)"};
+    constexpr string_view cUndesiredVar{R"(kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*)"};
+    constexpr string_view cDesiredVar{R"(int:1234)"};
 
-  constexpr string_view cInput{"key=123\n"};
+    constexpr string_view cInput{"key=123\n"};
 
-  ExpectedEvent const expected_event1{
-    .m_logtype{"key=123<newLine>"},
-    .m_timestamp_raw{""},
-    .m_tokens{{{"key", "", {}}, {"=123", "", {}}, {"\n", "newLine", {}}}}
-  };
+    ExpectedEvent const expected_event1{
+            .m_logtype{"key=123<newLine>"},
+            .m_timestamp_raw{""},
+            .m_tokens{{{"key", "", {}}, {"=123", "", {}}, {"\n", "newLine", {}}}}
+    };
 
-  ExpectedEvent const expected_event2{.m_logtype{""}, .m_timestamp_raw{""}, .m_tokens{}};
+    ExpectedEvent const expected_event2{.m_logtype{""}, .m_timestamp_raw{""}, .m_tokens{}};
 
-  Schema schema;
-  schema.add_delimiters(cDelimitersSchema);
-  schema.add_variable(cUndesiredVar, -1);
-  schema.add_variable(cDesiredVar, -1);
-  BufferParser buffer_parser(std::move(schema.release_schema_ast_ptr()));
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cUndesiredVar, -1);
+    schema.add_variable(cDesiredVar, -1);
+    BufferParser buffer_parser(std::move(schema.release_schema_ast_ptr()));
 
-  parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
+    parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
 }
 
 /**
@@ -959,27 +959,27 @@ TEST_CASE("backtracking_at_newline_without_match", "[BufferParser]") {
  * @endcode
  */
 TEST_CASE("backtracking_at_newline_with_match", "[BufferParser]") {
-  constexpr string_view cDelimitersSchema{R"(delimiters:=\n)"};
-  constexpr string_view cUndesiredVar{R"(kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*)"};
-  constexpr string_view cDesiredVar{R"(int:\d+)"};
+    constexpr string_view cDelimitersSchema{R"(delimiters:=\n)"};
+    constexpr string_view cUndesiredVar{R"(kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*)"};
+    constexpr string_view cDesiredVar{R"(int:\d+)"};
 
-  constexpr string_view cInput{"key=123\n"};
+    constexpr string_view cInput{"key=123\n"};
 
-  ExpectedEvent const expected_event1{
-    .m_logtype{"key=<int><newLine>"},
-    .m_timestamp_raw{""},
-    .m_tokens{{{"key", "", {}}, {"=123", "int", {}}, {"\n", "newLine", {}}}}
-  };
+    ExpectedEvent const expected_event1{
+            .m_logtype{"key=<int><newLine>"},
+            .m_timestamp_raw{""},
+            .m_tokens{{{"key", "", {}}, {"=123", "int", {}}, {"\n", "newLine", {}}}}
+    };
 
-  ExpectedEvent const expected_event2{.m_logtype{""}, .m_timestamp_raw{""}, .m_tokens{}};
+    ExpectedEvent const expected_event2{.m_logtype{""}, .m_timestamp_raw{""}, .m_tokens{}};
 
-  Schema schema;
-  schema.add_delimiters(cDelimitersSchema);
-  schema.add_variable(cUndesiredVar, -1);
-  schema.add_variable(cDesiredVar, -1);
-  BufferParser buffer_parser(std::move(schema.release_schema_ast_ptr()));
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cUndesiredVar, -1);
+    schema.add_variable(cDesiredVar, -1);
+    BufferParser buffer_parser(std::move(schema.release_schema_ast_ptr()));
 
-  parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
+    parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
 }
 
 /**
