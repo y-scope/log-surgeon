@@ -102,8 +102,8 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
             m_line++;
             // The newline character itself needs to be treated as a match for non-timestamped logs.
             if ((false == m_first_delimiter_pos.has_value()
-                 || prev_byte_buf_pos == m_first_delimiter_pos.value()) && m_has_delimiters
-                && false == m_match
+                 || prev_byte_buf_pos == m_first_delimiter_pos.value())
+                && m_has_delimiters && false == m_match
             ) {
                 m_state = m_dfa->get_root();
                 process_char(next_char, prev_byte_buf_pos);
