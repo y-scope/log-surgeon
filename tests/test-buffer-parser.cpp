@@ -943,7 +943,7 @@ TEST_CASE("backtracking_at_newline_without_match", "[BufferParser]") {
  * @code
  * delimiters:=\n,
  * kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*
- * int:1234
+ * int:\d+
  * @endcode
  *
  * ### Input Example
@@ -954,7 +954,7 @@ TEST_CASE("backtracking_at_newline_without_match", "[BufferParser]") {
  *
  * ### Expected Logtype
  * @code
- * "key=123<newLine>"
+ * "key=<int><newLine>"
  * ""
  * @endcode
  */
