@@ -66,7 +66,7 @@ class TestSimple(unittest.TestCase):
 	def test3(self):
 		p = ReaderParser()
 
-		p.set_delimiters(r" \t\r\n,!;%@=()\[\]")
+		p.set_delimiters(" \t\r\n,!;%@=()[]")
 		p.add_variable_pattern("c", r"Container")
 		p.add_variable_pattern("VAR", r"[a-zA-Z0-9_\.\-/\\#!]*[0-9][a-zA-Z0-9_\.\-/\\]*")
 
