@@ -17,7 +17,7 @@ fn main() {
 	schema.add_rule("hello", r);
 	let dfa: Tdfa = schema.build_dfa();
 	let b: bool = dfa
-		.execute_with_captures("bbbbbb", |t, lexeme, _, _| {
+		.execute_with_captures::<true, _>("bbbbbb", |t, lexeme, _, _| {
 			let var: &str = &dfa.capture_info(t).capture_info.name;
 			println!("got {var:?}: {lexeme:?}");
 		})
@@ -31,7 +31,7 @@ fn main3() {
 	schema.add_rule("hello", r);
 	let dfa: Tdfa = schema.build_dfa();
 	let b: bool = dfa
-		.execute_with_captures("xyaxyzxya", |t, lexeme, _, _| {
+		.execute_with_captures::<true, _>("xyaxyzxya", |t, lexeme, _, _| {
 			let var: &str = &dfa.capture_info(t).capture_info.name;
 			println!("got {var:?}: {lexeme:?}");
 		})

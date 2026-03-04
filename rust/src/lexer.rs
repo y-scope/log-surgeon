@@ -7,6 +7,7 @@ use crate::schema::Schema;
 pub struct Lexer {
 	schema: Schema,
 	dfa: Tdfa,
+	dfa_per_rule: Vec<Tdfa>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -23,7 +24,15 @@ pub enum Token<'schema, 'input> {
 impl Lexer {
 	pub fn new(schema: Schema) -> Self {
 		let dfa: Tdfa = schema.build_dfa();
-		Self { schema, dfa }
+		let mut dfa_per_rule: Vec<Tdfa> = Vec::new();
+		for i in 0..schema.rules().len() {
+			dfa_per_rule.push(Tdfa::for_rules(&schema.rules()[i..i + 1]));
+		}
+		Self {
+			schema,
+			dfa,
+			dfa_per_rule,
+		}
 	}
 
 	pub fn next_token<'input, F>(&self, input: &'input str, pos: &mut usize, on_capture: F) -> Token<'_, 'input>
@@ -36,7 +45,11 @@ impl Lexer {
 
 		let start: usize = *pos;
 
-		if let Some(MatchedRule { rule, lexeme }) = self.dfa.execute_with_captures(&input[*pos..], on_capture) {
+		if let Some(MatchedRule { rule, lexeme }) = self
+			.dfa
+			.execute_with_captures::<false, _>(&input[*pos..], |_, _, _, _| ())
+		{
+			self.dfa_per_rule[rule].execute_with_captures::<true, _>(lexeme, on_capture);
 			*pos += lexeme.len();
 			Token::Variable {
 				rule,

@@ -15,6 +15,7 @@ use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tag;
 use crate::nfa::Tnfa;
+use crate::schema::Rule;
 
 #[derive(Debug, Clone)]
 pub struct Tdfa {
@@ -153,14 +154,18 @@ struct ExecutionData {
 
 impl Tdfa {
 	pub fn execute(&self, input: &str) -> bool {
-		self.execute_with_captures(input, |capture, lexeme, _, _| {
+		self.execute_with_captures::<true, _>(input, |capture, lexeme, _, _| {
 			let capture: &AutomataCapture = self.capture_info(capture);
 			debug!("- captured {capture:?}, {lexeme}");
 		})
 		.is_some()
 	}
 
-	pub fn execute_with_captures<'input, F>(&self, input: &'input str, mut on_capture: F) -> Option<MatchedRule<'input>>
+	pub fn execute_with_captures<'input, const CAPTURE: bool, F>(
+		&self,
+		input: &'input str,
+		mut on_capture: F,
+	) -> Option<MatchedRule<'input>>
 	where
 		F: FnMut(usize, &'input str, usize, usize),
 	{
@@ -174,14 +179,16 @@ impl Tdfa {
 
 		for (i, ch) in input.char_indices() {
 			if let Some(transition) = self.lookup_transition(current_state, ch) {
-				/// Apply transition operations before updating position; lookahead 1 in TDFA(1).
-				self.apply_operations(
-					&mut registers,
-					&mut prefix_tree,
-					i,
-					&transition.operations,
-					&self.states[current_state].tag_for_register,
-				);
+				if CAPTURE {
+					/// Apply transition operations before updating position; lookahead 1 in TDFA(1).
+					self.apply_operations(
+						&mut registers,
+						&mut prefix_tree,
+						i,
+						&transition.operations,
+						&self.states[current_state].tag_for_register,
+					);
+				}
 				current_state = transition.target;
 				if let Some(rule) = self.states[current_state].final_rule {
 					maybe_backup = Some(ExecutionData {
@@ -197,38 +204,40 @@ impl Tdfa {
 
 		let data: ExecutionData = maybe_backup?;
 
-		self.apply_operations(
-			&mut registers,
-			&mut prefix_tree,
-			data.consumed,
-			&self.states[data.dfa_state].final_operations,
-			&self.states[data.dfa_state].tag_for_register,
-		);
+		if CAPTURE {
+			self.apply_operations(
+				&mut registers,
+				&mut prefix_tree,
+				data.consumed,
+				&self.states[data.dfa_state].final_operations,
+				&self.states[data.dfa_state].tag_for_register,
+			);
 
-		let mut captures: BTreeMap<&AutomataCapture, (usize, Vec<usize>, Vec<usize>)> = BTreeMap::new();
-		for i in 0..self.tags.len() {
-			let (Tag::StartCapture(capture) | Tag::StopCapture(capture)) = &self.tags[i];
-			let (_, starts, ends): &mut (usize, Vec<usize>, Vec<usize>) =
-				captures.entry(capture).or_insert((i, Vec::new(), Vec::new()));
-			let offsets: &mut Vec<usize> = match self.tags[i] {
-				Tag::StartCapture(_) => starts,
-				Tag::StopCapture(_) => ends,
-			};
-			let mut maybe_node: Option<NonZero<usize>> = registers[self.tags.len() + i];
-			while let Some(node) = maybe_node {
-				offsets.push(prefix_tree[node].lexeme_position);
-				maybe_node = prefix_tree[node].maybe_predecessor;
+			let mut captures: BTreeMap<&AutomataCapture, (usize, Vec<usize>, Vec<usize>)> = BTreeMap::new();
+			for i in 0..self.tags.len() {
+				let (Tag::StartCapture(capture) | Tag::StopCapture(capture)) = &self.tags[i];
+				let (_, starts, ends): &mut (usize, Vec<usize>, Vec<usize>) =
+					captures.entry(capture).or_insert((i, Vec::new(), Vec::new()));
+				let offsets: &mut Vec<usize> = match self.tags[i] {
+					Tag::StartCapture(_) => starts,
+					Tag::StopCapture(_) => ends,
+				};
+				let mut maybe_node: Option<NonZero<usize>> = registers[self.tags.len() + i];
+				while let Some(node) = maybe_node {
+					offsets.push(prefix_tree[node].lexeme_position);
+					maybe_node = prefix_tree[node].maybe_predecessor;
+				}
+				offsets.reverse();
 			}
-			offsets.reverse();
-		}
 
-		for (_, (tag, starts, ends)) in captures.into_iter() {
-			assert_eq!(starts.len(), ends.len());
-			if starts.is_empty() {
-				continue;
-			}
-			for (&i, &j) in std::iter::zip(starts.iter(), ends.iter()) {
-				on_capture(tag, &input, i, j);
+			for (_, (tag, starts, ends)) in captures.into_iter() {
+				assert_eq!(starts.len(), ends.len());
+				if starts.is_empty() {
+					continue;
+				}
+				for (&i, &j) in std::iter::zip(starts.iter(), ends.iter()) {
+					on_capture(tag, &input, i, j);
+				}
 			}
 		}
 
@@ -289,9 +298,14 @@ impl Tdfa {
 }
 
 impl Tdfa {
+	pub fn for_rules(rules: &[Rule]) -> Self {
+		let nfa: Tnfa = Tnfa::for_rules(rules);
+		Self::determinization(&nfa)
+	}
+
 	/// Algorithm 3 in the paper.
 	#[tracing::instrument]
-	pub fn determinization(nfa: &Tnfa) -> Self {
+	fn determinization(nfa: &Tnfa) -> Self {
 		let mut tag_ids: BTreeMap<Tag, DfaTagIdx> = BTreeMap::new();
 		for (i, tag) in nfa.tags().iter().enumerate() {
 			tag_ids.insert(tag.clone(), DfaTagIdx(i));
