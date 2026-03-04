@@ -8,12 +8,16 @@ FORCE:
 examples: target/debug/liblog_mechanic.a
 	$(MAKE) --directory $@
 
-cargo-test:
+cargo-tests:
 	cargo test
 
-test: cargo-test examples
-	./examples/cpp_usage/usage.o
+python-tests:
 	source .env/bin/activate && maturin develop && python3 -m unittest discover tests/python
+
+example-tests: examples
+	./examples/cpp_usage/usage.o
+
+test: cargo-tests python-tests example-tests
 
 include/log_mechanic.generated.hpp: FORCE
 	cbindgen --config cbindgen.toml --crate log-mechanic > $@

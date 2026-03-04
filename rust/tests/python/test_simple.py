@@ -78,3 +78,32 @@ class TestSimple(unittest.TestCase):
 
 		event = p.next_log_event()
 		self.assertEqual(str(event.log_type), "INFO [%c%Launcher %VAR%]")
+
+	def test4(self):
+		p = ReaderParser()
+
+		p.set_delimiters(" \t\r\n!\"#$%&'()*,:;<=>?{}@()[|]^_`~'")
+		p.add_variable_pattern("role", r"'roles': \[u'(?<role>[^']+)'\]")
+
+		p.compile()
+
+		text = "'roles': [u'_member_']"
+
+		p.set_input_stream(text)
+
+		event = p.next_log_event()
+		self.assertEqual(str(event.log_type), "%role%")
+
+		text = "a'roles': [u'_member_']"
+
+		p.set_input_stream(text)
+
+		event = p.next_log_event()
+		self.assertEqual(str(event.log_type), text)
+
+		text = " 'roles': [u'_member_']"
+
+		p.set_input_stream(text)
+
+		event = p.next_log_event()
+		self.assertEqual(str(event.log_type), " %role%")

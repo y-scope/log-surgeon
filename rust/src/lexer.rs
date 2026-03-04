@@ -62,19 +62,22 @@ impl Lexer {
 			if ch == '\n' {
 				break;
 			}
-			if self.is_delimiter(ch) {
-				for ch in input[*pos..].chars() {
-					if ch == '\n' {
-						break;
-					} else if self.is_delimiter(ch) {
-						*pos += ch.len_utf8();
-					} else {
-						break;
-					}
-				}
-				return;
-			}
 			*pos += ch.len_utf8();
+			if self.is_delimiter(ch) {
+				break;
+			}
+			// if self.is_delimiter(ch) {
+			// 	for ch in input[*pos..].chars() {
+			// 		if ch == '\n' {
+			// 			break;
+			// 		} else if self.is_delimiter(ch) {
+			// 			*pos += ch.len_utf8();
+			// 		} else {
+			// 			break;
+			// 		}
+			// 	}
+			// 	return;
+			// }
 		}
 	}
 
