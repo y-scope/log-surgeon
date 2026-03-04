@@ -15,6 +15,7 @@ use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tag;
 use crate::nfa::Tnfa;
+use crate::query::SymbolicChar;
 use crate::schema::Rule;
 
 #[derive(Debug, Clone)]
@@ -287,6 +288,66 @@ impl Tdfa {
 				},
 			}
 		}
+	}
+}
+
+impl Tdfa {
+	pub fn simulate2(&self, input: &[SymbolicChar]) -> BTreeSet<(usize, usize)> {
+		let mut final_states: BTreeSet<(usize, usize)> = BTreeSet::new();
+
+		let mut current_states: BTreeSet<(usize, Option<(usize, usize)>)> = BTreeSet::from([(0, None)]);
+
+		for (i, &ch) in input.iter().enumerate() {
+			if current_states.is_empty() {
+				return final_states;
+			}
+			let mut new_states: BTreeSet<(usize, Option<(usize, usize)>)> = BTreeSet::new();
+			match ch {
+				SymbolicChar::Literal(ch) => {
+					for &(state, maybe_backup) in current_states.iter() {
+						if let Some(transition) = self.lookup_transition(state, ch) {
+							new_states.insert((
+								transition.target,
+								self.states[transition.target].final_rule.map(|rule| (i, rule)),
+							));
+						} else if let Some(backup) = maybe_backup {
+							final_states.insert(backup);
+						}
+					}
+				},
+				SymbolicChar::WildcardOne => {
+					new_states = current_states.clone();
+					for &(state, _maybe_backup) in current_states.iter() {
+						for (_interval, transition) in self.states[state].transitions.iter() {
+							new_states.insert((
+								transition.target,
+								self.states[transition.target].final_rule.map(|rule| (i, rule)),
+							));
+						}
+					}
+				},
+				SymbolicChar::WildcardStar => {
+					new_states = current_states.clone();
+					let mut changed: bool = true;
+					while changed {
+						changed = false;
+						for &(state, _maybe_backup) in new_states.clone().iter() {
+							for (_interval, transition) in self.states[state].transitions.iter() {
+								if new_states.insert((
+									transition.target,
+									self.states[transition.target].final_rule.map(|rule| (i, rule)),
+								)) {
+									changed = true;
+								}
+							}
+						}
+					}
+				},
+			}
+			current_states = new_states;
+		}
+
+		final_states
 	}
 }
 

@@ -4,6 +4,8 @@
 
 namespace log_mechanic {
 
+struct Interpretation;
+
 struct LogEvent;
 
 struct Parser;
@@ -11,6 +13,9 @@ struct Parser;
 struct RegexError;
 
 struct Schema;
+
+template<typename T = void>
+struct Vec;
 
 struct CCapture {
     CCharArray name;
@@ -63,6 +68,15 @@ void logmech_schema_drop(Box<Schema> value);
 Box<Schema> logmech_schema_new();
 
 void logmech_schema_set_delimiters(Schema *schema, CCharArray delimiters);
+
+void logmech_search_interpretations_drop(Box<Box<Vec<Interpretation>>> value);
+
+CCharArray logmech_search_query_interpretation_as_string(const Vec<Interpretation> *interpretations,
+                                                         size_t i,
+                                                         size_t *len);
+
+Box<Vec<Interpretation>> logmech_search_query_interpretations(const Parser *parser,
+                                                              CCharArray input);
 
 }  // extern "C"
 

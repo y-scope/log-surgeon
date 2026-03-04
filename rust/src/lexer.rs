@@ -5,8 +5,8 @@ use crate::schema::Schema;
 
 #[derive(Debug, Clone)]
 pub struct Lexer {
-	schema: Schema,
-	dfa: Tdfa,
+	pub schema: Schema,
+	pub dfa: Tdfa,
 	dfa_per_rule: Vec<Tdfa>,
 }
 

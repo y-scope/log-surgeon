@@ -9,7 +9,7 @@ use crate::schema::Schema;
 
 #[derive(Debug, Clone)]
 pub struct Parser {
-	lexer: Lexer,
+	pub lexer: Lexer,
 	maybe_pending_header: Option<PendingHeader>,
 	current_log: String,
 	working_captures: Vec<WorkingCapture>,

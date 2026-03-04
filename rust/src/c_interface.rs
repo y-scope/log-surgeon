@@ -5,6 +5,8 @@ use std::str::Utf8Error;
 
 use crate::parser::LogEvent;
 use crate::parser::Parser;
+use crate::query::Interpretation;
+use crate::query::SearchString;
 use crate::regex::Regex;
 use crate::regex::RegexError;
 use crate::schema::Schema;
@@ -200,10 +202,32 @@ unsafe extern "C" fn logmech_log_event_clone<'a>(value: &LogEvent<'a>) -> Box<Lo
 	Box::new(value.clone())
 }
 
+#[unsafe(no_mangle)]
+unsafe extern "C" fn logmech_search_query_interpretations(
+	parser: &Parser,
+	input: CCharArray<'_>,
+) -> Box<Vec<Interpretation>> {
+	let query: SearchString = SearchString::parse(input.as_utf8().unwrap()).unwrap();
+	let interpretations: Vec<Interpretation> = query.interpretations(&parser.lexer);
+	Box::new(interpretations)
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn logmech_search_query_interpretation_as_string<'a>(
+	interpretations: &'a Vec<Interpretation>,
+	i: usize,
+	len: &mut usize,
+) -> CCharArray<'a> {
+	let s: &str = &interpretations[i].stringified;
+	*len = s.len();
+	CCharArray::from_utf8(s)
+}
+
 destructor!(logmech_schema_drop, Schema);
 destructor!(logmech_regex_error_drop, RegexError<'_>);
 destructor!(logmech_parser_drop, Parser);
 destructor!(logmech_log_event_drop, LogEvent<'_>);
+destructor!(logmech_search_interpretations_drop, Box<Vec<Interpretation>>);
 
 #[cfg(test)]
 mod test {

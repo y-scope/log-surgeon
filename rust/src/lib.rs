@@ -9,6 +9,7 @@ pub mod lexer;
 pub mod log_type;
 pub mod nfa;
 pub mod parser;
+pub mod query;
 pub mod regex;
 pub mod schema;
 
