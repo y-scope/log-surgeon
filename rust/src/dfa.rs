@@ -292,6 +292,48 @@ impl Tdfa {
 }
 
 impl Tdfa {
+	pub fn simulate(&self, input: &[SymbolicChar]) -> BTreeSet<usize> {
+		let mut current_states: BTreeSet<usize> = BTreeSet::from([0]);
+
+		for &ch in input.iter() {
+			let mut new_states: BTreeSet<usize> = BTreeSet::new();
+			match ch {
+				SymbolicChar::Literal(ch) => {
+					for &state in current_states.iter() {
+						if let Some(transition) = self.lookup_transition(state, ch) {
+							new_states.insert(transition.target);
+						}
+					}
+				},
+				SymbolicChar::WildcardOne => {
+					for &state in current_states.iter() {
+						for (_interval, transition) in self.states[state].transitions.iter() {
+							new_states.insert(transition.target);
+						}
+					}
+				},
+				SymbolicChar::WildcardStar => {
+					let mut changed: bool = true;
+					while changed {
+						changed = false;
+						for &state in current_states.iter() {
+							for (_interval, transition) in self.states[state].transitions.iter() {
+								// Care: Don't short circuit.
+								changed |= new_states.insert(transition.target);
+							}
+						}
+					}
+				},
+			}
+			current_states = new_states;
+		}
+
+		current_states
+			.iter()
+			.filter_map(|&state| self.states[state].final_rule)
+			.collect::<BTreeSet<_>>()
+	}
+
 	pub fn simulate2(&self, input: &[SymbolicChar]) -> BTreeSet<(usize, usize)> {
 		let mut final_states: BTreeSet<(usize, usize)> = BTreeSet::new();
 
