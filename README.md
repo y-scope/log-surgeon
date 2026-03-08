@@ -93,6 +93,12 @@ Requirements:
 * [uv] >= 0.7.10
 * [ystdlib-cpp] >= 0.1.0
 
+After cloning the repository, initialize submodules:
+
+```shell
+git submodule update --init --recursive
+```
+
 To build and install the project to `$HOME/.local`:
 
 ```shell
