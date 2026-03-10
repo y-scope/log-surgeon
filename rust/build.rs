@@ -8,7 +8,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 		.with_config(cbindgen::Config::from_file("cbindgen.toml")?)
 		.with_crate(&root_dir)
 		.generate()?
-		.write_to_file(root_dir.join("include").join("log_mechanic.generated.hpp"));
+		.write_to_file(
+			root_dir
+				.join("cpp_ffi")
+				.join("log_mechanic")
+				.join("generated_bindings.hpp"),
+		);
 
 	Ok(())
 }

@@ -1,2 +1,2 @@
--std=c++23
--Iinclude
+-std=c++20
+-Icpp_ffi

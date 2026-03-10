@@ -19,7 +19,7 @@ example-tests: examples
 
 test: cargo-tests python-tests example-tests
 
-include/log_mechanic.generated.hpp: FORCE
+cpp_ffi/log_mechanic/generated_bindings.hpp: FORCE
 	cbindgen --config cbindgen.toml --crate log-mechanic > $@
 
 target/debug/liblog_mechanic.a: FORCE

@@ -1,48 +1,48 @@
+#include "log_mechanic/log_mechanic.hpp"
+
 #include <cassert>
 #include <cstdio>
-#include <string_view>
-#include <optional>
 #include <iostream>
-
-#include "log_mechanic.hpp"
+#include <optional>
+#include <string_view>
 
 using namespace log_mechanic;
 
 int main() {
-	Box<Schema> schema { logmech_schema_new() };
+    Box<Schema> schema{logmech_schema_new()};
 
-	logmech_schema_add_rule(schema, "hello", "abc|d(?<foo>[a-z])f");
+    logmech_schema_add_rule(schema, "hello"_rust, "abc|d(?<foo>[a-z])f"_rust);
 
-	ParserHandle parser { schema } ;
+    ParserHandle parser{schema};
 
-	std::string_view const input { "def foobarbaz" };
-	size_t pos { 0 };
+    CArray<char> const input{"def foobarbaz"_rust};
+    size_t pos{0};
 
-	std::optional<EventHandle> maybe_event { parser.next_event(input, &pos) };
-	assert(maybe_event.has_value());
-	assert(pos == input.length());
+    std::optional<EventHandle> maybe_event{parser.next_event(input, &pos)};
+    assert(maybe_event.has_value());
+    assert(pos == input.length);
 
-	EventHandle event { *maybe_event };
-	assert(event.log_type() == "%hello% foobarbaz");
+    EventHandle event{*maybe_event};
+    assert(event.log_type() == "%hello% foobarbaz");
 
-	std::optional<Variable> maybe_var { event[0] };
-	assert(maybe_var.has_value());
+    std::optional<Variable> maybe_var{event.get_variable(0)};
+    assert(maybe_var.has_value());
 
-	Variable var { *maybe_var };
-	assert(var.name == "hello");
+    Variable const& var{*maybe_var};
+    assert(var.name() == "hello");
 
-	Variable::CaptureIterator begin { var.begin() };
+    Variable::CaptureIterator begin{var.captures_begin()};
 
-	assert(var[begin[0]][0].name.as_cpp_view() == "foo");
-	assert(var[begin[0]][0].lexeme.as_cpp_view() == "e");
+    assert(var.capture_by_id(begin[0])[0].name.as_cpp_view() == "foo");
+    assert(var.capture_by_id(begin[0])[0].lexeme.as_cpp_view() == "e");
 
-	assert(begin + 1 == var.end());
+    assert(begin + 1 == var.captures_end());
 
-	assert(!event[1].has_value());
+    assert(!event.get_variable(1).has_value());
 
-	printf("good!\n");
+    printf("good!\n");
 
-	logmech_schema_drop(schema);
+    logmech_schema_drop(schema);
 
-	return 0;
+    return 0;
 }

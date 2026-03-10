@@ -1,5 +1,14 @@
+// NOLINTBEGIN
+
+// C++ declarations for C-ABI functions implemented in Rust.
+
+
+#ifndef LOGMECH_GENERATED_BINDINGS_HPP
+#define LOGMECH_GENERATED_BINDINGS_HPP
+
+#include <cstddef>
 #include <cstdint>
-#include "log_mechanic.compat.hpp"
+#include "rust_compat.hpp"
 
 
 namespace log_mechanic {
@@ -81,3 +90,7 @@ Box<Vec<Interpretation>> logmech_search_query_interpretations(const Parser *pars
 }  // extern "C"
 
 }  // namespace log_mechanic
+
+#endif  // LOGMECH_GENERATED_BINDINGS_HPP
+
+// NOLINTEND
