@@ -17,7 +17,7 @@ fn main() {
 	schema.add_rule("hello", r);
 	let dfa: Tdfa = schema.build_dfa();
 	let b: bool = dfa
-		.execute_with_captures::<true, _>("bbbbbb", |t, lexeme, _, _| {
+		.execute_with_captures::<true, _>("bbbbbb", 0, |t, lexeme, _, _| {
 			let var: &str = &dfa.capture_info(t).capture_info.name;
 			println!("got {var:?}: {lexeme:?}");
 		})
@@ -31,7 +31,7 @@ fn main3() {
 	schema.add_rule("hello", r);
 	let dfa: Tdfa = schema.build_dfa();
 	let b: bool = dfa
-		.execute_with_captures::<true, _>("xyaxyzxya", |t, lexeme, _, _| {
+		.execute_with_captures::<true, _>("xyaxyzxya", 0, |t, lexeme, _, _| {
 			let var: &str = &dfa.capture_info(t).capture_info.name;
 			println!("got {var:?}: {lexeme:?}");
 		})
@@ -59,7 +59,7 @@ fn main2() {
 		dbg!(&r);
 		let mut schema: Schema = Schema::new();
 		schema.add_rule("hello", r);
-		let nfa: Tnfa = Tnfa::for_rules(schema.rules());
+		let nfa: Tnfa = Tnfa::for_rules(schema.rules(), " ".to_owned());
 		println!("nfa is {nfa:#?}");
 		// let b: bool = nfa.simulate("aabba").is_some();
 		// assert!(b);

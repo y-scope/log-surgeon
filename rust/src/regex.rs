@@ -8,7 +8,7 @@ use nom::error::ErrorKind as NomErrorKind;
 use nom::error::FromExternalError;
 use nom::error::ParseError;
 
-const SPECIAL_CHARACTERS: &str = r"\()[]{}<>*+?-.|^";
+const SPECIAL_CHARACTERS: &str = r"\()[]{}<>*+?-.|^$";
 
 /// This is morally just `Into<Regex>`,
 /// since we can't have `impl<'a> From<&'a str> for Result<Regex, RegexError<'a>`
@@ -21,6 +21,7 @@ pub trait IntoRegex {
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Regex {
+	Anchor(Anchor),
 	AnyChar,
 	Literal(char),
 	Capture { info: RegexCapture, item: Box<Regex> },
@@ -59,6 +60,12 @@ impl PartialEq for RegexCapture {
 	fn eq(&self, other: &Self) -> bool {
 		self.cmp(other).is_eq()
 	}
+}
+
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+pub enum Anchor {
+	Preceded,
+	Followed,
 }
 
 #[derive(Debug)]
@@ -197,6 +204,24 @@ impl Regex {
 			},
 		}
 	}
+
+	pub fn starts_with_anchor(&self) -> bool {
+		match self {
+			Self::Sequence(items) => items
+				.first()
+				.map_or(false, |first| matches!(first, Self::Anchor(Anchor::Preceded))),
+			_ => false,
+		}
+	}
+
+	pub fn ends_with_anchor(&self) -> bool {
+		match self {
+			Self::Sequence(items) => items
+				.last()
+				.map_or(false, |last| matches!(last, Self::Anchor(Anchor::Followed))),
+			_ => false,
+		}
+	}
 }
 
 impl Regex {
@@ -206,7 +231,7 @@ impl Regex {
 	fn number_captures(&mut self, id: &mut NonZero<u32>, stack: &mut Vec<NonZero<u32>>) -> Option<usize> {
 		let mut bread: usize = 0;
 		match self {
-			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
+			Self::Anchor(_) | Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
 			Self::Capture { info, item } => {
 				info.parent_id = stack.last().copied();
 				info.id = *id;
@@ -244,6 +269,12 @@ impl RegexErrorKind {
 // ==================================
 
 fn parse_to_end(input: &str) -> ParsingResult<'_, Regex> {
+	use nom::combinator::opt;
+
+	let (input, starts_with_anchor): (&str, bool) = opt(parse_char::<'^'>)
+		.map(|maybe_anchor| maybe_anchor.is_some())
+		.parse(input)?;
+
 	// `parse_sequence` (and consequently `parse_alternation`) may swallow errors from
 	// `parse_suffixed`, since the former two are "lists" that simply terminate when
 	// no more elements (suffixed terms) can be parsed.
@@ -252,10 +283,43 @@ fn parse_to_end(input: &str) -> ParsingResult<'_, Regex> {
 	// we look for the closing parenthesis.
 	// Here, after reaching the end of the list, we ensure we're at the end of input,
 	// otherwise "reproduce" the invalid term error.
-	let (input, regex): (&str, Regex) = parse_alternation(input)?;
+	let (input, mut regex): (&str, Regex) = parse_alternation(input)?;
+
+	let (input, ends_with_anchor): (&str, bool) = opt(parse_char::<'$'>)
+		.map(|maybe_anchor| maybe_anchor.is_some())
+		.parse(input)?;
 
 	if !input.is_empty() {
 		return Err(RegexErrorKind::InvalidTerm.error(input));
+	}
+
+	match &mut regex {
+		Regex::Sequence(items) => {
+			items.insert(
+				0,
+				if starts_with_anchor {
+					Regex::Anchor(Anchor::Preceded)
+				} else {
+					Regex::AnyChar
+				},
+			);
+			if ends_with_anchor {
+				items.push(Regex::Anchor(Anchor::Followed));
+			}
+		},
+		regex => {
+			let mut items: Vec<Regex> = Vec::with_capacity(3);
+			items.push(if starts_with_anchor {
+				Regex::Anchor(Anchor::Preceded)
+			} else {
+				Regex::AnyChar
+			});
+			items.push(std::mem::replace(regex, Regex::AnyChar));
+			if ends_with_anchor {
+				items.push(Regex::Anchor(Anchor::Followed));
+			}
+			*regex = Regex::Sequence(items);
+		},
 	}
 
 	Ok((input, regex))

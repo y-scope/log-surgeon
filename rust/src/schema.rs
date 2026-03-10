@@ -24,7 +24,7 @@ impl Schema {
 			rules: vec![Rule {
 				idx: 0,
 				name: "newline".to_owned(),
-				regex: Regex::Literal('\n'),
+				regex: Regex::Sequence(vec![Regex::AnyChar, Regex::Literal('\n')]),
 			}],
 			delimiters: Self::DEFAULT_DELIMITERS.to_owned(),
 		}
@@ -61,7 +61,7 @@ impl Schema {
 
 impl Schema {
 	pub fn build_dfa(&self) -> Tdfa {
-		Tdfa::for_rules(&self.rules)
+		Tdfa::for_rules(&self.rules, self.delimiters.clone())
 	}
 }
 

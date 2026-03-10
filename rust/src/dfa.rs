@@ -30,6 +30,8 @@ pub struct Tdfa {
 	/// The first `tags.len()` are initial registers for the corresponding tags.
 	/// The second `tags.len()` (i.e. `tags.len()..(2 * tags.len())`) are the corresponding final registers.
 	number_of_registers: usize,
+	// delimiters: String,
+	anchor_ch: char,
 }
 
 #[derive(Debug)]
@@ -43,8 +45,9 @@ struct DfaState {
 	kernel: Kernel,
 	transitions: IntervalTree<u32, Transition>,
 	/// If this is a final state (the kernel contains a final NFA state),
-	/// the rule that this state has matched for.
-	final_rule: Option<usize>,
+	/// the rule that this state has matched for,
+	/// and whether we should "backtrack" a symbol (used to implement ends-with lookahead/anchor).
+	final_rule: Option<(usize, bool)>,
 	/// Register operations upon finalizing a match (if applicable); copy to the final registers.
 	final_operations: Vec<RegisterOperation>,
 	/// Cache/combined map from this state's configurations of "register -> which tag it holds".
@@ -146,7 +149,7 @@ struct PrefixTreeNode {
 	lexeme_position: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 struct ExecutionData {
 	dfa_state: usize,
 	rule: usize,
@@ -155,7 +158,7 @@ struct ExecutionData {
 
 impl Tdfa {
 	pub fn execute(&self, input: &str) -> bool {
-		self.execute_with_captures::<true, _>(input, |capture, lexeme, _, _| {
+		self.execute_with_captures::<true, _>(input, 0, |capture, lexeme, _, _| {
 			let capture: &AutomataCapture = self.capture_info(capture);
 			debug!("- captured {capture:?}, {lexeme}");
 		})
@@ -165,12 +168,16 @@ impl Tdfa {
 	pub fn execute_with_captures<'input, const CAPTURE: bool, F>(
 		&self,
 		input: &'input str,
+		last_was_delimited: u32,
 		mut on_capture: F,
 	) -> Option<MatchedRule<'input>>
 	where
 		F: FnMut(usize, &'input str, usize, usize),
 	{
-		let mut current_state: usize = 0;
+		let Some(anchor_transition): Option<&Transition> = self.lookup_transition(0, last_was_delimited) else {
+			panic!("invalid first transition");
+		};
+		let mut current_state: usize = anchor_transition.target;
 
 		/// Vector of prefix tree node indices.
 		let mut registers: Vec<Option<NonZero<usize>>> = vec![None; self.number_of_registers];
@@ -178,25 +185,46 @@ impl Tdfa {
 
 		let mut maybe_backup: Option<ExecutionData> = None;
 
-		for (i, ch) in input.char_indices() {
-			if let Some(transition) = self.lookup_transition(current_state, ch) {
+		for (pos, ch) in input
+			.char_indices()
+			.chain(std::iter::once((input.len(), self.anchor_ch)))
+		{
+			if let Some(transition) = self.lookup_transition(current_state, u32::from(ch)) {
 				if CAPTURE {
 					/// Apply transition operations before updating position; lookahead 1 in TDFA(1).
 					self.apply_operations(
 						&mut registers,
 						&mut prefix_tree,
-						i,
+						pos,
 						&transition.operations,
 						&self.states[current_state].tag_for_register,
 					);
 				}
 				current_state = transition.target;
-				if let Some(rule) = self.states[current_state].final_rule {
-					maybe_backup = Some(ExecutionData {
-						dfa_state: current_state,
-						rule,
-						consumed: i + ch.len_utf8(),
-					});
+				if let Some((rule, backtrack)) = self.states[current_state].final_rule {
+					if (pos < input.len()) || backtrack {
+						// The current character is a "real input" (not the chained EOF pseudo-symbol),
+						// or the accepting state is after a lookahead and will backtrack...
+
+						let consumed: usize = pos + if backtrack { 0 } else { ch.len_utf8() };
+
+						if let Some(backup) = maybe_backup
+							&& backup.consumed >= consumed
+						{
+							// If the previously matched rule's lexeme was at least as long
+							// (technically, it can only be exactly as long, since it can't be longer),
+							// then keep the previous rule, since it has higher priority.
+							// Equivalently, "if we matched via an anchor, don't overwrite the previous rule
+							// if it also matched the full text".
+							continue;
+						}
+
+						maybe_backup = Some(ExecutionData {
+							dfa_state: current_state,
+							rule,
+							consumed,
+						});
+					}
 				}
 			} else {
 				break;
@@ -248,8 +276,7 @@ impl Tdfa {
 		})
 	}
 
-	fn lookup_transition(&self, current_state: usize, ch: char) -> Option<&Transition> {
-		let ch: u32 = u32::from(ch);
+	fn lookup_transition(&self, current_state: usize, ch: u32) -> Option<&Transition> {
 		let cache_index: usize = {
 			const _: () = const {
 				assert!(usize::BITS >= u32::BITS, "lossy cast from `u32` to `usize`");
@@ -300,7 +327,7 @@ impl Tdfa {
 			match ch {
 				SymbolicChar::Literal(ch) => {
 					for &state in current_states.iter() {
-						if let Some(transition) = self.lookup_transition(state, ch) {
+						if let Some(transition) = self.lookup_transition(state, u32::from(ch)) {
 							new_states.insert(transition.target);
 						}
 					}
@@ -330,14 +357,18 @@ impl Tdfa {
 
 		current_states
 			.iter()
-			.filter_map(|&state| self.states[state].final_rule)
+			.filter_map(|&state| self.states[state].final_rule.map(|(rule, _backtrack)| rule))
 			.collect::<BTreeSet<_>>()
 	}
 
 	pub fn simulate2(&self, input: &[SymbolicChar]) -> BTreeSet<(usize, usize)> {
 		let mut final_states: BTreeSet<(usize, usize)> = BTreeSet::new();
 
-		let mut current_states: BTreeSet<(usize, Option<(usize, usize)>)> = BTreeSet::from([(0, None)]);
+		let Some(anchor_transition): Option<&Transition> = self.lookup_transition(0, u32::from(self.anchor_ch)) else {
+			panic!("invalid first transition");
+		};
+		let mut current_states: BTreeSet<(usize, Option<(usize, usize)>)> =
+			BTreeSet::from([(anchor_transition.target, None)]);
 
 		for (i, &ch) in input.iter().enumerate() {
 			if current_states.is_empty() {
@@ -347,10 +378,12 @@ impl Tdfa {
 			match ch {
 				SymbolicChar::Literal(ch) => {
 					for &(state, maybe_backup) in current_states.iter() {
-						if let Some(transition) = self.lookup_transition(state, ch) {
+						if let Some(transition) = self.lookup_transition(state, u32::from(ch)) {
 							new_states.insert((
 								transition.target,
-								self.states[transition.target].final_rule.map(|rule| (i, rule)),
+								self.states[transition.target]
+									.final_rule
+									.map(|(rule, _backtrack)| (i, rule)),
 							));
 						} else if let Some(backup) = maybe_backup {
 							final_states.insert(backup);
@@ -363,7 +396,9 @@ impl Tdfa {
 						for (_interval, transition) in self.states[state].transitions.iter() {
 							new_states.insert((
 								transition.target,
-								self.states[transition.target].final_rule.map(|rule| (i, rule)),
+								self.states[transition.target]
+									.final_rule
+									.map(|(rule, _backtrack)| (i, rule)),
 							));
 						}
 					}
@@ -377,7 +412,9 @@ impl Tdfa {
 							for (_interval, transition) in self.states[state].transitions.iter() {
 								if new_states.insert((
 									transition.target,
-									self.states[transition.target].final_rule.map(|rule| (i, rule)),
+									self.states[transition.target]
+										.final_rule
+										.map(|(rule, _backtrack)| (i, rule)),
 								)) {
 									changed = true;
 								}
@@ -401,25 +438,28 @@ impl Tdfa {
 }
 
 impl Tdfa {
-	pub fn for_rules(rules: &[Rule]) -> Self {
-		let nfa: Tnfa = Tnfa::for_rules(rules);
-		Self::determinization(&nfa)
+	pub fn for_rules(rules: &[Rule], delimiters: String) -> Self {
+		let nfa: Tnfa = Tnfa::for_rules(rules, delimiters.clone());
+		Self::determinization(&nfa, delimiters)
 	}
 
 	/// Algorithm 3 in the paper.
 	#[tracing::instrument]
-	fn determinization(nfa: &Tnfa) -> Self {
+	fn determinization(nfa: &Tnfa, delimiters: String) -> Self {
 		let mut tag_ids: BTreeMap<Tag, DfaTagIdx> = BTreeMap::new();
 		for (i, tag) in nfa.tags().iter().enumerate() {
 			tag_ids.insert(tag.clone(), DfaTagIdx(i));
 		}
 
+		let anchor_ch: char = delimiters.chars().next().unwrap();
 		let mut dfa: Self = Self {
 			states: Vec::new(),
 			kernels: BTreeMap::new(),
 			tags: nfa.tags().to_owned(),
 			tag_ids,
 			number_of_registers: 2 * nfa.tags().len(),
+			// delimiters,
+			anchor_ch,
 		};
 
 		let initial: (Configuration, Vec<(Tag, SymbolicPosition)>) = (
@@ -433,7 +473,7 @@ impl Tdfa {
 
 		let initial: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Self::epsilon_closure(nfa, vec![initial]);
 
-		dfa.add_state(initial, &mut Vec::new());
+		dfa.add_state(nfa, initial, &mut Vec::new());
 
 		/// Note: New states may be created and appended to `dfa.states` inside the loop;
 		/// `dfa.states.len()` is not constant.
@@ -455,7 +495,7 @@ impl Tdfa {
 					Vec<RegisterOperation>,
 				) = dfa.transition_operations(next, &mut register_action_tag);
 
-				let next: usize = dfa.add_state(next, &mut operations);
+				let next: usize = dfa.add_state(nfa, next, &mut operations);
 				dfa.states[i].transitions.insert(
 					interval,
 					Transition {
@@ -494,10 +534,11 @@ impl Tdfa {
 
 	fn add_state(
 		&mut self,
+		nfa: &Tnfa,
 		configurations: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
 		ops: &mut Vec<RegisterOperation>,
 	) -> usize {
-		let mut final_rule: Option<usize> = None;
+		let mut final_rule: Option<(usize, bool)> = None;
 		let mut final_operations: Vec<RegisterOperation> = Vec::new();
 		let mut tag_for_register: BTreeMap<usize, Tag> = BTreeMap::new();
 		let configurations: Vec<Configuration> = configurations
@@ -505,7 +546,7 @@ impl Tdfa {
 			.map(|(config, _)| {
 				if let Some(rule) = config.nfa_state.final_rule() {
 					if final_rule.is_none() {
-						final_rule = Some(rule);
+						final_rule = Some((rule, nfa.needs_backtrack(rule)));
 					}
 					final_operations = self.final_operations(&config.register_for_tag, &config.tag_path_in_closure);
 				}

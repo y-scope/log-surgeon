@@ -14,7 +14,7 @@ pub struct Parser {
 	current_log: String,
 	working_captures: Vec<WorkingCapture>,
 	working_variables: Vec<WorkingVariable>,
-	// working_data: WorkingData,
+	anchor_ch: char,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -63,6 +63,7 @@ struct WorkingCapture {
 
 impl Parser {
 	pub fn new(schema: Schema) -> Self {
+		let anchor_ch: char = schema.delimiters().chars().next().unwrap();
 		let lexer: Lexer = Lexer::new(schema);
 		Self {
 			lexer,
@@ -70,6 +71,7 @@ impl Parser {
 			current_log: String::new(),
 			working_captures: Vec::new(),
 			working_variables: Vec::new(),
+			anchor_ch,
 		}
 	}
 
@@ -106,15 +108,20 @@ impl Parser {
 
 		let mut previous_was_newline: bool = false;
 
+		// Simulates whether we can match a start-anchored pattern.
+		// Currently, the start-anchor just means "must come after static text".
+		let mut last_was_delimited: u32 = u32::from(self.anchor_ch);
 		loop {
 			let old_pos: usize = *pos;
 			let old_captures: usize = self.working_captures.len();
-			match self.lexer.next_token(input, pos, |tag, _, start, end| {
-				self.working_captures.push(WorkingCapture {
-					tag,
-					range: (old_pos - original_pos + start)..(old_pos - original_pos + end),
-				});
-			}) {
+			match self
+				.lexer
+				.next_token(input, pos, last_was_delimited, |tag, _, start, end| {
+					self.working_captures.push(WorkingCapture {
+						tag,
+						range: (old_pos - original_pos + start)..(old_pos - original_pos + end),
+					});
+				}) {
 				Token::Variable { rule, name, lexeme } => {
 					if name == "newline" {
 						pending_static_text += lexeme.len();
@@ -122,6 +129,7 @@ impl Parser {
 							break;
 						}
 						previous_was_newline = true;
+						last_was_delimited = u32::from('\n');
 						continue;
 					}
 
@@ -144,6 +152,7 @@ impl Parser {
 						pending_header
 							.captures
 							.extend(self.working_captures.drain(old_captures..));
+						break;
 					} else {
 						self.working_variables.push(WorkingVariable {
 							rule,
@@ -151,11 +160,13 @@ impl Parser {
 							captures: old_captures..self.working_captures.len(),
 						});
 						working_variable_types.push((static_text.len(), name.to_owned()));
+						last_was_delimited = 0;
 					}
 				},
 				Token::StaticText(static_text) => {
-					assert_ne!(static_text, "");
+					assert!(!static_text.is_empty());
 					pending_static_text += static_text.len();
+					last_was_delimited = u32::from(self.anchor_ch);
 				},
 				Token::EndOfInput => {
 					assert_eq!(*pos, input.len());
@@ -251,7 +262,7 @@ impl Parser {
 		loop {
 			let old_pos: usize = *pos;
 			let old_captures: usize = self.working_captures.len();
-			match self.lexer.next_token(input, pos, |tag, lexeme, start, end| {
+			match self.lexer.next_token(input, pos, u32::MAX, |tag, lexeme, start, end| {
 				on_capture(tag, lexeme, start, end, data);
 			}) {
 				Token::Variable { rule, name, lexeme } => {

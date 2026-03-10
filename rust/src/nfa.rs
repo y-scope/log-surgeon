@@ -12,6 +12,8 @@ use crate::schema::Rule;
 pub struct Tnfa {
 	states: Vec<NfaState>,
 	tags: Vec<Tag>,
+	delimiters: String,
+	needs_backtrack: Vec<bool>,
 }
 
 #[derive(Debug)]
@@ -19,7 +21,7 @@ pub struct NfaState {
 	/// ID and also an index into an [`Nfa`]'s list of states.
 	#[allow(unused)]
 	idx: NfaIdx,
-	transitions: IntervalTree<u32, BTreeSet<NfaIdx>>,
+	transitions: IntervalTree<u32, Vec<NfaIdx>>,
 	spontaneous: Vec<SpontaneousTransition>,
 	/// Just to be cute, and for debugging, in that order.
 	/// See [`Nfa::new_state`].
@@ -104,20 +106,25 @@ impl Tnfa {
 		Self {
 			states: vec![NfaState::BEGIN],
 			tags: Vec::new(),
+			delimiters: String::new(),
+			needs_backtrack: Vec::new(),
 		}
 	}
 
-	pub fn for_rules(rules: &[Rule]) -> Self {
+	pub fn for_rules(rules: &[Rule], delimiters: String) -> Self {
 		assert_ne!(rules.len(), 0);
 
 		let mut nfa: Self = Self {
 			states: vec![NfaState::BEGIN],
 			tags: Vec::new(),
+			delimiters,
+			needs_backtrack: vec![false; rules.len()],
 		};
 
 		let mut tags: BTreeSet<Tag> = nfa.build(0, &rules[0].regex, NfaIdx::BEGIN, NfaIdx::end(0));
+		nfa.needs_backtrack[0] = rules[0].regex.ends_with_anchor();
 
-		for rule in rules[1..].iter() {
+		for (i, rule) in rules.iter().enumerate().skip(1) {
 			let state: NfaIdx = nfa.new_state(format!("rule {} start", rule.name));
 			// assert_eq!(state.0, rule.idx);
 			nfa[NfaIdx::BEGIN].spontaneous.push(SpontaneousTransition {
@@ -125,6 +132,7 @@ impl Tnfa {
 				target: state,
 			});
 			tags = &tags | &nfa.build(rule.idx, &rule.regex, state, NfaIdx::end(rule.idx));
+			nfa.needs_backtrack[i] = rule.regex.ends_with_anchor();
 		}
 
 		nfa.tags = tags.into_iter().collect::<Vec<_>>();
@@ -145,6 +153,9 @@ impl Tnfa {
 
 		let mut state_set: BTreeSet<(NfaIdx, Vec<NfaSimulationData>)> = BTreeSet::new();
 		state_set.insert(start);
+		state_set = self.epsilon_closure(state_set, 0);
+
+		state_set = self.step_on_symbol(&state_set, '\0');
 		state_set = self.epsilon_closure(state_set, 0);
 
 		let mut maybe_last_match: Option<(usize, Vec<(NfaIdx, Vec<NfaSimulationData>)>)> = None;
@@ -284,19 +295,27 @@ impl Tnfa {
 
 	fn build(&mut self, rule: usize, regex: &Regex, mut current: NfaIdx, target: NfaIdx) -> BTreeSet<Tag> {
 		match regex {
+			&Regex::Anchor(_) => {
+				for ch in self.delimiters.clone().chars() {
+					self[current].transitions.insert(
+						Interval::new(u32::from(ch), u32::from(ch)),
+						vec![target],
+						merge_states,
+					);
+				}
+				BTreeSet::new()
+			},
 			Regex::AnyChar => {
-				self[current].transitions.insert(
-					Interval::new(0, u32::from(char::MAX)),
-					BTreeSet::from([target]),
-					merge_sets,
-				);
+				self[current]
+					.transitions
+					.insert(Interval::new(0, u32::from(char::MAX)), vec![target], merge_states);
 				BTreeSet::new()
 			},
 			&Regex::Literal(ch) => {
 				self[current].transitions.insert(
 					Interval::new(u32::from(ch), u32::from(ch)),
-					BTreeSet::from([target]),
-					merge_sets,
+					vec![target],
+					merge_states,
 				);
 				BTreeSet::new()
 			},
@@ -311,9 +330,7 @@ impl Tnfa {
 						intervals.push(Interval::new(u32::from(start), u32::from(end)));
 					}
 					for interval in Interval::complement(&mut intervals).into_iter() {
-						self[current]
-							.transitions
-							.insert(interval, BTreeSet::from([target]), merge_sets);
+						self[current].transitions.insert(interval, vec![target], merge_states);
 					}
 				} else {
 					for &(start, end) in items.iter() {
@@ -322,8 +339,8 @@ impl Tnfa {
 
 						self[current].transitions.insert(
 							Interval::new(u32::from(start), u32::from(end)),
-							BTreeSet::from([target]),
-							merge_sets,
+							vec![target],
+							merge_states,
 						);
 					}
 				}
@@ -514,6 +531,10 @@ impl Tnfa {
 	pub fn begin(&self) -> NfaIdx {
 		NfaIdx::BEGIN
 	}
+
+	pub fn needs_backtrack(&self, rule: usize) -> bool {
+		self.needs_backtrack[rule]
+	}
 }
 
 impl std::ops::Index<NfaIdx> for Tnfa {
@@ -538,7 +559,7 @@ impl NfaState {
 		spontaneous: Vec::new(),
 	};
 
-	pub fn transitions(&self) -> &IntervalTree<u32, BTreeSet<NfaIdx>> {
+	pub fn transitions(&self) -> &IntervalTree<u32, Vec<NfaIdx>> {
 		&self.transitions
 	}
 
@@ -571,8 +592,11 @@ impl NfaIdx {
 /// ```
 ///
 /// But Rust can't do this.
-fn merge_sets(v1: &BTreeSet<NfaIdx>, v2: &BTreeSet<NfaIdx>) -> BTreeSet<NfaIdx> {
-	v1 | v2
+fn merge_states(v1: &Vec<NfaIdx>, v2: &Vec<NfaIdx>) -> Vec<NfaIdx> {
+	let mut v3: Vec<NfaIdx> = Vec::with_capacity(v1.len() + v2.len());
+	v3.extend_from_slice(&v1);
+	v3.extend_from_slice(&v2);
+	v3
 }
 
 #[cfg(test)]
@@ -585,7 +609,7 @@ mod test {
 		let r: Regex = Regex::from_pattern("0((?<foobar>1(2[a-zA-Z])*)|(?<baz>xyz))world").unwrap();
 		let mut schema: Schema = Schema::new();
 		schema.add_rule("hello", r);
-		let nfa: Tnfa = Tnfa::for_rules(schema.rules());
+		let nfa: Tnfa = Tnfa::for_rules(schema.rules(), " ".to_owned());
 		let b: bool = nfa.execute("012a2b2cworld").is_some();
 		assert!(b);
 		let b: bool = nfa.execute("0xyzworld").is_some();

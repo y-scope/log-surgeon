@@ -94,6 +94,8 @@ impl ReaderParser {
 	fn set_input_stream(&mut self, input: &Bound<'_, PyAny>) -> PyResult<()> {
 		// TODO check for read method
 		self.input = input.clone().unbind();
+		self.pos = 0;
+		self.buffer.clear();
 		read_from_input(input, &mut self.buffer)?;
 		Ok(())
 	}

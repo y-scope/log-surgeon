@@ -49,7 +49,7 @@ class TestSimple(unittest.TestCase):
 		p = ReaderParser()
 
 		p.set_delimiters(" \t\r\n:,!;%@/()[].=")
-		p.add_variable_pattern("handler_class", r"for class (?<handler_class>org\.apache\.hadoop\.yarn\.server\.[a-zA-Z0-9\.$]+)")
+		p.add_variable_pattern("handler_class", r"for class (?<handler_class>org\.apache\.hadoop\.yarn\.server\.[a-zA-Z0-9\.\$]+)")
 		p.add_variable_pattern("container", r"container[0-9_]+")
 
 		p.compile()
@@ -82,7 +82,7 @@ class TestSimple(unittest.TestCase):
 	def test4(self):
 		p = ReaderParser()
 
-		p.set_delimiters(" \t\r\n!\"#$%&'()*,:;<=>?{}@()[|]^_`~'")
+		p.set_delimiters(" \t\r\n!\"#\\$%&'()*,:;<=>?{}@()[|]^_`~'")
 		p.add_variable_pattern("role", r"'roles': \[u'(?<role>[^']+)'\]")
 
 		p.compile()
@@ -107,3 +107,43 @@ class TestSimple(unittest.TestCase):
 
 		event = p.next_log_event()
 		self.assertEqual(str(event.log_type), " %role%")
+
+	def test5(self):
+		p = ReaderParser()
+
+		p.set_delimiters(" ")
+		p.add_variable_pattern("word", r"[a-z]+")
+		p.add_variable_pattern("int1", r"^\d+")
+		p.add_variable_pattern("int2", r"\d+$")
+
+		p.compile()
+
+		text = "abc123"
+		p.set_input_stream(text)
+
+		event = p.next_log_event()
+		self.assertEqual(str(event.log_type), "%word%%int2%")
+
+		text = "abc 123"
+		p.set_input_stream(text)
+
+		event = p.next_log_event()
+		self.assertEqual(str(event.log_type), "%word% %int1%")
+
+		text = "123abc"
+		p.set_input_stream(text)
+
+		event = p.next_log_event()
+		self.assertEqual(str(event.log_type), "%int1%%word%")
+
+		text = "abc123abc"
+		p.set_input_stream(text)
+
+		event = p.next_log_event()
+		self.assertEqual(str(event.log_type), "%word%123abc")
+
+		text = "abc123 abc"
+		p.set_input_stream(text)
+
+		event = p.next_log_event()
+		self.assertEqual(str(event.log_type), "%word%%int2% %word%")

@@ -26,7 +26,10 @@ impl Lexer {
 		let dfa: Tdfa = schema.build_dfa();
 		let mut dfa_per_rule: Vec<Tdfa> = Vec::new();
 		for i in 0..schema.rules().len() {
-			dfa_per_rule.push(Tdfa::for_rules(&schema.rules()[i..i + 1]));
+			dfa_per_rule.push(Tdfa::for_rules(
+				&schema.rules()[i..i + 1],
+				schema.delimiters().to_owned(),
+			));
 		}
 		Self {
 			schema,
@@ -35,7 +38,13 @@ impl Lexer {
 		}
 	}
 
-	pub fn next_token<'input, F>(&self, input: &'input str, pos: &mut usize, on_capture: F) -> Token<'_, 'input>
+	pub fn next_token<'input, F>(
+		&self,
+		input: &'input str,
+		pos: &mut usize,
+		last_was_delimited: u32,
+		on_capture: F,
+	) -> Token<'_, 'input>
 	where
 		F: FnMut(usize, &'input str, usize, usize),
 	{
@@ -45,11 +54,11 @@ impl Lexer {
 
 		let start: usize = *pos;
 
-		if let Some(MatchedRule { rule, lexeme }) = self
-			.dfa
-			.execute_with_captures::<false, _>(&input[*pos..], |_, _, _, _| ())
+		if let Some(MatchedRule { rule, lexeme }) =
+			self.dfa
+				.execute_with_captures::<false, _>(&input[*pos..], last_was_delimited, |_, _, _, _| ())
 		{
-			self.dfa_per_rule[rule].execute_with_captures::<true, _>(lexeme, on_capture);
+			self.dfa_per_rule[rule].execute_with_captures::<true, _>(lexeme, last_was_delimited, on_capture);
 			*pos += lexeme.len();
 			Token::Variable {
 				rule,
