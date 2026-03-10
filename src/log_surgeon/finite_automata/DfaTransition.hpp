@@ -47,8 +47,8 @@ public:
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(
-            std::unordered_map<DfaState<state_type> const*, uint32_t> const& state_ids
-    ) const -> std::optional<std::string>;
+            std::unordered_map<DfaState<state_type> const*, uint32_t> const& state_ids) const
+            -> std::optional<std::string>;
 
 private:
     std::vector<RegisterOperation> m_reg_ops;
@@ -57,8 +57,8 @@ private:
 
 template <StateType state_type>
 auto DfaTransition<state_type>::serialize(
-        std::unordered_map<DfaState<state_type> const*, uint32_t> const& state_ids
-) const -> std::optional<std::string> {
+        std::unordered_map<DfaState<state_type> const*, uint32_t> const& state_ids) const
+        -> std::optional<std::string> {
     if (false == state_ids.contains(m_dest_state)) {
         return std::nullopt;
     }

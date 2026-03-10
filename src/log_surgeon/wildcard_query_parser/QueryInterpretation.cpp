@@ -42,7 +42,7 @@ void QueryInterpretation::append_query_interpretation(QueryInterpretation const&
     }
 
     auto& last_old_token = m_tokens.back();
-    auto const& first_new_token = suffix.m_tokens[0];
+    auto const& first_new_token = suffix.m_tokens.at(0);
     if (std::holds_alternative<StaticQueryToken>(last_old_token)
         && std::holds_alternative<StaticQueryToken>(first_new_token))
     {
@@ -84,16 +84,13 @@ auto QueryInterpretation::serialize() const -> string {
         } else {
             auto const& var = std::get<VariableQueryToken>(token);
             token_strings.emplace_back(
-                    fmt::format("<{}>({})", var.get_variable_type(), var.get_query_substring())
-            );
+                    fmt::format("<{}>({})", var.get_variable_type(), var.get_query_substring()));
             contains_wildcard_strings.emplace_back(var.get_contains_wildcard() ? "1" : "0");
         }
     }
 
-    return fmt::format(
-            "logtype='{}', contains_wildcard='{}'",
-            fmt::join(token_strings, ""),
-            fmt::join(contains_wildcard_strings, "")
-    );
+    return fmt::format("logtype='{}', contains_wildcard='{}'",
+                       fmt::join(token_strings, ""),
+                       fmt::join(contains_wildcard_strings, ""));
 }
 }  // namespace log_surgeon::wildcard_query_parser

@@ -49,8 +49,7 @@ public:
     SchemaVarAST(
             std::string name,
             std::unique_ptr<finite_automata::RegexAST<finite_automata::ByteNfaState>> regex_ptr,
-            uint32_t line_num
-    )
+            uint32_t line_num)
             : m_line_num(line_num),
               m_name(std::move(name)),
               m_regex_ptr(std::move(regex_ptr)) {}

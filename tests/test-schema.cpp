@@ -92,8 +92,7 @@ TEST_CASE("add_capture_var", "[Schema]") {
     REQUIRE("uID" == regex_ast_capture->get_capture_name());
 
     auto const* regex_ast_multiplication_ast = dynamic_cast<RegexASTMultiplicationByte*>(
-            regex_ast_capture->get_capture_regex_ast().get()
-    );
+            regex_ast_capture->get_capture_regex_ast().get());
     REQUIRE(nullptr != regex_ast_multiplication_ast);
     REQUIRE(1 == regex_ast_multiplication_ast->get_min());
     REQUIRE(0 == regex_ast_multiplication_ast->get_max());

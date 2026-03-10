@@ -20,11 +20,9 @@ using std::vector;
 using ByteLexicalRule = log_surgeon::LexicalRule<ByteNfaState>;
 
 namespace examples {
-auto get_intersect_for_query(
-        std::map<uint32_t, std::string>& m_id_symbol,
-        Dfa<ByteDfaState, ByteNfaState> const& dfa1,
-        std::string const& search_string
-) -> void {
+auto get_intersect_for_query(std::map<uint32_t, std::string>& m_id_symbol,
+                             Dfa<ByteDfaState, ByteNfaState> const& dfa1,
+                             std::string const& search_string) -> void {
     std::string processed_search_string;
     // Replace all * with .*
     for (char const& c : search_string) {
