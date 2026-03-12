@@ -11,7 +11,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		.write_to_file(
 			root_dir
 				.join("cpp_ffi")
-				.join("log_mechanic")
+				.join("log_surgeon")
 				.join("generated_bindings.hpp"),
 		);
 

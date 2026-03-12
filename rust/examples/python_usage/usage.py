@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-from logmech import ReaderParser
+from log_surgeon import Parser
 
-a = ReaderParser()
+a = Parser()
 a.add_variable_pattern("hello", "abc|d(?<foo>[a-z])f")
 text = "def foobarbaz"
 

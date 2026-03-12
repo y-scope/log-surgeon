@@ -20,12 +20,12 @@ use crate::parser::Parser;
 use crate::regex::Regex;
 use crate::schema::Schema;
 
-pyo3::create_exception!(logmech, LogMechException, PyRuntimeError);
-pyo3::create_exception!(logmech, LogMechInvalidRegexPattern, LogMechException);
+pyo3::create_exception!(log_surgeon, LogSurgeonException, PyRuntimeError);
+pyo3::create_exception!(log_surgeon, LogSurgeonInvalidRegexPattern, LogSurgeonException);
 
-#[pyclass]
+#[pyclass(name = "Parser")]
 #[derive(Debug)]
-struct ReaderParser {
+struct PyParser {
 	input: Py<PyAny>,
 	schema: Schema,
 	maybe_parser: Option<Parser>,
@@ -35,7 +35,7 @@ struct ReaderParser {
 	debug: bool,
 }
 
-#[pyclass]
+#[pyclass(name = "LogEvent")]
 #[derive(Debug)]
 struct PyLogEvent {
 	#[pyo3(get)]
@@ -44,11 +44,11 @@ struct PyLogEvent {
 	variables: Py<PyList>,
 }
 
-#[pyclass]
+#[pyclass(name = "LogType")]
 #[derive(Debug)]
 struct PyLogType(LogType);
 
-#[pyclass]
+#[pyclass(name = "Variable")]
 #[derive(Debug)]
 struct PyVariable {
 	#[pyo3(name = "name", get)]
@@ -60,7 +60,7 @@ struct PyVariable {
 }
 
 #[pymethods]
-impl ReaderParser {
+impl PyParser {
 	#[new]
 	#[pyo3(signature = (debug = false))]
 	fn new(debug: bool) -> Self {
@@ -76,12 +76,16 @@ impl ReaderParser {
 
 	fn add_variable_pattern(&mut self, rule: &str, pattern: &str) -> PyResult<()> {
 		let regex: Regex = Regex::from_pattern(pattern)
-			.map_err(|err| LogMechInvalidRegexPattern::new_err(format!("Invalid pattern: {err:?}")))?;
+			.map_err(|err| LogSurgeonInvalidRegexPattern::new_err(format!("invalid pattern: {err:?}")))?;
 		self.schema.add_rule(rule, regex);
 		Ok(())
 	}
 
+	/// Raises an exception if `delimiters` is empty.
 	fn set_delimiters(&mut self, delimiters: &str) -> PyResult<()> {
+		if delimiters.is_empty() {
+			return Err(LogSurgeonException::new_err("delimiters cannot be empty"));
+		}
 		self.schema.set_delimiters(delimiters);
 		Ok(())
 	}
@@ -106,7 +110,7 @@ impl ReaderParser {
 		}
 
 		let Some(lexer): Option<&mut Parser> = self.maybe_parser.as_mut() else {
-			return Err(LogMechException::new_err("Parser has not been compiled"));
+			return Err(LogSurgeonException::new_err("parser has not been compiled"));
 		};
 
 		let Some(event): Option<LogEvent<'_>> = lexer.next_event(&self.buffer, &mut self.pos) else {
@@ -264,13 +268,13 @@ fn python_unicode_or_bytes_as_str<'a>(input: &'a Bound<'_, PyAny>) -> PyResult<O
 }
 
 #[pymodule]
-mod logmech {
+mod log_surgeon {
 	#[pymodule_export]
 	use super::PyLogEvent;
 	#[pymodule_export]
 	use super::PyLogType;
 	#[pymodule_export]
-	use super::PyVariable;
+	use super::PyParser;
 	#[pymodule_export]
-	use super::ReaderParser;
+	use super::PyVariable;
 }

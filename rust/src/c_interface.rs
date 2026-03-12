@@ -41,17 +41,17 @@ pub struct CCapture<'parser> {
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn logmech_schema_new() -> Box<Schema> {
+extern "C" fn log_surgeon_schema_new() -> Box<Schema> {
 	Box::new(Schema::new())
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn logmech_schema_set_delimiters(schema: &mut Schema, delimiters: CCharArray<'_>) {
+unsafe extern "C" fn log_surgeon_schema_set_delimiters(schema: &mut Schema, delimiters: CCharArray<'_>) {
 	schema.set_delimiters(delimiters.as_utf8().unwrap());
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn logmech_schema_add_rule<'pattern>(
+unsafe extern "C" fn log_surgeon_schema_add_rule<'pattern>(
 	schema: &mut Schema,
 	name: CCharArray<'_>,
 	pattern: CCharArray<'pattern>,
@@ -69,18 +69,18 @@ unsafe extern "C" fn logmech_schema_add_rule<'pattern>(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn logmech_parser_new(schema: &Schema) -> Box<Parser> {
+unsafe extern "C" fn log_surgeon_parser_new(schema: &Schema) -> Box<Parser> {
 	let parser: Parser = Parser::new(schema.clone());
 	Box::new(parser)
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn logmech_log_event_new<'a>() -> Box<LogEvent<'a>> {
+extern "C" fn log_surgeon_log_event_new<'a>() -> Box<LogEvent<'a>> {
 	Box::new(LogEvent::blank())
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn logmech_parser_next<'parser, 'input>(
+extern "C" fn log_surgeon_parser_next<'parser, 'input>(
 	parser: &'parser mut Parser,
 	input: CCharArray<'input>,
 	pos: &mut usize,
@@ -99,17 +99,17 @@ mod log_event {
 	use super::*;
 
 	#[unsafe(no_mangle)]
-	extern "C" fn logmech_log_event_log_type<'a>(log_event: &'a LogEvent<'_>) -> CCharArray<'a> {
+	extern "C" fn log_surgeon_log_event_log_type<'a>(log_event: &'a LogEvent<'_>) -> CCharArray<'a> {
 		CCharArray::from_utf8(log_event.log_type.as_str())
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn logmech_log_event_have_header<'a>(log_event: &'a LogEvent<'_>) -> bool {
+	extern "C" fn log_surgeon_log_event_have_header<'a>(log_event: &'a LogEvent<'_>) -> bool {
 		log_event.have_header
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn logmech_log_event_variable<'a>(log_event: &LogEvent<'a>, i: usize) -> CVariable<'a> {
+	extern "C" fn log_surgeon_log_event_variable<'a>(log_event: &LogEvent<'a>, i: usize) -> CVariable<'a> {
 		if let Some(variable) = log_event.variables.get(i) {
 			return CVariable {
 				rule: variable.rule,
@@ -125,7 +125,7 @@ mod log_event {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn logmech_log_event_capture<'a>(log_event: &'a LogEvent<'_>, i: usize, j: usize) -> CCapture<'a> {
+	extern "C" fn log_surgeon_log_event_capture<'a>(log_event: &'a LogEvent<'_>, i: usize, j: usize) -> CCapture<'a> {
 		if let Some(variable) = log_event.variables.get(i) {
 			if let Some(capture) = variable.captures.get(j) {
 				return CCapture {
@@ -192,15 +192,15 @@ macro_rules! destructor {
 	};
 }
 
-clone!(logmech_parser_clone, Parser);
+clone!(log_surgeon_parser_clone, Parser);
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn logmech_log_event_clone<'a>(value: &LogEvent<'a>) -> Box<LogEvent<'a>> {
+unsafe extern "C" fn log_surgeon_log_event_clone<'a>(value: &LogEvent<'a>) -> Box<LogEvent<'a>> {
 	Box::new(value.clone())
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn logmech_search_query_interpretations(
+unsafe extern "C" fn log_surgeon_search_query_interpretations(
 	parser: &Parser,
 	input: CCharArray<'_>,
 ) -> Box<Vec<Interpretation>> {
@@ -210,7 +210,7 @@ unsafe extern "C" fn logmech_search_query_interpretations(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn logmech_search_query_interpretation_as_string<'a>(
+unsafe extern "C" fn log_surgeon_search_query_interpretation_as_string<'a>(
 	interpretations: &'a Vec<Interpretation>,
 	i: usize,
 	len: &mut usize,
@@ -220,11 +220,11 @@ unsafe extern "C" fn logmech_search_query_interpretation_as_string<'a>(
 	CCharArray::from_utf8(s)
 }
 
-destructor!(logmech_schema_drop, Schema);
-destructor!(logmech_regex_error_drop, RegexError<'_>);
-destructor!(logmech_parser_drop, Parser);
-destructor!(logmech_log_event_drop, LogEvent<'_>);
-destructor!(logmech_search_interpretations_drop, Box<Vec<Interpretation>>);
+destructor!(log_surgeon_schema_drop, Schema);
+destructor!(log_surgeon_regex_error_drop, RegexError<'_>);
+destructor!(log_surgeon_parser_drop, Parser);
+destructor!(log_surgeon_log_event_drop, LogEvent<'_>);
+destructor!(log_surgeon_search_interpretations_drop, Box<Vec<Interpretation>>);
 
 #[cfg(test)]
 mod test {
@@ -244,9 +244,9 @@ mod test {
 
 		let mut event: LogEvent<'_> = LogEvent::blank();
 
-		assert!(logmech_parser_next(&mut parser, input, &mut pos, &mut event));
+		assert!(log_surgeon_parser_next(&mut parser, input, &mut pos, &mut event));
 		// Rust doesn't allow this since it doesn't know that this function simply overwrites event,
 		// and that the destructor (when overwriting the old event) doesn't touch the borrow on the parser.
-		//assert!(logmech_parser_next(&mut parser, input, &mut pos, &mut event));
+		//assert!(log_surgeon_parser_next(&mut parser, input, &mut pos, &mut event));
 	}
 }

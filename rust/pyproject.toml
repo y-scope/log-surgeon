@@ -1,5 +1,5 @@
 [project]
-name = "logmech"
+name = "log_surgeon"
 version = "67"
 
 [build-system]

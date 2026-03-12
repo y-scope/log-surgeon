@@ -1,22 +1,22 @@
-#ifndef LOGMECH_RUST_COMPAT_HPP
-#define LOGMECH_RUST_COMPAT_HPP
+#ifndef LOG_SURGEON_RUST_COMPAT_HPP
+#define LOG_SURGEON_RUST_COMPAT_HPP
 
 #include <cstddef>
 #include <string_view>
 #include <type_traits>
 
-namespace log_mechanic {
+namespace log_surgeon {
 template <typename T>
 using Box = T*;
 
 template <typename T>
-struct is_rust_box_t : std::false_type {}; // NOLINT(readability-identifier-naming)
+struct is_rust_box_t : std::false_type {};  // NOLINT(readability-identifier-naming)
 
 template <typename T>
 struct is_rust_box_t<Box<T>> : std::true_type {};
 
 template <typename T>
-constexpr bool is_rust_box_v = is_rust_box_t<T>::value; // NOLINT(readability-identifier-naming)
+constexpr bool is_rust_box_v = is_rust_box_t<T>::value;  // NOLINT(readability-identifier-naming)
 
 template <typename T>
 using Option = std::enable_if_t<is_rust_box_v<T>, T>;
@@ -27,7 +27,7 @@ struct CArray {
     size_t length;
 
     [[nodiscard]] static auto from_ptr_len(T const* ptr, size_t len) noexcept -> CArray {
-        return CArray { ptr, len };
+        return CArray{ptr, len};
     }
 
     [[nodiscard]] static auto from_string_view(std::string_view const& view) noexcept -> CArray
@@ -63,6 +63,6 @@ static_assert(std::is_standard_layout_v<CCharArray>);
 static auto operator""_rust(char const* c_str, size_t len) -> CCharArray {
     return CCharArray::from_ptr_len(c_str, len);
 }
-}  // namespace log_mechanic
+}  // namespace log_surgeon
 
-#endif  // LOGMECH_RUST_COMPAT_HPP
+#endif  // LOG_SURGEON_RUST_COMPAT_HPP

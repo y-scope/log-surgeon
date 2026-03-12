@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-from logmech import ReaderParser
+from log_surgeon import Parser
 from pattern import PATTERN
 
-parser = ReaderParser()
+parser = Parser()
 
 # Custom delimiters can be specified, though the default is usually sufficient
 parser.set_delimiters(" \t\r\n:,!;%@/()[].")

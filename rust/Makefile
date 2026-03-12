@@ -5,7 +5,7 @@ default:
 # https://www.gnu.org/software/make/manual/html_node/Force-Targets.html
 FORCE:
 
-examples: target/debug/liblog_mechanic.a
+examples: target/debug/liblog_surgeon.a
 	$(MAKE) --directory $@
 
 cargo-tests:
@@ -19,8 +19,8 @@ example-tests: examples
 
 test: cargo-tests python-tests example-tests
 
-cpp_ffi/log_mechanic/generated_bindings.hpp: FORCE
-	cbindgen --config cbindgen.toml --crate log-mechanic > $@
+cpp_ffi/log_surgeon/generated_bindings.hpp: FORCE
+	cbindgen --config cbindgen.toml --crate log-surgeon > $@
 
-target/debug/liblog_mechanic.a: FORCE
+target/debug/liblog_surgeon.a: FORCE
 	cargo build --no-default-features

@@ -3,14 +3,14 @@
 import unittest
 from textwrap import dedent
 
-from logmech import ReaderParser
+from log_surgeon import Parser
 
 class TestSimple(unittest.TestCase):
 	def setUp(self):
 		pass
 
 	def test1(self):
-		p = ReaderParser()
+		p = Parser()
 
 		p.add_variable_pattern("number", r"[0-9]+")
 		p.add_variable_pattern("at_host", r"@(?<inside>[a-z]+)(?<parts>(?<dot>\.)[a-z]*(?<end>[a-z]))*")
@@ -46,7 +46,7 @@ class TestSimple(unittest.TestCase):
 		self.assertIsNone(p.next_log_event())
 
 	def test2(self):
-		p = ReaderParser()
+		p = Parser()
 
 		p.set_delimiters(" \t\r\n:,!;%@/()[].=")
 		p.add_variable_pattern("handler_class", r"for class (?<handler_class>org\.apache\.hadoop\.yarn\.server\.[a-zA-Z0-9\.\$]+)")
@@ -64,7 +64,7 @@ class TestSimple(unittest.TestCase):
 		self.assertIsNone(p.next_log_event())
 
 	def test3(self):
-		p = ReaderParser()
+		p = Parser()
 
 		p.set_delimiters(" \t\r\n,!;%@=()[]")
 		p.add_variable_pattern("c", r"Container")
@@ -80,7 +80,7 @@ class TestSimple(unittest.TestCase):
 		self.assertEqual(str(event.log_type), "INFO [%c%Launcher %VAR%]")
 
 	def test4(self):
-		p = ReaderParser()
+		p = Parser()
 
 		p.set_delimiters(" \t\r\n!\"#\\$%&'()*,:;<=>?{}@()[|]^_`~'")
 		p.add_variable_pattern("role", r"'roles': \[u'(?<role>[^']+)'\]")
@@ -109,7 +109,7 @@ class TestSimple(unittest.TestCase):
 		self.assertEqual(str(event.log_type), " %role%")
 
 	def test5(self):
-		p = ReaderParser()
+		p = Parser()
 
 		p.set_delimiters(" ")
 		p.add_variable_pattern("word", r"[a-z]+")

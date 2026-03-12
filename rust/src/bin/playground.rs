@@ -1,9 +1,9 @@
 #![allow(unused)]
 
-use log_mechanic::dfa::*;
-use log_mechanic::nfa::*;
-use log_mechanic::regex::*;
-use log_mechanic::schema::*;
+use log_surgeon::dfa::*;
+use log_surgeon::nfa::*;
+use log_surgeon::regex::*;
+use log_surgeon::schema::*;
 
 fn main() {
 	// let r: Regex = Regex::from_pattern("(?<bar>[a-z]*)|(?<foo>b)+").unwrap();

@@ -1,4 +1,4 @@
-#include "log_mechanic/log_mechanic.hpp"
+#include "log_surgeon/log_surgeon.hpp"
 
 #include <cassert>
 #include <cstdio>
@@ -6,12 +6,12 @@
 #include <optional>
 #include <string_view>
 
-using namespace log_mechanic;
+using namespace log_surgeon;
 
 int main() {
-    Box<Schema> schema{logmech_schema_new()};
+    Box<Schema> schema{log_surgeon_schema_new()};
 
-    logmech_schema_add_rule(schema, "hello"_rust, "abc|d(?<foo>[a-z])f"_rust);
+    log_surgeon_schema_add_rule(schema, "hello"_rust, "abc|d(?<foo>[a-z])f"_rust);
 
     ParserHandle parser{schema};
 
@@ -29,7 +29,7 @@ int main() {
     assert(maybe_var.has_value());
 
     Variable const& var{*maybe_var};
-    assert(var.name() == "hello");
+    assert(var.get_name() == "hello");
 
     Variable::CaptureIterator begin{var.captures_begin()};
 
@@ -42,7 +42,7 @@ int main() {
 
     printf("good!\n");
 
-    logmech_schema_drop(schema);
+    log_surgeon_schema_drop(schema);
 
     return 0;
 }
