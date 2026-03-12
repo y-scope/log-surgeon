@@ -20,6 +20,24 @@ pub trait Number: Ord + std::fmt::Debug {
 	fn down(&self) -> Self;
 }
 
+/// When inserting an overlapping value into an [`IntervalTree`],
+/// a `Policy` determines how the existing and new value is combined.
+pub trait Policy<T> {
+	fn merge(&mut self, existing: &mut T, new: T);
+}
+
+/// Combine values using the [`Extend`] trait; e.g. for containers.
+pub struct PolicyExtend;
+
+/// Combine values using the [`Add`] trait; e.g. for numbers.
+pub struct PolicyAdd;
+
+/// Do nothing; for the unit type/object `()`.
+pub struct PolicyNoop;
+
+/// Use an arbitrary function to combine values.
+pub struct PolicyFunction<T>(T);
+
 enum Intersection<T: Number> {
 	Same,
 	Disjoint {
@@ -70,9 +88,9 @@ where
 		self.lookup_entry(pos).map(|(interval, _)| interval)
 	}
 
-	pub fn insert<Merge>(&mut self, mut new: Interval<T>, new_value: V, merge: Merge)
+	pub fn insert<P>(&mut self, mut new: Interval<T>, new_value: V, mut policy: P)
 	where
-		Merge: Fn(&V, &V) -> V,
+		P: Policy<V>,
 	{
 		// Existing intervals in the tree are disjoint,
 		// but the new interval being inserted may intersect with multiple existing intervals,
@@ -91,7 +109,7 @@ where
 				// The explicit `break`s and `continue`s are intentional for readability.
 				match new.intersection(existing) {
 					Intersection::Same => {
-						*existing_value = merge(existing_value, &new_value);
+						policy.merge(existing_value, new_value.clone());
 						break;
 					},
 					Intersection::Disjoint { lower_is } => {
@@ -108,7 +126,7 @@ where
 					Intersection::SameStartLeftExtendsRight { overlap, remaining } => {
 						// The new interval extends longer.
 						*existing = overlap;
-						*existing_value = merge(existing_value, &new_value);
+						policy.merge(existing_value, new_value.clone());
 						assert_eq!(remaining.end, new.end);
 						new = remaining;
 						continue;
@@ -116,7 +134,8 @@ where
 					Intersection::SameStartRightExtendsLeft { overlap, remaining } => {
 						// The existing interval extends longer.
 						*existing = remaining;
-						let merged: V = merge(existing_value, &new_value);
+						let mut merged: V = existing_value.clone();
+						policy.merge(&mut merged, new_value.clone());
 						self.intervals.insert(index, (overlap, merged));
 						break;
 					},
@@ -292,6 +311,49 @@ macro_rules! number_impl {
 number_impl!(u8, u16, u32, u64, usize);
 number_impl!(i8, i16, i32, i64, isize);
 
+impl<T> Policy<T> for PolicyExtend
+where
+	T: IntoIterator + Extend<<T as IntoIterator>::Item>,
+{
+	fn merge(&mut self, existing: &mut T, new: T) {
+		existing.extend(new);
+	}
+}
+
+impl<T> Policy<T> for PolicyAdd
+where
+	T: std::ops::Add<Output = T> + Copy,
+{
+	fn merge(&mut self, existing: &mut T, new: T) {
+		*existing = *existing + new;
+	}
+}
+
+impl Policy<()> for PolicyNoop {
+	fn merge(&mut self, _existing: &mut (), _new: ()) {}
+}
+
+/// Ideally, we could implement `Policy<T>` on `F: FnMut(&mut T, T)` directly,
+/// but we can't due to a limitation on Rust's trait solver.
+/// Further, we need this helper function to make the trait bounds resolve properly.
+impl<F> PolicyFunction<F> {
+	pub fn new<T>(f: F) -> Self
+	where
+		F: for<'a> FnMut(&'a mut T, T),
+	{
+		Self(f)
+	}
+}
+
+impl<T, F> Policy<T> for PolicyFunction<F>
+where
+	F: FnMut(&mut T, T),
+{
+	fn merge(&mut self, existing: &mut T, new: T) {
+		self.0(existing, new);
+	}
+}
+
 #[cfg(test)]
 mod test {
 	use super::*;
@@ -300,9 +362,9 @@ mod test {
 	fn stuff() {
 		{
 			let mut tree: IntervalTree<u32, u64> = IntervalTree::new();
-			tree.insert(Interval::new(0, 10), 1, merge);
-			tree.insert(Interval::new(5, 15), 2, merge);
-			tree.insert(Interval::new(15, 15), 3, merge);
+			tree.insert(Interval::new(0, 10), 1, PolicyAdd);
+			tree.insert(Interval::new(5, 15), 2, PolicyAdd);
+			tree.insert(Interval::new(15, 15), 3, PolicyAdd);
 			assert_eq!(tree.len(), 4);
 			assert_eq!(tree.intervals[0].0, Interval::new(0, 4));
 			assert_eq!(tree.intervals[0].1, 1);
@@ -326,9 +388,9 @@ mod test {
 	fn insert_across_multiple_intervals() {
 		{
 			let mut tree: IntervalTree<u32, u64> = IntervalTree::new();
-			tree.insert(Interval::new(119, 119), 1, merge);
-			tree.insert(Interval::new(120, 120), 1, merge);
-			tree.insert(Interval::new(117, u32::MAX), 1, merge);
+			tree.insert(Interval::new(119, 119), 1, PolicyAdd);
+			tree.insert(Interval::new(120, 120), 1, PolicyAdd);
+			tree.insert(Interval::new(117, u32::MAX), 1, PolicyAdd);
 			assert_eq!(tree.len(), 4);
 			assert_eq!(tree.intervals[0].0, Interval::new(117, 118));
 			assert_eq!(tree.intervals[0].1, 1);
@@ -361,9 +423,5 @@ mod test {
 				}
 			);
 		}
-	}
-
-	fn merge(x: &u64, y: &u64) -> u64 {
-		x + y
 	}
 }

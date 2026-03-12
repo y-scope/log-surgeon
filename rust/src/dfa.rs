@@ -9,6 +9,8 @@ use std::num::NonZero;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
+use crate::interval_tree::PolicyFunction;
+use crate::interval_tree::PolicyNoop;
 use crate::nfa::AutomataCapture;
 use crate::nfa::NfaIdx;
 use crate::nfa::NfaState;
@@ -158,14 +160,34 @@ struct ExecutionData {
 
 impl Tdfa {
 	pub fn execute(&self, input: &str) -> bool {
-		self.execute_with_captures::<true, _>(input, 0, |capture, lexeme, _, _| {
+		self.execute_internal::<true, _>(input, 0, |capture, lexeme, _, _| {
 			let capture: &AutomataCapture = self.capture_info(capture);
 			debug!("- captured {capture:?}, {lexeme}");
 		})
 		.is_some()
 	}
 
-	pub fn execute_with_captures<'input, const CAPTURE: bool, F>(
+	pub fn execute_without_captures<'input>(
+		&self,
+		input: &'input str,
+		last_was_delimited: u32,
+	) -> Option<MatchedRule<'input>> {
+		self.execute_internal::<false, _>(input, last_was_delimited, |_, _, _, _| ())
+	}
+
+	pub fn execute_with_captures<'input, F>(
+		&self,
+		input: &'input str,
+		last_was_delimited: u32,
+		on_capture: F,
+	) -> Option<MatchedRule<'input>>
+	where
+		F: FnMut(usize, &'input str, usize, usize),
+	{
+		self.execute_internal::<true, _>(input, last_was_delimited, on_capture)
+	}
+
+	fn execute_internal<'input, const CAPTURE: bool, F>(
 		&self,
 		input: &'input str,
 		last_was_delimited: u32,
@@ -179,7 +201,7 @@ impl Tdfa {
 		};
 		let mut current_state: usize = anchor_transition.target;
 
-		/// Vector of prefix tree node indices.
+		// Vector of prefix tree node indices.
 		let mut registers: Vec<Option<NonZero<usize>>> = vec![None; self.number_of_registers];
 		let mut prefix_tree: PrefixTree = PrefixTree::new();
 
@@ -191,7 +213,7 @@ impl Tdfa {
 		{
 			if let Some(transition) = self.lookup_transition(current_state, u32::from(ch)) {
 				if CAPTURE {
-					/// Apply transition operations before updating position; lookahead 1 in TDFA(1).
+					// Apply transition operations before updating position; lookahead 1 in TDFA(1).
 					self.apply_operations(
 						&mut registers,
 						&mut prefix_tree,
@@ -475,13 +497,13 @@ impl Tdfa {
 
 		dfa.add_state(nfa, initial, &mut Vec::new());
 
-		/// Note: New states may be created and appended to `dfa.states` inside the loop;
-		/// `dfa.states.len()` is not constant.
+		// Note: New states may be created and appended to `dfa.states` inside the loop;
+		// `dfa.states.len()` is not constant.
 		let mut i: usize = 0;
 		while i < dfa.states.len() {
-			/// Since we may append to `dfa.states`, it may resize
-			/// and a reference to `dfa.states[i]` here would become invalid
-			/// (borrow checker will complain without the `.clone()`.
+			// Since we may append to `dfa.states`, it may resize
+			// and a reference to `dfa.states[i]` here would become invalid
+			// (borrow checker will complain without the `.clone()`.
 			let kernel: Kernel = dfa.states[i].kernel.clone();
 
 			let mut register_action_tag: BTreeMap<(Tag, RegisterAction), usize> = BTreeMap::new();
@@ -502,12 +524,12 @@ impl Tdfa {
 						target: next,
 						operations,
 					},
-					|existing, new| {
+					PolicyFunction::new(|existing, new| {
 						panic!(
 							"state {i} transition on {interval:?} had existing target {:?}, trying to insert {:?}",
 							existing, new
 						);
-					},
+					}),
 				);
 			}
 
@@ -518,11 +540,11 @@ impl Tdfa {
 
 		for state in dfa.states.iter_mut() {
 			for (i, cached_transition) in state.ascii_cache.iter_mut().enumerate() {
-				/// It doesn't matter whether this is a (lossless) upcast (`usize::BITS <= u32::BITS`)
-				/// or (lossy) downcast (`usize::BITS > u32::BITS`);
-				/// a lossless cast is necessarily harmless,
-				/// and a lossy downcast simply means the cache contains more slots than necessary,
-				/// which won't be touched during simulation/lexing.
+				// It doesn't matter whether this is a (lossless) upcast (`usize::BITS <= u32::BITS`)
+				// or (lossy) downcast (`usize::BITS > u32::BITS`);
+				// a lossless cast is necessarily harmless,
+				// and a lossy downcast simply means the cache contains more slots than necessary,
+				// which won't be touched during simulation/lexing.
 				if let Some(transition) = state.transitions.lookup(i as u32) {
 					*cached_transition = transition.clone();
 				}
@@ -593,7 +615,7 @@ impl Tdfa {
 		rhs: &[Configuration],
 		mut ops: Vec<RegisterOperation>,
 	) -> Option<Vec<RegisterOperation>> {
-		/// Do they contain the same NFA states with the same lookahead tags?
+		// Do they contain the same NFA states with the same lookahead tags?
 		for x in lhs.iter() {
 			rhs.iter()
 				.find(|y| (x.nfa_state == y.nfa_state) && (x.tag_path_in_closure == y.tag_path_in_closure))?;
@@ -603,8 +625,8 @@ impl Tdfa {
 				.find(|y| (x.nfa_state == y.nfa_state) && (x.tag_path_in_closure == y.tag_path_in_closure))?;
 		}
 
-		/// `m1`: register in `lhs` -> register in `rhs`.
-		/// `m2`: register in `rhs` -> register in `lhs`.
+		// `m1`: register in `lhs` -> register in `rhs`.
+		// `m2`: register in `rhs` -> register in `lhs`.
 		let mut m1: BTreeMap<usize, usize> = BTreeMap::new();
 		let mut m2: BTreeMap<usize, usize> = BTreeMap::new();
 
@@ -618,18 +640,18 @@ impl Tdfa {
 					let j: usize = y.register_for_tag[tag_idx];
 					match (m1.entry(i), m2.entry(j)) {
 						(Entry::Vacant(e1), Entry::Vacant(e2)) => {
-							/// Associate `i` (in `lhs`) with `j` (in `rhs`).
+							// Associate `i` (in `lhs`) with `j` (in `rhs`).
 							e1.insert(j);
 							e2.insert(i);
 						},
 						(Entry::Occupied(e1), Entry::Occupied(e2)) => {
-							/// Unless `m1[i] == m2[j]`, the bijection breaks.
+							// Unless `m1[i] == m2[j]`, the bijection breaks.
 							if (*e1.get() != j) || (*e2.get() != i) {
 								return None;
 							}
 						},
 						_ => {
-							/// Something doesn't match - not a bijection.
+							// Something doesn't match - not a bijection.
 							return None;
 						},
 					}
@@ -961,7 +983,7 @@ impl Kernel {
 
 			let nfa_state: &NfaState = &nfa[config.nfa_state];
 			for (interval, _) in nfa_state.transitions().iter() {
-				transitions.insert(interval, (), |(), ()| ());
+				transitions.insert(interval, (), PolicyNoop);
 			}
 		}
 

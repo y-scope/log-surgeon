@@ -1,44 +1,22 @@
-use std::num::NonZero;
 use std::ops::Range;
 
 use crate::lexer::Lexer;
 use crate::lexer::Token;
+use crate::log_event::Capture;
+use crate::log_event::LogEvent;
+use crate::log_event::Variable;
 use crate::log_type::LogType;
 use crate::nfa::AutomataCapture;
 use crate::schema::Schema;
 
 #[derive(Debug, Clone)]
 pub struct Parser {
+	pub schema: Schema,
 	pub lexer: Lexer,
 	maybe_pending_header: Option<PendingHeader>,
 	current_log: String,
 	working_captures: Vec<WorkingCapture>,
 	working_variables: Vec<WorkingVariable>,
-	anchor_ch: char,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct LogEvent<'parser> {
-	pub log_type: LogType,
-	pub variables: Vec<Variable<'parser>>,
-	pub have_header: bool,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Variable<'parser> {
-	pub rule: usize,
-	pub name: &'parser str,
-	pub lexeme: &'parser str,
-	pub captures: Vec<Capture<'parser>>,
-}
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub struct Capture<'a> {
-	pub name: &'a str,
-	pub lexeme: &'a str,
-	pub id: NonZero<u32>,
-	pub parent_id: Option<NonZero<u32>>,
-	pub is_leaf: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -63,15 +41,14 @@ struct WorkingCapture {
 
 impl Parser {
 	pub fn new(schema: Schema) -> Self {
-		let anchor_ch: char = schema.delimiters().chars().next().unwrap();
-		let lexer: Lexer = Lexer::new(schema);
+		let lexer: Lexer = Lexer::new(schema.clone());
 		Self {
+			schema,
 			lexer,
 			maybe_pending_header: None,
 			current_log: String::new(),
 			working_captures: Vec::new(),
 			working_variables: Vec::new(),
-			anchor_ch,
 		}
 	}
 
@@ -110,7 +87,7 @@ impl Parser {
 
 		// Simulates whether we can match a start-anchored pattern.
 		// Currently, the start-anchor just means "must come after static text".
-		let mut last_was_delimited: u32 = u32::from(self.anchor_ch);
+		let mut last_was_delimited: u32 = u32::from(self.schema.anchor_ch);
 		loop {
 			let old_pos: usize = *pos;
 			let old_captures: usize = self.working_captures.len();
@@ -122,8 +99,10 @@ impl Parser {
 						range: (old_pos - original_pos + start)..(old_pos - original_pos + end),
 					});
 				}) {
-				Token::Variable { rule, name, lexeme } => {
-					if name == "newline" {
+				Token::Variable { rule, lexeme } => {
+					let name: &str = &self.schema.rules()[rule].name;
+
+					if rule == 0 {
 						pending_static_text += lexeme.len();
 						if !have_header {
 							break;
@@ -166,7 +145,7 @@ impl Parser {
 				Token::StaticText(static_text) => {
 					assert!(!static_text.is_empty());
 					pending_static_text += static_text.len();
-					last_was_delimited = u32::from(self.anchor_ch);
+					last_was_delimited = u32::from(self.schema.anchor_ch);
 				},
 				Token::EndOfInput => {
 					assert_eq!(*pos, input.len());
@@ -198,7 +177,6 @@ impl Parser {
 							lexeme: &self.current_log[capture.range.clone()],
 							id: info.capture_info.id,
 							parent_id: info.capture_info.parent_id,
-							is_leaf: info.capture_info.descendents == 0,
 						}
 					})
 					.collect::<Vec<_>>(),
@@ -210,151 +188,6 @@ impl Parser {
 			variables,
 			have_header,
 		})
-	}
-
-	// TODO
-	fn _next_event_internal<D, F, G, H, R>(
-		&mut self,
-		input: &str,
-		pos: &mut usize,
-		data: &mut D,
-		mut on_variable: F,
-		mut on_capture: G,
-		done: H,
-	) -> Option<R>
-	where
-		F: FnMut(usize, &str, &mut D),
-		G: FnMut(usize, &str, usize, usize, &mut D),
-		H: FnOnce(String, bool, &mut D) -> R,
-	{
-		if *pos == input.len() {
-			return None;
-		}
-
-		let original_pos: usize = *pos;
-
-		let mut static_text: String = String::new();
-		let mut pending_static_text: usize = 0;
-
-		self.current_log.clear();
-		self.working_captures.clear();
-		self.working_variables.clear();
-
-		let mut have_header: bool = false;
-
-		if let Some(header) = &mut self.maybe_pending_header {
-			std::mem::swap(&mut header.lexeme, &mut self.current_log);
-			std::mem::swap(&mut header.captures, &mut self.working_captures);
-			self.working_variables.push(WorkingVariable {
-				rule: header.rule,
-				range: 0..self.current_log.len(),
-				captures: 0..self.working_captures.len(),
-			});
-
-			assert_eq!(self.lexer.rule_name(header.rule), "header");
-			on_variable(0, self.lexer.rule_name(header.rule), data);
-
-			have_header = true;
-		}
-
-		let mut previous_was_newline: bool = false;
-
-		loop {
-			let old_pos: usize = *pos;
-			let old_captures: usize = self.working_captures.len();
-			match self.lexer.next_token(input, pos, u32::MAX, |tag, lexeme, start, end| {
-				on_capture(tag, lexeme, start, end, data);
-			}) {
-				Token::Variable { rule, name, lexeme } => {
-					if name == "newline" {
-						pending_static_text += lexeme.len();
-						if !have_header {
-							break;
-						}
-						previous_was_newline = true;
-						continue;
-					}
-
-					if pending_static_text > 0 {
-						static_text += &input[(old_pos - pending_static_text)..old_pos];
-						pending_static_text = 0;
-					}
-
-					if name == "header" && (!have_header || previous_was_newline) {
-						let pending_header: &mut PendingHeader =
-							self.maybe_pending_header.get_or_insert(PendingHeader {
-								rule: 0,
-								lexeme: String::new(),
-								captures: Vec::new(),
-							});
-						pending_header.rule = rule;
-						assert_eq!(pending_header.lexeme.len(), 0);
-						assert_eq!(pending_header.captures.len(), 0);
-						pending_header.lexeme.push_str(lexeme);
-						pending_header
-							.captures
-							.extend(self.working_captures.drain(old_captures..));
-					} else {
-						self.working_variables.push(WorkingVariable {
-							rule,
-							range: (old_pos - original_pos)..(*pos - original_pos),
-							captures: old_captures..self.working_captures.len(),
-						});
-						on_variable(static_text.len(), name, data);
-					}
-				},
-				Token::StaticText(static_text) => {
-					assert_ne!(static_text, "");
-					pending_static_text += static_text.len();
-				},
-				Token::EndOfInput => {
-					assert_eq!(*pos, input.len());
-					break;
-				},
-			}
-			previous_was_newline = false;
-		}
-
-		if pending_static_text > 0 {
-			static_text += &input[(*pos - pending_static_text)..*pos];
-		}
-
-		self.current_log.push_str(&input[original_pos..*pos]);
-
-		let mut variables: Vec<Variable<'_>> = Vec::new();
-
-		for variable in self.working_variables.iter() {
-			variables.push(Variable {
-				rule: variable.rule,
-				name: self.lexer.rule_name(variable.rule),
-				lexeme: &self.current_log[variable.range.clone()],
-				captures: self.working_captures[variable.captures.clone()]
-					.iter()
-					.map(|capture| {
-						let info: &AutomataCapture = self.lexer.capture_info(capture.tag);
-						Capture {
-							name: &info.capture_info.name,
-							lexeme: &self.current_log[capture.range.clone()],
-							id: info.capture_info.id,
-							parent_id: info.capture_info.parent_id,
-							is_leaf: info.capture_info.descendents == 0,
-						}
-					})
-					.collect::<Vec<_>>(),
-			});
-		}
-
-		Some(done(static_text, have_header, data))
-	}
-}
-
-impl<'a> LogEvent<'a> {
-	pub fn blank() -> Self {
-		Self {
-			log_type: LogType::new(String::new(), Vec::new()),
-			variables: Vec::new(),
-			have_header: false,
-		}
 	}
 }
 

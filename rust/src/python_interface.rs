@@ -13,10 +13,10 @@ use pyo3::types::PyList;
 use pyo3::types::PyListMethods;
 use pyo3::types::PyString;
 
+use crate::log_event::LogEvent;
+use crate::log_event::Variable;
 use crate::log_type::LogType;
-use crate::parser::LogEvent;
 use crate::parser::Parser;
-use crate::parser::Variable;
 use crate::regex::Regex;
 use crate::schema::Schema;
 

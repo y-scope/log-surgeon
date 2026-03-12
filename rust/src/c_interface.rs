@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::num::NonZero;
 use std::str::Utf8Error;
 
-use crate::parser::LogEvent;
+use crate::log_event::LogEvent;
 use crate::parser::Parser;
 use crate::query::Interpretation;
 use crate::query::SearchString;
@@ -36,9 +36,8 @@ pub struct CCapture<'parser> {
 	pub name: CCharArray<'parser>,
 	pub lexeme: CCharArray<'parser>,
 	/// Nonzero for a valid capture.
-	pub id: u32,
-	pub parent_id: u32,
-	pub is_leaf: bool,
+	pub id: Option<NonZero<u32>>,
+	pub parent_id: Option<NonZero<u32>>,
 }
 
 #[unsafe(no_mangle)]
@@ -132,18 +131,16 @@ mod log_event {
 				return CCapture {
 					name: CCharArray::from_utf8(capture.name),
 					lexeme: CCharArray::from_utf8(capture.lexeme),
-					id: capture.id.get(),
-					parent_id: capture.parent_id.map_or(0, NonZero::get),
-					is_leaf: capture.is_leaf,
+					id: Some(capture.id),
+					parent_id: capture.parent_id,
 				};
 			}
 		}
 		CCapture {
 			name: CCharArray::null(),
 			lexeme: CCharArray::null(),
-			id: 0,
-			parent_id: 0,
-			is_leaf: false,
+			id: None,
+			parent_id: None,
 		}
 	}
 }

@@ -303,7 +303,7 @@ impl SymbolicChar {
 
 	pub fn maybe_delimiter(&self, lexer: &Lexer) -> bool {
 		match *self {
-			Self::Literal(ch) => lexer.schema.delimiters().contains(ch),
+			Self::Literal(ch) => lexer.schema.delimiters.contains(ch),
 			Self::WildcardStar => true,
 			Self::WildcardOne => true,
 		}
@@ -395,7 +395,7 @@ impl From<&[SymbolicChar]> for SubQuery {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::parser::LogEvent;
+	use crate::log_event::LogEvent;
 	use crate::parser::Parser;
 	use crate::schema::Schema;
 

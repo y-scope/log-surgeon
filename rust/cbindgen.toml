@@ -15,9 +15,9 @@ language = "C++"
 # header = "/* Text to put at the beginning of the generated file. Probably a license. */"
 # trailer = "/* Text to put at the end of the generated file */"
 header = """
-// NOLINTBEGIN
-
 // C++ declarations for C-ABI functions implemented in Rust.
+
+// NOLINTBEGIN
 """
 trailer = """
 // NOLINTEND

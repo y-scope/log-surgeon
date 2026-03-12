@@ -1,6 +1,6 @@
-// NOLINTBEGIN
-
 // C++ declarations for C-ABI functions implemented in Rust.
+
+// NOLINTBEGIN
 
 
 #ifndef LOGMECH_GENERATED_BINDINGS_HPP
@@ -15,6 +15,8 @@ namespace log_mechanic {
 
 struct Interpretation;
 
+/// A `LogEvent` has a template [`LogType`](crate::log_type::LogType).
+/// and a sequence of [`Variable`]s to interpolate.
 struct LogEvent;
 
 struct Parser;
@@ -32,7 +34,6 @@ struct CCapture {
     /// Nonzero for a valid capture.
     uint32_t id;
     uint32_t parent_id;
-    bool is_leaf;
 };
 
 struct CVariable {

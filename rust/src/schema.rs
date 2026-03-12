@@ -4,8 +4,9 @@ use crate::regex::Regex;
 
 #[derive(Debug, Clone)]
 pub struct Schema {
-	rules: Vec<Rule>,
-	delimiters: String,
+	pub rules: Vec<Rule>,
+	pub delimiters: String,
+	pub anchor_ch: char,
 }
 
 #[derive(Debug, Clone)]
@@ -27,16 +28,26 @@ impl Schema {
 				regex: Regex::Sequence(vec![Regex::AnyChar, Regex::Literal('\n')]),
 			}],
 			delimiters: Self::DEFAULT_DELIMITERS.to_owned(),
+			anchor_ch: ' ',
 		}
 	}
 
+	/// Panics if `delimiters` is empty.
 	pub fn set_delimiters<LikeString>(&mut self, delimiters: LikeString)
 	where
 		LikeString: Into<String>,
 	{
-		self.delimiters = delimiters.into();
+		let delimiters: String = delimiters.into();
+		assert!(!delimiters.is_empty());
+		self.anchor_ch = delimiters.chars().next().unwrap();
+		self.delimiters = delimiters;
 	}
 
+	/// Panics if `name` is empty or one of the reserved words:
+	///
+	/// - `"newline"`
+	/// - `"delimiters"`
+	///
 	pub fn add_rule<LikeString, RegexOrPattern>(
 		&mut self,
 		name: LikeString,
@@ -47,8 +58,8 @@ impl Schema {
 		RegexOrPattern: IntoRegex,
 	{
 		let name: String = name.into();
+		assert!(!name.is_empty());
 		assert_ne!(name, "newline");
-		assert_ne!(name, "static");
 		assert_ne!(name, "delimiters");
 
 		let regex: Regex = regex.into()?;
@@ -65,35 +76,8 @@ impl Schema {
 	}
 }
 
-// Accessors
 impl Schema {
 	pub fn rules(&self) -> &[Rule] {
 		&self.rules
-	}
-
-	pub fn delimiters(&self) -> &str {
-		&self.delimiters
-	}
-}
-
-// Nolonger needed?
-// TODO
-#[allow(unused)]
-impl Schema {
-	fn pattern_for_delimiters(delimiters: &str) -> Regex {
-		let escaped: String = delimiters
-			.chars()
-			.fold(String::new(), |buf, ch| buf + &format!("\\u{{{:x}}}", u32::from(ch)));
-		let pattern: String = format!("[{escaped}]");
-		Regex::from_pattern(&pattern).unwrap()
-	}
-
-	fn pattern_for_static_text(delimiters: &str) -> Regex {
-		let mut escaped: String = String::new();
-		for ch in delimiters.chars() {
-			escaped += &format!("\\u{{{:x}}}", u32::from(ch));
-		}
-		let pattern: String = format!("[^{escaped}]+|[{escaped}]+");
-		Regex::from_pattern(&pattern).unwrap()
 	}
 }

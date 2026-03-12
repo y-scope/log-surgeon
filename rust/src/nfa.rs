@@ -4,6 +4,7 @@ use std::collections::BTreeSet;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
+use crate::interval_tree::PolicyExtend;
 use crate::regex::Regex;
 use crate::regex::RegexCapture;
 use crate::schema::Rule;
@@ -39,7 +40,7 @@ pub struct NfaState {
 /// ```
 ///
 /// where `NfaIdx::ValidState` is an `Nfa` state index
-/// and `NfaIdx::EndState` is a Schema rule index indicating that this rule has been matched.
+/// and `NfaIdx::EndState` is a [`Schema`](crate::schema::Schema) rule index indicating that this rule has been matched.
 ///
 /// However, such a type would be larger than a `usize` (realistically, it would be `2 * size_of::<usize>`).
 /// Unfortunately, Rust doesn't have a way to define custom bit-width integer types,
@@ -300,7 +301,7 @@ impl Tnfa {
 					self[current].transitions.insert(
 						Interval::new(u32::from(ch), u32::from(ch)),
 						vec![target],
-						merge_states,
+						PolicyExtend,
 					);
 				}
 				BTreeSet::new()
@@ -308,14 +309,14 @@ impl Tnfa {
 			Regex::AnyChar => {
 				self[current]
 					.transitions
-					.insert(Interval::new(0, u32::from(char::MAX)), vec![target], merge_states);
+					.insert(Interval::new(0, u32::from(char::MAX)), vec![target], PolicyExtend);
 				BTreeSet::new()
 			},
 			&Regex::Literal(ch) => {
 				self[current].transitions.insert(
 					Interval::new(u32::from(ch), u32::from(ch)),
 					vec![target],
-					merge_states,
+					PolicyExtend,
 				);
 				BTreeSet::new()
 			},
@@ -330,7 +331,7 @@ impl Tnfa {
 						intervals.push(Interval::new(u32::from(start), u32::from(end)));
 					}
 					for interval in Interval::complement(&mut intervals).into_iter() {
-						self[current].transitions.insert(interval, vec![target], merge_states);
+						self[current].transitions.insert(interval, vec![target], PolicyExtend);
 					}
 				} else {
 					for &(start, end) in items.iter() {
@@ -340,7 +341,7 @@ impl Tnfa {
 						self[current].transitions.insert(
 							Interval::new(u32::from(start), u32::from(end)),
 							vec![target],
-							merge_states,
+							PolicyExtend,
 						);
 					}
 				}
@@ -582,21 +583,6 @@ impl NfaIdx {
 	pub fn is_end(&self) -> bool {
 		self.0 > (isize::MAX as usize)
 	}
-}
-
-/// Ideally, we could write:
-///
-/// ```rust,ignore
-/// type MergeFn = fn(&BTreeSet<NfaIdx>, &BTreeSet<NfaIdx>) -> BTreeSet<NfaIdx>;
-/// const MERGE_SETS: MergeFn = <&BTreeSet<NfaIdx> as std::ops::BitOr>::bitor;
-/// ```
-///
-/// But Rust can't do this.
-fn merge_states(v1: &Vec<NfaIdx>, v2: &Vec<NfaIdx>) -> Vec<NfaIdx> {
-	let mut v3: Vec<NfaIdx> = Vec::with_capacity(v1.len() + v2.len());
-	v3.extend_from_slice(&v1);
-	v3.extend_from_slice(&v2);
-	v3
 }
 
 #[cfg(test)]

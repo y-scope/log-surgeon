@@ -8,15 +8,13 @@ pub struct Lexer {
 	pub schema: Schema,
 	pub dfa: Tdfa,
 	dfa_per_rule: Vec<Tdfa>,
+	delimiter_ascii_cache: [bool; 0x80],
+	non_ascii_delimiters: String,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum Token<'schema, 'input> {
-	Variable {
-		rule: usize,
-		name: &'schema str,
-		lexeme: &'input str,
-	},
+pub enum Token<'input> {
+	Variable { rule: usize, lexeme: &'input str },
 	StaticText(&'input str),
 	EndOfInput,
 }
@@ -24,17 +22,28 @@ pub enum Token<'schema, 'input> {
 impl Lexer {
 	pub fn new(schema: Schema) -> Self {
 		let dfa: Tdfa = schema.build_dfa();
-		let mut dfa_per_rule: Vec<Tdfa> = Vec::new();
-		for i in 0..schema.rules().len() {
-			dfa_per_rule.push(Tdfa::for_rules(
-				&schema.rules()[i..i + 1],
-				schema.delimiters().to_owned(),
-			));
+		let dfa_per_rule: Vec<Tdfa> = schema
+			.rules()
+			.chunks(1)
+			.map(|rule| Tdfa::for_rules(rule, schema.delimiters.to_owned()))
+			.collect::<Vec<_>>();
+		let mut delimiter_ascii_cache: [bool; 0x80] = [false; 0x80];
+		let mut non_ascii_delimiters: String = String::new();
+		for ch in schema.delimiters.chars() {
+			if let Ok(i) = u8::try_from(ch)
+				&& let Some(entry) = delimiter_ascii_cache.get_mut(usize::from(i))
+			{
+				*entry = true;
+			} else {
+				non_ascii_delimiters.push(ch);
+			}
 		}
 		Self {
 			schema,
 			dfa,
 			dfa_per_rule,
+			delimiter_ascii_cache,
+			non_ascii_delimiters,
 		}
 	}
 
@@ -44,7 +53,7 @@ impl Lexer {
 		pos: &mut usize,
 		last_was_delimited: u32,
 		on_capture: F,
-	) -> Token<'_, 'input>
+	) -> Token<'input>
 	where
 		F: FnMut(usize, &'input str, usize, usize),
 	{
@@ -55,16 +64,11 @@ impl Lexer {
 		let start: usize = *pos;
 
 		if let Some(MatchedRule { rule, lexeme }) =
-			self.dfa
-				.execute_with_captures::<false, _>(&input[*pos..], last_was_delimited, |_, _, _, _| ())
+			self.dfa.execute_without_captures(&input[*pos..], last_was_delimited)
 		{
-			self.dfa_per_rule[rule].execute_with_captures::<true, _>(lexeme, last_was_delimited, on_capture);
+			self.dfa_per_rule[rule].execute_with_captures(lexeme, last_was_delimited, on_capture);
 			*pos += lexeme.len();
-			Token::Variable {
-				rule,
-				name: &self.schema.rules()[rule].name,
-				lexeme,
-			}
+			Token::Variable { rule, lexeme }
 		} else {
 			self.glob_static_text(input, pos);
 			Token::StaticText(&input[start..*pos])
@@ -88,72 +92,30 @@ impl Lexer {
 			if self.is_delimiter(ch) {
 				break;
 			}
-			// if self.is_delimiter(ch) {
-			// 	for ch in input[*pos..].chars() {
-			// 		if ch == '\n' {
-			// 			break;
-			// 		} else if self.is_delimiter(ch) {
-			// 			*pos += ch.len_utf8();
-			// 		} else {
-			// 			break;
-			// 		}
-			// 	}
-			// 	return;
-			// }
 		}
 	}
 
 	fn is_delimiter(&self, ch: char) -> bool {
-		// XXX: Needs benchmarking, but given a small set of delimiter characters,
-		// a linear search may be faster than a theoretically $O(1)$ hash lookup.
-		self.schema.delimiters().contains(ch)
+		if let Ok(i) = u8::try_from(ch)
+			&& let Some(ch_is_delimiter) = self.delimiter_ascii_cache.get(usize::from(i))
+		{
+			*ch_is_delimiter
+		} else {
+			self.non_ascii_delimiters.contains(ch)
+		}
 	}
 }
 
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::regex::Regex;
-
-	/*
-	#[test]
-	fn basic() {
-		let mut schema: Schema = Schema::new();
-		schema.set_delimiters(" ");
-		schema.add_rule("hello", Regex::from_pattern("hello world").unwrap());
-		schema.add_rule("bye", Regex::from_pattern("goodbye").unwrap());
-
-		let mut lexer: Lexer = Lexer::new(schema);
-		let input: &str = "hello world goodbye hello world  goodbye  ";
-		let mut pos: usize = 0;
-		assert_eq!(
-			lexer.next_fragment(input, &mut pos, ignore).projection(),
-			(1, "hello world")
-		);
-		assert_eq!(
-			lexer.next_fragment(input, &mut pos, ignore).projection(),
-			(2, "goodbye")
-		);
-		assert_eq!(
-			lexer.next_fragment(input, &mut pos, ignore).projection(),
-			(1, "hello world")
-		);
-		assert_eq!(
-			lexer.next_fragment(input, &mut pos, ignore).projection(),
-			(2, "goodbye")
-		);
-		assert_eq!(lexer.next_fragment(input, &mut pos, ignore).projection(), (0, ""));
-		assert_eq!(pos, input.len());
-		assert_eq!(lexer.next_fragment(input, &mut pos, ignore).projection(), (0, ""));
-	}
-	*/
 
 	#[test]
 	fn variables() {
 		let mut schema: Schema = Schema::new();
 		schema.set_delimiters(" ");
-		schema.add_rule("hello", Regex::from_pattern("hello world").unwrap());
-		schema.add_rule("bye", Regex::from_pattern("goodbye").unwrap());
+		schema.add_rule("hello", "hello world").unwrap();
+		schema.add_rule("bye", "goodbye").unwrap();
 
 		let _lexer: Lexer = Lexer::new(schema);
 		let _input: &str = "hello world goodbye hello world  goodbye  ";
