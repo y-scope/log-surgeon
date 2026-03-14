@@ -10,6 +10,8 @@ use nom::error::ParseError;
 
 const SPECIAL_CHARACTERS: &str = r"\()[]{}<>*+?-.|^$";
 
+const SPECIAL_CHARACTERS_IN_BRACKETED_EXPRESSIONS: &str = r"\[]";
+
 /// This is morally just `Into<Regex>`,
 /// since we can't have `impl<'a> From<&'a str> for Result<Regex, RegexError<'a>`
 /// because of Rust's forsake orphan rules.
@@ -86,9 +88,13 @@ pub enum RegexErrorKind {
 	MissingClose(char, char),
 	/// "General" error kind, e.g. an isolated reptition suffix operator (e.g. the pattern "*").
 	InvalidTerm,
+	// TODO
 	/// A valid literal character was expected but not found;
 	/// should only appear from an invalid group.
 	InvalidLiteral,
+	/// An empty bracketed expression "[]".
+	/// Note that "[^]" is allowed, being equivalent to the wildcard ".".
+	EmptyGroup,
 	/// Group range `min > max`.
 	InvalidGroupRange(char, char),
 	/// Invalid escape character.
@@ -127,7 +133,7 @@ struct RegexParsingError<'a> {
 	pub kind: RegexErrorKind,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Literals {
 	Single(char),
 	Group { negated: bool, items: Vec<(char, char)> },
@@ -259,6 +265,10 @@ impl Regex {
 impl RegexErrorKind {
 	fn error(self, input: &str) -> NomErr<RegexParsingError<'_>> {
 		NomErr::Error(RegexParsingError::new(input, self))
+	}
+
+	fn fail(self, input: &str) -> NomErr<RegexParsingError<'_>> {
+		NomErr::Failure(RegexParsingError::new(input, self))
 	}
 
 	fn diagnostic<'a, T>(self) -> impl Fn(&'a str) -> ParsingResult<'a, T> {
@@ -494,7 +504,7 @@ fn parse_term(input: &str) -> ParsingResult<'_, Regex> {
 			Literals::Group { negated, items } => Regex::Group { negated, items },
 		}),
 		parse_parenthesized,
-		parse_group,
+		parse_bracketed_expression,
 		RegexErrorKind::InvalidTerm.diagnostic(),
 	))
 	.parse(input)
@@ -534,65 +544,94 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 
 // ========================================
 
-fn parse_group(input: &str) -> ParsingResult<'_, Regex> {
+fn parse_bracketed_expression(input: &str) -> ParsingResult<'_, Regex> {
 	let (input, (negated, items)): (&str, (bool, Vec<(char, char)>)) =
-		combinator_surrounded_cut::<'[', ']', _, _>(parse_group_inside).parse(input)?;
+		combinator_surrounded_cut::<'[', ']', _, _>(parse_bracketed_inside).parse(input)?;
 
 	Ok((input, Regex::Group { negated, items }))
 }
 
-fn parse_group_inside(input: &str) -> ParsingResult<'_, (bool, Vec<(char, char)>)> {
-	use nom::combinator::opt;
+fn parse_bracketed_inside(input: &str) -> ParsingResult<'_, (bool, Vec<(char, char)>)> {
+	use nom::branch::alt;
+	use nom::combinator::success;
+	use nom::combinator::value;
+	use nom::sequence::pair;
 
-	let (input, negated): (&str, Option<char>) = opt(parse_char::<'^'>).parse(input)?;
-
-	// let (input, items): (&str, Vec<(char, char)>) = many1(parse_group_item).parse(input)?;
-
-	let (mut input, mut items): (&str, Vec<(char, char)>) = parse_group_item(input)?;
-	loop {
-		match parse_group_item(input) {
-			Ok((new_input, new_items)) => {
-				input = new_input;
-				items.extend(&new_items);
-			},
-			Err(NomErr::Error(_)) => {
-				break;
-			},
-			Err(err @ NomErr::Failure(_) | err @ NomErr::Incomplete(_)) => {
-				return Err(err);
-			},
-		}
+	#[derive(Clone, Copy, Eq, PartialEq)]
+	enum FirstChar {
+		Negation,
+		EscapedCaret,
 	}
 
-	Ok((input, (negated.is_some(), items)))
+	let (mut input, maybe_first_char): (&str, Option<FirstChar>) = alt((
+		value(Some(FirstChar::Negation), parse_char::<'^'>),
+		value(
+			Some(FirstChar::EscapedCaret),
+			pair(parse_char::<'\\'>, parse_char::<'^'>),
+		),
+		success(None),
+	))
+	.parse(input)?;
+
+	let negated: bool = maybe_first_char == Some(FirstChar::Negation);
+
+	let mut items: Vec<(char, char)> = Vec::new();
+
+	if maybe_first_char == Some(FirstChar::EscapedCaret) {
+		items.push(('^', '^'));
+	}
+
+	loop {
+		let (new_input, new_items): (&str, Vec<(char, char)>) = parse_bracketed_item(input)?;
+		if new_items.is_empty() {
+			break;
+		}
+		input = new_input;
+		items.extend(&new_items);
+	}
+
+	if !negated && items.is_empty() {
+		return Err(RegexErrorKind::EmptyGroup.error(input));
+	}
+
+	Ok((input, (negated, items)))
 }
 
-fn parse_group_item(original_input: &str) -> ParsingResult<'_, Vec<(char, char)>> {
-	use nom::combinator::cut;
+fn parse_bracketed_item(original_input: &str) -> ParsingResult<'_, Vec<(char, char)>> {
 	use nom::combinator::opt;
 
-	let (input, start): (&str, Literals) = parse_literal_character(original_input)?;
+	let (input, maybe_start): (&str, Option<Literals>) = parse_literal_char_in_bracketed_expression(original_input)?;
+
+	let Some(start): Option<Literals> = maybe_start else {
+		return Ok((input, Vec::new()));
+	};
 
 	let (input_after_dash, maybe_dash): (&str, Option<char>) = opt(parse_char::<'-'>).parse(input)?;
 
 	if maybe_dash.is_some() {
 		match start {
 			Literals::Single(start) => {
-				let (input, end): (&str, Literals) = cut(parse_literal_character).parse(input_after_dash)?;
+				let (input, maybe_end): (&str, Option<Literals>) =
+					parse_literal_char_in_bracketed_expression(input_after_dash)?;
+
+				let Some(end): Option<Literals> = maybe_end else {
+					return Ok((input, vec![(start, start), ('-', '-')]));
+				};
+
 				match end {
 					Literals::Single(end) => {
 						if start > end {
-							return Err(RegexErrorKind::InvalidGroupRange(start, end).error(input_after_dash));
+							return Err(RegexErrorKind::InvalidGroupRange(start, end).fail(input_after_dash));
 						}
 						Ok((input, vec![(start, end)]))
 					},
 					Literals::Group { .. } => {
-						return Err(RegexErrorKind::EscapeClassInGroupRange.error(input_after_dash));
+						return Err(RegexErrorKind::EscapeClassInGroupRange.fail(input_after_dash));
 					},
 				}
 			},
 			Literals::Group { .. } => {
-				return Err(RegexErrorKind::EscapeClassInGroupRange.error(original_input));
+				return Err(RegexErrorKind::EscapeClassInGroupRange.fail(original_input));
 			},
 		}
 	} else {
@@ -600,7 +639,7 @@ fn parse_group_item(original_input: &str) -> ParsingResult<'_, Vec<(char, char)>
 			Literals::Single(ch) => Ok((input, vec![(ch, ch)])),
 			Literals::Group { negated, items } => {
 				if negated {
-					return Err(RegexErrorKind::InvertedEscapeClassInGroup.error(original_input));
+					return Err(RegexErrorKind::InvertedEscapeClassInGroup.fail(original_input));
 				}
 				Ok((input, items))
 			},
@@ -632,8 +671,26 @@ fn parse_escaped_character(original_input: &str) -> ParsingResult<'_, Literals> 
 		parse_one_char_of::<false>(SPECIAL_CHARACTERS).map(Literals::Single),
 		parse_standard_escape,
 	))
-	// Outside of the `alt` since the error starts at the original input.
+	// Outside of the `alt` since the error starts at the original input, still inside the `cut`.
 	.or(|_| Err(RegexErrorKind::InvalidEscape.error(original_input))))
+	.parse(input)
+}
+
+fn parse_literal_char_in_bracketed_expression(input: &str) -> ParsingResult<'_, Option<Literals>> {
+	use nom::branch::alt;
+	use nom::combinator::eof;
+	use nom::combinator::peek;
+	use nom::combinator::value;
+
+	alt((
+		parse_one_char_of::<true>(SPECIAL_CHARACTERS_IN_BRACKETED_EXPRESSIONS)
+			.map(Literals::Single)
+			.map(Some),
+		parse_escaped_character.map(Some),
+		value(None, peek(parse_char::<']'>)),
+		value(None, eof),
+		|input| Err(RegexErrorKind::InvalidLiteral.fail(input)),
+	))
 	.parse(input)
 }
 
@@ -894,6 +951,42 @@ mod test {
 	}
 
 	#[test]
+	fn special_characters_in_group() {
+		{
+			Regex::from_pattern("[^]").unwrap();
+			Regex::from_pattern(r"[^^]").unwrap();
+			Regex::from_pattern(r"[.]").unwrap();
+			Regex::from_pattern(r"[$]").unwrap();
+			Regex::from_pattern(r"[\.]").unwrap();
+			Regex::from_pattern(r"[\$]").unwrap();
+			Regex::from_pattern(r"[\\]").unwrap();
+			Regex::from_pattern(r"[a-]").unwrap();
+			Regex::from_pattern(r"[-a]").unwrap();
+			Regex::from_pattern(r"[^-a]").unwrap();
+			Regex::from_pattern(r"[-]").unwrap();
+			Regex::from_pattern(r"[^-]").unwrap();
+		}
+		{
+			let e: RegexError<'_> = Regex::from_pattern(r"[\]").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::MissingClose('[', ']'));
+			assert_eq!(e.consumed, r"[\]");
+			assert_eq!(e.remaining, "");
+		}
+		{
+			let e: RegexError<'_> = Regex::from_pattern(r"[\a]").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::InvalidEscape);
+			assert_eq!(e.consumed, r"[");
+			assert_eq!(e.remaining, r"\a]");
+		}
+		{
+			let e: RegexError<'_> = Regex::from_pattern(r"[[").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::InvalidLiteral);
+			assert_eq!(e.consumed, r"[");
+			assert_eq!(e.remaining, r"[");
+		}
+	}
+
+	#[test]
 	fn invalid_term() {
 		{
 			let e: RegexError<'_> = Regex::from_pattern("|abc").unwrap_err();
@@ -944,8 +1037,8 @@ mod test {
 		{
 			let e: RegexError<'_> = Regex::from_pattern("(abc[def)").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::MissingClose('[', ']'));
-			assert_eq!(e.consumed, "(abc[def");
-			assert_eq!(e.remaining, ")");
+			assert_eq!(e.consumed, "(abc[def)");
+			assert_eq!(e.remaining, "");
 		}
 		{
 			let e: RegexError<'_> = Regex::from_pattern(".{123a}").unwrap_err();
@@ -1003,23 +1096,11 @@ mod test {
 	}
 
 	#[test]
-	fn invalid_literal() {
-		{
-			let e: RegexError<'_> = Regex::from_pattern("[^]").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::InvalidLiteral);
-			assert_eq!(e.consumed, "[^");
-			assert_eq!(e.remaining, "]");
-		}
+	fn empty_group() {
 		{
 			let e: RegexError<'_> = Regex::from_pattern("[]").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::InvalidLiteral);
+			assert_eq!(e.kind, RegexErrorKind::EmptyGroup);
 			assert_eq!(e.consumed, "[");
-			assert_eq!(e.remaining, "]");
-		}
-		{
-			let e: RegexError<'_> = Regex::from_pattern("[a-]").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::InvalidLiteral);
-			assert_eq!(e.consumed, "[a-");
 			assert_eq!(e.remaining, "]");
 		}
 	}
