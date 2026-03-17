@@ -23,6 +23,10 @@ struct Parser;
 
 struct RegexError;
 
+/// A `Schema` is a just a list of rules and a set of delimiter characters.
+/// [`Rule`]s are "ID"ed by their index (insertion order).
+/// The `0`th rule is special (internally, it is used to represent a "newline" token),
+/// so the first "user-added" rule has ID/index `1`.
 struct Schema;
 
 template<typename T = void>

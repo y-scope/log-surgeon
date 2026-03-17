@@ -596,7 +596,7 @@ impl<T> Policy<Vec<T>> for PolicyExtendUnique
 where
 	T: Ord + Clone,
 {
-	fn merge(&mut self, existing: &mut Vec<T>, mut new: Vec<T>) {
+	fn combine(&mut self, existing: &mut Vec<T>, mut new: Vec<T>) {
 		let mut seen: BTreeSet<T> = BTreeSet::from_iter(existing.iter().cloned());
 		new.retain(|x| seen.insert(x.clone()));
 		existing.extend(new);

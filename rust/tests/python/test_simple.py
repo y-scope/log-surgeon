@@ -147,3 +147,28 @@ class TestSimple(unittest.TestCase):
 
 		event = p.next_log_event()
 		self.assertEqual(str(event.log_type), "%word%%int2% %word%")
+
+	def test6(self):
+		p = Parser()
+
+		p.set_delimiters(" ")
+		p.add_variable_pattern("word", r"[a-z]+")
+
+		p.compile()
+
+		text = dedent("""\
+		line 1
+		line 2
+		""")
+
+		p.set_input_stream(text)
+		e1 = p.next_log_event()
+
+		self.assertEqual(e1.message, "line 1\n")
+
+		p.set_input_stream(text)
+		e2 = p.next_log_event()
+
+		# `LogEvent` doesn't implement `__eq__`.
+		self.assertNotEqual(e1, e2)
+		self.assertEqual(e1.log_type, e2.log_type)

@@ -2,15 +2,22 @@ use crate::dfa::Tdfa;
 use crate::regex::IntoRegex;
 use crate::regex::Regex;
 
+/// A `Schema` is a just a list of rules and a set of delimiter characters.
+/// [`Rule`]s are "ID"ed by their index (insertion order).
+/// The `0`th rule is special (internally, it is used to represent a "newline" token),
+/// so the first "user-added" rule has ID/index `1`.
 #[derive(Debug, Clone)]
 pub struct Schema {
 	pub rules: Vec<Rule>,
 	pub delimiters: String,
+	/// Derived from `delimiters`;
+	/// used to insert "phantom characters" for start/end anchors.
 	pub anchor_ch: char,
 }
 
 #[derive(Debug, Clone)]
 pub struct Rule {
+	/// ID/index in the schema.
 	pub idx: usize,
 	pub name: String,
 	pub regex: Regex,
@@ -20,7 +27,6 @@ impl Schema {
 	pub const DEFAULT_DELIMITERS: &str = " \t\r\n:,!;%";
 
 	pub fn new() -> Self {
-		// TODO special first rule
 		Self {
 			rules: vec![Rule {
 				idx: 0,

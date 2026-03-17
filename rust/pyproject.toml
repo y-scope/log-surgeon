@@ -1,6 +1,6 @@
 [project]
 name = "log_surgeon"
-version = "67"
+version = "0.1"
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]

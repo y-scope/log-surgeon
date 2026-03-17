@@ -1,6 +1,11 @@
 use std::cmp::Ordering;
 
-/// I'm a tree!
+/// A naive interval "tree" implementation;
+/// only constructed when building NFAs,
+/// so we optimize for simplicity (correctness) and lookups.
+///
+/// Internally, just an ordered list of non-overlapping intervals;
+/// lookups are `O(log(n))` with binary search.
 #[derive(Debug, Clone)]
 pub struct IntervalTree<T: Number, V: Clone> {
 	intervals: Vec<(Interval<T>, V)>,
@@ -20,10 +25,10 @@ pub trait Number: Ord + std::fmt::Debug {
 	fn down(&self) -> Self;
 }
 
-/// When inserting an overlapping value into an [`IntervalTree`],
-/// a `Policy` determines how the existing and new value is combined.
+/// When inserting a value with an overlapping interval into an [`IntervalTree`],
+/// a `Policy` determines how the existing and new values are combined.
 pub trait Policy<T> {
-	fn merge(&mut self, existing: &mut T, new: T);
+	fn combine(&mut self, existing: &mut T, new: T);
 }
 
 /// Combine values using the [`Extend`] trait; e.g. for containers.
@@ -44,9 +49,8 @@ pub struct PolicyFunction<T>(T);
 
 enum Intersection<T: Number> {
 	Same,
-	Disjoint {
-		lower_is: Side,
-	},
+	DisjointLeftLower,
+	DisjointRightLower,
 	SameStartLeftExtendsRight {
 		overlap: Interval<T>,
 		remaining: Interval<T>,
@@ -63,11 +67,6 @@ enum Intersection<T: Number> {
 		before: Interval<T>,
 		overlap_start: T,
 	},
-}
-
-enum Side {
-	Left,
-	Right,
 }
 
 impl<T: Number, V: Clone> IntervalTree<T, V> {
@@ -113,24 +112,21 @@ where
 				// The explicit `break`s and `continue`s are intentional for readability.
 				match new.intersection(existing) {
 					Intersection::Same => {
-						policy.merge(existing_value, new_value.clone());
+						policy.combine(existing_value, new_value.clone());
 						break;
 					},
-					Intersection::Disjoint { lower_is } => {
-						match lower_is {
-							Side::Left => {
-								self.intervals.insert(index, (new, new_value.clone()));
-							},
-							Side::Right => {
-								self.intervals.insert(index + 1, (new, new_value.clone()));
-							},
-						}
+					Intersection::DisjointLeftLower => {
+						self.intervals.insert(index, (new, new_value.clone()));
+						break;
+					},
+					Intersection::DisjointRightLower => {
+						self.intervals.insert(index + 1, (new, new_value.clone()));
 						break;
 					},
 					Intersection::SameStartLeftExtendsRight { overlap, remaining } => {
 						// The new interval extends longer.
 						*existing = overlap;
-						policy.merge(existing_value, new_value.clone());
+						policy.combine(existing_value, new_value.clone());
 						assert_eq!(remaining.end, new.end);
 						new = remaining;
 						continue;
@@ -139,7 +135,7 @@ where
 						// The existing interval extends longer.
 						*existing = remaining;
 						let mut merged: V = existing_value.clone();
-						policy.merge(&mut merged, new_value.clone());
+						policy.combine(&mut merged, new_value.clone());
 						self.intervals.insert(index, (overlap, merged));
 						break;
 					},
@@ -204,6 +200,7 @@ where
 		self.intervals.partition_point(|(interval, _)| interval.end < pos)
 	}
 
+	/// Checks that intervals are non-overlapping.
 	fn invariants(&self) {
 		let mut maybe_previous: Option<T> = None;
 		for (interval, _) in self.intervals.iter() {
@@ -243,30 +240,28 @@ where
 
 		let mut complement: Vec<Interval<T>> = Vec::new();
 
-		let mut pos: T = T::MIN;
+		let mut cursor: T = T::MIN;
 		for &Interval { start, end } in intervals.iter() {
-			if pos < start {
-				complement.push(Interval::new(pos, start.down()));
+			if cursor < start {
+				complement.push(Interval::new(cursor, start.down()));
 			}
 			if end < T::MAX {
-				pos = end.up();
+				cursor = end.up();
 			} else {
 				return complement;
 			}
 		}
 
-		if pos < T::MAX {
-			complement.push(Interval::new(pos, T::MAX));
-		}
+		complement.push(Interval::new(cursor, T::MAX));
 
 		complement
 	}
 
 	fn intersection(&self, other: &Self) -> Intersection<T> {
 		if self.end < other.start {
-			return Intersection::Disjoint { lower_is: Side::Left };
+			return Intersection::DisjointLeftLower;
 		} else if other.end < self.start {
-			return Intersection::Disjoint { lower_is: Side::Right };
+			return Intersection::DisjointRightLower;
 		}
 
 		match (self.start.cmp(&other.start), self.end.cmp(&other.end)) {
@@ -302,11 +297,11 @@ macro_rules! number_impl {
 			const MAX: Self = <$ty>::MAX;
 
 			fn up(&self) -> Self {
-				self + 1
+				self.checked_add(1).unwrap()
 			}
 
 			fn down(&self) -> Self {
-				self - 1
+				self.checked_sub(1).unwrap()
 			}
 		}
 	};
@@ -319,7 +314,7 @@ impl<T> Policy<T> for PolicyExtend
 where
 	T: IntoIterator + Extend<<T as IntoIterator>::Item>,
 {
-	fn merge(&mut self, existing: &mut T, new: T) {
+	fn combine(&mut self, existing: &mut T, new: T) {
 		existing.extend(new);
 	}
 }
@@ -328,13 +323,13 @@ impl<T> Policy<T> for PolicyAdd
 where
 	T: std::ops::Add<Output = T> + Copy,
 {
-	fn merge(&mut self, existing: &mut T, new: T) {
+	fn combine(&mut self, existing: &mut T, new: T) {
 		*existing = *existing + new;
 	}
 }
 
 impl Policy<()> for PolicyNoop {
-	fn merge(&mut self, _existing: &mut (), _new: ()) {}
+	fn combine(&mut self, _existing: &mut (), _new: ()) {}
 }
 
 /// Ideally, we could implement `Policy<T>` on `F: FnMut(&mut T, T)` directly,
@@ -353,7 +348,7 @@ impl<T, F> Policy<T> for PolicyFunction<F>
 where
 	F: FnMut(&mut T, T),
 {
-	fn merge(&mut self, existing: &mut T, new: T) {
+	fn combine(&mut self, existing: &mut T, new: T) {
 		self.0(existing, new);
 	}
 }
@@ -363,7 +358,7 @@ mod test {
 	use super::*;
 
 	#[test]
-	fn stuff() {
+	fn basic_operations() {
 		{
 			let mut tree: IntervalTree<u32, u64> = IntervalTree::new();
 			tree.insert(Interval::new(0, 10), 1, PolicyAdd);
@@ -408,24 +403,79 @@ mod test {
 	}
 
 	#[test]
-	fn complement() {
-		{
-			let intervals: &mut [Interval<u32>] = &mut [
-				Interval { start: 10, end: 15 },
-				Interval { start: 20, end: 30 },
-				Interval { start: 25, end: 40 },
-			];
-			let complement: Vec<Interval<u32>> = Interval::complement(intervals);
-			assert_eq!(complement.len(), 3);
-			assert_eq!(complement[0], Interval { start: 0, end: 9 });
-			assert_eq!(complement[1], Interval { start: 16, end: 19 });
-			assert_eq!(
-				complement[2],
-				Interval {
-					start: 41,
-					end: u32::MAX,
-				}
-			);
-		}
+	fn complement_multiple_intervals() {
+		let intervals: &mut [Interval<u32>] = &mut [
+			Interval { start: 10, end: 15 },
+			Interval { start: 20, end: 30 },
+			Interval { start: 25, end: 40 },
+		];
+		let complement: Vec<Interval<u32>> = Interval::complement(intervals);
+		assert_eq!(complement[0], Interval { start: 0, end: 9 });
+		assert_eq!(complement[1], Interval { start: 16, end: 19 });
+		assert_eq!(
+			complement[2],
+			Interval {
+				start: 41,
+				end: u32::MAX,
+			}
+		);
+		assert_eq!(complement.len(), 3);
+	}
+
+	#[test]
+	fn complement_lower_is_min() {
+		let intervals: &mut [Interval<u32>] = &mut [Interval { start: 0, end: 10 }];
+		let complement: Vec<Interval<u32>> = Interval::complement(intervals);
+		assert_eq!(complement.len(), 1);
+		assert_eq!(
+			complement[0],
+			Interval {
+				start: 11,
+				end: u32::MAX,
+			}
+		);
+	}
+
+	#[test]
+	fn complement_lower_is_min_plus_one() {
+		let intervals: &mut [Interval<u32>] = &mut [Interval { start: 1, end: 10 }];
+		let complement: Vec<Interval<u32>> = Interval::complement(intervals);
+		assert_eq!(complement.len(), 2);
+		assert_eq!(complement[0], Interval { start: 0, end: 0 });
+		assert_eq!(
+			complement[1],
+			Interval {
+				start: 11,
+				end: u32::MAX,
+			}
+		);
+	}
+
+	#[test]
+	fn complement_upper_is_max_minus_one() {
+		let intervals: &mut [Interval<u32>] = &mut [Interval {
+			start: 10,
+			end: u32::MAX - 1,
+		}];
+		let complement: Vec<Interval<u32>> = Interval::complement(intervals);
+		assert_eq!(complement.len(), 2);
+		assert_eq!(complement[0], Interval { start: 0, end: 9 });
+		assert_eq!(
+			complement[1],
+			Interval {
+				start: u32::MAX,
+				end: u32::MAX,
+			}
+		);
+	}
+	#[test]
+	fn complement_upper_is_max() {
+		let intervals: &mut [Interval<u32>] = &mut [Interval {
+			start: 10,
+			end: u32::MAX,
+		}];
+		let complement: Vec<Interval<u32>> = Interval::complement(intervals);
+		assert_eq!(complement.len(), 1);
+		assert_eq!(complement[0], Interval { start: 0, end: 9 });
 	}
 }
