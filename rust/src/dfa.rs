@@ -732,12 +732,10 @@ impl Tdfa {
 
 	fn step_on_interval(
 		nfa: &Tnfa,
-		mut configurations: Vec<Configuration>,
+		configurations: Vec<Configuration>,
 		interval: Interval<u32>,
 	) -> Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> {
 		let mut next_states: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Vec::new();
-
-		configurations.sort_by_key(|config| config.nfa_state);
 
 		for config in configurations.iter() {
 			if config.nfa_state.is_end() {
@@ -791,7 +789,7 @@ impl Tdfa {
 				continue;
 			}
 
-			for transition in nfa[config.nfa_state].spontaneous().iter() {
+			for transition in nfa[config.nfa_state].spontaneous().iter().rev() {
 				if nfa_states_on_stack.contains(&transition.target) {
 					continue;
 				}
@@ -963,14 +961,14 @@ impl Tdfa {
 impl Kernel {
 	/// There should be no duplicate NFA states; see comment above on [`Kernel`].
 	fn invariants(configurations: &[(Configuration, Vec<(Tag, SymbolicPosition)>)]) {
-		assert_eq!(
-			configurations.len(),
-			configurations
-				.iter()
-				.map(|(config, _)| config.nfa_state)
-				.collect::<BTreeSet<_>>()
-				.len()
-		);
+		let states: Vec<NfaIdx> = configurations
+			.iter()
+			.map(|(config, _)| config.nfa_state)
+			.collect::<Vec<_>>();
+		let mut seen: BTreeSet<NfaIdx> = BTreeSet::new();
+		let mut unique_states: Vec<NfaIdx> = states.clone();
+		unique_states.retain(|state| seen.insert(*state));
+		assert_eq!(states, unique_states);
 	}
 
 	fn nontrivial_transitions(&self, nfa: &Tnfa) -> Vec<Interval<u32>> {
@@ -1046,19 +1044,25 @@ impl std::ops::Index<NonZero<usize>> for PrefixTree {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::regex::Regex;
 	use crate::schema::Schema;
 
 	#[test]
-	fn stuff() {
-		{
-			let r: Regex = Regex::from_pattern("0((?<foobar>1(2[a-zA-Z])*)*|(?<baz>xyz))*world").unwrap();
-			let mut schema: Schema = Schema::new();
-			schema.add_rule("hello", r);
-			let dfa: Tdfa = schema.build_dfa();
-			dbg!(&dfa);
-			let b: bool = dfa.execute("012a2b2c12z12zxyzxyzxyzworld");
-			assert!(b);
-		}
+	fn complex_pattern() {
+		let mut schema: Schema = Schema::new();
+		schema
+			.add_rule("hello", "0((?<foobar>1(2[a-zA-Z])*)*|(?<baz>xyz))*world")
+			.unwrap();
+		let dfa: Tdfa = schema.build_dfa();
+		let b: bool = dfa.execute("012a2b2c12z12zxyzxyzxyzworld");
+		assert!(b);
+	}
+
+	#[test]
+	fn group_with_overlapping_range() {
+		let mut schema: Schema = Schema::new();
+		schema.add_rule("hello", r"[aa]").unwrap();
+		let dfa: Tdfa = schema.build_dfa();
+		let b: bool = dfa.execute("a");
+		assert!(b);
 	}
 }

@@ -123,7 +123,8 @@ pub enum RegexErrorKind {
 	/// it'll either get consumed by/turned into `InvalidLiteral` or `InvalidTerm`,
 	/// but exists because 1. it models "what's happening", and 2. it's useful for debugging.
 	ExpectedOneOf { characters: &'static str, negate: bool },
-	/// An error from nom; shouldn't happen, but used to implement [`nom::error::ParseError`].
+	/// An error from nom; shouldn't happen, but in implementation of [`nom::error::ParseError`]
+	/// (useful for debugging/failing gracefully in a non-critical scenario).
 	Nom(NomErrorKind),
 }
 

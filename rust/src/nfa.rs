@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
-use crate::interval_tree::PolicyExtend;
+use crate::interval_tree::Policy;
 use crate::regex::Regex;
 use crate::regex::RegexCapture;
 use crate::schema::Rule;
@@ -96,6 +96,9 @@ pub struct AutomataCapture {
 	pub rule: usize,
 	pub capture_info: RegexCapture,
 }
+
+#[derive(Debug)]
+struct PolicyExtendUnique;
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 struct NfaSimulationData {
@@ -301,22 +304,24 @@ impl Tnfa {
 					self[current].transitions.insert(
 						Interval::new(u32::from(ch), u32::from(ch)),
 						vec![target],
-						PolicyExtend,
+						PolicyExtendUnique,
 					);
 				}
 				BTreeSet::new()
 			},
 			Regex::AnyChar => {
-				self[current]
-					.transitions
-					.insert(Interval::new(0, u32::from(char::MAX)), vec![target], PolicyExtend);
+				self[current].transitions.insert(
+					Interval::new(0, u32::from(char::MAX)),
+					vec![target],
+					PolicyExtendUnique,
+				);
 				BTreeSet::new()
 			},
 			&Regex::Literal(ch) => {
 				self[current].transitions.insert(
 					Interval::new(u32::from(ch), u32::from(ch)),
 					vec![target],
-					PolicyExtend,
+					PolicyExtendUnique,
 				);
 				BTreeSet::new()
 			},
@@ -331,7 +336,9 @@ impl Tnfa {
 						intervals.push(Interval::new(u32::from(start), u32::from(end)));
 					}
 					for interval in Interval::complement(&mut intervals).into_iter() {
-						self[current].transitions.insert(interval, vec![target], PolicyExtend);
+						self[current]
+							.transitions
+							.insert(interval, vec![target], PolicyExtendUnique);
 					}
 				} else {
 					for &(start, end) in items.iter() {
@@ -341,7 +348,7 @@ impl Tnfa {
 						self[current].transitions.insert(
 							Interval::new(u32::from(start), u32::from(end)),
 							vec![target],
-							PolicyExtend,
+							PolicyExtendUnique,
 						);
 					}
 				}
@@ -582,6 +589,17 @@ impl NfaIdx {
 
 	pub fn is_end(&self) -> bool {
 		self.0 > (isize::MAX as usize)
+	}
+}
+
+impl<T> Policy<Vec<T>> for PolicyExtendUnique
+where
+	T: Ord + Clone,
+{
+	fn merge(&mut self, existing: &mut Vec<T>, mut new: Vec<T>) {
+		let mut seen: BTreeSet<T> = BTreeSet::from_iter(existing.iter().cloned());
+		new.retain(|x| seen.insert(x.clone()));
+		existing.extend(new);
 	}
 }
 

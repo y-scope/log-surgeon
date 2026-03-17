@@ -91,7 +91,7 @@ public:
      * @param pos A pointer to the current position in the text.
      * @return `std::nullopt` iff EOF.
      */
-    [[nodiscard]] auto next_event(std::string_view const& input, size_t* pos)
+    [[nodiscard]] auto next_event(std::string_view input, size_t* pos)
             -> std::optional<EventHandle>;
 
 private:
@@ -165,7 +165,7 @@ private:
     std::vector<std::vector<CCapture>> m_captures_by_id;
 };
 
-inline auto ParserHandle::next_event(std::string_view const& input, size_t* pos)
+inline auto ParserHandle::next_event(std::string_view input, size_t* pos)
         -> std::optional<EventHandle> {
     if (!log_surgeon_parser_next(m_parser, CCharArray::from_string_view(input), pos, m_event)) {
         return std::nullopt;

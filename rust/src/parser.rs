@@ -187,6 +187,7 @@ impl Parser {
 			log_type: LogType::new(static_text, working_variable_types),
 			variables,
 			have_header,
+			message: &self.current_log,
 		})
 	}
 }

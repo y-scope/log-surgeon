@@ -11,6 +11,7 @@ pub struct LogEvent<'parser> {
 	/// Whether this `LogEvent` was delimited by a ``"header"` variable (otherwise, just by a newline);
 	/// if so, the header is necessarily the first variable.
 	pub have_header: bool,
+	pub message: &'parser str,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -49,6 +50,7 @@ impl<'parser> LogEvent<'parser> {
 			log_type: LogType::new(String::new(), Vec::new()),
 			variables: Vec::new(),
 			have_header: false,
+			message: "",
 		}
 	}
 }

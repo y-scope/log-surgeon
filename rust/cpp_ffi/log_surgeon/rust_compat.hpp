@@ -30,7 +30,7 @@ struct CArray {
         return CArray{ptr, len};
     }
 
-    [[nodiscard]] static auto from_string_view(std::string_view const& view) noexcept -> CArray
+    [[nodiscard]] static auto from_string_view(std::string_view view) noexcept -> CArray
     requires std::is_same_v<T, char>
     {
         return CArray::from_ptr_len(view.data(), view.length());

@@ -27,15 +27,19 @@ pub trait Policy<T> {
 }
 
 /// Combine values using the [`Extend`] trait; e.g. for containers.
+#[derive(Debug)]
 pub struct PolicyExtend;
 
 /// Combine values using the [`Add`] trait; e.g. for numbers.
+#[derive(Debug)]
 pub struct PolicyAdd;
 
 /// Do nothing; for the unit type/object `()`.
+#[derive(Debug)]
 pub struct PolicyNoop;
 
 /// Use an arbitrary function to combine values.
+#[derive(Debug)]
 pub struct PolicyFunction<T>(T);
 
 enum Intersection<T: Number> {

@@ -42,10 +42,12 @@ struct PyLogEvent {
 	log_type: Py<PyLogType>,
 	#[pyo3(get)]
 	variables: Py<PyList>,
+	#[pyo3(get)]
+	message: Py<PyString>,
 }
 
-#[pyclass(name = "LogType")]
-#[derive(Debug)]
+#[pyclass(name = "LogType", eq)]
+#[derive(Debug, Eq, PartialEq)]
 struct PyLogType(LogType);
 
 #[pyclass(name = "Variable")]
@@ -74,10 +76,11 @@ impl PyParser {
 		}
 	}
 
-	fn add_variable_pattern(&mut self, rule: &str, pattern: &str) -> PyResult<()> {
+	/// Raises an exception if `name` is empty, `"newline"`, or `"delimiters"`.
+	fn add_variable_pattern(&mut self, name: &str, pattern: &str) -> PyResult<()> {
 		let regex: Regex = Regex::from_pattern(pattern)
 			.map_err(|err| LogSurgeonInvalidRegexPattern::new_err(format!("invalid pattern: {err:?}")))?;
-		self.schema.add_rule(rule, regex);
+		self.schema.add_rule(name, regex);
 		Ok(())
 	}
 
@@ -96,7 +99,6 @@ impl PyParser {
 	}
 
 	fn set_input_stream(&mut self, input: &Bound<'_, PyAny>) -> PyResult<()> {
-		// TODO check for read method
 		self.input = input.clone().unbind();
 		self.pos = 0;
 		self.buffer.clear();
@@ -127,6 +129,7 @@ impl PyParser {
 			Ok(Some(PyLogEvent {
 				log_type: Py::new(py, PyLogType(event.log_type.clone()))?,
 				variables: variables.unbind(),
+				message: PyString::new(py, event.message).unbind(),
 			}))
 		})
 	}
@@ -156,22 +159,17 @@ impl PyLogEvent {
 	// 	}
 	// }
 
-	#[pyo3(name = "__repr__")]
-	fn repr(&self) -> String {
-		format!("{self:?}")
+	#[pyo3(name = "__str__")]
+	fn to_string<'py>(this: PyRef<'py, Self>) -> Py<PyString> {
+		this.message.clone_ref(this.py())
 	}
 }
 
 #[pymethods]
 impl PyLogType {
 	#[pyo3(name = "__str__")]
-	fn to_str(&self) -> String {
-		self.0.to_string()
-	}
-
-	#[pyo3(name = "__repr__")]
-	fn repr(&self) -> String {
-		format!("{self:?}")
+	fn as_str(&self) -> &str {
+		self.0.as_str()
 	}
 }
 
@@ -225,12 +223,19 @@ fn read_from_input(input: &Bound<'_, PyAny>, output: &mut String) -> PyResult<us
 		*output += utf8;
 		Ok(utf8.len())
 	} else {
+		let id_read: &Bound<'_, PyString> = pyo3::intern!(input.py(), "read");
+		if !input.hasattr(id_read)? {
+			return Err(LogSurgeonException::new_err(
+				"input stream must be a string, bytes, or a `read`able object",
+			));
+		}
+
 		// - <https://docs.python.org/3/library/io.html#io.RawIOBase.read>
 		//
 		// > If `size` is unspecified or -1, all bytes until EOF are read.
 		// > If 0 bytes are returned, and size was not 0, this indicates end of file.
 		// > If the object is in non-blocking mode and no bytes are available, `None` is returned.
-		let data: Bound<'_, PyAny> = input.call_method0("read")?;
+		let data: Bound<'_, PyAny> = input.call_method0(id_read)?;
 
 		if let Some(utf8) = python_unicode_or_bytes_as_str(&data)? {
 			*output += utf8;
