@@ -16,20 +16,11 @@ class LogEvent:
     A parsed log event.
     """
     @property
-    def log_type(self) -> LogType:
-        r"""
-        Template with ``%rule_name%`` placeholders for matched variables.
-        """
+    def log_type(self) -> LogType: ...
     @property
-    def variables(self) -> list[Variable]:
-        r"""
-        List of variables that matched in this event.
-        """
+    def variables(self) -> list[Variable]: ...
     @property
-    def message(self) -> str:
-        r"""
-        The original text of the log event.
-        """
+    def message(self) -> str: ...
     def __str__(self) -> str: ...
 
 @typing.final
@@ -79,19 +70,10 @@ class Variable:
     A matched variable within a log event.
     """
     @property
-    def name(self) -> str:
-        r"""
-        The rule name passed to ``add_variable_pattern()``.
-        """
+    def name(self) -> str: ...
     @property
-    def text(self) -> str:
-        r"""
-        The matched text.
-        """
+    def text(self) -> str: ...
     @property
-    def captures(self) -> dict[str, list[str]]:
-        r"""
-        Capture group names mapped to their matched values.
-        """
+    def captures(self) -> dict[str, list[str]]: ...
     def __repr__(self) -> builtins.str: ...
 

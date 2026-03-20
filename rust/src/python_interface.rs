@@ -13,7 +13,8 @@ use pyo3::types::PyDictMethods;
 use pyo3::types::PyList;
 use pyo3::types::PyListMethods;
 use pyo3::types::PyString;
-use pyo3_stub_gen::derive::*;
+
+#[cfg(feature = "stub-gen")]
 use pyo3_stub_gen::define_stub_info_gatherer;
 
 use crate::log_event::LogEvent;
@@ -27,7 +28,7 @@ pyo3::create_exception!(log_surgeon, LogSurgeonException, PyRuntimeError);
 pyo3::create_exception!(log_surgeon, LogSurgeonInvalidRegexPattern, LogSurgeonException);
 
 /// High-performance log parser using DFA-based pattern matching.
-#[gen_stub_pyclass]
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyclass)]
 #[pyclass(name = "Parser")]
 #[derive(Debug)]
 struct PyParser {
@@ -41,35 +42,38 @@ struct PyParser {
 }
 
 /// A parsed log event.
-// Fields are exposed via explicit `#[getter]` methods (not `#[pyo3(get)]`) so
-// that pyo3-stub-gen can apply type overrides for the generated `.pyi` stubs.
-// Doc comments on those getters become the Python-side docstrings.
-#[gen_stub_pyclass]
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyclass)]
 #[pyclass(name = "LogEvent")]
 #[derive(Debug)]
 struct PyLogEvent {
+	#[pyo3(get)]
 	log_type: Py<PyLogType>,
+	#[pyo3(get)]
 	variables: Py<PyList>,
+	#[pyo3(get)]
 	message: Py<PyString>,
 }
 
 /// A log type template showing the structure of a log event.
-#[gen_stub_pyclass]
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyclass)]
 #[pyclass(name = "LogType", eq)]
 #[derive(Debug, Eq, PartialEq)]
 struct PyLogType(LogType);
 
 /// A matched variable within a log event.
-#[gen_stub_pyclass]
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyclass)]
 #[pyclass(name = "Variable")]
 #[derive(Debug)]
 struct PyVariable {
+	#[pyo3(name = "name", get)]
 	name: Py<PyString>,
+	#[pyo3(name = "text", get)]
 	lexeme: Py<PyString>,
+	#[pyo3(get)]
 	captures: Py<PyDict>,
 }
 
-#[gen_stub_pymethods]
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyParser {
 	#[new]
@@ -112,11 +116,7 @@ impl PyParser {
 	}
 
 	/// Set the input to parse (string, bytes, or readable file object).
-	fn set_input_stream(
-		&mut self,
-		#[gen_stub(override_type(type_repr = "str | bytes | typing.IO[bytes]"))]
-		input: &Bound<'_, PyAny>,
-	) -> PyResult<()> {
+	fn set_input_stream(&mut self, input: &Bound<'_, PyAny>) -> PyResult<()> {
 		self.input = input.clone().unbind();
 		self.pos = 0;
 		self.buffer.clear();
@@ -159,35 +159,16 @@ impl PyParser {
 	}
 }
 
-#[gen_stub_pymethods]
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyLogEvent {
-	/// Template with ``%rule_name%`` placeholders for matched variables.
-	#[getter]
-	fn log_type(&self) -> Py<PyLogType> {
-		Python::attach(|py| self.log_type.clone_ref(py))
-	}
-
-	/// List of variables that matched in this event.
-	#[getter]
-	#[gen_stub(override_return_type(type_repr = "list[Variable]"))]
-	fn variables(&self) -> Py<PyList> {
-		Python::attach(|py| self.variables.clone_ref(py))
-	}
-
-	/// The original text of the log event.
-	#[getter]
-	fn message(&self) -> Py<PyString> {
-		Python::attach(|py| self.message.clone_ref(py))
-	}
-
 	#[pyo3(name = "__str__")]
 	fn to_string<'py>(this: PyRef<'py, Self>) -> Py<PyString> {
 		this.message.clone_ref(this.py())
 	}
 }
 
-#[gen_stub_pymethods]
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyLogType {
 	#[pyo3(name = "__str__")]
@@ -196,28 +177,9 @@ impl PyLogType {
 	}
 }
 
-#[gen_stub_pymethods]
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyVariable {
-	/// The rule name passed to ``add_variable_pattern()``.
-	#[getter]
-	fn name(&self) -> Py<PyString> {
-		Python::attach(|py| self.name.clone_ref(py))
-	}
-
-	/// The matched text.
-	#[getter]
-	fn text(&self) -> Py<PyString> {
-		Python::attach(|py| self.lexeme.clone_ref(py))
-	}
-
-	/// Capture group names mapped to their matched values.
-	#[getter]
-	#[gen_stub(override_return_type(type_repr = "dict[str, list[str]]"))]
-	fn captures(&self) -> Py<PyDict> {
-		Python::attach(|py| self.captures.clone_ref(py))
-	}
-
 	#[pyo3(name = "__repr__")]
 	fn repr(&self) -> String {
 		format!("{self:?}")
@@ -313,4 +275,5 @@ mod log_surgeon {
 	use super::PyVariable;
 }
 
+#[cfg(feature = "stub-gen")]
 define_stub_info_gatherer!(stub_info);

@@ -54,3 +54,7 @@ changing `src/python_interface.rs`:
 ```bash
 cargo run --example gen_stub --features stub-gen
 ```
+
+> **Note:** Stub generation requires Python 3.10+ (pyo3-stub-gen does not
+> support 3.9). The generated stubs are committed and shipped in all wheels,
+> including Python 3.9.
