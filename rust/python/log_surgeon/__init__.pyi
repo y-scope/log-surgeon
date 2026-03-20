@@ -9,8 +9,11 @@ class Parser:
     """High-performance log parser using DFA-based pattern matching."""
 
     def __new__(cls, debug: bool = False) -> Parser: ...
-    def add_variable_pattern(self, name: str, pattern: str) -> None:
-        """Add a named pattern with ``(?<capture_name>...)`` groups."""
+    def add_variable_pattern(self, name: str, pattern: str, *, priority: int = 0) -> None:
+        """Add a named pattern with ``(?<capture_name>...)`` groups.
+
+        Higher priority patterns are matched first. Default is 0.
+        """
         ...
     def set_delimiters(self, delimiters: str) -> None:
         """Set token boundary characters. Raises if empty."""

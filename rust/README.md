@@ -53,7 +53,7 @@ message:  10:30:00 INFO starting up
 | Method | Description |
 |--------|-------------|
 | `Parser(debug=False)` | Create a new parser |
-| `add_variable_pattern(name, pattern)` | Add a named pattern with `(?<capture_name>...)` groups |
+| `add_variable_pattern(name, pattern, *, priority=0)` | Add a named pattern with `(?<capture_name>...)` groups |
 | `set_delimiters(delimiters)` | Set token boundary characters (default: space, tab, etc.) |
 | `compile()` | Compile patterns into the matching engine |
 | `set_input_stream(input)` | Set input (string, bytes, or file-like object) |
