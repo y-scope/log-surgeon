@@ -23,6 +23,14 @@ default = []
 python = [
 	"pyo3/extension-module",
 	"pyo3/macros",
+	"dep:pyo3-stub-gen",
+]
+# Like "python" but without extension-module, so we can link a standalone
+# binary that generates .pyi type stubs without needing libpython.
+stub-gen = [
+	"pyo3/auto-initialize",
+	"pyo3/macros",
+	"dep:pyo3-stub-gen",
 ]
 
 [build-dependencies]
@@ -35,5 +43,13 @@ tracing = "0.1"
 [dependencies.pyo3]
 version = "0.27"
 default-features = false
+
+[dependencies.pyo3-stub-gen]
+version = "0.19"
+optional = true
+
+[[example]]
+name = "gen_stub"
+required-features = ["stub-gen"]
 
 [workspace]
