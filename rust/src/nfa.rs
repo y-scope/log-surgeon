@@ -610,9 +610,10 @@ mod test {
 
 	#[test]
 	fn stuff() {
-		let r: Regex = Regex::from_pattern("0((?<foobar>1(2[a-zA-Z])*)|(?<baz>xyz))world").unwrap();
 		let mut schema: Schema = Schema::new();
-		schema.add_rule("hello", r);
+		schema
+			.add_rule("hello", "0((?<foobar>1(2[a-zA-Z])*)|(?<baz>xyz))world")
+			.unwrap();
 		let nfa: Tnfa = Tnfa::for_rules(schema.rules(), " ".to_owned());
 		let b: bool = nfa.execute("012a2b2cworld").is_some();
 		assert!(b);

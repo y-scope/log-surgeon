@@ -171,7 +171,8 @@ extra_bindings = []
 
 
 [parse.expand]
-crates = ["log-surgeon"]
+# If `-Zunpretty=expanded` ever gets stabilized, we can clean up "clone" and "destructor" impls in `c_interface.rs`.
+crates = []
 all_features = false
 default_features = false
 features = []

@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::convert::Infallible;
 
 use pyo3::buffer::PyBuffer;
 // use pyo3::exceptions::PyIndexError;
@@ -80,7 +81,7 @@ impl PyParser {
 	fn add_variable_pattern(&mut self, name: &str, pattern: &str) -> PyResult<()> {
 		let regex: Regex = Regex::from_pattern(pattern)
 			.map_err(|err| LogSurgeonInvalidRegexPattern::new_err(format!("invalid pattern: {err:?}")))?;
-		self.schema.add_rule(name, regex);
+		let Ok(_): Result<(), Infallible> = self.schema.add_rule(name, regex);
 		Ok(())
 	}
 

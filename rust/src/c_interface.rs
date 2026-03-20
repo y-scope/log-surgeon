@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::ffi::c_char;
 use std::marker::PhantomData;
 use std::num::NonZero;
@@ -64,7 +65,7 @@ unsafe extern "C" fn log_surgeon_schema_add_rule<'pattern>(
 			return Some(Box::new(err));
 		},
 	};
-	schema.add_rule(name, regex);
+	let Ok(_): Result<(), Infallible> = schema.add_rule(name, regex);
 	None
 }
 
@@ -93,6 +94,27 @@ extern "C" fn log_surgeon_parser_next<'parser, 'input>(
 	} else {
 		false
 	}
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn log_surgeon_search_query_interpretations(
+	parser: &Parser,
+	input: CCharArray<'_>,
+) -> Box<Vec<Interpretation>> {
+	let query: SearchString = SearchString::parse(input.as_utf8().unwrap()).unwrap();
+	let interpretations: Vec<Interpretation> = query.interpretations(&parser.lexer);
+	Box::new(interpretations)
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn log_surgeon_search_query_interpretation_as_string<'a>(
+	interpretations: &'a Vec<Interpretation>,
+	i: usize,
+	len: &mut usize,
+) -> CCharArray<'a> {
+	let s: &str = &interpretations[i].stringified;
+	*len = s.len();
+	CCharArray::from_utf8(s)
 }
 
 mod log_event {
@@ -174,69 +196,61 @@ impl<'lifetime> CCharArray<'lifetime> {
 	}
 }
 
-macro_rules! clone {
-	($name:ident, $ty:ty) => {
-		#[unsafe(no_mangle)]
-		extern "C" fn $name(value: &$ty) -> Box<$ty> {
-			Box::new(value.clone())
-		}
-	};
+/// `-Zunpretty=expanded` only in nightly...
+mod clone_impls {
+	use super::*;
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_parser_clone(value: &Parser) -> Box<Parser> {
+		Box::new(value.clone())
+	}
+
+	#[unsafe(no_mangle)]
+	unsafe extern "C" fn log_surgeon_log_event_clone<'a>(value: &LogEvent<'a>) -> Box<LogEvent<'a>> {
+		Box::new(value.clone())
+	}
 }
 
-macro_rules! destructor {
-	($name:ident, $ty:ty) => {
-		#[unsafe(no_mangle)]
-		unsafe extern "C" fn $name(value: Box<$ty>) {
-			std::mem::drop(value);
-		}
-	};
+/// `-Zunpretty=expanded` only in nightly...
+mod destructor_impls {
+	use super::*;
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_schema_drop(value: Box<Schema>) {
+		std::mem::drop(value);
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_regex_error_drop(value: Box<RegexError<'_>>) {
+		std::mem::drop(value);
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_parser_drop(value: Box<Parser>) {
+		std::mem::drop(value);
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_log_event_drop(value: Box<LogEvent<'_>>) {
+		std::mem::drop(value);
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_search_interpretations_drop(value: Box<Box<Vec<Interpretation>>>) {
+		std::mem::drop(value);
+	}
 }
-
-clone!(log_surgeon_parser_clone, Parser);
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn log_surgeon_log_event_clone<'a>(value: &LogEvent<'a>) -> Box<LogEvent<'a>> {
-	Box::new(value.clone())
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn log_surgeon_search_query_interpretations(
-	parser: &Parser,
-	input: CCharArray<'_>,
-) -> Box<Vec<Interpretation>> {
-	let query: SearchString = SearchString::parse(input.as_utf8().unwrap()).unwrap();
-	let interpretations: Vec<Interpretation> = query.interpretations(&parser.lexer);
-	Box::new(interpretations)
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn log_surgeon_search_query_interpretation_as_string<'a>(
-	interpretations: &'a Vec<Interpretation>,
-	i: usize,
-	len: &mut usize,
-) -> CCharArray<'a> {
-	let s: &str = &interpretations[i].stringified;
-	*len = s.len();
-	CCharArray::from_utf8(s)
-}
-
-destructor!(log_surgeon_schema_drop, Schema);
-destructor!(log_surgeon_regex_error_drop, RegexError<'_>);
-destructor!(log_surgeon_parser_drop, Parser);
-destructor!(log_surgeon_log_event_drop, LogEvent<'_>);
-destructor!(log_surgeon_search_interpretations_drop, Box<Vec<Interpretation>>);
 
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::regex::Regex;
 
 	#[test]
 	fn basic() {
 		let mut schema: Schema = Schema::new();
 		schema.set_delimiters(" ");
-		schema.add_rule("hello", Regex::from_pattern("hello world").unwrap());
-		schema.add_rule("bye", Regex::from_pattern("goodbye").unwrap());
+		schema.add_rule("hello", "hello world").unwrap();
+		schema.add_rule("bye", "goodbye").unwrap();
 
 		let mut parser: Parser = Parser::new(schema);
 		let input: CCharArray<'_> = CCharArray::from_utf8("hello world goodbye hello world  goodbye  ");
