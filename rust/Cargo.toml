@@ -48,7 +48,7 @@ default-features = false
 version = "0.19"
 optional = true
 
-[[example]]
+[[bin]]
 name = "gen_stub"
 required-features = ["stub-gen"]
 

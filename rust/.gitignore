@@ -9,3 +9,6 @@ __pycache__/
 
 # maturin build artifacts
 /dist/
+
+# Auto-generated type stubs (CI generates these during wheel builds)
+python/log_surgeon/__init__.pyi

@@ -10,7 +10,7 @@ fn refine(s: String, old: &str, new: &str) -> String {
 		 Expected: {old}\n\
 		 pyo3-stub-gen output may have changed."
 	);
-	s.replace(old, new)
+	s.replacen(old, new, 1)
 }
 
 fn main() {
