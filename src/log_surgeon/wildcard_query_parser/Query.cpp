@@ -69,8 +69,7 @@ auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const
             }
 
             auto const single_token_interpretations{
-                    get_all_single_token_interpretations(expression_view, lexer)
-            };
+                    get_all_single_token_interpretations(expression_view, lexer)};
             if (single_token_interpretations.empty()) {
                 continue;
             }
@@ -78,8 +77,7 @@ auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const
             if (begin_idx == 0) {
                 query_interpretations[end_idx - 1].insert(
                         std::make_move_iterator(single_token_interpretations.begin()),
-                        std::make_move_iterator(single_token_interpretations.end())
-                );
+                        std::make_move_iterator(single_token_interpretations.end()));
             } else {
                 for (auto const& prefix : query_interpretations[begin_idx - 1]) {
                     for (auto const& suffix : single_token_interpretations) {
@@ -94,10 +92,9 @@ auto Query::get_all_multi_token_interpretations(ByteLexer const& lexer) const
     return query_interpretations.back();
 }
 
-auto Query::get_all_single_token_interpretations(
-        ExpressionView const& original_view,
-        ByteLexer const& lexer
-) -> std::vector<QueryInterpretation> {
+auto Query::get_all_single_token_interpretations(ExpressionView const& original_view,
+                                                 ByteLexer const& lexer)
+        -> std::vector<QueryInterpretation> {
     vector<QueryInterpretation> interpretations;
     auto const extended_view{original_view.extend_to_adjacent_greedy_wildcards().second};
 
@@ -121,11 +118,9 @@ auto Query::get_all_single_token_interpretations(
     }
 
     for (auto const variable_type_id : matching_var_type_ids) {
-        interpretations.emplace_back(
-                variable_type_id,
-                string{extended_view.get_search_string()},
-                contains_wildcard
-        );
+        interpretations.emplace_back(variable_type_id,
+                                     string{extended_view.get_search_string()},
+                                     contains_wildcard);
         if (false == contains_wildcard) {
             break;
         }

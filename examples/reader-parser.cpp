@@ -66,6 +66,6 @@ auto main(int argc, char* argv[]) -> int {
     if (int const err{examples::check_input(args)}; 0 != err) {
         return err;
     }
-    examples::process_logs(args[0], args[1]);
+    examples::process_logs(args.at(0), args.at(1));
     return 0;
 }

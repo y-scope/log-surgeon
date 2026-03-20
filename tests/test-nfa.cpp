@@ -87,8 +87,7 @@ TEST_CASE("capture", "[NFA]") {
             "9:byte_transitions={2-->10},spontaneous_transition={}\n"
             "10:byte_transitions={3-->11},spontaneous_transition={}\n"
             "11:byte_transitions={},spontaneous_transition={12[1p]}\n"
-            "12:accepting_tag=0,byte_transitions={},spontaneous_transition={}\n"
-    };
+            "12:accepting_tag=0,byte_transitions={},spontaneous_transition={}\n"};
     test_nfa(var_schema, expected_serialized_nfa);
 }
 
@@ -119,8 +118,7 @@ TEST_CASE("capture_containing_repetition", "[NFA]") {
             "->15},spontaneous_transition={}\n"
             "15:byte_transitions={0-->15,1-->15,2-->15,3-->15,4-->15,5-->15,6-->15,7-->15,8-->15,9-"
             "->15},spontaneous_transition={16[7p]}\n"
-            "16:byte_transitions={C-->4},spontaneous_transition={}\n"
-    };
+            "16:byte_transitions={C-->4},spontaneous_transition={}\n"};
     test_nfa(var_schema, expected_serialized_nfa);
 }
 
@@ -137,8 +135,7 @@ TEST_CASE("multi_valued_capture_0", "[NFA]") {
             "3:byte_transitions={},spontaneous_transition={4[1p+]}\n"
             "4:accepting_tag=0,byte_transitions={},spontaneous_transition={5[0p+]}\n"
             "5:byte_transitions={1-->6},spontaneous_transition={}\n"
-            "6:byte_transitions={},spontaneous_transition={4[1p+]}\n"
-    };
+            "6:byte_transitions={},spontaneous_transition={4[1p+]}\n"};
     test_nfa(var_schema, expected_serialized_nfa);
 }
 
@@ -156,8 +153,7 @@ TEST_CASE("multi_valued_capture_1", "[NFA]") {
             "4:accepting_tag=0,byte_transitions={a-->5},spontaneous_transition={5[]}\n"
             "5:byte_transitions={a-->5},spontaneous_transition={6[0p+]}\n"
             "6:byte_transitions={1-->7},spontaneous_transition={}\n"
-            "7:byte_transitions={},spontaneous_transition={4[1p+]}\n"
-    };
+            "7:byte_transitions={},spontaneous_transition={4[1p+]}\n"};
     test_nfa(var_schema, expected_serialized_nfa);
 }
 
@@ -179,8 +175,7 @@ TEST_CASE("multi_valued_capture_containing_repetition", "[NFA]") {
             "8:byte_transitions={},spontaneous_transition={9[0p+]}\n"
             "9:byte_transitions={1-->10},spontaneous_transition={}\n"
             "10:byte_transitions={1-->10},spontaneous_transition={11[1p+]}\n"
-            "11:byte_transitions={,-->6},spontaneous_transition={}\n"
-    };
+            "11:byte_transitions={,-->6},spontaneous_transition={}\n"};
     test_nfa(var_schema, expected_serialized_nfa);
 }
 
@@ -195,8 +190,7 @@ TEST_CASE("int_var", "[NFA]") {
             "1:byte_transitions={0-->2,1-->2,2-->2,3-->2,4-->2,5-->2,6-->2,7-->2,8-->2,9-->2},"
             "spontaneous_transition={}\n"
             "2:accepting_tag=0,byte_transitions={0-->2,1-->2,2-->2,3-->2,4-->2,5-->2,6-->2,7-->2,8-"
-            "->2,9-->2},spontaneous_transition={}\n"
-    };
+            "->2,9-->2},spontaneous_transition={}\n"};
     test_nfa(var_schema, expected_serialized_nfa);
 }
 
@@ -214,7 +208,6 @@ TEST_CASE("kv_pair_var", "[NFA]") {
             "4:byte_transitions={=-->4,A-->4,A-->5,B-->4},spontaneous_transition={}\n"
             "5:byte_transitions={=-->6,A-->6,B-->6},spontaneous_transition={6[]}\n"
             "6:byte_transitions={=-->6,A-->6,B-->6},spontaneous_transition={7[1p]}\n"
-            "7:accepting_tag=0,byte_transitions={},spontaneous_transition={}\n"
-    };
+            "7:accepting_tag=0,byte_transitions={},spontaneous_transition={}\n"};
     test_nfa(var_schema, expected_serialized_nfa);
 }

@@ -84,16 +84,13 @@ auto QueryInterpretation::serialize() const -> string {
         } else {
             auto const& var = std::get<VariableQueryToken>(token);
             token_strings.emplace_back(
-                    fmt::format("<{}>({})", var.get_variable_type(), var.get_query_substring())
-            );
+                    fmt::format("<{}>({})", var.get_variable_type(), var.get_query_substring()));
             contains_wildcard_strings.emplace_back(var.get_contains_wildcard() ? "1" : "0");
         }
     }
 
-    return fmt::format(
-            "logtype='{}', contains_wildcard='{}'",
-            fmt::join(token_strings, ""),
-            fmt::join(contains_wildcard_strings, "")
-    );
+    return fmt::format("logtype='{}', contains_wildcard='{}'",
+                       fmt::join(token_strings, ""),
+                       fmt::join(contains_wildcard_strings, ""));
 }
 }  // namespace log_surgeon::wildcard_query_parser

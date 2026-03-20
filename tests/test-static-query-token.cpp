@@ -22,11 +22,9 @@ using log_surgeon::wildcard_query_parser::StaticQueryToken;
  * @brief Tests `operator<=>` and all derived operators.
  */
 TEST_CASE("comparison_operators", "[StaticQueryToken]") {
-    std::vector<StaticQueryToken> const ordered_tokens{
-            StaticQueryToken{""},
-            StaticQueryToken{"abc"},
-            StaticQueryToken{"def"}
-    };
+    std::vector<StaticQueryToken> const ordered_tokens{StaticQueryToken{""},
+                                                       StaticQueryToken{"abc"},
+                                                       StaticQueryToken{"def"}};
     StaticQueryToken const token{"ghi"};
     StaticQueryToken const duplicate_token{"ghi"};
 

@@ -60,8 +60,7 @@ public:
      * @return true when both boundaries are satisfied; false otherwise.
      */
     [[nodiscard]] auto is_surrounded_by_delims_or_wildcards(
-            std::array<bool, cSizeOfByte> const& delim_table
-    ) const -> bool;
+            std::array<bool, cSizeOfByte> const& delim_table) const -> bool;
 
     /**
      * Checks whether this `ExpressionView` represents a well-formed subrange.

@@ -74,12 +74,10 @@ auto LogEventView::get_logtype() const -> std::string {
                 auto capture_view{token_view};
                 auto const& captures{optional_captures.value()};
                 for (auto const capture : captures) {
-                    auto const [reg_start_id, reg_end_id]{
-                            m_log_parser.m_lexer.get_reg_ids_from_capture(capture)
-                    };
+                    auto const [reg_start_id,
+                                reg_end_id]{m_log_parser.m_lexer.get_reg_ids_from_capture(capture)};
                     auto const start_positions{
-                            capture_view.get_reversed_reg_positions(reg_start_id)
-                    };
+                            capture_view.get_reversed_reg_positions(reg_start_id)};
                     auto const end_positions{capture_view.get_reversed_reg_positions(reg_end_id)};
 
                     auto const& capture_name{capture->get_name()};
@@ -129,14 +127,12 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
             curr_pos++;
         }
         // TODO: this is bad the token class should handle this copy, now the regs are missing
-        Token copied_token{
-                start_pos,
-                curr_pos,
-                m_buffer.data(),
-                buffer_size,
-                0,
-                token.get_type_ids()
-        };
+        Token copied_token{start_pos,
+                           curr_pos,
+                           m_buffer.data(),
+                           buffer_size,
+                           0,
+                           token.get_type_ids()};
         m_log_output_buffer->set_curr_token(copied_token);
         m_log_output_buffer->advance_to_next_token();
     }

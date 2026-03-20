@@ -85,10 +85,8 @@ TEST_CASE("operations", "[PrefixTree]") {
         tree.insert(cRootId, cInitialPos1);
         REQUIRE_THROWS_AS(tree.get_reversed_positions(tree.size()), std::out_of_range);
 
-        REQUIRE_THROWS_AS(
-                tree.get_reversed_positions(std::numeric_limits<id_t>::max()),
-                std::out_of_range
-        );
+        REQUIRE_THROWS_AS(tree.get_reversed_positions(std::numeric_limits<id_t>::max()),
+                          std::out_of_range);
     }
 
     SECTION("Set position for a valid index works correctly") {

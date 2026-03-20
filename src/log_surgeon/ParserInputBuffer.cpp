@@ -107,12 +107,10 @@ auto ParserInputBuffer::get_next_character(unsigned char& next_char) -> ErrorCod
 // the user to wrap their input buffer. It tricks the LogParser and
 // ParserInputBuffer into thinking it never reaches the wrap, while still
 // respecting the actual size of the buffer the user passed in.
-auto ParserInputBuffer::set_storage(
-        char* storage,
-        uint32_t size,
-        uint32_t pos,
-        bool finished_reading_input
-) -> void {
+auto ParserInputBuffer::set_storage(char* storage,
+                                    uint32_t size,
+                                    uint32_t pos,
+                                    bool finished_reading_input) -> void {
     reset();
     m_storage.set_active_buffer(storage, size * 2, pos);
     m_finished_reading_input = finished_reading_input;

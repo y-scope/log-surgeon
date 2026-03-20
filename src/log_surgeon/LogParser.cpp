@@ -67,21 +67,17 @@ auto LogParser::add_rules(std::unique_ptr<SchemaAST> schema_ast) -> void {
         if (rule->m_name == "header") {
             auto start_of_file_or_new_line_regex{make_unique<RegexASTOr<ByteNfaState>>(
                     make_unique<RegexASTLiteral<ByteNfaState>>(utf8::cCharStartOfFile),
-                    make_unique<RegexASTLiteral<ByteNfaState>>('\n')
-            )};
+                    make_unique<RegexASTLiteral<ByteNfaState>>('\n'))};
             rule->m_regex_ptr = make_unique<RegexASTCat<ByteNfaState>>(
                     std::move(start_of_file_or_new_line_regex),
-                    std::move(rule->m_regex_ptr)
-            );
+                    std::move(rule->m_regex_ptr));
         } else {
             // For log-specific lexing: modify variable regex to contain a delimiter at the start.
             auto delimiter_group = make_unique<RegexASTGroup<ByteNfaState>>(
-                    RegexASTGroup<ByteNfaState>(delimiters)
-            );
-            rule->m_regex_ptr = make_unique<RegexASTCat<ByteNfaState>>(
-                    std::move(delimiter_group),
-                    std::move(rule->m_regex_ptr)
-            );
+                    RegexASTGroup<ByteNfaState>(delimiters));
+            rule->m_regex_ptr
+                    = make_unique<RegexASTCat<ByteNfaState>>(std::move(delimiter_group),
+                                                             std::move(rule->m_regex_ptr));
         }
         add_rule(rule->m_name, std::move(rule->m_regex_ptr));
     }
@@ -125,8 +121,7 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
                 // make a message with just the '\n' character
                 next_token.set_end_pos(next_token.get_next_pos());
                 next_token.set_type_ids(
-                        &Lexer<ByteNfaState, ByteDfaState>::cTokenUncaughtStringTypes
-                );
+                        &Lexer<ByteNfaState, ByteDfaState>::cTokenUncaughtStringTypes);
                 output_buffer->set_token(1, next_token);
                 output_buffer->set_pos(2);
                 m_input_buffer.set_consumed_pos(next_token.get_start_pos());
@@ -145,9 +140,8 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
             output_buffer->set_has_header(true);
             output_buffer->set_token(0, next_token);
             output_buffer->set_timestamp(std::nullopt);
-            auto optional_captures{
-                    m_lexer.get_captures_from_rule_id(static_cast<uint32_t>(SymbolId::TokenHeader))
-            };
+            auto optional_captures{m_lexer.get_captures_from_rule_id(
+                    static_cast<uint32_t>(SymbolId::TokenHeader))};
             if (optional_captures.has_value()) {
                 for (auto const* const capture : optional_captures.value()) {
                     if (capture->get_name() == "timestamp") {
@@ -157,10 +151,8 @@ auto LogParser::parse(ParsingAction& parsing_action) -> ErrorCode {
                         if (starts.empty() || ends.empty() || starts[0] < 0 || ends[0] < 0) {
                             continue;
                         }
-                        auto ts_token{next_token.get_sub_token(
-                                static_cast<size_t>(starts[0]),
-                                static_cast<size_t>(ends[0])
-                        )};
+                        auto ts_token{next_token.get_sub_token(static_cast<size_t>(starts[0]),
+                                                               static_cast<size_t>(ends[0]))};
                         output_buffer->set_timestamp(ts_token.to_string_view());
                         break;
                     }

@@ -95,8 +95,7 @@ TEST_CASE("no_capture_0", "[DFA]") {
             "7:byte_transitions={1-()->8}\n"
             "8:byte_transitions={2-()->9}\n"
             "9:byte_transitions={3-()->10}\n"
-            "10:accepting_tags={0},accepting_operations={},byte_transitions={}\n"
-    };
+            "10:accepting_tags={0},accepting_operations={},byte_transitions={}\n"};
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
@@ -114,8 +113,7 @@ TEST_CASE("no_capture_1", "[DFA]") {
             "4:byte_transitions={0-()->5,1-()->5,2-()->5,3-()->5,4-()->5,5-()->5,6-()->5,7-()->5,"
             "8-()->5,9-()->5}\n"
             "5:byte_transitions={0-()->5,1-()->5,2-()->5,3-()->5,4-()->5,5-()->5,6-()->5,7-()->5,"
-            "8-()->5,9-()->5,C-()->2}\n"
-    };
+            "8-()->5,9-()->5,C-()->2}\n"};
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
@@ -136,8 +134,7 @@ TEST_CASE("capture", "[DFA]") {
             "7:byte_transitions={1-(4p)->8}\n"
             "8:byte_transitions={2-()->9}\n"
             "9:byte_transitions={3-()->10}\n"
-            "10:accepting_tags={0},accepting_operations={2c4,3p},byte_transitions={}\n"
-    };
+            "10:accepting_tags={0},accepting_operations={2c4,3p},byte_transitions={}\n"};
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
@@ -160,8 +157,7 @@ TEST_CASE("capture_containing_repetition", "[DFA]") {
             "6:byte_transitions={0-()->6,1-()->6,2-()->6,3-()->6,4-()->6,5-()->6,6-()->6,7-()->6,"
             "8-()->6,9-()->6,C-(28p)->7}\n"
             "7:accepting_tags={0},accepting_operations={8c16,9c19,10c20,11c21,12c17,13c22,14c27,"
-            "15c28},byte_transitions={}\n"
-    };
+            "15c28},byte_transitions={}\n"};
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
@@ -179,8 +175,7 @@ TEST_CASE("multi_valued_capture_containing_repetition", "[DFA]") {
             "4:accepting_tags={0},accepting_operations={2c4,3c5},byte_transitions={a-()->5}\n"
             "5:byte_transitions={=-()->6,a-()->5}\n"
             "6:byte_transitions={1-(6p)->7}\n"
-            "7:byte_transitions={,-(5p,4c6)->4,1-()->7}\n"
-    };
+            "7:byte_transitions={,-(5p,4c6)->4,1-()->7}\n"};
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
@@ -196,8 +191,7 @@ TEST_CASE("int_var", "[DFA]") {
             "1:byte_transitions={0-()->2,1-()->2,2-()->2,3-()->2,4-()->2,5-()->2,6-()->2,7-()->2,8-"
             "()->2,9-()->2}\n"
             "2:accepting_tags={0},accepting_operations={},byte_transitions={0-()->2,1-()->2,2-()->"
-            "2,3-()->2,4-()->2,5-()->2,6-()->2,7-()->2,8-()->2,9-()->2}\n"
-    };
+            "2,3-()->2,4-()->2,5-()->2,6-()->2,7-()->2,8-()->2,9-()->2}\n"};
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
@@ -215,8 +209,7 @@ TEST_CASE("kv_pair_var", "[DFA]") {
             "4:accepting_tags={0},accepting_operations={2c4,3p},byte_transitions={=-()->5,A-()->4,"
             "B-()->5}\n"
             "5:accepting_tags={0},accepting_operations={2c4,3p},byte_transitions={=-()->5,A-()->4,"
-            "B-()->5}\n"
-    };
+            "B-()->5}\n"};
     test_dfa({var_schema}, expected_serialized_dfa);
 }
 
@@ -245,7 +238,6 @@ TEST_CASE("two_overlapping_vars", "[DFA]") {
             "8:accepting_tags={1},accepting_operations={2c0,3c1},byte_transitions={=-()->8,A-()->8,"
             "B-()->8}\n"
             "9:accepting_tags={0,1},accepting_operations={2c4,3p,2c0,3c1},"
-            "byte_transitions={=-()->9,A-()->7,B-()->9}\n"
-    };
+            "byte_transitions={=-()->9,A-()->7,B-()->9}\n"};
     test_dfa({var_schema1, var_schema2}, expected_serialized_dfa);
 }

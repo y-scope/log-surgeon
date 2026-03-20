@@ -39,20 +39,17 @@ public:
      * @param name
      * @param rule
      */
-    auto add_rule(
-            std::string const& name,
-            std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
-    ) -> void override;
+    auto add_rule(std::string const& name,
+                  std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule) -> void override;
 
     /**
      * Calls add_rule with the given RegexASTGroup
      * @param name
      * @param rule_char
      */
-    auto add_token_group(
-            std::string const& name,
-            std::unique_ptr<finite_automata::RegexASTGroup<TypedNfaState>> rule_group
-    ) -> void;
+    auto add_token_group(std::string const& name,
+                         std::unique_ptr<finite_automata::RegexASTGroup<TypedNfaState>> rule_group)
+            -> void;
 
     /**
      * Constructs a RegexASTCat and calls add_rule
@@ -68,11 +65,9 @@ public:
      * @param semantic_rule
      * @return uint32_t
      */
-    auto add_production(
-            std::string const& head,
-            std::vector<std::string> const& body,
-            SemanticRule semantic_rule
-    ) -> uint32_t;
+    auto add_production(std::string const& head,
+                        std::vector<std::string> const& body,
+                        SemanticRule semantic_rule) -> uint32_t;
 
     /**
      * Generate the LALR1 parser (use after all the lexical rules and
