@@ -1,7 +1,54 @@
 [project]
-name = "log_surgeon"
-version = "0.1"
+name = "log-surgeon-ffi"
+version = "0.1.0b11"
+description = "Python FFI bindings for log-surgeon: high-performance parsing of unstructured logs into structured data"
+license = {text = "Apache License 2.0"}
+authors = [
+    {name = "y-scope", email = "info@yscope.com"},
+]
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = [
+    "logging",
+    "log-parsing",
+    "log-analysis",
+    "structured-data",
+    "performance",
+    "observability",
+]
+dependencies = []
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Logging",
+    "Topic :: System :: Monitoring",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+]
+
+[project.urls]
+Homepage = "https://github.com/y-scope/log-surgeon"
+"Bug Tracker" = "https://github.com/y-scope/log-surgeon/issues"
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
+
+[tool.maturin]
+# Ignore Cargo.toml's default features and only enable what we list below.
+# This ensures the Python build won't break if someone adds a new default
+# feature to Cargo.toml that is incompatible with Python extensions.
+no-default-features = true
+features = ["python"]
+module-name = "log_surgeon"
+python-source = "python"

@@ -11,9 +11,15 @@ crate-type = [
 ]
 
 [features]
-default = [
-	"python",
-]
+# This crate produces two types of output:
+# 1. A C library (staticlib) — used by C/C++ code, built with `cargo build`
+# 2. A Python extension (.so) — used by Python, built with `maturin build`
+#
+# These two outputs need incompatible linker settings, so we can't enable both
+# at once. We leave "default" empty here, and let each build tool enable only
+# what it needs: maturin automatically enables the "python" feature (configured
+# in pyproject.toml).
+default = []
 python = [
 	"pyo3/extension-module",
 	"pyo3/macros",

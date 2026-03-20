@@ -1,7 +1,11 @@
 /target
 
 __pycache__/
+*.pyc
 
 /examples/**/*.o
 
 *.vim
+
+# maturin build artifacts
+/dist/
