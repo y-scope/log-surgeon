@@ -78,10 +78,11 @@ impl PyParser {
 	}
 
 	/// Raises an exception if `name` is empty, `"newline"`, or `"delimiters"`.
-	fn add_variable_pattern(&mut self, name: &str, pattern: &str) -> PyResult<()> {
+	#[pyo3(signature = (name, pattern, *, priority=0))]
+	fn add_variable_pattern(&mut self, name: &str, pattern: &str, priority: i32) -> PyResult<()> {
 		let regex: Regex = Regex::from_pattern(pattern)
 			.map_err(|err| LogSurgeonInvalidRegexPattern::new_err(format!("invalid pattern: {err:?}")))?;
-		let Ok(_): Result<(), Infallible> = self.schema.add_rule(name, regex);
+		let Ok(_): Result<(), Infallible> = self.schema.add_rule_with_priority(priority, name, regex);
 		Ok(())
 	}
 

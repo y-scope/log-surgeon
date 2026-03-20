@@ -52,8 +52,9 @@ unsafe extern "C" fn log_surgeon_schema_set_delimiters(schema: &mut Schema, deli
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn log_surgeon_schema_add_rule<'pattern>(
+unsafe extern "C" fn log_surgeon_schema_add_rule_with_priority<'pattern>(
 	schema: &mut Schema,
+	priority: i32,
 	name: CCharArray<'_>,
 	pattern: CCharArray<'pattern>,
 ) -> Option<Box<RegexError<'pattern>>> {
@@ -65,7 +66,7 @@ unsafe extern "C" fn log_surgeon_schema_add_rule<'pattern>(
 			return Some(Box::new(err));
 		},
 	};
-	let Ok(_): Result<(), Infallible> = schema.add_rule(name, regex);
+	let Ok(_): Result<(), Infallible> = schema.add_rule_with_priority(priority, name, regex);
 	None
 }
 

@@ -20,7 +20,7 @@ pub enum Token<'input> {
 }
 
 impl Lexer {
-	pub fn new(schema: Schema) -> Self {
+	pub fn new(mut schema: Schema) -> Self {
 		let dfa: Tdfa = schema.build_dfa();
 		let dfa_per_rule: Vec<Tdfa> = schema
 			.rules()

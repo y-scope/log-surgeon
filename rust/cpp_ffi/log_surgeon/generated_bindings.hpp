@@ -23,10 +23,16 @@ struct Parser;
 
 struct RegexError;
 
-/// A `Schema` is a just a list of rules and a set of delimiter characters.
-/// [`Rule`]s are "ID"ed by their index (insertion order).
-/// The `0`th rule is special (internally, it is used to represent a "newline" token),
-/// so the first "user-added" rule has ID/index `1`.
+/// A `Schema` is conceptually a list of rules and a set of delimiter characters.
+///
+/// [`Rule`]s may be added with a specific integer priority;
+/// larger integer value means higher priority.
+/// Within a priority level, rules are prioritized by insertion order.
+///
+/// Before automata construction, rules are "flattened", ordered by priority (highest first).
+/// A special `0`th rule internally represents a "newline" token.
+/// Rules are "ID"ed by their index in this flattened priority list.
+///
 struct Schema;
 
 template<typename T = void>
@@ -73,9 +79,10 @@ bool log_surgeon_parser_next(Parser *parser, CCharArray input, size_t *pos, LogE
 
 void log_surgeon_regex_error_drop(Box<RegexError> value);
 
-Option<Box<RegexError>> log_surgeon_schema_add_rule(Schema *schema,
-                                                    CCharArray name,
-                                                    CCharArray pattern);
+Option<Box<RegexError>> log_surgeon_schema_add_rule_with_priority(Schema *schema,
+                                                                  int32_t priority,
+                                                                  CCharArray name,
+                                                                  CCharArray pattern);
 
 void log_surgeon_schema_drop(Box<Schema> value);
 

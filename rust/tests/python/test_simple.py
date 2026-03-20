@@ -172,3 +172,46 @@ class TestSimple(unittest.TestCase):
 		# `LogEvent` doesn't implement `__eq__`.
 		self.assertNotEqual(e1, e2)
 		self.assertEqual(e1.log_type, e2.log_type)
+
+	def test_priority(self):
+		p = Parser()
+
+		p.set_delimiters(" ")
+
+		# Earlier patterns have priority;
+		# if both the first and second rules match (with the same length),
+		# `"var1"` will be returned.
+		# If both the second and third rules match (with the same length),
+		# `"var2"` will be returned.
+		p.add_variable_pattern("var1", r"[a-z]+")
+		p.add_variable_pattern("var2", r"[a-z0-9]+")
+		p.add_variable_pattern("var1", r"[0-9]+")
+
+		# Add them in reverse order, but hardcode the priority
+		# (so that the end result should be as above).
+		p.add_variable_pattern("var1", r":[0-9]+", priority=10)
+		p.add_variable_pattern("var2", r":[a-z0-9]+", priority=20)
+		p.add_variable_pattern("var1", r":[a-z]+", priority=30)
+
+		p.compile()
+
+		text = dedent("""\
+		abc
+		123
+		:abc
+		:123
+		""")
+
+		p.set_input_stream(text)
+
+		e1 = p.next_log_event()
+		self.assertEqual(str(e1.log_type), "%var1%\n")
+
+		e2 = p.next_log_event()
+		self.assertEqual(str(e2.log_type), "%var2%\n")
+
+		e3 = p.next_log_event()
+		self.assertEqual(str(e3.log_type), "%var1%\n")
+
+		e4 = p.next_log_event()
+		self.assertEqual(str(e4.log_type), "%var2%\n")

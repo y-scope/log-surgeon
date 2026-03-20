@@ -135,7 +135,7 @@ impl Tnfa {
 				kind: SpontaneousTransitionKind::Epsilon,
 				target: state,
 			});
-			tags = &tags | &nfa.build(rule.idx, &rule.regex, state, NfaIdx::end(rule.idx));
+			tags = &tags | &nfa.build(rule.idx.index(), &rule.regex, state, NfaIdx::end(rule.idx.index()));
 			nfa.needs_backtrack[i] = rule.regex.ends_with_anchor();
 		}
 
@@ -606,15 +606,18 @@ where
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::schema::Schema;
+	use crate::regex::Regex;
+	use crate::schema::Rule;
+	use crate::schema::RuleIdx;
 
 	#[test]
 	fn stuff() {
-		let mut schema: Schema = Schema::new();
-		schema
-			.add_rule("hello", "0((?<foobar>1(2[a-zA-Z])*)|(?<baz>xyz))world")
-			.unwrap();
-		let nfa: Tnfa = Tnfa::for_rules(schema.rules(), " ".to_owned());
+		let rules: &[Rule] = &[Rule {
+			idx: RuleIdx { index: 0, priority: 0 },
+			name: "hello".to_owned(),
+			regex: Regex::from_pattern("0((?<foobar>1(2[a-zA-Z])*)|(?<baz>xyz))world").unwrap(),
+		}];
+		let nfa: Tnfa = Tnfa::for_rules(rules, " ".to_owned());
 		let b: bool = nfa.execute("012a2b2cworld").is_some();
 		assert!(b);
 		let b: bool = nfa.execute("0xyzworld").is_some();

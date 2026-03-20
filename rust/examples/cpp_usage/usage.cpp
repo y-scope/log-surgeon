@@ -11,7 +11,7 @@ using namespace log_surgeon;
 int main() {
     Box<Schema> schema{log_surgeon_schema_new()};
 
-    log_surgeon_schema_add_rule(schema, "hello"_rust, "abc|d(?<foo>[a-z])f"_rust);
+    log_surgeon_schema_add_rule_with_priority(schema, 0, "hello"_rust, "abc|d(?<foo>[a-z])f"_rust);
 
     ParserHandle parser{schema};
 

@@ -11,7 +11,6 @@ use crate::schema::Schema;
 
 #[derive(Debug, Clone)]
 pub struct Parser {
-	pub schema: Schema,
 	pub lexer: Lexer,
 	maybe_pending_header: Option<PendingHeader>,
 	current_log: String,
@@ -41,9 +40,8 @@ struct WorkingCapture {
 
 impl Parser {
 	pub fn new(schema: Schema) -> Self {
-		let lexer: Lexer = Lexer::new(schema.clone());
+		let lexer: Lexer = Lexer::new(schema);
 		Self {
-			schema,
 			lexer,
 			maybe_pending_header: None,
 			current_log: String::new(),
@@ -87,7 +85,7 @@ impl Parser {
 
 		// Simulates whether we can match a start-anchored pattern.
 		// Currently, the start-anchor just means "must come after static text".
-		let mut last_was_delimited: u32 = u32::from(self.schema.anchor_ch);
+		let mut last_was_delimited: u32 = u32::from(self.lexer.schema.anchor_ch);
 		loop {
 			let old_pos: usize = *pos;
 			let old_captures: usize = self.working_captures.len();
@@ -100,7 +98,7 @@ impl Parser {
 					});
 				}) {
 				Token::Variable { rule, lexeme } => {
-					let name: &str = &self.schema.rules()[rule].name;
+					let name: &str = &self.lexer.schema.rules()[rule].name;
 
 					if rule == 0 {
 						pending_static_text += lexeme.len();
@@ -145,7 +143,7 @@ impl Parser {
 				Token::StaticText(static_text) => {
 					assert!(!static_text.is_empty());
 					pending_static_text += static_text.len();
-					last_was_delimited = u32::from(self.schema.anchor_ch);
+					last_was_delimited = u32::from(self.lexer.schema.anchor_ch);
 				},
 				Token::EndOfInput => {
 					assert_eq!(*pos, input.len());
