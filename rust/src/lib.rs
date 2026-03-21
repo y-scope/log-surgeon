@@ -13,5 +13,5 @@ pub mod regex;
 pub mod schema;
 
 pub mod c_interface;
-#[cfg(any(feature = "python", feature = "stub-gen"))]
+#[cfg(feature = "python")]
 pub mod python_interface;

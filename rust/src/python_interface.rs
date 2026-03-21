@@ -14,9 +14,6 @@ use pyo3::types::PyList;
 use pyo3::types::PyListMethods;
 use pyo3::types::PyString;
 
-#[cfg(feature = "stub-gen")]
-use pyo3_stub_gen::define_stub_info_gatherer;
-
 use crate::log_event::LogEvent;
 use crate::log_event::Variable;
 use crate::log_type::LogType;
@@ -27,8 +24,6 @@ use crate::schema::Schema;
 pyo3::create_exception!(log_surgeon, LogSurgeonException, PyRuntimeError);
 pyo3::create_exception!(log_surgeon, LogSurgeonInvalidRegexPattern, LogSurgeonException);
 
-/// High-performance log parser using DFA-based pattern matching.
-#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyclass)]
 #[pyclass(name = "Parser")]
 #[derive(Debug)]
 struct PyParser {
@@ -41,8 +36,6 @@ struct PyParser {
 	debug: bool,
 }
 
-/// A parsed log event.
-#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyclass)]
 #[pyclass(name = "LogEvent")]
 #[derive(Debug)]
 struct PyLogEvent {
@@ -54,14 +47,10 @@ struct PyLogEvent {
 	message: Py<PyString>,
 }
 
-/// A log type template showing the structure of a log event.
-#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyclass)]
 #[pyclass(name = "LogType", eq)]
 #[derive(Debug, Eq, PartialEq)]
 struct PyLogType(LogType);
 
-/// A matched variable within a log event.
-#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pyclass)]
 #[pyclass(name = "Variable")]
 #[derive(Debug)]
 struct PyVariable {
@@ -73,7 +62,6 @@ struct PyVariable {
 	captures: Py<PyDict>,
 }
 
-#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyParser {
 	#[new]
@@ -89,9 +77,7 @@ impl PyParser {
 		}
 	}
 
-	/// Add a named pattern with ``(?<capture_name>...)`` groups.
-	///
-	/// Higher priority patterns are matched first. Default is 0.
+	/// Raises an exception if `name` is empty, `"newline"`, or `"delimiters"`.
 	#[pyo3(signature = (name, pattern, *, priority=0))]
 	fn add_variable_pattern(&mut self, name: &str, pattern: &str, priority: i32) -> PyResult<()> {
 		let regex: Regex = Regex::from_pattern(pattern)
@@ -100,7 +86,7 @@ impl PyParser {
 		Ok(())
 	}
 
-	/// Set token boundary characters. Raises if empty.
+	/// Raises an exception if `delimiters` is empty.
 	fn set_delimiters(&mut self, delimiters: &str) -> PyResult<()> {
 		if delimiters.is_empty() {
 			return Err(LogSurgeonException::new_err("delimiters cannot be empty"));
@@ -109,13 +95,11 @@ impl PyParser {
 		Ok(())
 	}
 
-	/// Compile patterns into the matching engine. Must be called before parsing.
 	fn compile(&mut self) -> PyResult<()> {
 		self.maybe_parser = Some(Parser::new(self.schema.clone()));
 		Ok(())
 	}
 
-	/// Set the input to parse (string, bytes, or readable file object).
 	fn set_input_stream(&mut self, input: &Bound<'_, PyAny>) -> PyResult<()> {
 		self.input = input.clone().unbind();
 		self.pos = 0;
@@ -124,7 +108,6 @@ impl PyParser {
 		Ok(())
 	}
 
-	/// Get the next parsed event, or ``None`` at end of input.
 	fn next_log_event(&mut self) -> PyResult<Option<PyLogEvent>> {
 		if self.done() {
 			return Ok(None);
@@ -153,22 +136,37 @@ impl PyParser {
 		})
 	}
 
-	/// Check if all input has been consumed.
 	fn done(&self) -> bool {
 		self.pos == self.buffer.len()
 	}
 }
 
-#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyLogEvent {
+	// #[pyo3(name = "__len__")]
+	// fn len(&self) -> usize {
+	// 	self.tokens.len()
+	// }
+
+	// #[pyo3(name = "__getitem__")]
+	// fn get_item(&self, i: usize) -> PyResult<PyToken> {
+	// 	if let Some(token) = self.tokens.get(i) {
+	// 		Ok(token.clone())
+	// 	} else {
+	// 		Err(PyIndexError::new_err(format!(
+	// 			"event token index {} is out of range 0..{}",
+	// 			i,
+	// 			self.tokens.len()
+	// 		)))
+	// 	}
+	// }
+
 	#[pyo3(name = "__str__")]
 	fn to_string<'py>(this: PyRef<'py, Self>) -> Py<PyString> {
 		this.message.clone_ref(this.py())
 	}
 }
 
-#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyLogType {
 	#[pyo3(name = "__str__")]
@@ -177,9 +175,22 @@ impl PyLogType {
 	}
 }
 
-#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyVariable {
+	// #[pyo3(name = "__getitem__")]
+	// fn get_item(&self, key: &str) -> PyResult<Vec<String>> {
+	// 	if let Some(captures) = self.captures.get(key) {
+	// 		Ok(captures.clone())
+	// 	} else {
+	// 		Err(PyKeyError::new_err(format!("token has no capture {}", key)))
+	// 	}
+	// }
+
+	// #[pyo3(name = "__contains__")]
+	// fn contains(&self, key: &str) -> bool {
+	// 	self.captures.contains_key(key)
+	// }
+
 	#[pyo3(name = "__repr__")]
 	fn repr(&self) -> String {
 		format!("{self:?}")
@@ -274,6 +285,3 @@ mod log_surgeon {
 	#[pymodule_export]
 	use super::PyVariable;
 }
-
-#[cfg(feature = "stub-gen")]
-define_stub_info_gatherer!(stub_info);

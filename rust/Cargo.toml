@@ -24,14 +24,6 @@ python = [
 	"pyo3/extension-module",
 	"pyo3/macros",
 ]
-# Like "python" but without extension-module, so we can link a standalone
-# binary that generates .pyi type stubs without needing libpython.
-# Requires Python 3.10+ (pyo3-stub-gen does not support 3.9).
-stub-gen = [
-	"pyo3/auto-initialize",
-	"pyo3/macros",
-	"dep:pyo3-stub-gen",
-]
 
 [build-dependencies]
 cbindgen = "0.29"
@@ -43,13 +35,5 @@ tracing = "0.1"
 [dependencies.pyo3]
 version = "0.27"
 default-features = false
-
-[dependencies.pyo3-stub-gen]
-version = "0.19"
-optional = true
-
-[[bin]]
-name = "gen_stub"
-required-features = ["stub-gen"]
 
 [workspace]
