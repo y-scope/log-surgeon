@@ -27,13 +27,11 @@ TEST_CASE("comparison_operators", "[VariableQueryToken]") {
     constexpr uint32_t cIntId{2};
     constexpr uint32_t cHasNumId{7};
 
-    std::vector<VariableQueryToken> const ordered_tokens{
-            {cEmptyId, "", false},
-            {cIntId, "123", false},
-            {cIntId, "456", false},
-            {cHasNumId, "123", false},
-            {cHasNumId, "user123*", true}
-    };
+    std::vector<VariableQueryToken> const ordered_tokens{{cEmptyId, "", false},
+                                                         {cIntId, "123", false},
+                                                         {cIntId, "456", false},
+                                                         {cHasNumId, "123", false},
+                                                         {cHasNumId, "user123*", true}};
     VariableQueryToken const token{cHasNumId, "abc*123", true};
     VariableQueryToken const duplicate_token{cHasNumId, "abc*123", true};
 

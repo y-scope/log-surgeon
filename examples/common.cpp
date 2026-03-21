@@ -17,10 +17,10 @@ auto check_input(std::vector<std::string> const& args) -> int {
     if (2 != args.size()) {
         ret = 1;
         cout << "Not enough arguments.\n";
-    } else if (std::filesystem::path const f{args[0]}; false == std::filesystem::exists(f)) {
+    } else if (std::filesystem::path const f{args.at(0)}; false == std::filesystem::exists(f)) {
         ret = 2;
         cout << "Schema file does not exist.\n";
-    } else if (std::filesystem::path const f{args[1]}; false == std::filesystem::exists(f)) {
+    } else if (std::filesystem::path const f{args.at(1)}; false == std::filesystem::exists(f)) {
         ret = 3;
         cout << "Input file does not exist.\n";
     }
@@ -36,7 +36,7 @@ auto print_timestamp_loglevel(log_surgeon::LogEventView const& event, uint32_t l
     auto const& optional_timestamp{event.get_log_output_buffer()->get_timestamp()};
     if (optional_timestamp.has_value()) {
         if (auto const& vec{event.get_variables(loglevel_id)}; false == vec.empty()) {
-            loglevel = vec[0];
+            loglevel = vec.at(0);
         }
         cout << "timestamp: " << optional_timestamp.value();
     }

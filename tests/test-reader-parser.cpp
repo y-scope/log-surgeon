@@ -63,11 +63,9 @@ struct ExpectedEvent {
  * @param input The input to parse.
  * @param expected_events The expected parsed events.
  */
-auto parse_and_validate(
-        ReaderParser& reader_parser,
-        string_view input,
-        vector<ExpectedEvent> const& expected_events
-) -> void;
+auto parse_and_validate(ReaderParser& reader_parser,
+                        string_view input,
+                        vector<ExpectedEvent> const& expected_events) -> void;
 
 /**
  * @param map The map to serialize.
@@ -75,11 +73,9 @@ auto parse_and_validate(
  */
 [[nodiscard]] auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> string;
 
-auto parse_and_validate(
-        ReaderParser& reader_parser,
-        string_view input,
-        vector<ExpectedEvent> const& expected_events
-) -> void {
+auto parse_and_validate(ReaderParser& reader_parser,
+                        string_view input,
+                        vector<ExpectedEvent> const& expected_events) -> void {
     size_t curr_pos{0};
 
     Reader reader{[&](char* buffer, size_t const count, size_t& read_to) -> ErrorCode {
@@ -157,12 +153,10 @@ auto parse_and_validate(
                     REQUIRE(expected_captures.contains(capture_name));
                     auto const [start_reg_id, end_reg_id]{lexer.get_reg_ids_from_capture(capture)};
                     auto const actual_start_positions{
-                            token.get_reversed_reg_positions(start_reg_id)
-                    };
+                            token.get_reversed_reg_positions(start_reg_id)};
                     auto const actual_end_positions{token.get_reversed_reg_positions(end_reg_id)};
-                    auto const [expected_start_positions, expected_end_positions]{
-                            expected_captures.at(capture_name)
-                    };
+                    auto const [expected_start_positions,
+                                expected_end_positions]{expected_captures.at(capture_name)};
                     REQUIRE(expected_start_positions == actual_start_positions);
                     REQUIRE(expected_end_positions == actual_end_positions);
                 }
@@ -225,17 +219,13 @@ TEST_CASE("single_line_without_capture_reader_parser", "[ReaderParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=123"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
-    ExpectedEvent const expected_event{
-            .m_logtype{R"(<myVar> userID=234 <myVar> 123 <myVar>)"},
-            .m_timestamp_raw{""},
-            .m_tokens{
-                    {{"userID=123", "myVar", {}},
-                     {" userID=234", "", {}},
-                     {" userID=123", "myVar", {}},
-                     {" 123", "", {}},
-                     {" userID=123", "myVar", {}}}
-            }
-    };
+    ExpectedEvent const expected_event{.m_logtype{R"(<myVar> userID=234 <myVar> 123 <myVar>)"},
+                                       .m_timestamp_raw{""},
+                                       .m_tokens{{{"userID=123", "myVar", {}},
+                                                  {" userID=234", "", {}},
+                                                  {" userID=123", "myVar", {}},
+                                                  {" 123", "", {}},
+                                                  {" userID=123", "myVar", {}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
@@ -300,29 +290,22 @@ TEST_CASE("reader_parser_wrap_around", "[ReaderParser]") {
         ExpectedEvent expected_event1{
                 .m_logtype{"<myVar> userID=<capture> <myVar> 123 <myVar>\n"},
                 .m_timestamp_raw{""},
-                .m_tokens{
-                        {{"userID=123", "myVar", {}},
-                         {" userID=234", "myCapture", {{{"capture", {{18}, {21}}}}}},
-                         {" userID=123", "myVar", {}},
-                         {" 123", "", {}},
-                         {" userID=123", "myVar", {}},
-                         {"\n", "", {}}}
-                }
-        };
+                .m_tokens{{{"userID=123", "myVar", {}},
+                           {" userID=234", "myCapture", {{{"capture", {{18}, {21}}}}}},
+                           {" userID=123", "myVar", {}},
+                           {" 123", "", {}},
+                           {" userID=123", "myVar", {}},
+                           {"\n", "", {}}}}};
 
         string_view logtype2_view{logtype2};
         string_view user_var_view{user_var};
         string remaining_filler_with_space{" " + remaining_filler};
         string_view remaining_filler_view{remaining_filler_with_space};
-        ExpectedEvent expected_event2{
-                .m_logtype{logtype2_view},
-                .m_timestamp_raw{""},
-                .m_tokens{
-                        {{user_var_view, "myVar", {}},
-                         {remaining_filler_view, "", {}},
-                         {"\n", "", {}}}
-                }
-        };
+        ExpectedEvent expected_event2{.m_logtype{logtype2_view},
+                                      .m_timestamp_raw{""},
+                                      .m_tokens{{{user_var_view, "myVar", {}},
+                                                 {remaining_filler_view, "", {}},
+                                                 {"\n", "", {}}}}};
 
         int32_t log_start_pos{static_cast<int32_t>(cStaticByteBuffSize) - offset};
         int32_t cap_begin{log_start_pos + 18};
@@ -336,14 +319,11 @@ TEST_CASE("reader_parser_wrap_around", "[ReaderParser]") {
         ExpectedEvent expected_event3{
                 .m_logtype{"<myVar> userID=<capture> <myVar> 123 <myVar>"},
                 .m_timestamp_raw{""},
-                .m_tokens{
-                        {{"userID=123", "myVar", {}},
-                         {" userID=234", "myCapture", {{{"capture", {{cap_begin}, {cap_end}}}}}},
-                         {" userID=123", "myVar", {}},
-                         {" 123", "", {}},
-                         {" userID=123", "myVar", {}}}
-                }
-        };
+                .m_tokens{{{"userID=123", "myVar", {}},
+                           {" userID=234", "myCapture", {{{"capture", {{cap_begin}, {cap_end}}}}}},
+                           {" userID=123", "myVar", {}},
+                           {" 123", "", {}},
+                           {" userID=123", "myVar", {}}}}};
 
         vector<ExpectedEvent> expected_events;
         for (uint32_t i{0}; i < cNumInput1; ++i) {

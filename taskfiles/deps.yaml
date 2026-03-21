@@ -11,6 +11,9 @@ vars:
   # This path must be kept in-sync with its usage in CMakeLists.txt and examples/CMakeLists.txt.
   G_DEPS_CMAKE_SETTINGS_DIR: "{{.G_DEPS_DIR}}/cmake-settings"
 
+  # Library names
+  G_BOOST_LIB_NAME: "Boost"
+
 tasks:
   install-all:
     run: "once"
@@ -27,6 +30,20 @@ tasks:
       - "install-catch2"
       - "install-fmt"
       - "install-microsoft.gsl"
+      - "install-ystdlib"
+
+  install-boost:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:boost:download-and-install"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
+          FILE_SHA256: "d6c69e4459eb5d6ec208250291221e7ff4a2affde9af6e49c9303b89c687461f"
+          URL: "https://github.com/boostorg/boost/releases/download/boost-1.87.0\
+            /boost-1.87.0-b2-nodocs.tar.gz"
+          TARGETS: ["headers"]
+          WORK_DIR: "{{.G_DEPS_DIR}}"
 
   install-catch2:
     internal: true
@@ -75,4 +92,23 @@ tasks:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
           TAR_SHA256: "f0e32cb10654fea91ad56bde89170d78cfbf4363ee0b01d8f097de2ba49f6ce9"
           TAR_URL: "https://github.com/microsoft/GSL/archive/refs/tags/v4.0.0.tar.gz"
+          WORK_DIR: "{{.G_DEPS_DIR}}"
+
+  install-ystdlib:
+    internal: true
+    run: "once"
+    deps:
+      - "install-boost"
+    cmds:
+      - task: "utils:cmake:install-remote-tar"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-Dystdlib_BUILD_TESTING=OFF"
+          CMAKE_PACKAGE_NAME: "ystdlib"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CMAKE_SETTINGS_DIR}}"
+          TAR_SHA256: "379c04c86715f39cffa09bb3ebc22b4c45af9a63ea3efa2081d210289fcd2af6"
+          TAR_URL: "https://github.com/y-scope/ystdlib-cpp/archive/c03806a.tar.gz"
           WORK_DIR: "{{.G_DEPS_DIR}}"

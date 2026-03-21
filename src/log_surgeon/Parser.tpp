@@ -29,8 +29,7 @@ Parser<TypedNfaState, TypedDfaState>::Parser() {
 template <typename TypedNfaState, typename TypedDfaState>
 auto Parser<TypedNfaState, TypedDfaState>::add_rule(
         std::string const& name,
-        std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
-) -> void {
+        std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule) -> void {
     if (m_lexer.m_symbol_id.find(name) == m_lexer.m_symbol_id.end()) {
         m_lexer.m_symbol_id[name] = m_lexer.m_symbol_id.size();
         m_lexer.m_id_symbol[m_lexer.m_symbol_id[name]] = name;

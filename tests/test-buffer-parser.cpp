@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -22,7 +23,6 @@ using log_surgeon::finite_automata::PrefixTree;
 using log_surgeon::rule_id_t;
 using log_surgeon::Schema;
 using log_surgeon::SymbolId;
-using std::pair;
 using std::string;
 using std::string_view;
 using std::unordered_map;
@@ -34,10 +34,24 @@ struct CapturePositions {
     vector<PrefixTree::position_t> m_end_positions;
 };
 
+struct ExpectedCaptureMatch {
+    ExpectedCaptureMatch(string name, CapturePositions pos, bool leaf)
+            : m_name(std::move(name)),
+              m_pos(std::move(pos)),
+              m_leaf(leaf) {}
+
+    ExpectedCaptureMatch(string name, CapturePositions pos)
+            : ExpectedCaptureMatch(std::move(name), std::move(pos), true) {}
+
+    string m_name;
+    CapturePositions m_pos;
+    bool m_leaf;
+};
+
 struct ExpectedToken {
     string_view m_raw_string;
     string m_type;
-    vector<pair<string, CapturePositions>> m_captures;
+    vector<ExpectedCaptureMatch> m_captures;
 };
 
 struct ExpectedEvent {
@@ -56,11 +70,9 @@ struct ExpectedEvent {
  * @param input The input to parse.
  * @param expected_events The expected parsed events.
  */
-auto parse_and_validate(
-        BufferParser& buffer_parser,
-        string_view input,
-        vector<ExpectedEvent> const& expected_events
-) -> void;
+auto parse_and_validate(BufferParser& buffer_parser,
+                        string_view input,
+                        vector<ExpectedEvent> const& expected_events) -> void;
 
 /**
  * @param map The map to serialize.
@@ -68,11 +80,9 @@ auto parse_and_validate(
  */
 [[nodiscard]] auto serialize_id_symbol_map(unordered_map<rule_id_t, string> const& map) -> string;
 
-auto parse_and_validate(
-        BufferParser& buffer_parser,
-        string_view input,
-        vector<ExpectedEvent> const& expected_events
-) -> void {
+auto parse_and_validate(BufferParser& buffer_parser,
+                        string_view input,
+                        vector<ExpectedEvent> const& expected_events) -> void {
     buffer_parser.reset();
 
     CAPTURE(serialize_id_symbol_map(buffer_parser.get_log_parser().m_lexer.m_id_symbol));
@@ -82,10 +92,10 @@ auto parse_and_validate(
     size_t buffer_offset{0};
     for (auto const& [expected_logtype, expected_timestamp_raw, expected_tokens] : expected_events)
     {
-        auto err{
-                buffer_parser
-                        .parse_next_event(input_str.data(), input_str.size(), buffer_offset, true)
-        };
+        auto err{buffer_parser.parse_next_event(input_str.data(),
+                                                input_str.size(),
+                                                buffer_offset,
+                                                true)};
         REQUIRE(ErrorCode::Success == err);
         auto const& event{buffer_parser.get_log_parser().get_log_event_view()};
         REQUIRE(expected_logtype == event.get_logtype());
@@ -128,23 +138,65 @@ auto parse_and_validate(
                     return;
                 }
 
+                // Testing direct usage of fields to inspect capture group matches.
                 REQUIRE(expected_captures.size() == optional_captures.value().size());
                 for (uint32_t j{0}; j < optional_captures.value().size(); j++) {
-                    auto const capture{optional_captures.value()[j]};
-                    auto const [expected_name, expected_positions]{expected_captures[j]};
+                    auto const* capture{optional_captures.value()[j]};
+                    auto const [expected_name, expected_positions, unused]{expected_captures[j]};
                     REQUIRE(expected_name == capture->get_name());
                     auto const [start_reg_id, end_reg_id]{lexer.get_reg_ids_from_capture(capture)};
                     auto actual_start_positions{token.get_reversed_reg_positions(start_reg_id)};
                     auto const actual_end_positions{token.get_reversed_reg_positions(end_reg_id)};
-                    auto const [expected_start_positions, expected_end_positions]{
-                            expected_positions
-                    };
+                    auto const [expected_start_positions,
+                                expected_end_positions]{expected_positions};
                     // Note: Known bug that start positions contain failed match starts as well, so
                     // currently it must be truncated.
                     actual_start_positions.resize(actual_end_positions.size());
                     REQUIRE(expected_start_positions == actual_start_positions);
                     REQUIRE(expected_end_positions == actual_end_positions);
                 }
+
+                // Testing event API for capture group matches.
+                auto sorted_expected_captures{expected_tokens[i].m_captures};
+                std::sort(sorted_expected_captures.begin(),
+                          sorted_expected_captures.end(),
+                          [](ExpectedCaptureMatch const& a, ExpectedCaptureMatch const& b) -> bool {
+                              if (a.m_pos.m_start_positions.empty()
+                                  || 0 > a.m_pos.m_start_positions[0]) {
+                                  return false;
+                              }
+                              if (b.m_pos.m_start_positions.empty()
+                                  || 0 > b.m_pos.m_start_positions[0]) {
+                                  return true;
+                              }
+                              if (a.m_pos.m_start_positions[0] != b.m_pos.m_start_positions[0]) {
+                                  return a.m_pos.m_start_positions[0]
+                                         < b.m_pos.m_start_positions[0];
+                              }
+                              return a.m_pos.m_end_positions[0] > b.m_pos.m_end_positions[0];
+                          });
+                auto matches{event.get_capture_matches(token)};
+                REQUIRE(false == matches.has_error());
+                size_t captures_with_no_match{0};
+                for (size_t j{0}; j < sorted_expected_captures.size(); ++j) {
+                    auto const [expected_name, expected_positions, expected_leaf]{
+                            sorted_expected_captures[j]};
+                    auto const [expected_start_positions,
+                                expected_end_positions]{expected_positions};
+                    if (expected_start_positions.empty() || 0 > expected_start_positions[0]
+                        || expected_end_positions.empty() || 0 > expected_end_positions[0])
+                    {
+                        ++captures_with_no_match;
+                        continue;
+                    }
+                    auto const capture{matches.value().at(j - captures_with_no_match)};
+                    REQUIRE(expected_name == capture.m_capture->get_name());
+                    REQUIRE(expected_start_positions[0] == capture.m_pos.m_start);
+                    REQUIRE(expected_end_positions[0] == capture.m_pos.m_end);
+                    REQUIRE(expected_leaf == capture.m_leaf);
+                }
+                REQUIRE(sorted_expected_captures.size() - captures_with_no_match
+                        == matches.value().size());
             }
         }
     }
@@ -204,17 +256,13 @@ TEST_CASE("single_line_without_capture", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cVarSchema{"myVar:userID=123"};
     constexpr string_view cInput{"userID=123 userID=234 userID=123 123 userID=123"};
-    ExpectedEvent const expected_event{
-            .m_logtype{R"(<myVar> userID=234 <myVar> 123 <myVar>)"},
-            .m_timestamp_raw{""},
-            .m_tokens{
-                    {{"userID=123", "myVar", {}},
-                     {" userID=234", "", {}},
-                     {" userID=123", "myVar", {}},
-                     {" 123", "", {}},
-                     {" userID=123", "myVar", {}}}
-            }
-    };
+    ExpectedEvent const expected_event{.m_logtype{R"(<myVar> userID=234 <myVar> 123 <myVar>)"},
+                                       .m_timestamp_raw{""},
+                                       .m_tokens{{{"userID=123", "myVar", {}},
+                                                  {" userID=234", "", {}},
+                                                  {" userID=123", "myVar", {}},
+                                                  {" 123", "", {}},
+                                                  {" userID=123", "myVar", {}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
@@ -282,14 +330,11 @@ TEST_CASE("single_line_with_capture", "[BufferParser]") {
     ExpectedEvent const expected_event{
             .m_logtype{R"(userID=<uid> userID=234 userID=<uid> 123 userID=<uid>)"},
             .m_timestamp_raw{""},
-            .m_tokens{
-                    {{"userID=123", "myVar", {{{"uid", {{7}, {10}}}}}},
-                     {" userID=234", "", {}},
-                     {" userID=123", "myVar", {{{"uid", {{29}, {32}}}}}},
-                     {" 123", "", {}},
-                     {" userID=123", "myVar", {{{"uid", {{44}, {47}}}}}}}
-            }
-    };
+            .m_tokens{{{"userID=123", "myVar", {{{"uid", {{7}, {10}}}}}},
+                       {" userID=234", "", {}},
+                       {" userID=123", "myVar", {{{"uid", {{29}, {32}}}}}},
+                       {" 123", "", {}},
+                       {" userID=123", "myVar", {{{"uid", {{44}, {47}}}}}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
@@ -337,16 +382,67 @@ TEST_CASE("single_line_with_optional_capture", "[BufferParser]") {
     ExpectedEvent const expected_event{
             .m_logtype{R"(userID=<uid> userID= userID=456)"},
             .m_timestamp_raw{""},
-            .m_tokens{
-                    {{"userID=123",
-                      "myVar",
-                      {{{"uid", {.m_start_positions{7}, .m_end_positions{10}}}}}},
-                     {" userID=",
-                      "myVar",
-                      {{{"uid", {.m_start_positions{-1}, .m_end_positions{-1}}}}}},
-                     {" userID=456", "", {}}}
-            }
-    };
+            .m_tokens{{{"userID=123",
+                        "myVar",
+                        {{{"uid", {.m_start_positions{7}, .m_end_positions{10}}}}}},
+                       {" userID=",
+                        "myVar",
+                        {{{"uid", {.m_start_positions{-1}, .m_end_positions{-1}}}}}},
+                       {" userID=456", "", {}}}}};
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cVarSchema, -1);
+    BufferParser buffer_parser(std::move(schema.release_schema_ast_ptr()));
+
+    parse_and_validate(buffer_parser, cInput, {expected_event});
+}
+
+/**
+ * @ingroup test_buffer_parser_capture
+ * @brief Validates tokenization behavior when using nested capture groups in variable schemas.
+ *
+ * This test is an extension of `single_line_with_capture` that verifies the correct behaviour when
+ * a nested capture groups are not found.
+ *
+ * ### Schema Definition
+ * @code
+ * delimiters: \n\r[:,
+ * myVar:userID=(?<full>abc_(?<uid>\d{3}))
+ * @endcode
+ *
+ * ### Test Input
+ * @code
+ * "userID=abc_123 userID=abc_456"
+ * @endcode
+ *
+ * ### Expected Logtype
+ * @code
+ * "userID=<uid> userID=<uid>"
+ * @endcode
+ *
+ * ### Expected Tokenization
+ * @code
+ * "userID=abc_123" -> "myVar" with "abc_123" -> "full", "123" -> "uid"
+ * " userID=abc_456" -> "myVar" with "abc_456" -> "full", "456" -> "uid"
+ * @endcode
+ */
+TEST_CASE("single_line_with_nested_capture", "[BufferParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
+    constexpr string_view cVarSchema{R"(myVar:userID=(?<full>abc_(?<uid>\d{3})))"};
+    constexpr string_view cInput{"userID=abc_123 userID=abc_456"};
+
+    ExpectedEvent const expected_event{
+            .m_logtype{R"(userID=abc_<uid> userID=abc_<uid>)"},
+            .m_timestamp_raw{""},
+            .m_tokens{{{"userID=abc_123",
+                        "myVar",
+                        {{{"uid", {.m_start_positions{11}, .m_end_positions{14}}},
+                          {"full", {.m_start_positions{7}, .m_end_positions{14}}, false}}}},
+                       {" userID=abc_456",
+                        "myVar",
+                        {{{"uid", {.m_start_positions{26}, .m_end_positions{29}}},
+                          {"full", {.m_start_positions{22}, .m_end_positions{29}}, false}}}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
@@ -424,37 +520,31 @@ TEST_CASE("single_line_with_optional_capture", "[BufferParser]") {
 TEST_CASE("single_line_with_clp_default_vars", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cVarSchema1{
-            R"(header:(?<timestamp>(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[,\.]\d{0,3})))"
-    };
+            R"(header:(?<timestamp>(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[,\.]\d{0,3})))"};
     constexpr string_view cVarSchema2{R"(int:-{0,1}[0-9]+)"};
     constexpr string_view cVarSchema3{R"(float:-{0,1}[0-9]+\.[0-9]+)"};
     constexpr string_view cVarSchema4{R"(hex:[a-fA-F]+)"};
     constexpr string_view cVarSchema5{
-            R"(keyValuePair:[^ \r\n=]+=(?<val>[^ \r\n]*[A-Za-z0-9][^ \r\n]*))"
-    };
+            R"(keyValuePair:[^ \r\n=]+=(?<val>[^ \r\n]*[A-Za-z0-9][^ \r\n]*))"};
     constexpr string_view cVarSchema6{R"(hasNumber:={0,1}[^ \r\n=]*\d[^ \r\n=]*={0,1})"};
     constexpr string_view cInput{"2012-12-12 12:12:12.123 123 123.123 abc userID=123 text user123 "
                                  "\n2012-12-12 12:12:12.123"};
     ExpectedEvent const expected_event1{
             .m_logtype{"<timestamp> <int> <float> <hex> userID=<val> text <hasNumber> \n"},
             .m_timestamp_raw{"2012-12-12 12:12:12.123"},
-            .m_tokens{
-                    {{"2012-12-12 12:12:12.123", "header", {{{"timestamp", {{0}, {23}}}}}},
-                     {" 123", "int", {}},
-                     {" 123.123", "float", {}},
-                     {" abc", "hex", {}},
-                     {" userID=123", "keyValuePair", {{{"val", {{47}, {50}}}}}},
-                     {" text", "", {}},
-                     {" user123", "hasNumber", {}},
-                     {" ", "", {}},
-                     {"\n", "", {}}}
-            }
-    };
+            .m_tokens{{{"2012-12-12 12:12:12.123", "header", {{{"timestamp", {{0}, {23}}}}}},
+                       {" 123", "int", {}},
+                       {" 123.123", "float", {}},
+                       {" abc", "hex", {}},
+                       {" userID=123", "keyValuePair", {{{"val", {{47}, {50}}}}}},
+                       {" text", "", {}},
+                       {" user123", "hasNumber", {}},
+                       {" ", "", {}},
+                       {"\n", "", {}}}}};
     ExpectedEvent const expected_event2{
             .m_logtype{"<timestamp>"},
             .m_timestamp_raw{"2012-12-12 12:12:12.123"},
-            .m_tokens{{"2012-12-12 12:12:12.123", "header", {{{"timestamp", {{65}, {88}}}}}}}
-    };
+            .m_tokens{{"2012-12-12 12:12:12.123", "header", {{{"timestamp", {{65}, {88}}}}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
@@ -518,16 +608,12 @@ TEST_CASE("multi_line_with_newline_static_var_sequence", "[BufferParser]") {
     constexpr string_view cDelimitersSchema{R"(delimiters: \n\r[:,)"};
     constexpr string_view cVarSchema{R"(int:-{0,1}[0-9]+)"};
     constexpr string_view cInput{"1234567\nText 1234567"};
-    ExpectedEvent const expected_event1{
-            .m_logtype{R"(<int><newLine>)"},
-            .m_timestamp_raw{""},
-            .m_tokens{{{"1234567", "int", {}}, {"\n", "newLine", {}}}}
-    };
-    ExpectedEvent const expected_event2{
-            .m_logtype{R"(Text <int>)"},
-            .m_timestamp_raw{""},
-            .m_tokens{{{"Text", "", {}}, {" 1234567", "int", {}}}}
-    };
+    ExpectedEvent const expected_event1{.m_logtype{R"(<int><newLine>)"},
+                                        .m_timestamp_raw{""},
+                                        .m_tokens{{{"1234567", "int", {}}, {"\n", "newLine", {}}}}};
+    ExpectedEvent const expected_event2{.m_logtype{R"(Text <int>)"},
+                                        .m_timestamp_raw{""},
+                                        .m_tokens{{{"Text", "", {}}, {" 1234567", "int", {}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
@@ -579,13 +665,10 @@ TEST_CASE("multi_line_with_static_newline_static_var_sequence", "[BufferParser]"
     ExpectedEvent const expected_event1{
             .m_logtype{R"(<int> abc<newLine>)"},
             .m_timestamp_raw{""},
-            .m_tokens{{{"1234567", "int", {}}, {" abc", "", {}}, {"\n", "newLine", {}}}}
-    };
-    ExpectedEvent const expected_event2{
-            .m_logtype{R"(Text <int>)"},
-            .m_timestamp_raw{""},
-            .m_tokens{{{"Text", "", {}}, {" 1234567", "int", {}}}}
-    };
+            .m_tokens{{{"1234567", "int", {}}, {" abc", "", {}}, {"\n", "newLine", {}}}}};
+    ExpectedEvent const expected_event2{.m_logtype{R"(Text <int>)"},
+                                        .m_timestamp_raw{""},
+                                        .m_tokens{{{"Text", "", {}}, {" 1234567", "int", {}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
@@ -634,13 +717,10 @@ TEST_CASE("multi_line_with_static_newline_var_sequence", "[BufferParser]") {
     ExpectedEvent const expected_event1{
             .m_logtype{"<int> abc\n"},
             .m_timestamp_raw{""},
-            .m_tokens{{{"1234567", "int", {}}, {" abc", "", {}}, {"\n", "", {}}}}
-    };
-    ExpectedEvent const expected_event2{
-            .m_logtype{R"(<int>)"},
-            .m_timestamp_raw{""},
-            .m_tokens{{{"1234567", "int", {}}}}
-    };
+            .m_tokens{{{"1234567", "int", {}}, {" abc", "", {}}, {"\n", "", {}}}}};
+    ExpectedEvent const expected_event2{.m_logtype{R"(<int>)"},
+                                        .m_timestamp_raw{""},
+                                        .m_tokens{{{"1234567", "int", {}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
@@ -692,13 +772,10 @@ TEST_CASE("multi_line_with_static_newline_var_newline_sequence", "[BufferParser]
     ExpectedEvent const expected_event1{
             .m_logtype{"<int> abc\n"},
             .m_timestamp_raw{""},
-            .m_tokens{{{"1234567", "int", {}}, {" abc", "", {}}, {"\n", "", {}}}}
-    };
-    ExpectedEvent const expected_event2{
-            .m_logtype{R"(<int><newLine>)"},
-            .m_timestamp_raw{""},
-            .m_tokens{{{"1234567", "int", {}}, {"\n", "newLine", {}}}}
-    };
+            .m_tokens{{{"1234567", "int", {}}, {" abc", "", {}}, {"\n", "", {}}}}};
+    ExpectedEvent const expected_event2{.m_logtype{R"(<int><newLine>)"},
+                                        .m_timestamp_raw{""},
+                                        .m_tokens{{{"1234567", "int", {}}, {"\n", "newLine", {}}}}};
     ExpectedEvent const expected_event3{.m_logtype{""}, .m_timestamp_raw{""}, .m_tokens{}};
 
     Schema schema;
@@ -749,18 +826,113 @@ TEST_CASE("multi_line_with_delim_newline_var_sequence", "[BufferParser]") {
     ExpectedEvent const expected_event1{
             .m_logtype{"<int> \n"},
             .m_timestamp_raw{""},
-            .m_tokens{{{"1234567", "int", {}}, {" ", "", {}}, {"\n", "", {}}}}
-    };
-    ExpectedEvent const expected_event2{
-            .m_logtype{R"(<int>)"},
-            .m_timestamp_raw{""},
-            .m_tokens{{{"1234567", "int", {}}}}
-    };
+            .m_tokens{{{"1234567", "int", {}}, {" ", "", {}}, {"\n", "", {}}}}};
+    ExpectedEvent const expected_event2{.m_logtype{R"(<int>)"},
+                                        .m_timestamp_raw{""},
+                                        .m_tokens{{{"1234567", "int", {}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
     schema.add_variable(cRule, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
+
+    parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
+}
+
+/**
+ * @ingroup test_buffer_parser_newline_vars
+ * @brief Tests a schema with variables containing delimiters.
+ *
+ * This test verifies that a buffer_parser will correctly backtrack to the first delimiter upon
+ * hitting a newline, and will not backtrack if the delimiter is the newline itself.
+ *
+ * ### Schema Definition
+ * @code
+ * delimiters:=\n,
+ * kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*
+ * int:1234
+ * @endcode
+ *
+ * ### Input Example
+ * @code
+ * "key=123\n"
+ *
+ * @endcode
+ *
+ * ### Expected Logtype
+ * @code
+ * "key=123<newLine>"
+ * ""
+ * @endcode
+ */
+TEST_CASE("backtracking_at_newline_without_match", "[BufferParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters:=\n)"};
+    constexpr string_view cUndesiredVar{R"(kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*)"};
+    constexpr string_view cDesiredVar{R"(int:1234)"};
+
+    constexpr string_view cInput{"key=123\n"};
+
+    ExpectedEvent const expected_event1{
+            .m_logtype{"key=123<newLine>"},
+            .m_timestamp_raw{""},
+            .m_tokens{{{"key", "", {}}, {"=123", "", {}}, {"\n", "newLine", {}}}}};
+
+    ExpectedEvent const expected_event2{.m_logtype{""}, .m_timestamp_raw{""}, .m_tokens{}};
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cUndesiredVar, -1);
+    schema.add_variable(cDesiredVar, -1);
+    BufferParser buffer_parser(std::move(schema.release_schema_ast_ptr()));
+
+    parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
+}
+
+/**
+ * @ingroup test_buffer_parser_newline_vars
+ * @brief Tests a schema with variables containing delimiters.
+ *
+ * This test verifies that a buffer_parser will correctly backtrack to the first delimiter upon
+ * hitting a newline, and will not backtrack if there is a match.
+ *
+ * ### Schema Definition
+ * @code
+ * delimiters:=\n,
+ * kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*
+ * int:\d+
+ * @endcode
+ *
+ * ### Input Example
+ * @code
+ * "key=123\n"
+ *
+ * @endcode
+ *
+ * ### Expected Logtype
+ * @code
+ * "key=<int><newLine>"
+ * ""
+ * @endcode
+ */
+TEST_CASE("backtracking_at_newline_with_match", "[BufferParser]") {
+    constexpr string_view cDelimitersSchema{R"(delimiters:=\n)"};
+    constexpr string_view cUndesiredVar{R"(kv_pair:[a-z]+=[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*)"};
+    constexpr string_view cDesiredVar{R"(int:\d+)"};
+
+    constexpr string_view cInput{"key=123\n"};
+
+    ExpectedEvent const expected_event1{
+            .m_logtype{"key=<int><newLine>"},
+            .m_timestamp_raw{""},
+            .m_tokens{{{"key", "", {}}, {"=123", "int", {}}, {"\n", "newLine", {}}}}};
+
+    ExpectedEvent const expected_event2{.m_logtype{""}, .m_timestamp_raw{""}, .m_tokens{}};
+
+    Schema schema;
+    schema.add_delimiters(cDelimitersSchema);
+    schema.add_variable(cUndesiredVar, -1);
+    schema.add_variable(cDesiredVar, -1);
+    BufferParser buffer_parser(std::move(schema.release_schema_ast_ptr()));
 
     parse_and_validate(buffer_parser, cInput, {expected_event1, expected_event2});
 }
@@ -855,53 +1027,46 @@ TEST_CASE("multi_line_with_delimited_vars", "[BufferParser]") {
             "[WARNING] A:2 [folder/file.cc:150] insert node:folder/file-op7, id:7 and "
             "folder/file-op8, id:8\n"
             "Perform App::Action App::Action1 ::App::Action::Action1 on "
-            "word::my/path/to/file.txt"
-    };
+            "word::my/path/to/file.txt"};
     ExpectedEvent const expected_event1{
             .m_logtype{"[WARNING] A:2 [<path>:150] insert node:<path>, id:7 and <path>, "
                        "id:8<newLine>"},
             .m_timestamp_raw{""},
-            .m_tokens{
-                    {{"[WARNING]", "", {}},
-                     {" A", "", {}},
-                     {":2", "", {}},
-                     {" ", "", {}},
-                     {"[folder/file.cc", "path", {}},
-                     {":150]", "", {}},
-                     {" insert", "", {}},
-                     {" node", "", {}},
-                     {":folder/file-op7", "path", {}},
-                     {",", "", {}},
-                     {" id", "", {}},
-                     {":7", "", {}},
-                     {" and", "", {}},
-                     {" folder/file-op8", "path", {}},
-                     {",", "", {}},
-                     {" id", "", {}},
-                     {":8", "", {}},
-                     {"\n", "newLine", {}}}
-            }
-    };
+            .m_tokens{{{"[WARNING]", "", {}},
+                       {" A", "", {}},
+                       {":2", "", {}},
+                       {" ", "", {}},
+                       {"[folder/file.cc", "path", {}},
+                       {":150]", "", {}},
+                       {" insert", "", {}},
+                       {" node", "", {}},
+                       {":folder/file-op7", "path", {}},
+                       {",", "", {}},
+                       {" id", "", {}},
+                       {":7", "", {}},
+                       {" and", "", {}},
+                       {" folder/file-op8", "path", {}},
+                       {",", "", {}},
+                       {" id", "", {}},
+                       {":8", "", {}},
+                       {"\n", "newLine", {}}}}};
     ExpectedEvent const expected_event2{
             .m_logtype{"Perform App::Action <function> ::App::<function> on word::<path>"},
             .m_timestamp_raw{""},
-            .m_tokens{
-                    {{"Perform", "", {}},
-                     {" App", "", {}},
-                     {":", "", {}},
-                     {":Action", "", {}},
-                     {" App::Action1", "function", {}},
-                     {" ", "", {}},
-                     {":", "", {}},
-                     {":App", "", {}},
-                     {":", "", {}},
-                     {":Action::Action1", "function", {}},
-                     {" on", "", {}},
-                     {" word", "", {}},
-                     {":", "", {}},
-                     {":my/path/to/file.txt", "path", {}}}
-            }
-    };
+            .m_tokens{{{"Perform", "", {}},
+                       {" App", "", {}},
+                       {":", "", {}},
+                       {":Action", "", {}},
+                       {" App::Action1", "function", {}},
+                       {" ", "", {}},
+                       {":", "", {}},
+                       {":App", "", {}},
+                       {":", "", {}},
+                       {":Action::Action1", "function", {}},
+                       {" on", "", {}},
+                       {" word", "", {}},
+                       {":", "", {}},
+                       {":my/path/to/file.txt", "path", {}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
@@ -955,24 +1120,20 @@ TEST_CASE("multi_capture_one", "[BufferParser]") {
     constexpr string_view cInput{"1999-12-12T01:02:03.456 1234 5678 I MyService A=TEXT B=1.1"};
     string const header_rule{fmt::format("header:{} {} {} {}", cTime, cPid, cTid, cLogLevel)};
     string const inside_capture_rule{
-            fmt::format("key_capture:[a-zA-Z]+ (?<key>[a-zA-Z]+)=[a-zA-Z]+")
-    };
+            fmt::format("key_capture:[a-zA-Z]+ (?<key>[a-zA-Z]+)=[a-zA-Z]+")};
     ExpectedEvent const expected_event{
             .m_logtype{"<timestamp> <PID> <TID> <LogLevel> MyService <key>=TEXT B=1.1"},
             .m_timestamp_raw{"1999-12-12T01:02:03.456"},
-            .m_tokens{
-                    {{"1999-12-12T01:02:03.456 1234 5678 I",
-                      "header",
-                      {{{"timestamp", {.m_start_positions{0}, .m_end_positions{23}}},
-                        {"PID", {.m_start_positions{24}, .m_end_positions{28}}},
-                        {"TID", {.m_start_positions{29}, .m_end_positions{33}}},
-                        {"LogLevel", {.m_start_positions{34}, .m_end_positions{35}}}}}},
-                     {" MyService A=TEXT",
-                      "key_capture",
-                      {{"key", {.m_start_positions{46}, .m_end_positions{47}}}}},
-                     {" B=1.1", "", {}}}
-            }
-    };
+            .m_tokens{{{"1999-12-12T01:02:03.456 1234 5678 I",
+                        "header",
+                        {{{"timestamp", {.m_start_positions{0}, .m_end_positions{23}}},
+                          {"PID", {.m_start_positions{24}, .m_end_positions{28}}},
+                          {"TID", {.m_start_positions{29}, .m_end_positions{33}}},
+                          {"LogLevel", {.m_start_positions{34}, .m_end_positions{35}}}}}},
+                       {" MyService A=TEXT",
+                        "key_capture",
+                        {{"key", {.m_start_positions{46}, .m_end_positions{47}}}}},
+                       {" B=1.1", "", {}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
@@ -1029,32 +1190,27 @@ TEST_CASE("multi_capture_two", "[BufferParser]") {
     constexpr string_view cInput{"Jan 01 02:03:04 ip-999-99-99-99 ku[1234]: E5678 02:03:04.5678"
                                  "    1111 Y failed"};
 
-    string const header_rule{fmt::format(
-            R"(header:{} ip-{} ku\[{}\]: {}{} {}    {})",
-            cTime,
-            cIp,
-            cPid,
-            cLogLevel,
-            cLid,
-            cLTime,
-            cTid
-    )};
+    string const header_rule{fmt::format(R"(header:{} ip-{} ku\[{}\]: {}{} {}    {})",
+                                         cTime,
+                                         cIp,
+                                         cPid,
+                                         cLogLevel,
+                                         cLid,
+                                         cLTime,
+                                         cTid)};
     ExpectedEvent const expected_event{
             .m_logtype{"<timestamp> ip-<IP> ku[<PID>]: <LogLevel><LID> <LTime>    <TID> Y failed"},
             .m_timestamp_raw{"Jan 01 02:03:04"},
-            .m_tokens{
-                    {{"Jan 01 02:03:04 ip-999-99-99-99 ku[1234]: E5678 02:03:04.5678    1111",
-                      "header",
-                      {{{"timestamp", {{0}, {15}}},
-                        {"IP", {{19}, {31}}},
-                        {"PID", {{35}, {39}}},
-                        {"LogLevel", {{42}, {43}}},
-                        {"LID", {{43}, {47}}},
-                        {"LTime", {{48}, {61}}},
-                        {"TID", {{65}, {69}}}}}},
-                     {" Y failed", "", {}}}
-            }
-    };
+            .m_tokens{{{"Jan 01 02:03:04 ip-999-99-99-99 ku[1234]: E5678 02:03:04.5678    1111",
+                        "header",
+                        {{{"timestamp", {{0}, {15}}},
+                          {"IP", {{19}, {31}}},
+                          {"PID", {{35}, {39}}},
+                          {"LogLevel", {{42}, {43}}},
+                          {"LID", {{43}, {47}}},
+                          {"LTime", {{48}, {61}}},
+                          {"TID", {{65}, {69}}}}}},
+                       {" Y failed", "", {}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
@@ -1114,20 +1270,17 @@ TEST_CASE("multi_capture_non_unique_names", "[BufferParser]") {
             .m_logtype{"Log is <capture> text <capture> and then another variable is <capture> "
                        "text text"},
             .m_timestamp_raw{""},
-            .m_tokens{
-                    {{"Log", "", {}},
-                     {" is", "", {}},
-                     {" myCapture123 text anotherCapture123",
-                      "var1",
-                      {{{"capture", {{7}, {19}}}, {"capture", {{25}, {42}}}}}},
-                     {" and", "", {}},
-                     {" then", "", {}},
-                     {" another", "", {}},
-                     {" variable", "", {}},
-                     {" is", "", {}},
-                     {" capture123 text text", "var2", {{{"capture", {{72}, {82}}}}}}}
-            }
-    };
+            .m_tokens{{{"Log", "", {}},
+                       {" is", "", {}},
+                       {" myCapture123 text anotherCapture123",
+                        "var1",
+                        {{{"capture", {{7}, {19}}}, {"capture", {{25}, {42}}}}}},
+                       {" and", "", {}},
+                       {" then", "", {}},
+                       {" another", "", {}},
+                       {" variable", "", {}},
+                       {" is", "", {}},
+                       {" capture123 text text", "var2", {{{"capture", {{72}, {82}}}}}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
@@ -1208,193 +1361,161 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
     ExpectedEvent const expected_event1{
             .m_logtype{"text <timestamp> text <int> text word <float><newLine>a\n"},
             .m_timestamp_raw{"Jan 01 02:03:04"},
-            .m_tokens{
-                    {{"text Jan 01 02:03:04 text 123 text",
-                      "header",
-                      {{{"timestamp", {{5}, {20}}},
-                        {"int", {{26}, {29}}},
-                        {"timestamp", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"int", {{}, {}}},
-                        {"hex", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"timestamp", {{}, {}}}}}},
-                     {" word", "", {}},
-                     {" 12.12", "float", {}},
-                     {"\n", "newLine", {}},
-                     {"a", "", {}},
-                     {"\n", "", {}}}
-            }
-    };
+            .m_tokens{{{"text Jan 01 02:03:04 text 123 text",
+                        "header",
+                        {{{"timestamp", {{5}, {20}}},
+                          {"int", {{26}, {29}}},
+                          {"timestamp", {{}, {}}},
+                          {"timestamp", {{}, {}}},
+                          {"int", {{}, {}}},
+                          {"hex", {{}, {}}},
+                          {"timestamp", {{}, {}}},
+                          {"timestamp", {{}, {}}}}}},
+                       {" word", "", {}},
+                       {" 12.12", "float", {}},
+                       {"\n", "newLine", {}},
+                       {"a", "", {}},
+                       {"\n", "", {}}}}};
 
     ExpectedEvent const expected_event2{
             .m_logtype{"text <timestamp> text <timestamp> text word <float><newLine>a\n"},
             .m_timestamp_raw{"Feb 01 02:03:05"},
-            .m_tokens{
-                    {{"text Feb 01 02:03:05 text Mar 29 12:11:10 text",
-                      "header",
-                      {{{"timestamp", {{}, {}}},
-                        {"int", {{}, {}}},
-                        {"timestamp", {{53}, {68}}},
-                        {"timestamp", {{74}, {89}}},
-                        {"int", {{}, {}}},
-                        {"hex", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"timestamp", {{}, {}}}}}},
-                     {" word", "", {}},
-                     {" 12.12", "float", {}},
-                     {"\n", "newLine", {}},
-                     {"a", "", {}},
-                     {"\n", "", {}}}
-            }
-    };
+            .m_tokens{{{"text Feb 01 02:03:05 text Mar 29 12:11:10 text",
+                        "header",
+                        {{{"timestamp", {{}, {}}},
+                          {"int", {{}, {}}},
+                          {"timestamp", {{53}, {68}}},
+                          {"timestamp", {{74}, {89}}},
+                          {"int", {{}, {}}},
+                          {"hex", {{}, {}}},
+                          {"timestamp", {{}, {}}},
+                          {"timestamp", {{}, {}}}}}},
+                       {" word", "", {}},
+                       {" 12.12", "float", {}},
+                       {"\n", "newLine", {}},
+                       {"a", "", {}},
+                       {"\n", "", {}}}}};
 
-    ExpectedEvent const expected_event3{
-            .m_logtype{"text word <float><newLine>a\n"},
-            .m_timestamp_raw{""},
-            .m_tokens{
-                    {{"text",
-                      "header",
-                      {{{"timestamp", {{}, {}}},
-                        {"int", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"int", {{}, {}}},
-                        {"hex", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"timestamp", {{}, {}}}}}},
-                     {" word", "", {}},
-                     {" 12.12", "float", {}},
-                     {"\n", "newLine", {}},
-                     {"a", "", {}},
-                     {"\n", "", {}}}
-            }
-    };
+    ExpectedEvent const expected_event3{.m_logtype{"text word <float><newLine>a\n"},
+                                        .m_timestamp_raw{""},
+                                        .m_tokens{{{"text",
+                                                    "header",
+                                                    {{{"timestamp", {{}, {}}},
+                                                      {"int", {{}, {}}},
+                                                      {"timestamp", {{}, {}}},
+                                                      {"timestamp", {{}, {}}},
+                                                      {"int", {{}, {}}},
+                                                      {"hex", {{}, {}}},
+                                                      {"timestamp", {{}, {}}},
+                                                      {"timestamp", {{}, {}}}}}},
+                                                   {" word", "", {}},
+                                                   {" 12.12", "float", {}},
+                                                   {"\n", "newLine", {}},
+                                                   {"a", "", {}},
+                                                   {"\n", "", {}}}}};
 
-    ExpectedEvent const expected_event4{
-            .m_logtype{"<int>  abc: <float><newLine>a\n"},
-            .m_timestamp_raw{""},
-            .m_tokens{
-                    {{"123  abc:",
-                      "header",
-                      {{{"timestamp", {{}, {}}},
-                        {"int", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"int", {{126}, {129}}},
-                        {"hex", {{-1}, {-1}}},
-                        {"timestamp", {{-1}, {-1}}},
-                        {"timestamp", {{-1}, {-1}}}}}},
-                     {" 12.12", "float", {}},
-                     {"\n", "newLine", {}},
-                     {"a", "", {}},
-                     {"\n", "", {}}}
-            }
-    };
+    ExpectedEvent const expected_event4{.m_logtype{"<int>  abc: <float><newLine>a\n"},
+                                        .m_timestamp_raw{""},
+                                        .m_tokens{{{"123  abc:",
+                                                    "header",
+                                                    {{{"timestamp", {{}, {}}},
+                                                      {"int", {{}, {}}},
+                                                      {"timestamp", {{}, {}}},
+                                                      {"timestamp", {{}, {}}},
+                                                      {"int", {{126}, {129}}},
+                                                      {"hex", {{-1}, {-1}}},
+                                                      {"timestamp", {{-1}, {-1}}},
+                                                      {"timestamp", {{-1}, {-1}}}}}},
+                                                   {" 12.12", "float", {}},
+                                                   {"\n", "newLine", {}},
+                                                   {"a", "", {}},
+                                                   {"\n", "", {}}}}};
 
-    ExpectedEvent const expected_event5{
-            .m_logtype{"<int> <hex> abc: <float><newLine>a\n"},
-            .m_timestamp_raw{""},
-            .m_tokens{
-                    {{"123 DFF abc:",
-                      "header",
-                      {{{"timestamp", {{}, {}}},
-                        {"int", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"int", {{144}, {147}}},
-                        {"hex", {{148}, {151}}},
-                        {"timestamp", {{-1}, {-1}}},
-                        {"timestamp", {{-1}, {-1}}}}}},
-                     {" 12.12", "float", {}},
-                     {"\n", "newLine", {}},
-                     {"a", "", {}},
-                     {"\n", "", {}}}
-            }
-    };
+    ExpectedEvent const expected_event5{.m_logtype{"<int> <hex> abc: <float><newLine>a\n"},
+                                        .m_timestamp_raw{""},
+                                        .m_tokens{{{"123 DFF abc:",
+                                                    "header",
+                                                    {{{"timestamp", {{}, {}}},
+                                                      {"int", {{}, {}}},
+                                                      {"timestamp", {{}, {}}},
+                                                      {"timestamp", {{}, {}}},
+                                                      {"int", {{144}, {147}}},
+                                                      {"hex", {{148}, {151}}},
+                                                      {"timestamp", {{-1}, {-1}}},
+                                                      {"timestamp", {{-1}, {-1}}}}}},
+                                                   {" 12.12", "float", {}},
+                                                   {"\n", "newLine", {}},
+                                                   {"a", "", {}},
+                                                   {"\n", "", {}}}}};
 
-    ExpectedEvent const expected_event6{
-            .m_logtype{"<int> <timestamp> abc: <float><newLine>a\n"},
-            .m_timestamp_raw{"Dec 10 11:11:11"},
-            .m_tokens{
-                    {{"123 Dec 10 11:11:11 abc:",
-                      "header",
-                      {{{"timestamp", {{}, {}}},
-                        {"int", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"int", {{165}, {168}}},
-                        {"hex", {{-1}, {-1}}},
-                        {"timestamp", {{169}, {184}}},
-                        {"timestamp", {{-1}, {-1}}}}}},
-                     {" 12.12", "float", {}},
-                     {"\n", "newLine", {}},
-                     {"a", "", {}},
-                     {"\n", "", {}}}
-            }
-    };
+    ExpectedEvent const expected_event6{.m_logtype{"<int> <timestamp> abc: <float><newLine>a\n"},
+                                        .m_timestamp_raw{"Dec 10 11:11:11"},
+                                        .m_tokens{{{"123 Dec 10 11:11:11 abc:",
+                                                    "header",
+                                                    {{{"timestamp", {{}, {}}},
+                                                      {"int", {{}, {}}},
+                                                      {"timestamp", {{}, {}}},
+                                                      {"timestamp", {{}, {}}},
+                                                      {"int", {{165}, {168}}},
+                                                      {"hex", {{-1}, {-1}}},
+                                                      {"timestamp", {{169}, {184}}},
+                                                      {"timestamp", {{-1}, {-1}}}}}},
+                                                   {" 12.12", "float", {}},
+                                                   {"\n", "newLine", {}},
+                                                   {"a", "", {}},
+                                                   {"\n", "", {}}}}};
 
-    ExpectedEvent const expected_event7{
-            .m_logtype{"<int>  abc:<timestamp> <float><newLine>a\n"},
-            .m_timestamp_raw{"Apr 10 11:11:11"},
-            .m_tokens{
-                    {{"123  abc:Apr 10 11:11:11",
-                      "header",
-                      {{{"timestamp", {{}, {}}},
-                        {"int", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"int", {{198}, {201}}},
-                        {"hex", {{-1}, {-1}}},
-                        {"timestamp", {{-1}, {-1}}},
-                        {"timestamp", {{207}, {222}}}}}},
-                     {" 12.12", "float", {}},
-                     {"\n", "newLine", {}},
-                     {"a", "", {}},
-                     {"\n", "", {}}}
-            }
-    };
+    ExpectedEvent const expected_event7{.m_logtype{"<int>  abc:<timestamp> <float><newLine>a\n"},
+                                        .m_timestamp_raw{"Apr 10 11:11:11"},
+                                        .m_tokens{{{"123  abc:Apr 10 11:11:11",
+                                                    "header",
+                                                    {{{"timestamp", {{}, {}}},
+                                                      {"int", {{}, {}}},
+                                                      {"timestamp", {{}, {}}},
+                                                      {"timestamp", {{}, {}}},
+                                                      {"int", {{198}, {201}}},
+                                                      {"hex", {{-1}, {-1}}},
+                                                      {"timestamp", {{-1}, {-1}}},
+                                                      {"timestamp", {{207}, {222}}}}}},
+                                                   {" 12.12", "float", {}},
+                                                   {"\n", "newLine", {}},
+                                                   {"a", "", {}},
+                                                   {"\n", "", {}}}}};
 
     ExpectedEvent const expected_event8{
             .m_logtype{"<int> <hex> abc:<timestamp> <float><newLine>a\n"},
             .m_timestamp_raw{"May 12 05:06:07"},
-            .m_tokens{
-                    {{"123 DFF abc:May 12 05:06:07",
-                      "header",
-                      {{{"timestamp", {{}, {}}},
-                        {"int", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"int", {{231}, {234}}},
-                        {"hex", {{235}, {238}}},
-                        {"timestamp", {{-1}, {-1}}},
-                        {"timestamp", {{243}, {258}}}}}},
-                     {" 12.12", "float", {}},
-                     {"\n", "newLine", {}},
-                     {"a", "", {}},
-                     {"\n", "", {}}}
-            }
-    };
+            .m_tokens{{{"123 DFF abc:May 12 05:06:07",
+                        "header",
+                        {{{"timestamp", {{}, {}}},
+                          {"int", {{}, {}}},
+                          {"timestamp", {{}, {}}},
+                          {"timestamp", {{}, {}}},
+                          {"int", {{231}, {234}}},
+                          {"hex", {{235}, {238}}},
+                          {"timestamp", {{-1}, {-1}}},
+                          {"timestamp", {{243}, {258}}}}}},
+                       {" 12.12", "float", {}},
+                       {"\n", "newLine", {}},
+                       {"a", "", {}},
+                       {"\n", "", {}}}}};
 
     ExpectedEvent const expected_event9{
             .m_logtype{"<int> <timestamp> abc:<timestamp> <float><newLine>a"},
             .m_timestamp_raw{"Jun 18 08:12:21"},
-            .m_tokens{
-                    {{"123 Jun 18 08:12:21 abc:Jul 21 02:11:12",
-                      "header",
-                      {{{"timestamp", {{}, {}}},
-                        {"int", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"timestamp", {{}, {}}},
-                        {"int", {{267}, {270}}},
-                        {"hex", {{-1}, {-1}}},
-                        {"timestamp", {{271}, {286}}},
-                        {"timestamp", {{291}, {306}}}}}},
-                     {" 12.12", "float", {}},
-                     {"\n", "newLine", {}},
-                     {"a", "", {}}}
-            }
-    };
+            .m_tokens{{{"123 Jun 18 08:12:21 abc:Jul 21 02:11:12",
+                        "header",
+                        {{{"timestamp", {{}, {}}},
+                          {"int", {{}, {}}},
+                          {"timestamp", {{}, {}}},
+                          {"timestamp", {{}, {}}},
+                          {"int", {{267}, {270}}},
+                          {"hex", {{-1}, {-1}}},
+                          {"timestamp", {{271}, {286}}},
+                          {"timestamp", {{291}, {306}}}}}},
+                       {" 12.12", "float", {}},
+                       {"\n", "newLine", {}},
+                       {"a", "", {}}}}};
 
     Schema schema;
     schema.add_delimiters(cDelimitersSchema);
@@ -1405,17 +1526,15 @@ TEST_CASE("multiple_headers", "[BufferParser]") {
     schema.add_variable(cVar5, -1);
     BufferParser buffer_parser{std::move(schema.release_schema_ast_ptr())};
 
-    parse_and_validate(
-            buffer_parser,
-            cInput,
-            {expected_event1,
-             expected_event2,
-             expected_event3,
-             expected_event4,
-             expected_event5,
-             expected_event6,
-             expected_event7,
-             expected_event8,
-             expected_event9}
-    );
+    parse_and_validate(buffer_parser,
+                       cInput,
+                       {expected_event1,
+                        expected_event2,
+                        expected_event3,
+                        expected_event4,
+                        expected_event5,
+                        expected_event6,
+                        expected_event7,
+                        expected_event8,
+                        expected_event9});
 }

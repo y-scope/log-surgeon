@@ -9,10 +9,8 @@ class Parser {
 public:
     Parser();
 
-    virtual auto add_rule(
-            std::string const& name,
-            std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
-    ) -> void;
+    virtual auto add_rule(std::string const& name,
+                          std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule) -> void;
 
     auto add_token(std::string const& name, char rule_char) -> void;
 

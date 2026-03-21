@@ -52,15 +52,13 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
             m_match = false;
             m_last_match_pos = m_match_pos;
             m_last_match_line = m_match_line;
-            Token token{
-                    m_start_pos,
-                    m_match_pos,
-                    input_buffer.storage().get_active_buffer(),
-                    input_buffer.storage().size(),
-                    m_match_line,
-                    m_type_ids,
-                    m_dfa->release_reg_handler()
-            };
+            Token token{m_start_pos,
+                        m_match_pos,
+                        input_buffer.storage().get_active_buffer(),
+                        input_buffer.storage().size(),
+                        m_match_line,
+                        m_type_ids,
+                        m_dfa->release_reg_handler()};
             return {ErrorCode::Success, token};
         }
         if (m_first_delimiter_pos.has_value()) {
@@ -101,7 +99,10 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
         if ('\n' == next_char) {
             m_line++;
             // The newline character itself needs to be treated as a match for non-timestamped logs.
-            if (m_has_delimiters && false == m_match) {
+            if ((false == m_first_delimiter_pos.has_value()
+                 || prev_byte_buf_pos == m_first_delimiter_pos.value())
+                && m_has_delimiters && false == m_match)
+            {
                 m_state = m_dfa->get_root();
                 process_char(next_char, prev_byte_buf_pos);
                 m_match = true;
@@ -119,78 +120,66 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
                 input_buffer.set_pos(m_match_pos);
                 m_line = m_match_line;
                 if (m_last_match_pos != m_start_pos) {
-                    Token token{
-                            m_last_match_pos,
-                            m_start_pos,
-                            input_buffer.storage().get_active_buffer(),
-                            input_buffer.storage().size(),
-                            m_last_match_line,
-                            &cTokenUncaughtStringTypes
-                    };
+                    Token token{m_last_match_pos,
+                                m_start_pos,
+                                input_buffer.storage().get_active_buffer(),
+                                input_buffer.storage().size(),
+                                m_last_match_line,
+                                &cTokenUncaughtStringTypes};
                     return {ErrorCode::Success, token};
                 }
                 m_first_delimiter_pos = std::nullopt;
                 m_match = false;
                 m_last_match_pos = m_match_pos;
                 m_last_match_line = m_match_line;
-                Token token{
-                        m_start_pos,
-                        m_match_pos,
-                        input_buffer.storage().get_active_buffer(),
-                        input_buffer.storage().size(),
-                        m_match_line,
-                        m_type_ids,
-                        m_dfa->release_reg_handler()
-                };
+                Token token{m_start_pos,
+                            m_match_pos,
+                            input_buffer.storage().get_active_buffer(),
+                            input_buffer.storage().size(),
+                            m_match_line,
+                            m_type_ids,
+                            m_dfa->release_reg_handler()};
                 return {ErrorCode::Success, token};
             }
             if (input_buffer.log_fully_consumed() && input_buffer.storage().pos() == m_start_pos) {
                 if (m_last_match_pos != m_start_pos) {
                     if (m_first_delimiter_pos.has_value()) {
-                        Token token{
-                                m_last_match_pos,
-                                m_first_delimiter_pos.value(),
-                                input_buffer.storage().get_active_buffer(),
-                                input_buffer.storage().size(),
-                                m_last_match_line,
-                                &cTokenUncaughtStringTypes
-                        };
+                        Token token{m_last_match_pos,
+                                    m_first_delimiter_pos.value(),
+                                    input_buffer.storage().get_active_buffer(),
+                                    input_buffer.storage().size(),
+                                    m_last_match_line,
+                                    &cTokenUncaughtStringTypes};
                         m_last_match_pos = m_first_delimiter_pos.value();
                         return {ErrorCode::Success, token};
                     } else {
                         m_match_pos = input_buffer.storage().pos();
                         m_type_ids = &cTokenEndTypes;
                         m_match = true;
-                        Token token{
-                                m_last_match_pos,
-                                m_start_pos,
-                                input_buffer.storage().get_active_buffer(),
-                                input_buffer.storage().size(),
-                                m_last_match_line,
-                                &cTokenUncaughtStringTypes
-                        };
+                        Token token{m_last_match_pos,
+                                    m_start_pos,
+                                    input_buffer.storage().get_active_buffer(),
+                                    input_buffer.storage().size(),
+                                    m_last_match_line,
+                                    &cTokenUncaughtStringTypes};
                         return {ErrorCode::Success, token};
                     }
                 }
-                Token token{
-                        input_buffer.storage().pos(),
-                        input_buffer.storage().pos(),
-                        input_buffer.storage().get_active_buffer(),
-                        input_buffer.storage().size(),
-                        m_line,
-                        &cTokenEndTypes
-                };
+                Token token{input_buffer.storage().pos(),
+                            input_buffer.storage().pos(),
+                            input_buffer.storage().get_active_buffer(),
+                            input_buffer.storage().size(),
+                            m_line,
+                            &cTokenEndTypes};
                 return {ErrorCode::Success, token};
             }
             if (m_first_delimiter_pos.has_value()) {
-                Token token{
-                        m_last_match_pos,
-                        m_first_delimiter_pos.value(),
-                        input_buffer.storage().get_active_buffer(),
-                        input_buffer.storage().size(),
-                        m_last_match_line,
-                        &cTokenUncaughtStringTypes
-                };
+                Token token{m_last_match_pos,
+                            m_first_delimiter_pos.value(),
+                            input_buffer.storage().get_active_buffer(),
+                            input_buffer.storage().size(),
+                            m_last_match_line,
+                            &cTokenUncaughtStringTypes};
                 m_last_match_pos = m_first_delimiter_pos.value();
                 return {ErrorCode::Success, token};
             }
@@ -217,11 +206,9 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan(ParserInputBuffer& input_buffer)
 
 // TODO: this is duplicating almost all the code of scan()
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
-        ParserInputBuffer& input_buffer,
-        char wildcard,
-        Token& token
-) -> ErrorCode {
+auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(ParserInputBuffer& input_buffer,
+                                                             char wildcard,
+                                                             Token& token) -> ErrorCode {
     auto const* state = m_dfa->get_root();
     if (m_asked_for_more_data) {
         state = m_prev_state;
@@ -231,13 +218,12 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
             m_match = false;
             m_last_match_pos = m_match_pos;
             m_last_match_line = m_match_line;
-            token
-                    = Token{m_start_pos,
-                            m_match_pos,
-                            input_buffer.storage().get_active_buffer(),
-                            input_buffer.storage().size(),
-                            m_match_line,
-                            m_type_ids};
+            token = Token{m_start_pos,
+                          m_match_pos,
+                          input_buffer.storage().get_active_buffer(),
+                          input_buffer.storage().size(),
+                          m_match_line,
+                          m_type_ids};
             return ErrorCode::Success;
         }
         m_start_pos = input_buffer.storage().pos();
@@ -266,8 +252,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
             m_line++;
             if (m_has_delimiters && !m_match) {
                 auto const* dest_state{
-                        m_dfa->get_root()->get_transition(next_char)->get_dest_state()
-                };
+                        m_dfa->get_root()->get_transition(next_char)->get_dest_state()};
                 m_match = true;
                 m_type_ids = &(dest_state->get_matching_variable_ids());
                 m_start_pos = prev_byte_buf_pos;
@@ -278,13 +263,12 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
         if (input_buffer.log_fully_consumed() || false == optional_transition.has_value()) {
             assert(input_buffer.log_fully_consumed());
             if (!m_match || (m_match && m_match_pos != input_buffer.storage().pos())) {
-                token
-                        = Token{m_last_match_pos,
-                                input_buffer.storage().pos(),
-                                input_buffer.storage().get_active_buffer(),
-                                input_buffer.storage().size(),
-                                m_last_match_line,
-                                &cTokenUncaughtStringTypes};
+                token = Token{m_last_match_pos,
+                              input_buffer.storage().pos(),
+                              input_buffer.storage().get_active_buffer(),
+                              input_buffer.storage().size(),
+                              m_last_match_line,
+                              &cTokenUncaughtStringTypes};
                 return ErrorCode::Success;
             }
             if (m_match) {
@@ -293,13 +277,12 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
                     for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
                         auto const* dest_state{state->get_transition(byte)->get_dest_state()};
                         if (false == dest_state->is_accepting()) {
-                            token
-                                    = Token{m_last_match_pos,
-                                            input_buffer.storage().pos(),
-                                            input_buffer.storage().get_active_buffer(),
-                                            input_buffer.storage().size(),
-                                            m_last_match_line,
-                                            &cTokenUncaughtStringTypes};
+                            token = Token{m_last_match_pos,
+                                          input_buffer.storage().pos(),
+                                          input_buffer.storage().get_active_buffer(),
+                                          input_buffer.storage().size(),
+                                          m_last_match_line,
+                                          &cTokenUncaughtStringTypes};
                             return ErrorCode::Success;
                         }
                     }
@@ -310,13 +293,12 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
                     while (!unvisited_states.empty()) {
                         TypedDfaState const* current_state = unvisited_states.top();
                         if (current_state == nullptr || current_state->is_accepting() == false) {
-                            token
-                                    = Token{m_last_match_pos,
-                                            input_buffer.storage().pos(),
-                                            input_buffer.storage().get_active_buffer(),
-                                            input_buffer.storage().size(),
-                                            m_last_match_line,
-                                            &cTokenUncaughtStringTypes};
+                            token = Token{m_last_match_pos,
+                                          input_buffer.storage().pos(),
+                                          input_buffer.storage().get_active_buffer(),
+                                          input_buffer.storage().size(),
+                                          m_last_match_line,
+                                          &cTokenUncaughtStringTypes};
                             return ErrorCode::Success;
                         }
                         unvisited_states.pop();
@@ -326,8 +308,7 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
                                 continue;
                             }
                             auto const& optional_wildcard_transition{
-                                    current_state->get_transition(byte)
-                            };
+                                    current_state->get_transition(byte)};
                             if (false == optional_wildcard_transition.has_value()) {
                                 unvisited_states.push(nullptr);
                                 continue;
@@ -344,13 +325,12 @@ auto Lexer<TypedNfaState, TypedDfaState>::scan_with_wildcard(
                 m_match = false;
                 m_last_match_pos = m_match_pos;
                 m_last_match_line = m_match_line;
-                token
-                        = Token{m_start_pos,
-                                m_match_pos,
-                                input_buffer.storage().get_active_buffer(),
-                                input_buffer.storage().size(),
-                                m_match_line,
-                                m_type_ids};
+                token = Token{m_start_pos,
+                              m_match_pos,
+                              input_buffer.storage().get_active_buffer(),
+                              input_buffer.storage().size(),
+                              m_match_line,
+                              m_type_ids};
                 return ErrorCode::Success;
             }
         }
@@ -392,8 +372,8 @@ void Lexer<TypedNfaState, TypedDfaState>::reset() {
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-void
-Lexer<TypedNfaState, TypedDfaState>::prepend_start_of_file_char(ParserInputBuffer& input_buffer) {
+void Lexer<TypedNfaState, TypedDfaState>::prepend_start_of_file_char(
+        ParserInputBuffer& input_buffer) {
     m_state = m_dfa->get_root()->get_transition(utf8::cCharStartOfFile)->get_dest_state();
     m_asked_for_more_data = true;
     m_start_pos = input_buffer.storage().pos();
@@ -418,8 +398,7 @@ void Lexer<TypedNfaState, TypedDfaState>::set_delimiters(std::vector<uint32_t> c
 template <typename TypedNfaState, typename TypedDfaState>
 void Lexer<TypedNfaState, TypedDfaState>::add_rule(
         rule_id_t const rule_id,
-        std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
-) {
+        std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule) {
     m_rules.emplace_back(rule_id, std::move(rule));
 }
 
