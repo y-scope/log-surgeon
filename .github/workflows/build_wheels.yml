@@ -36,25 +36,25 @@ jobs:
       matrix:
         include:
           # Linux x86_64
-          - {os: ubuntu-latest, target: x86_64-unknown-linux-gnu, python: "3.9"}
-          - {os: ubuntu-latest, target: x86_64-unknown-linux-gnu, python: "3.10"}
-          - {os: ubuntu-latest, target: x86_64-unknown-linux-gnu, python: "3.11"}
-          - {os: ubuntu-latest, target: x86_64-unknown-linux-gnu, python: "3.12"}
-          - {os: ubuntu-latest, target: x86_64-unknown-linux-gnu, python: "3.13"}
+          - {os: "ubuntu-latest", target: "x86_64-unknown-linux-gnu", python: "3.9"}
+          - {os: "ubuntu-latest", target: "x86_64-unknown-linux-gnu", python: "3.10"}
+          - {os: "ubuntu-latest", target: "x86_64-unknown-linux-gnu", python: "3.11"}
+          - {os: "ubuntu-latest", target: "x86_64-unknown-linux-gnu", python: "3.12"}
+          - {os: "ubuntu-latest", target: "x86_64-unknown-linux-gnu", python: "3.13"}
 
           # Linux aarch64
-          - {os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu, python: "3.9"}
-          - {os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu, python: "3.10"}
-          - {os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu, python: "3.11"}
-          - {os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu, python: "3.12"}
-          - {os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu, python: "3.13"}
+          - {os: "ubuntu-22.04-arm", target: "aarch64-unknown-linux-gnu", python: "3.9"}
+          - {os: "ubuntu-22.04-arm", target: "aarch64-unknown-linux-gnu", python: "3.10"}
+          - {os: "ubuntu-22.04-arm", target: "aarch64-unknown-linux-gnu", python: "3.11"}
+          - {os: "ubuntu-22.04-arm", target: "aarch64-unknown-linux-gnu", python: "3.12"}
+          - {os: "ubuntu-22.04-arm", target: "aarch64-unknown-linux-gnu", python: "3.13"}
 
           # macOS universal2 (x86_64 + arm64 fat binaries)
-          - {os: macos-14, target: universal2-apple-darwin, python: "3.9"}
-          - {os: macos-14, target: universal2-apple-darwin, python: "3.10"}
-          - {os: macos-14, target: universal2-apple-darwin, python: "3.11"}
-          - {os: macos-14, target: universal2-apple-darwin, python: "3.12"}
-          - {os: macos-14, target: universal2-apple-darwin, python: "3.13"}
+          - {os: "macos-14", target: "universal2-apple-darwin", python: "3.9"}
+          - {os: "macos-14", target: "universal2-apple-darwin", python: "3.10"}
+          - {os: "macos-14", target: "universal2-apple-darwin", python: "3.11"}
+          - {os: "macos-14", target: "universal2-apple-darwin", python: "3.12"}
+          - {os: "macos-14", target: "universal2-apple-darwin", python: "3.13"}
 
     steps:
       - uses: "actions/checkout@v4"
@@ -86,10 +86,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {os: ubuntu-latest, target: x86_64-unknown-linux-gnu, python: "3.9"}
-          - {os: ubuntu-latest, target: x86_64-unknown-linux-gnu, python: "3.13"}
-          - {os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu, python: "3.12"}
-          - {os: macos-14, target: universal2-apple-darwin, python: "3.12"}
+          - {os: "ubuntu-latest", target: "x86_64-unknown-linux-gnu", python: "3.9"}
+          - {os: "ubuntu-latest", target: "x86_64-unknown-linux-gnu", python: "3.13"}
+          - {os: "ubuntu-22.04-arm", target: "aarch64-unknown-linux-gnu", python: "3.12"}
+          - {os: "macos-14", target: "universal2-apple-darwin", python: "3.12"}
 
     steps:
       - uses: "actions/checkout@v4"
@@ -106,7 +106,10 @@ jobs:
       - name: "Install and test wheel"
         run: |
           pip install dist/*.whl
-          python -c "from log_surgeon import Parser, LogEvent, Variable, LogType; print('Import OK')"
+          python -c "
+          from log_surgeon import Parser, LogEvent, Variable, LogType
+          print('Import OK')
+          "
           python -m unittest discover rust/tests/python
 
   combine-wheels:
