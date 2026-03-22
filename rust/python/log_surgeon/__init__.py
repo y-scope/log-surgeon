@@ -1,4 +1,4 @@
-from log_surgeon.log_surgeon import LogEvent, LogType, Parser, Variable
+from log_surgeon.log_surgeon_ffi import LogEvent, LogType, Parser, Variable
 
 __all__ = [
     "LogEvent",

@@ -50,5 +50,5 @@ build-backend = "maturin"
 # feature to Cargo.toml that is incompatible with Python extensions.
 no-default-features = true
 features = ["python"]
-module-name = "log_surgeon"
+module-name = "log_surgeon.log_surgeon_ffi"
 python-source = "python"

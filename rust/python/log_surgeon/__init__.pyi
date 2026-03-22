@@ -69,6 +69,10 @@ class Variable:
         """The matched text."""
         ...
     @property
+    def offsets(self) -> slice:
+        """Offset of text in log message."""
+        ...
+    @property
     def captures(self) -> dict[str, list[str]]:
         """Capture group names mapped to their matched values."""
         ...

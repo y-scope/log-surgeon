@@ -166,6 +166,7 @@ impl Parser {
 				rule: variable.rule,
 				name: self.lexer.rule_name(variable.rule),
 				lexeme: &self.current_log[variable.range.clone()],
+				range: (variable.range.start, variable.range.end),
 				captures: self.working_captures[variable.captures.clone()]
 					.iter()
 					.map(|capture| {
@@ -173,6 +174,10 @@ impl Parser {
 						Capture {
 							name: &info.capture_info.name,
 							lexeme: &self.current_log[capture.range.clone()],
+							range: (
+								capture.range.start - variable.range.start,
+								capture.range.end - variable.range.start,
+							),
 							id: info.capture_info.id,
 							parent_id: info.capture_info.parent_id,
 						}

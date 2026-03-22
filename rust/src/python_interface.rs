@@ -12,6 +12,7 @@ use pyo3::types::PyDict;
 use pyo3::types::PyDictMethods;
 use pyo3::types::PyList;
 use pyo3::types::PyListMethods;
+use pyo3::types::PySlice;
 use pyo3::types::PyString;
 
 use crate::log_event::LogEvent;
@@ -58,6 +59,8 @@ struct PyVariable {
 	name: Py<PyString>,
 	#[pyo3(name = "text", get)]
 	lexeme: Py<PyString>,
+	#[pyo3(get)]
+	offsets: Py<PySlice>,
 	#[pyo3(get)]
 	captures: Py<PyDict>,
 }
@@ -214,6 +217,7 @@ impl PyVariable {
 		Ok(Self {
 			name: PyString::new(py, variable.name).unbind(),
 			lexeme: PyString::new(py, variable.lexeme).unbind(),
+			offsets: PySlice::new(py, variable.range.0 as isize, variable.range.1 as isize, 1).unbind(),
 			captures: captures2.unbind(),
 		})
 	}
@@ -275,7 +279,7 @@ fn python_unicode_or_bytes_as_str<'a>(input: &'a Bound<'_, PyAny>) -> PyResult<O
 }
 
 #[pymodule]
-mod log_surgeon {
+mod log_surgeon_ffi {
 	#[pymodule_export]
 	use super::PyLogEvent;
 	#[pymodule_export]

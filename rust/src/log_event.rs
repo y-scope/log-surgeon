@@ -22,6 +22,8 @@ pub struct Variable<'parser> {
 	pub name: &'parser str,
 	/// Matched text.
 	pub lexeme: &'parser str,
+	/// Offset of the variable in the log message.
+	pub range: (usize, usize),
 	/// Flattened list of captures; sorted top-down (nesting), left-to-right (input order).
 	pub captures: Vec<Capture<'parser>>,
 }
@@ -32,6 +34,8 @@ pub struct Capture<'a> {
 	pub name: &'a str,
 	/// Matched text.
 	pub lexeme: &'a str,
+	/// Offset of the capture in the variable.
+	pub range: (usize, usize),
 	/// Capture ID, statically assigned left-to-right based on the regex pattern;
 	/// e.g. the pattern `(?<start>[a-z]+(?<rest>\.[a-z]+)*)|(?<start>[0-9]+)` has three capture IDs.
 	/// When this variable/pattern is actually matched,
