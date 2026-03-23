@@ -23,22 +23,19 @@ int main() {
     assert(pos == input.length);
 
     EventHandle event{*maybe_event};
-    assert(event.log_type() == "%hello% foobarbaz");
+    // assert(event.log_type() == "%hello% foobarbaz");
+    assert(event.log_type() == "d%1.1:hello.foo%f foobarbaz");
 
-    std::optional<Variable> maybe_var{event.get_variable(0)};
-    assert(maybe_var.has_value());
+    std::optional<CCapture> maybe_capture{event.get_capture(0)};
+    assert(maybe_capture.has_value());
 
-    Variable const& var{*maybe_var};
-    assert(var.get_name() == "hello");
+    CCapture const& cap{*maybe_capture};
+    assert(cap.variable_name.as_cpp_view() == "hello");
 
-    Variable::CaptureIterator begin{var.captures_begin()};
+    assert(event.get_variable_window(0).has_value());
+    assert(event.get_variable_window(0) == std::make_optional(std::make_pair(0, 3)));
 
-    assert(var.capture_by_id(begin[0])[0].name.as_cpp_view() == "foo");
-    assert(var.capture_by_id(begin[0])[0].lexeme.as_cpp_view() == "e");
-
-    assert(begin + 1 == var.captures_end());
-
-    assert(!event.get_variable(1).has_value());
+    assert(!event.get_capture(1).has_value());
 
     printf("good!\n");
 

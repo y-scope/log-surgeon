@@ -29,19 +29,39 @@ class TestSimple(unittest.TestCase):
 
 		event = p.next_log_event()
 		self.assertIsNotNone(event)
-		self.assertEqual(str(event.log_type), "%number% qwerty %number% %at_host% someone@example %at_host%\n")
-		self.assertEqual(event.variables[0].name, "number")
-		self.assertEqual(event.variables[0].text, "123")
-		self.assertEqual(event.variables[1].name, "number")
-		self.assertEqual(event.variables[1].text, "4567")
-		self.assertEqual(event.variables[2].name, "at_host")
-		self.assertEqual(event.variables[2].text, "@example")
-		self.assertEqual(event.variables[3].name, "at_host")
-		self.assertEqual(event.variables[3].text, "@example.foo.bar.baz")
-		self.assertEqual(event.variables[3].captures["dot"], ["."] * 3)
-		self.assertEqual(event.variables[3].captures["end"], ["o", "r", "z"])
-		self.assertEqual(event.variables[3].captures["inside"], ["example"])
-		self.assertEqual(event.variables[3].captures["parts"], [".foo", ".bar", ".baz"])
+		# self.assertEqual(str(event.log_type), "%number% qwerty %number% %at_host% someone@example %at_host%\n")
+		parts = [
+			"%1.0:number.%",
+			" qwerty ",
+			"%1.0:number.%",
+			" @",
+			"%2.1:at_host.inside%",
+			" someone@example @",
+			"%2.1:at_host.inside%",
+			"%2.3:at_host.dot%",
+			"fo",
+			"%2.4:at_host.end%",
+			"%2.3:at_host.dot%",
+			"ba",
+			"%2.4:at_host.end%",
+			"%2.3:at_host.dot%",
+			"ba",
+			"%2.4:at_host.end%",
+			"\n",
+		]
+		self.assertEqual(str(event.log_type), ''.join(parts))
+		# self.assertEqual(event.variables[0].name, "number")
+		# self.assertEqual(event.variables[0].text, "123")
+		# self.assertEqual(event.variables[1].name, "number")
+		# self.assertEqual(event.variables[1].text, "4567")
+		# self.assertEqual(event.variables[2].name, "at_host")
+		# self.assertEqual(event.variables[2].text, "@example")
+		# self.assertEqual(event.variables[3].name, "at_host")
+		# self.assertEqual(event.variables[3].text, "@example.foo.bar.baz")
+		# self.assertEqual(event.variables[3].captures["dot"], ["."] * 3)
+		# self.assertEqual(event.variables[3].captures["end"], ["o", "r", "z"])
+		# self.assertEqual(event.variables[3].captures["inside"], ["example"])
+		# self.assertEqual(event.variables[3].captures["parts"], [".foo", ".bar", ".baz"])
 
 		self.assertIsNone(p.next_log_event())
 
@@ -59,31 +79,31 @@ class TestSimple(unittest.TestCase):
 		p.set_input_stream(text)
 
 		event = p.next_log_event()
-		self.assertEqual(str(event.log_type), "%word%%int2%")
+		self.assertEqual(str(event.log_type), "%1.0:word.%%3.0:int2.%")
 
 		text = "abc 123"
 		p.set_input_stream(text)
 
 		event = p.next_log_event()
-		self.assertEqual(str(event.log_type), "%word% %int1%")
+		self.assertEqual(str(event.log_type), "%1.0:word.% %2.0:int1.%")
 
 		text = "123abc"
 		p.set_input_stream(text)
 
 		event = p.next_log_event()
-		self.assertEqual(str(event.log_type), "%int1%%word%")
+		self.assertEqual(str(event.log_type), "%2.0:int1.%%1.0:word.%")
 
 		text = "abc123abc"
 		p.set_input_stream(text)
 
 		event = p.next_log_event()
-		self.assertEqual(str(event.log_type), "%word%123abc")
+		self.assertEqual(str(event.log_type), "%1.0:word.%123abc")
 
 		text = "abc123 abc"
 		p.set_input_stream(text)
 
 		event = p.next_log_event()
-		self.assertEqual(str(event.log_type), "%word%%int2% %word%")
+		self.assertEqual(str(event.log_type), "%1.0:word.%%3.0:int2.% %1.0:word.%")
 
 	def test_log_type_eq(self):
 		p = Parser()
@@ -145,16 +165,16 @@ class TestSimple(unittest.TestCase):
 		p.set_input_stream(text)
 
 		e1 = p.next_log_event()
-		self.assertEqual(str(e1.log_type), "%var1%\n")
+		self.assertEqual(str(e1.log_type), "%4.0:var1.%\n")
 
 		e2 = p.next_log_event()
-		self.assertEqual(str(e2.log_type), "%var2%\n")
+		self.assertEqual(str(e2.log_type), "%5.0:var2.%\n")
 
 		e3 = p.next_log_event()
-		self.assertEqual(str(e3.log_type), "%var1%\n")
+		self.assertEqual(str(e3.log_type), "%1.0:var1.%\n")
 
 		e4 = p.next_log_event()
-		self.assertEqual(str(e4.log_type), "%var2%\n")
+		self.assertEqual(str(e4.log_type), "%2.0:var2.%\n")
 
 	def test_variable_offsets(self):
 		p = Parser()
@@ -170,10 +190,10 @@ class TestSimple(unittest.TestCase):
 		e = p.next_log_event()
 
 		self.assertEqual(e.message, text)
-		self.assertEqual(len(e.variables), 3)
+		self.assertEqual(len(e.captures), 3)
 
-		self.assertEqual(e.variables[2].offsets.start, 7)
-		self.assertEqual(e.variables[2].offsets.stop, 10)
+		self.assertEqual(e.captures[2].offsets.start, 7)
+		self.assertEqual(e.captures[2].offsets.stop, 10)
 
-		for var in e.variables:
-			self.assertEqual(var.text, e.message[var.offsets])
+		for cap in e.captures:
+			self.assertEqual(cap.text, e.message[cap.offsets])

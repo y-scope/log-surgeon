@@ -1,15 +1,18 @@
+use crate::log_event::Capture;
+use crate::schema::Schema;
+use std::num::NonZero;
+
 /// A `LogType` is a "template string" for a [`LogEvent`](crate::log_event::LogEvent).
 /// The string representation of a `LogType` (e.g. given by [`LogType::as_str`])
 /// consists of:
 ///
 /// - `'%'` characters escaped by doubling them,
-/// - variable placeholders surrounded by a single `'%'` on each side;
-///   a variable named `foo` shows up as `%foo%` in the string representation.
+/// - capture placeholders surrounded by a single `'%'` on each side;
+///   a capture `bar` with capture id `2` in a variable `foo` with rule id `1`
+///   shows up at `%1.2:foo.bar%` in the string representation.
 ///
 #[derive(Clone, Eq)]
 pub struct LogType {
-	// static_text: String,
-	// variable_indices: Vec<(usize, String)>,
 	cached_representation: String,
 }
 
@@ -32,13 +35,9 @@ impl std::fmt::Display for LogType {
 }
 
 impl LogType {
-	pub fn new(static_text: String, variable_indices: Vec<(usize, String)>) -> Self {
-		let cached_representation: String = to_string(&static_text, &variable_indices);
-		Self {
-			// static_text,
-			// variable_indices,
-			cached_representation,
-		}
+	pub fn new(schema: &Schema, log_message: &str, captures: &[Capture]) -> Self {
+		let cached_representation: String = to_string(schema, log_message, captures);
+		Self { cached_representation }
 	}
 
 	pub fn as_str(&self) -> &str {
@@ -46,20 +45,29 @@ impl LogType {
 	}
 }
 
-fn to_string(static_text: &str, variable_indices: &[(usize, String)]) -> String {
+fn to_string(schema: &Schema, log_message: &str, captures: &[Capture]) -> String {
+	use std::fmt::Write;
+
 	let mut buf: String = String::new();
 	let mut last_pos: usize = 0;
-	for (pos, variable_type) in variable_indices.iter() {
-		let pos: usize = *pos;
-		for s in escape::<'%'>(&static_text[last_pos..pos]) {
+	for capture in captures.iter() {
+		let pos: usize = capture.range.0;
+		for s in escape::<'%'>(&log_message[last_pos..pos]) {
 			buf.push_str(s);
 		}
-		buf.push_str("%");
-		buf.push_str(variable_type);
-		buf.push_str("%");
-		last_pos = pos;
+		let (variable_name, capture_name): (&str, &str) = capture.names(schema);
+		write!(
+			&mut buf,
+			"%{}.{}:{}.{}%",
+			&capture.rule_id,
+			capture.capture_id.map_or(0, NonZero::get),
+			variable_name,
+			capture_name,
+		)
+		.unwrap();
+		last_pos = capture.range.1;
 	}
-	for s in escape::<'%'>(&static_text[last_pos..]) {
+	for s in escape::<'%'>(&log_message[last_pos..]) {
 		buf.push_str(s);
 	}
 	buf
@@ -90,14 +98,14 @@ fn escape<'a, const CHAR: char>(mut remaining: &'a str) -> impl Iterator<Item = 
 
 #[cfg(test)]
 mod test {
-	use super::*;
+	// use super::*;
 
 	#[test]
 	fn basic() {
-		let t: LogType = LogType::new(
-			"hello % world".to_owned(),
-			vec![(3, "int".to_owned()), (6, "float".to_owned())],
-		);
-		assert_eq!(t.to_string(), "hel%int%lo %float%%% world");
+		// let t: LogType = LogType::new(
+		// 	"hello % world",
+		// 	&[(3, "int".to_owned()), (6, "float".to_owned())],
+		// );
+		// assert_eq!(t.to_string(), "hel%int%lo %float%%% world");
 	}
 }

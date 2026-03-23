@@ -1,5 +1,5 @@
-use std::collections::BTreeMap;
 use std::convert::Infallible;
+use std::num::NonZero;
 
 use pyo3::buffer::PyBuffer;
 // use pyo3::exceptions::PyIndexError;
@@ -8,15 +8,13 @@ use pyo3::exceptions::PyRuntimeError;
 use pyo3::exceptions::PyUnicodeEncodeError;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
-use pyo3::types::PyDict;
-use pyo3::types::PyDictMethods;
+use pyo3::types::PyInt;
 use pyo3::types::PyList;
 use pyo3::types::PyListMethods;
 use pyo3::types::PySlice;
 use pyo3::types::PyString;
 
 use crate::log_event::LogEvent;
-use crate::log_event::Variable;
 use crate::log_type::LogType;
 use crate::parser::Parser;
 use crate::regex::Regex;
@@ -43,26 +41,35 @@ struct PyLogEvent {
 	#[pyo3(get)]
 	log_type: Py<PyLogType>,
 	#[pyo3(get)]
-	variables: Py<PyList>,
-	#[pyo3(get)]
 	message: Py<PyString>,
+	#[pyo3(get)]
+	captures: Py<PyList>,
 }
 
 #[pyclass(name = "LogType", eq)]
 #[derive(Debug, Eq, PartialEq)]
 struct PyLogType(LogType);
 
-#[pyclass(name = "Variable")]
+#[pyclass(name = "Capture")]
 #[derive(Debug)]
-struct PyVariable {
-	#[pyo3(name = "name", get)]
-	name: Py<PyString>,
-	#[pyo3(name = "text", get)]
-	lexeme: Py<PyString>,
+struct PyCapture {
+	#[pyo3(get)]
+	rule_id: Py<PyInt>,
+	#[pyo3(get)]
+	capture_id: Py<PyInt>,
+	#[pyo3(get)]
+	parent_id: Py<PyInt>,
+
 	#[pyo3(get)]
 	offsets: Py<PySlice>,
+
 	#[pyo3(get)]
-	captures: Py<PyDict>,
+	variable_name: Py<PyString>,
+	#[pyo3(get)]
+	capture_name: Py<PyString>,
+
+	#[pyo3(get, name = "text")]
+	lexeme: Py<PyString>,
 }
 
 #[pymethods]
@@ -99,7 +106,10 @@ impl PyParser {
 	}
 
 	fn compile(&mut self) -> PyResult<()> {
-		self.maybe_parser = Some(Parser::new(self.schema.clone()));
+		let parser: Parser = Parser::new(self.schema.clone());
+		self.schema = parser.lexer.schema.clone();
+		// self.maybe_parser = Some(Parser::new(self.schema.clone()));
+		self.maybe_parser = Some(parser);
 		Ok(())
 	}
 
@@ -116,25 +126,34 @@ impl PyParser {
 			return Ok(None);
 		}
 
-		let Some(lexer): Option<&mut Parser> = self.maybe_parser.as_mut() else {
+		let Some(parser): Option<&mut Parser> = self.maybe_parser.as_mut() else {
 			return Err(LogSurgeonException::new_err("parser has not been compiled"));
 		};
 
-		let Some(event): Option<LogEvent<'_>> = lexer.next_event(&self.buffer, &mut self.pos) else {
+		let Some(event): Option<LogEvent<'_>> = parser.next_event(&self.buffer, &mut self.pos) else {
 			return Ok(None);
 		};
 
 		Python::attach(|py| {
-			let variables: Bound<'_, PyList> = PyList::empty(py);
+			let captures: Bound<'_, PyList> = PyList::empty(py);
 
-			for variable in event.variables.iter() {
-				variables.append(PyVariable::new(py, variable)?)?;
+			for cap in event.captures.iter() {
+				let (variable_name, capture_name): (&str, &str) = cap.names(&self.schema);
+				captures.append(PyCapture {
+					rule_id: PyInt::new(py, cap.rule_id).unbind(),
+					capture_id: PyInt::new(py, cap.capture_id.map_or(0, NonZero::get)).unbind(),
+					parent_id: PyInt::new(py, cap.parent_id.map_or(0, NonZero::get)).unbind(),
+					offsets: PySlice::new(py, cap.range.0 as isize, cap.range.1 as isize, 1).unbind(),
+					variable_name: PyString::new(py, variable_name).unbind(),
+					capture_name: PyString::new(py, capture_name).unbind(),
+					lexeme: PyString::new(py, &event.message[cap.range.0..cap.range.1]).unbind(),
+				})?;
 			}
 
 			Ok(Some(PyLogEvent {
 				log_type: Py::new(py, PyLogType(event.log_type.clone()))?,
-				variables: variables.unbind(),
 				message: PyString::new(py, event.message).unbind(),
+				captures: captures.unbind(),
 			}))
 		})
 	}
@@ -179,7 +198,7 @@ impl PyLogType {
 }
 
 #[pymethods]
-impl PyVariable {
+impl PyCapture {
 	// #[pyo3(name = "__getitem__")]
 	// fn get_item(&self, key: &str) -> PyResult<Vec<String>> {
 	// 	if let Some(captures) = self.captures.get(key) {
@@ -197,29 +216,6 @@ impl PyVariable {
 	#[pyo3(name = "__repr__")]
 	fn repr(&self) -> String {
 		format!("{self:?}")
-	}
-}
-
-impl PyVariable {
-	fn new(py: Python<'_>, variable: &Variable<'_>) -> PyResult<Self> {
-		let mut captures1: BTreeMap<String, Vec<String>> = BTreeMap::new();
-		for capture in variable.captures.iter() {
-			captures1
-				.entry(capture.name.to_owned())
-				.or_insert_with(Vec::new)
-				.push(capture.lexeme.to_owned());
-		}
-		let captures2: Bound<'_, PyDict> = PyDict::new(py);
-		for (key, values) in captures1.into_iter() {
-			captures2.set_item(PyString::new(py, &key), PyList::new(py, values)?)?;
-		}
-
-		Ok(Self {
-			name: PyString::new(py, variable.name).unbind(),
-			lexeme: PyString::new(py, variable.lexeme).unbind(),
-			offsets: PySlice::new(py, variable.range.0 as isize, variable.range.1 as isize, 1).unbind(),
-			captures: captures2.unbind(),
-		})
 	}
 }
 
@@ -281,11 +277,11 @@ fn python_unicode_or_bytes_as_str<'a>(input: &'a Bound<'_, PyAny>) -> PyResult<O
 #[pymodule]
 mod log_surgeon_ffi {
 	#[pymodule_export]
+	use super::PyCapture;
+	#[pymodule_export]
 	use super::PyLogEvent;
 	#[pymodule_export]
 	use super::PyLogType;
 	#[pymodule_export]
 	use super::PyParser;
-	#[pymodule_export]
-	use super::PyVariable;
 }

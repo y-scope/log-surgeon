@@ -129,6 +129,7 @@ impl Tnfa {
 		nfa.needs_backtrack[0] = rules[0].regex.ends_with_anchor();
 
 		for (i, rule) in rules.iter().enumerate().skip(1) {
+			assert_eq!(i, rule.idx.index());
 			let state: NfaIdx = nfa.new_state(format!("rule {} start", rule.name));
 			// assert_eq!(state.0, rule.idx);
 			nfa[NfaIdx::BEGIN].spontaneous.push(SpontaneousTransition {
@@ -616,6 +617,7 @@ mod test {
 			idx: RuleIdx { index: 0, priority: 0 },
 			name: "hello".to_owned(),
 			regex: Regex::from_pattern("0((?<foobar>1(2[a-zA-Z])*)|(?<baz>xyz))world").unwrap(),
+			capture_names: vec![String::new(), "foobar".to_owned(), "baz".to_owned()],
 		}];
 		let nfa: Tnfa = Tnfa::for_rules(rules, " ".to_owned());
 		let b: bool = nfa.execute("012a2b2cworld").is_some();

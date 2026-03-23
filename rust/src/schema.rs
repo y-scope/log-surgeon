@@ -28,6 +28,7 @@ pub struct Rule {
 	pub idx: RuleIdx,
 	pub name: String,
 	pub regex: Regex,
+	pub capture_names: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
@@ -128,15 +129,19 @@ impl Schema {
 			},
 			name: "newline".to_owned(),
 			regex: Regex::Sequence(vec![Regex::AnyChar, Regex::Literal('\n')]),
+			capture_names: vec![String::new()],
 		});
 		for (&priority, rules) in self.rules_by_priority.iter().rev() {
 			for (name, regex) in rules.iter() {
 				// This can only fail on 32-bit platforms; i.e. (as far as rustc supports, 16-bit ones).
 				let index: u32 = u32::try_from(self.rules_flattened.len()).unwrap();
+				let mut capture_names: Vec<String> = vec![String::new(); 1 + regex.count_captures()];
+				regex.name_captures(&mut capture_names);
 				self.rules_flattened.push(Rule {
 					idx: RuleIdx { index, priority },
 					name: name.clone(),
 					regex: regex.clone(),
+					capture_names,
 				});
 			}
 		}

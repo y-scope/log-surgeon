@@ -232,6 +232,36 @@ impl Regex {
 }
 
 impl Regex {
+	pub fn count_captures(&self) -> usize {
+		match self {
+			Self::Anchor(_) | Self::AnyChar | Self::Literal(..) | Self::Group { .. } => 0,
+			Self::Capture { info, .. } => 1 + info.descendents,
+			Self::KleeneClosure(item) | Self::BoundedRepetition { item, .. } => item.count_captures(),
+			Self::Sequence(items) | Self::Alternation(items) => {
+				items.iter().fold(0, |total, item| total + item.count_captures())
+			},
+		}
+	}
+
+	pub fn name_captures(&self, names: &mut Vec<String>) {
+		match self {
+			Self::Anchor(_) | Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
+			Self::Capture { info, item } => {
+				let i: usize = info.id.get() as usize;
+				names[i] = info.name.clone();
+				item.name_captures(names);
+			},
+			Self::KleeneClosure(item) | Self::BoundedRepetition { item, .. } => {
+				item.name_captures(names);
+			},
+			Self::Sequence(items) | Self::Alternation(items) => {
+				for sub_item in items.iter() {
+					sub_item.name_captures(names);
+				}
+			},
+		}
+	}
+
 	/// [`RegexCapture::id`] defaults to [`NonZero::<u32>::MAX`];
 	/// if we actually reach this, `next_id` will overflow,
 	/// so it naturally works as a placeholder/invalid value.
@@ -258,8 +288,14 @@ impl Regex {
 					bread += sub_item.number_captures(id, stack)?;
 				}
 			},
-		};
+		}
 		Some(bread)
+	}
+}
+
+impl RegexCapture {
+	pub fn is_leaf(&self) -> bool {
+		self.descendents == 0
 	}
 }
 

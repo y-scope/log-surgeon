@@ -16,7 +16,7 @@ namespace log_surgeon {
 struct Interpretation;
 
 /// A `LogEvent` has a template [`LogType`](crate::log_type::LogType).
-/// and a sequence of [`Variable`]s to interpolate.
+/// and a sequence of [`Capture`]s to interpolate.
 struct LogEvent;
 
 struct Parser;
@@ -39,35 +39,38 @@ template<typename T = void>
 struct Vec;
 
 struct CCapture {
-    CCharArray name;
-    CCharArray lexeme;
-    /// Nonzero for a valid capture.
-    uint32_t id;
+    size_t rule_id;
+    /// `None`/zero when it is an implicit capture of the entire variable pattern.
+    uint32_t capture_id;
     uint32_t parent_id;
-};
-
-struct CVariable {
-    size_t rule;
-    CCharArray name;
+    /// Offset relative to start of log event message.
+    size_t start;
+    /// Offset relative to start of log event message.
+    size_t end;
+    CCharArray variable_name;
+    CCharArray capture_name;
     CCharArray lexeme;
 };
 
 
 extern "C" {
 
-CCapture log_surgeon_log_event_capture(const LogEvent *log_event, size_t i, size_t j);
-
 Box<LogEvent> log_surgeon_log_event_clone(const LogEvent *value);
 
 void log_surgeon_log_event_drop(Box<LogEvent> value);
 
-bool log_surgeon_log_event_have_header(const LogEvent *log_event);
+CCapture log_surgeon_log_event_get_capture(const LogEvent *log_event,
+                                           size_t i,
+                                           const Parser *parser);
+
+bool log_surgeon_log_event_get_variable_window(const LogEvent *log_event,
+                                               size_t i,
+                                               size_t *start,
+                                               size_t *end);
 
 CCharArray log_surgeon_log_event_log_type(const LogEvent *log_event);
 
 Box<LogEvent> log_surgeon_log_event_new();
-
-CVariable log_surgeon_log_event_variable(const LogEvent *log_event, size_t i);
 
 Box<Parser> log_surgeon_parser_clone(const Parser *value);
 

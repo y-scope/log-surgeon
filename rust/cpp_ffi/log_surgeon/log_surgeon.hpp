@@ -6,15 +6,13 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <cstdint>
 #include <optional>
 #include <string_view>
-#include <vector>
+#include <utility>
 
 namespace log_surgeon {
 class ParserHandle;
 class EventHandle;
-class Variable;
 
 class ParserHandle {
 public:
@@ -110,59 +108,33 @@ public:
     /**
      * @param event A borrowed `Event const*` (doesn't take ownership).
      */
-    EventHandle(LogEvent const* event) : m_event(event) {}
+    EventHandle(LogEvent const* event, Parser const* parser) : m_event(event), m_parser(parser) {}
 
     [[nodiscard]] auto log_type() const -> std::string_view {
         return log_surgeon_log_event_log_type(m_event);
     }
 
     /**
-     * Used to iterate over variables of a log event;
+     * Used to iterate over captures of a log event;
      * done when this function returns `std::nullopt`.
      *
-     * @param i Try to get the `i`th variable.
+     * @param i Try to get the `i`th capture.
      * @return `std::nullopt` iff out of range.
      */
-    [[nodiscard]] auto get_variable(size_t i) const -> std::optional<Variable>;
-
-private:
-    LogEvent const* m_event;
-};
-
-class Variable {
-public:
-    using CaptureIterator = std::vector<uint32_t>::const_iterator;
+    [[nodiscard]] auto get_capture(size_t i) const -> std::optional<CCapture>;
 
     /**
-     * @param event The log event this variable belongs to.
-     * @param index This variable's index in its event.
-     * @param variable The `CVariable` struct with the rule ID/index, name, and lexeme.
+     * Used to iterate over variable windows of a log event;
+     * done when this function returns `std::nullopt`.
+     *
+     * @param i Try to get the `i`th capture.
+     * @return `std::nullopt` iff out of range.
      */
-    Variable(LogEvent const* event, size_t index, CVariable variable);
-
-    [[nodiscard]] auto get_rule() const -> size_t { return m_rule; }
-
-    [[nodiscard]] auto get_name() const -> std::string_view { return m_name; }
-
-    [[nodiscard]] auto get_lexeme() const -> std::string_view { return m_lexeme; }
-
-    [[nodiscard]] auto captures_begin() const -> CaptureIterator { return m_captures.begin(); }
-
-    [[nodiscard]] auto captures_end() const -> CaptureIterator { return m_captures.end(); }
-
-    [[nodiscard]] auto capture_by_id(uint32_t id) const -> std::vector<CCapture> const& {
-        return m_captures_by_id.at(id);
-    }
+    [[nodiscard]] auto get_variable_window(size_t i) const -> std::optional<std::pair<size_t, size_t>>;
 
 private:
-    size_t m_rule;
-    std::string_view m_name;
-    std::string_view m_lexeme;
-
     LogEvent const* m_event;
-    size_t m_index;
-    std::vector<uint32_t> m_captures;
-    std::vector<std::vector<CCapture>> m_captures_by_id;
+    Parser const* m_parser;
 };
 
 inline auto ParserHandle::next_event(std::string_view input, size_t* pos)
@@ -170,39 +142,24 @@ inline auto ParserHandle::next_event(std::string_view input, size_t* pos)
     if (!log_surgeon_parser_next(m_parser, CCharArray::from_string_view(input), pos, m_event)) {
         return std::nullopt;
     }
-    return std::make_optional(EventHandle{m_event});
+    return std::make_optional(EventHandle{m_event, m_parser});
 }
 
-inline auto EventHandle::get_variable(size_t i) const -> std::optional<Variable> {
-    CVariable const variable{log_surgeon_log_event_variable(m_event, i)};
-    if (nullptr != variable.name.pointer) {
-        return std::make_optional(Variable{m_event, i, variable});
+inline auto EventHandle::get_capture(size_t i) const -> std::optional<CCapture> {
+    CCapture const capture{log_surgeon_log_event_get_capture(m_event, i, m_parser)};
+    if (nullptr != capture.lexeme.pointer) {
+        return std::make_optional(capture);
     }
     return std::nullopt;
 }
 
-inline Variable::Variable(LogEvent const* event, size_t index, CVariable variable)
-        : m_rule(variable.rule),
-          m_name(variable.name),
-          m_lexeme(variable.lexeme),
-          m_event(event),
-          m_index(index) {
-    for (size_t i{0};; ++i) {
-        CCapture const capture{log_surgeon_log_event_capture(m_event, m_index, i)};
-        if (0 == capture.id) {
-            break;
-        }
-
-        if (m_captures.end() == std::find(m_captures.begin(), m_captures.end(), capture.id)) {
-            m_captures.push_back(capture.id);
-
-            assert(m_captures_by_id.size() < capture.id);
-            m_captures_by_id.resize(capture.id + 1);
-        }
-
-        assert(m_captures_by_id.size() >= capture.id);
-        m_captures_by_id.at(capture.id).push_back(capture);
+inline auto EventHandle::get_variable_window(size_t i) const -> std::optional<std::pair<size_t, size_t>> {
+    size_t start{0};
+    size_t end{0};
+    if (log_surgeon_log_event_get_variable_window(m_event, i, &start, &end)) {
+        return std::make_optional(std::make_pair(start, end));
     }
+    return std::nullopt;
 }
 }  // namespace log_surgeon
 

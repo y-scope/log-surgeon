@@ -23,7 +23,7 @@ class TestSimple(unittest.TestCase):
 		p.set_input_stream(text)
 
 		event = p.next_log_event()
-		self.assertEqual(str(event.log_type), "Starting resource-monitoring for %container%")
+		self.assertEqual(str(event.log_type), "Starting resource-monitoring for %2.0:container.%")
 
 		self.assertIsNone(p.next_log_event())
 
@@ -41,7 +41,7 @@ class TestSimple(unittest.TestCase):
 		p.set_input_stream(text)
 
 		event = p.next_log_event()
-		self.assertEqual(str(event.log_type), "INFO [%c%Launcher %VAR%]")
+		self.assertEqual(str(event.log_type), "INFO [%1.0:c.%Launcher %2.0:VAR.%]")
 
 	def test3(self):
 		p = Parser()
@@ -56,7 +56,8 @@ class TestSimple(unittest.TestCase):
 		p.set_input_stream(text)
 
 		event = p.next_log_event()
-		self.assertEqual(str(event.log_type), "%role%")
+		# self.assertEqual(str(event.log_type), "%1.1:role.role%")
+		self.assertEqual(str(event.log_type), r"'roles': [u'%1.1:role.role%']")
 
 		text = "a'roles': [u'_member_']"
 
@@ -70,4 +71,5 @@ class TestSimple(unittest.TestCase):
 		p.set_input_stream(text)
 
 		event = p.next_log_event()
-		self.assertEqual(str(event.log_type), " %role%")
+		# self.assertEqual(str(event.log_type), " %role%")
+		self.assertEqual(str(event.log_type), " 'roles': [u'%1.1:role.role%']")

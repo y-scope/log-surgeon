@@ -161,7 +161,6 @@ struct ExecutionData {
 impl Tdfa {
 	pub fn execute(&self, input: &str) -> bool {
 		self.execute_internal::<true, _>(input, 0, |capture, lexeme, _, _| {
-			let capture: &AutomataCapture = self.capture_info(capture);
 			debug!("- captured {capture:?}, {lexeme}");
 		})
 		.is_some()
@@ -179,12 +178,19 @@ impl Tdfa {
 		&self,
 		input: &'input str,
 		last_was_delimited: u32,
-		on_capture: F,
+		mut on_capture: F,
+		override_rule: usize,
 	) -> Option<MatchedRule<'input>>
 	where
-		F: FnMut(usize, &'input str, usize, usize),
+		F: FnMut(&AutomataCapture, &'input str, usize, usize),
 	{
-		self.execute_internal::<true, _>(input, last_was_delimited, on_capture)
+		self.execute_internal::<true, _>(input, last_was_delimited, |capture, lexeme, start, end| {
+			let c2: AutomataCapture = AutomataCapture {
+				rule: override_rule,
+				capture_info: capture.capture_info.clone(),
+			};
+			on_capture(&c2, lexeme, start, end)
+		})
 	}
 
 	fn execute_internal<'input, const CAPTURE: bool, F>(
@@ -194,7 +200,7 @@ impl Tdfa {
 		mut on_capture: F,
 	) -> Option<MatchedRule<'input>>
 	where
-		F: FnMut(usize, &'input str, usize, usize),
+		F: FnMut(&AutomataCapture, &'input str, usize, usize),
 	{
 		let Some(anchor_transition): Option<&Transition> = self.lookup_transition(0, last_was_delimited) else {
 			panic!("invalid first transition");
@@ -282,12 +288,13 @@ impl Tdfa {
 			}
 
 			for (_, (tag, starts, ends)) in captures.into_iter() {
+				let (Tag::StartCapture(capture) | Tag::StopCapture(capture)) = &self.tags[tag];
 				assert_eq!(starts.len(), ends.len());
 				if starts.is_empty() {
 					continue;
 				}
 				for (&i, &j) in std::iter::zip(starts.iter(), ends.iter()) {
-					on_capture(tag, &input, i, j);
+					on_capture(capture, &input, i, j);
 				}
 			}
 		}

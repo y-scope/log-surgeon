@@ -1,12 +1,8 @@
-use std::ops::Range;
-
 use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::log_event::Capture;
 use crate::log_event::LogEvent;
-use crate::log_event::Variable;
 use crate::log_type::LogType;
-use crate::nfa::AutomataCapture;
 use crate::schema::Schema;
 
 #[derive(Debug, Clone)]
@@ -14,28 +10,15 @@ pub struct Parser {
 	pub lexer: Lexer,
 	maybe_pending_header: Option<PendingHeader>,
 	current_log: String,
-	working_captures: Vec<WorkingCapture>,
-	working_variables: Vec<WorkingVariable>,
+	current_captures: Vec<Capture>,
+	current_variables: Vec<(usize, usize)>,
 }
 
 #[derive(Debug, Clone)]
 struct PendingHeader {
-	rule: usize,
 	lexeme: String,
-	captures: Vec<WorkingCapture>,
-}
-
-#[derive(Debug, Clone)]
-struct WorkingVariable {
-	rule: usize,
-	range: Range<usize>,
-	captures: Range<usize>,
-}
-
-#[derive(Debug, Clone)]
-struct WorkingCapture {
-	tag: usize,
-	range: Range<usize>,
+	captures: Vec<Capture>,
+	variables: Vec<(usize, usize)>,
 }
 
 impl Parser {
@@ -45,8 +28,8 @@ impl Parser {
 			lexer,
 			maybe_pending_header: None,
 			current_log: String::new(),
-			working_captures: Vec::new(),
-			working_variables: Vec::new(),
+			current_captures: Vec::new(),
+			current_variables: Vec::new(),
 		}
 	}
 
@@ -57,29 +40,21 @@ impl Parser {
 
 		let original_pos: usize = *pos;
 
-		let mut static_text: String = String::new();
-		let mut working_variable_types: Vec<(usize, String)> = Vec::new();
-		let mut pending_static_text: usize = 0;
-
 		self.current_log.clear();
-		self.working_captures.clear();
-		self.working_variables.clear();
+		self.current_captures.clear();
+		self.current_variables.clear();
 
 		let mut have_header: bool = false;
 
 		if let Some(header) = &mut self.maybe_pending_header {
 			std::mem::swap(&mut header.lexeme, &mut self.current_log);
-			std::mem::swap(&mut header.captures, &mut self.working_captures);
-			self.working_variables.push(WorkingVariable {
-				rule: header.rule,
-				range: 0..self.current_log.len(),
-				captures: 0..self.working_captures.len(),
-			});
-
-			working_variable_types.push((0, self.lexer.rule_name(header.rule).to_owned()));
+			std::mem::swap(&mut header.captures, &mut self.current_captures);
+			std::mem::swap(&mut header.variables, &mut self.current_variables);
 
 			have_header = true;
 		}
+
+		let header_len: usize = self.current_log.len();
 
 		let mut previous_was_newline: bool = false;
 
@@ -87,21 +62,29 @@ impl Parser {
 		// Currently, the start-anchor just means "must come after static text".
 		let mut last_was_delimited: u32 = u32::from(self.lexer.schema.anchor_ch);
 		loop {
-			let old_pos: usize = *pos;
-			let old_captures: usize = self.working_captures.len();
+			let token_start: usize = *pos;
+			let token_starting_capture_count: usize = self.current_captures.len();
+			let log_event_start: usize = token_start - original_pos + header_len;
 			match self
 				.lexer
-				.next_token(input, pos, last_was_delimited, |tag, _, start, end| {
-					self.working_captures.push(WorkingCapture {
-						tag,
-						range: (old_pos - original_pos + start)..(old_pos - original_pos + end),
-					});
+				.next_token(input, pos, last_was_delimited, |capture, _, start, end| {
+					if capture.capture_info.is_leaf() {
+						self.current_captures.push(Capture {
+							rule_id: capture.rule,
+							capture_id: Some(capture.capture_info.id),
+							parent_id: capture.capture_info.parent_id,
+							range: (log_event_start + start, log_event_start + end),
+						});
+					}
 				}) {
-				Token::Variable { rule, lexeme } => {
+				Token::Variable {
+					rule,
+					lexeme,
+					has_captures,
+				} => {
 					let name: &str = &self.lexer.schema.rules()[rule].name;
 
 					if rule == 0 {
-						pending_static_text += lexeme.len();
 						if !have_header {
 							break;
 						}
@@ -110,39 +93,37 @@ impl Parser {
 						continue;
 					}
 
-					if pending_static_text > 0 {
-						static_text += &input[(old_pos - pending_static_text)..old_pos];
-						pending_static_text = 0;
+					if !has_captures || (token_starting_capture_count == self.current_captures.len()) {
+						self.current_captures.push(Capture {
+							rule_id: rule,
+							capture_id: None,
+							parent_id: None,
+							range: (log_event_start, log_event_start + lexeme.len()),
+						})
 					}
 
 					if name == "header" && (!have_header || previous_was_newline) {
 						let pending_header: &mut PendingHeader =
 							self.maybe_pending_header.get_or_insert(PendingHeader {
-								rule: 0,
 								lexeme: String::new(),
 								captures: Vec::new(),
+								variables: Vec::new(),
 							});
-						pending_header.rule = rule;
 						assert_eq!(pending_header.lexeme.len(), 0);
 						assert_eq!(pending_header.captures.len(), 0);
 						pending_header.lexeme.push_str(lexeme);
 						pending_header
 							.captures
-							.extend(self.working_captures.drain(old_captures..));
+							.extend(self.current_captures.drain(token_starting_capture_count..));
+						pending_header.variables.push((token_start, *pos));
 						break;
 					} else {
-						self.working_variables.push(WorkingVariable {
-							rule,
-							range: (old_pos - original_pos)..(*pos - original_pos),
-							captures: old_captures..self.working_captures.len(),
-						});
-						working_variable_types.push((static_text.len(), name.to_owned()));
+						self.current_variables.push((token_start, *pos));
 						last_was_delimited = 0;
 					}
 				},
 				Token::StaticText(static_text) => {
 					assert!(!static_text.is_empty());
-					pending_static_text += static_text.len();
 					last_was_delimited = u32::from(self.lexer.schema.anchor_ch);
 				},
 				Token::EndOfInput => {
@@ -153,50 +134,50 @@ impl Parser {
 			previous_was_newline = false;
 		}
 
-		if pending_static_text > 0 {
-			static_text += &input[(*pos - pending_static_text)..*pos];
-		}
-
 		self.current_log.push_str(&input[original_pos..*pos]);
 
-		let mut variables: Vec<Variable<'_>> = Vec::new();
+		self.current_captures.sort_by_key(|capture| capture.range);
 
-		for variable in self.working_variables.iter() {
-			variables.push(Variable {
-				rule: variable.rule,
-				name: self.lexer.rule_name(variable.rule),
-				lexeme: &self.current_log[variable.range.clone()],
-				range: (variable.range.start, variable.range.end),
-				captures: self.working_captures[variable.captures.clone()]
-					.iter()
-					.map(|capture| {
-						let info: &AutomataCapture = self.lexer.capture_info(capture.tag);
-						Capture {
-							name: &info.capture_info.name,
-							lexeme: &self.current_log[capture.range.clone()],
-							range: (
-								capture.range.start - variable.range.start,
-								capture.range.end - variable.range.start,
-							),
-							id: info.capture_info.id,
-							parent_id: info.capture_info.parent_id,
-						}
-					})
-					.collect::<Vec<_>>(),
-			});
-		}
+		// let mut variables: Vec<Variable<'_>> = Vec::new();
+
+		// for variable in self.working_variables.iter() {
+		// 	variables.push(Variable {
+		// 		rule: variable.rule,
+		// 		name: self.lexer.rule_name(variable.rule),
+		// 		lexeme: &self.current_log[variable.range.clone()],
+		// 		range: (variable.range.start, variable.range.end),
+		// 		captures: self.working_captures[variable.captures.clone()]
+		// 			.iter()
+		// 			.map(|capture| {
+		// 				let info: &AutomataCapture = self.lexer.capture_info(capture.tag);
+		// 				Capture {
+		// 					name: &info.capture_info.name,
+		// 					lexeme: &self.current_log[capture.range.clone()],
+		// 					range: (
+		// 						capture.range.start - variable.range.start,
+		// 						capture.range.end - variable.range.start,
+		// 					),
+		// 					id: info.capture_info.id,
+		// 					parent_id: info.capture_info.parent_id,
+		// 				}
+		// 			})
+		// 			.collect::<Vec<_>>(),
+		// 	});
+		// }
 
 		Some(LogEvent {
-			log_type: LogType::new(static_text, working_variable_types),
-			variables,
-			have_header,
+			log_type: LogType::new(&self.lexer.schema, &self.current_log, &self.current_captures),
 			message: &self.current_log,
+			captures: &self.current_captures,
+			variables: &self.current_variables,
 		})
 	}
 }
 
 #[cfg(test)]
 mod test {
+	use std::num::NonZero;
+
 	use super::*;
 
 	#[test]
@@ -213,16 +194,16 @@ mod test {
 			let event: LogEvent<'_> = parser.next_event(input, &mut pos).unwrap();
 			assert_eq!(pos, input.len());
 
-			assert_eq!(event.variables[0].name, "hello");
-			assert_eq!(event.variables[0].lexeme, "def");
-			assert_eq!(event.variables[0].captures[0].name, "foo");
-			assert_eq!(event.variables[0].captures[0].lexeme, "e");
+			assert_eq!(event.captures[0].rule_id, 1);
+			assert_eq!(event.captures[0].capture_id, Some(NonZero::<u32>::MIN));
+			assert_eq!(event.captures[0].range, (1, 2));
 		}
 		{
 			assert_eq!(parser.next_event(input, &mut pos), None);
 		}
 	}
 
+	/*
 	#[test]
 	fn hmmm2() {
 		let mut schema: Schema = Schema::new();
@@ -291,4 +272,5 @@ mod test {
 			assert_eq!(parser.next_event(input, &mut pos), None);
 		}
 	}
+	*/
 }

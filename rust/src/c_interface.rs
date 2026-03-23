@@ -25,20 +25,20 @@ pub type CCharArray<'lifetime> = CArray<'lifetime, c_char>;
 
 #[repr(C)]
 #[derive(Debug)]
-pub struct CVariable<'event> {
-	pub rule: usize,
-	pub name: CCharArray<'event>,
-	pub lexeme: CCharArray<'event>,
-}
-
-#[repr(C)]
-#[derive(Debug)]
-pub struct CCapture<'parser> {
-	pub name: CCharArray<'parser>,
-	pub lexeme: CCharArray<'parser>,
-	/// Nonzero for a valid capture.
-	pub id: Option<NonZero<u32>>,
+pub struct CCapture<'event> {
+	pub rule_id: usize,
+	/// `None`/zero when it is an implicit capture of the entire variable pattern.
+	pub capture_id: Option<NonZero<u32>>,
 	pub parent_id: Option<NonZero<u32>>,
+
+	/// Offset relative to start of log event message.
+	pub start: usize,
+	/// Offset relative to start of log event message.
+	pub end: usize,
+
+	pub variable_name: CCharArray<'event>,
+	pub capture_name: CCharArray<'event>,
+	pub lexeme: CCharArray<'event>,
 }
 
 #[unsafe(no_mangle)]
@@ -77,11 +77,6 @@ unsafe extern "C" fn log_surgeon_parser_new(schema: &Schema) -> Box<Parser> {
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn log_surgeon_log_event_new<'a>() -> Box<LogEvent<'a>> {
-	Box::new(LogEvent::blank())
-}
-
-#[unsafe(no_mangle)]
 extern "C" fn log_surgeon_parser_next<'parser, 'input>(
 	parser: &'parser mut Parser,
 	input: CCharArray<'input>,
@@ -97,29 +92,13 @@ extern "C" fn log_surgeon_parser_next<'parser, 'input>(
 	}
 }
 
-#[unsafe(no_mangle)]
-unsafe extern "C" fn log_surgeon_search_query_interpretations(
-	parser: &Parser,
-	input: CCharArray<'_>,
-) -> Box<Vec<Interpretation>> {
-	let query: SearchString = SearchString::parse(input.as_utf8().unwrap()).unwrap();
-	let interpretations: Vec<Interpretation> = query.interpretations(&parser.lexer);
-	Box::new(interpretations)
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn log_surgeon_search_query_interpretation_as_string<'a>(
-	interpretations: &'a Vec<Interpretation>,
-	i: usize,
-	len: &mut usize,
-) -> CCharArray<'a> {
-	let s: &str = &interpretations[i].stringified;
-	*len = s.len();
-	CCharArray::from_utf8(s)
-}
-
 mod log_event {
 	use super::*;
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_log_event_new<'a>() -> Box<LogEvent<'a>> {
+		Box::new(LogEvent::blank())
+	}
 
 	#[unsafe(no_mangle)]
 	extern "C" fn log_surgeon_log_event_log_type<'a>(log_event: &'a LogEvent<'_>) -> CCharArray<'a> {
@@ -127,44 +106,76 @@ mod log_event {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_have_header<'a>(log_event: &'a LogEvent<'_>) -> bool {
-		log_event.have_header
+	extern "C" fn log_surgeon_log_event_get_variable_window(
+		log_event: &LogEvent<'_>,
+		i: usize,
+		start: &mut usize,
+		end: &mut usize,
+	) -> bool {
+		if let Some(variable) = log_event.variables.get(i) {
+			*start = variable.0;
+			*end = variable.1;
+			true
+		} else {
+			false
+		}
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_variable<'a>(log_event: &LogEvent<'a>, i: usize) -> CVariable<'a> {
-		if let Some(variable) = log_event.variables.get(i) {
-			return CVariable {
-				rule: variable.rule,
-				name: CCharArray::from_utf8(variable.name),
-				lexeme: CCharArray::from_utf8(variable.lexeme),
+	extern "C" fn log_surgeon_log_event_get_capture<'a>(
+		log_event: &LogEvent<'a>,
+		i: usize,
+		parser: &'a Parser,
+	) -> CCapture<'a> {
+		if let Some(capture) = log_event.captures.get(i) {
+			let (variable_name, capture_name): (&str, &str) = capture.names(&parser.lexer.schema);
+			let lexeme: &str = &log_event.message[capture.range.0..capture.range.1];
+			return CCapture {
+				rule_id: capture.rule_id,
+				capture_id: capture.capture_id,
+				parent_id: capture.parent_id,
+				start: capture.range.0,
+				end: capture.range.1,
+				variable_name: CCharArray::from_utf8(variable_name),
+				capture_name: CCharArray::from_utf8(capture_name),
+				lexeme: CCharArray::from_utf8(lexeme),
 			};
 		}
-		CVariable {
-			rule: 0,
-			name: CCharArray::null(),
+		CCapture {
+			rule_id: 0,
+			capture_id: None,
+			parent_id: None,
+			start: 0,
+			end: 0,
+			variable_name: CCharArray::null(),
+			capture_name: CCharArray::null(),
 			lexeme: CCharArray::null(),
 		}
 	}
+}
+
+mod query {
+	use super::*;
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_capture<'a>(log_event: &'a LogEvent<'_>, i: usize, j: usize) -> CCapture<'a> {
-		if let Some(variable) = log_event.variables.get(i) {
-			if let Some(capture) = variable.captures.get(j) {
-				return CCapture {
-					name: CCharArray::from_utf8(capture.name),
-					lexeme: CCharArray::from_utf8(capture.lexeme),
-					id: Some(capture.id),
-					parent_id: capture.parent_id,
-				};
-			}
-		}
-		CCapture {
-			name: CCharArray::null(),
-			lexeme: CCharArray::null(),
-			id: None,
-			parent_id: None,
-		}
+	unsafe extern "C" fn log_surgeon_search_query_interpretations(
+		parser: &Parser,
+		input: CCharArray<'_>,
+	) -> Box<Vec<Interpretation>> {
+		let query: SearchString = SearchString::parse(input.as_utf8().unwrap()).unwrap();
+		let interpretations: Vec<Interpretation> = query.interpretations(&parser.lexer);
+		Box::new(interpretations)
+	}
+
+	#[unsafe(no_mangle)]
+	unsafe extern "C" fn log_surgeon_search_query_interpretation_as_string<'a>(
+		interpretations: &'a Vec<Interpretation>,
+		i: usize,
+		len: &mut usize,
+	) -> CCharArray<'a> {
+		let s: &str = &interpretations[i].stringified;
+		*len = s.len();
+		CCharArray::from_utf8(s)
 	}
 }
 
