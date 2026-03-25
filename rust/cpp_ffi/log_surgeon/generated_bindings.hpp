@@ -58,13 +58,13 @@ Box<LogEvent> log_surgeon_log_event_clone(const LogEvent *value);
 
 void log_surgeon_log_event_drop(Box<LogEvent> value);
 
-CCapture log_surgeon_log_event_get_capture(const LogEvent *log_event,
-                                           size_t i,
-                                           const Parser *parser);
-
 CCapture log_surgeon_log_event_get_leaf_capture(const LogEvent *log_event,
                                                 size_t i,
                                                 const Parser *parser);
+
+CCapture log_surgeon_log_event_get_non_leaf_capture(const LogEvent *log_event,
+                                                    size_t i,
+                                                    const Parser *parser);
 
 CCharArray log_surgeon_log_event_log_type(const LogEvent *log_event);
 

@@ -162,12 +162,12 @@ mod log_event {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_get_capture<'a>(
+	extern "C" fn log_surgeon_log_event_get_leaf_capture<'a>(
 		log_event: &LogEvent<'a>,
 		i: usize,
 		parser: &'a Parser,
 	) -> CCapture<'a> {
-		if let Some(capture) = log_event.all_captures.get(i) {
+		if let Some(capture) = log_event.leaf_captures.get(i) {
 			let (variable_name, capture_name): (&str, &str) = capture.names(&parser.lexer.schema);
 			let lexeme: &str = &log_event.message[capture.range.0..capture.range.1];
 			return CCapture {
@@ -186,12 +186,12 @@ mod log_event {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_get_leaf_capture<'a>(
+	extern "C" fn log_surgeon_log_event_get_non_leaf_capture<'a>(
 		log_event: &LogEvent<'a>,
 		i: usize,
 		parser: &'a Parser,
 	) -> CCapture<'a> {
-		if let Some(capture) = log_event.leaf_captures.get(i) {
+		if let Some(capture) = log_event.non_leaf_captures.get(i) {
 			let (variable_name, capture_name): (&str, &str) = capture.names(&parser.lexer.schema);
 			let lexeme: &str = &log_event.message[capture.range.0..capture.range.1];
 			return CCapture {

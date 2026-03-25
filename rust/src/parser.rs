@@ -16,7 +16,7 @@ pub struct Parser {
 struct WorkingLogEvent {
 	message: String,
 	leaf_captures: Vec<Capture>,
-	all_captures: Vec<Capture>,
+	non_leaf_captures: Vec<Capture>,
 	variables: Vec<Capture>,
 }
 
@@ -55,7 +55,8 @@ impl Parser {
 		let mut last_was_delimited: u32 = u32::from(self.lexer.schema.anchor_ch);
 		loop {
 			let token_start: usize = *pos;
-			let token_starting_capture_count: usize = self.current_log.leaf_captures.len();
+			let token_starting_leaf_capture_count: usize = self.current_log.leaf_captures.len();
+			let token_starting_non_leaf_capture_count: usize = self.current_log.non_leaf_captures.len();
 			let log_event_start: usize = token_start - original_pos + header_len;
 			match self.lexer.next_token(input, pos, last_was_delimited, |regex_capture| {
 				let generalized_capture: Capture = Capture {
@@ -69,9 +70,10 @@ impl Parser {
 					is_leaf: regex_capture.is_leaf,
 				};
 				if regex_capture.is_leaf {
-					self.current_log.leaf_captures.push(generalized_capture.clone());
+					self.current_log.leaf_captures.push(generalized_capture);
+				} else {
+					self.current_log.non_leaf_captures.push(generalized_capture);
 				}
-				self.current_log.all_captures.push(generalized_capture);
 			}) {
 				Token::Variable {
 					rule,
@@ -80,34 +82,41 @@ impl Parser {
 				} => {
 					let name: &str = &self.lexer.schema[rule].name;
 
-					if !has_captures || (token_starting_capture_count == self.current_log.leaf_captures.len()) {
-						self.current_log.leaf_captures.push(Capture {
-							rule_idx: rule,
-							capture_id: None,
-							parent_id: None,
-							range: (log_event_start, log_event_start + lexeme.len()),
-							is_leaf: true,
-						})
-					}
+					let variable_is_implicit_capture: bool =
+						!has_captures || (token_starting_leaf_capture_count == self.current_log.leaf_captures.len());
 
 					let variable_capture: Capture = Capture {
 						rule_idx: rule,
 						capture_id: None,
 						parent_id: None,
-						range: (log_event_start, *pos - original_pos + header_len),
-						is_leaf: false,
+						range: (log_event_start, log_event_start + lexeme.len()),
+						is_leaf: variable_is_implicit_capture,
 					};
-					self.current_log.all_captures.push(variable_capture.clone());
+
+					if variable_capture.is_leaf {
+						self.current_log.leaf_captures.push(variable_capture.clone());
+					} else {
+						self.current_log.non_leaf_captures.push(variable_capture.clone());
+					}
 
 					if name == "header" && (!have_header || previous_was_newline) {
 						let pending_header: &mut WorkingLogEvent =
 							self.maybe_pending_header.get_or_insert_with(WorkingLogEvent::new);
 						assert_eq!(pending_header.message.len(), 0);
 						assert_eq!(pending_header.leaf_captures.len(), 0);
+						assert_eq!(pending_header.non_leaf_captures.len(), 0);
+						assert_eq!(pending_header.variables.len(), 0);
 						pending_header.message.push_str(lexeme);
-						pending_header
-							.leaf_captures
-							.extend(self.current_log.leaf_captures.drain(token_starting_capture_count..));
+						pending_header.leaf_captures.extend(
+							self.current_log
+								.leaf_captures
+								.drain(token_starting_leaf_capture_count..),
+						);
+						pending_header.non_leaf_captures.extend(
+							self.current_log
+								.non_leaf_captures
+								.drain(token_starting_non_leaf_capture_count..),
+						);
 						pending_header.variables.push(variable_capture);
 						break;
 					} else {
@@ -174,7 +183,7 @@ impl Parser {
 			),
 			message: &self.current_log.message,
 			leaf_captures: &self.current_log.leaf_captures,
-			all_captures: &self.current_log.all_captures,
+			non_leaf_captures: &self.current_log.non_leaf_captures,
 			variables: &self.current_log.variables,
 		})
 	}
@@ -185,7 +194,7 @@ impl WorkingLogEvent {
 		Self {
 			message: String::new(),
 			leaf_captures: Vec::new(),
-			all_captures: Vec::new(),
+			non_leaf_captures: Vec::new(),
 			variables: Vec::new(),
 		}
 	}
@@ -193,7 +202,7 @@ impl WorkingLogEvent {
 	fn clear(&mut self) {
 		self.message.clear();
 		self.leaf_captures.clear();
-		self.all_captures.clear();
+		self.non_leaf_captures.clear();
 		self.variables.clear();
 	}
 }

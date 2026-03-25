@@ -130,7 +130,7 @@ public:
      * @param i Try to get the `i`th capture.
      * @return `std::nullopt` iff out of range.
      */
-    [[nodiscard]] auto get_capture(size_t i) const -> std::optional<CCapture>;
+    [[nodiscard]] auto get_non_leaf_capture(size_t i) const -> std::optional<CCapture>;
 
 private:
     LogEvent const* m_event;
@@ -153,8 +153,8 @@ inline auto EventHandle::get_leaf_capture(size_t i) const -> std::optional<CCapt
     return std::nullopt;
 }
 
-inline auto EventHandle::get_capture(size_t i) const -> std::optional<CCapture> {
-    CCapture const capture{log_surgeon_log_event_get_capture(m_event, i, m_parser)};
+inline auto EventHandle::get_non_leaf_capture(size_t i) const -> std::optional<CCapture> {
+    CCapture const capture{log_surgeon_log_event_get_non_leaf_capture(m_event, i, m_parser)};
     if (nullptr != capture.lexeme.pointer) {
         return std::make_optional(capture);
     }

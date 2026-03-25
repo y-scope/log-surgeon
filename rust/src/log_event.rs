@@ -12,7 +12,7 @@ pub struct LogEvent<'parser> {
 	pub log_type: LogType,
 	pub message: &'parser str,
 	pub leaf_captures: &'parser [Capture],
-	pub all_captures: &'parser [Capture],
+	pub non_leaf_captures: &'parser [Capture],
 	pub variables: &'parser [Capture],
 }
 
@@ -39,7 +39,7 @@ impl<'parser> LogEvent<'parser> {
 		log_type: LogType::BLANK,
 		message: "",
 		leaf_captures: &[],
-		all_captures: &[],
+		non_leaf_captures: &[],
 		variables: &[],
 	};
 }

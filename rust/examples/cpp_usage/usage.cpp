@@ -34,9 +34,8 @@ int main() {
 
     assert(!event.get_leaf_capture(1).has_value());
 
-    assert(event.get_capture(0).has_value());
-    assert(event.get_capture(1).has_value());
-    assert(!event.get_capture(2).has_value());
+    assert(event.get_non_leaf_capture(0).has_value());
+    assert(!event.get_non_leaf_capture(1).has_value());
 
 
     printf("good!\n");
