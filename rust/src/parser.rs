@@ -66,6 +66,7 @@ impl Parser {
 						log_event_start + regex_capture.start,
 						log_event_start + regex_capture.end,
 					),
+					is_leaf: regex_capture.is_leaf,
 				};
 				if regex_capture.is_leaf {
 					self.current_log.leaf_captures.push(generalized_capture.clone());
@@ -85,6 +86,7 @@ impl Parser {
 							capture_id: None,
 							parent_id: None,
 							range: (log_event_start, log_event_start + lexeme.len()),
+							is_leaf: true,
 						})
 					}
 
@@ -93,6 +95,7 @@ impl Parser {
 						capture_id: None,
 						parent_id: None,
 						range: (log_event_start, *pos - original_pos + header_len),
+						is_leaf: false,
 					};
 					self.current_log.all_captures.push(variable_capture.clone());
 

@@ -45,6 +45,7 @@ struct CCapture {
     size_t start;
     /// Offset relative to start of log event message.
     size_t end;
+    bool is_leaf;
     CCharArray variable_name;
     CCharArray capture_name;
     CCharArray lexeme;

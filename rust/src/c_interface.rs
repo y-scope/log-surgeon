@@ -37,6 +37,8 @@ pub struct CCapture<'event> {
 	/// Offset relative to start of log event message.
 	pub end: usize,
 
+	pub is_leaf: bool,
+
 	pub variable_name: CCharArray<'event>,
 	pub capture_name: CCharArray<'event>,
 	pub lexeme: CCharArray<'event>,
@@ -79,6 +81,7 @@ impl CCapture<'_> {
 			parent_id: None,
 			start: 0,
 			end: 0,
+			is_leaf: false,
 			variable_name: CCharArray::null(),
 			capture_name: CCharArray::null(),
 			lexeme: CCharArray::null(),
@@ -173,6 +176,7 @@ mod log_event {
 				parent_id: capture.parent_id,
 				start: capture.range.0,
 				end: capture.range.1,
+				is_leaf: capture.is_leaf,
 				variable_name: CCharArray::from_utf8(variable_name),
 				capture_name: CCharArray::from_utf8(capture_name),
 				lexeme: CCharArray::from_utf8(lexeme),
@@ -196,6 +200,7 @@ mod log_event {
 				parent_id: capture.parent_id,
 				start: capture.range.0,
 				end: capture.range.1,
+				is_leaf: capture.is_leaf,
 				variable_name: CCharArray::from_utf8(variable_name),
 				capture_name: CCharArray::from_utf8(capture_name),
 				lexeme: CCharArray::from_utf8(lexeme),

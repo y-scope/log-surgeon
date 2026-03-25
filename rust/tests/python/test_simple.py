@@ -217,12 +217,17 @@ class TestSimple(unittest.TestCase):
 			self.assertEqual(e.message, line)
 			self.assertEqual(len(e.leaf_captures), 1)
 			self.assertEqual(e.leaf_captures[0].offsets, slice(len(":abc"), len(line) - 1, 1))
+			self.assertEqual(e.leaf_captures[0].text, "123")
 
 			self.assertEqual(len(e.all_captures), 3)
 			self.assertEqual(e.all_captures[0].offsets, slice(len(":"), len(line) - 1, 1))
+			self.assertEqual(e.all_captures[0].text, "abc123")
 			self.assertEqual(e.all_captures[1].offsets, slice(len(":abc"), len(line) - 1, 1))
+			self.assertEqual(e.all_captures[1].text, "123")
 			self.assertEqual(e.all_captures[2].offsets, slice(0, len(line) - 1, 1))
+			self.assertEqual(e.all_captures[2].text, ":abc123")
 
 			self.assertEqual(len(e.variables), 1)
 			self.assertEqual(e.variables[0].offsets, slice(0, len(line) - 1, 1))
 			self.assertEqual(e.variables[0].variable_name, "wordint")
+			self.assertEqual(e.variables[0].text, ":abc123")

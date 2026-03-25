@@ -30,6 +30,7 @@ pub struct Capture {
 	pub parent_id: Option<NonZero<u32>>,
 	/// Offset of the capture in the log message.
 	pub range: (usize, usize),
+	pub is_leaf: bool,
 }
 
 impl<'parser> LogEvent<'parser> {
