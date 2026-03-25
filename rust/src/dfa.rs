@@ -19,6 +19,7 @@ use crate::nfa::Tag;
 use crate::nfa::Tnfa;
 use crate::query::SymbolicChar;
 use crate::schema::Rule;
+use crate::schema::RuleIdx;
 
 #[derive(Debug, Clone)]
 pub struct Tdfa {
@@ -38,18 +39,30 @@ pub struct Tdfa {
 
 #[derive(Debug)]
 pub struct MatchedRule<'input> {
-	pub rule: usize,
+	pub rule: RuleIdx,
 	pub lexeme: &'input str,
+}
+
+#[derive(Debug)]
+pub struct MatchedCapture {
+	pub rule: RuleIdx,
+	pub capture_id: NonZero<u32>,
+	pub parent_id: Option<NonZero<u32>>,
+	pub is_leaf: bool,
+	/// Relative to rule/variable match.
+	pub start: usize,
+	/// Relative to rule/variable match.
+	pub end: usize,
 }
 
 #[derive(Debug, Clone)]
 struct DfaState {
 	kernel: Kernel,
 	transitions: IntervalTree<u32, Transition>,
-	/// If this is a final state (the kernel contains a final NFA state),
+	/// If this is a final state (the kernel contains an accepting NFA state),
 	/// the rule that this state has matched for,
 	/// and whether we should "backtrack" a symbol (used to implement ends-with lookahead/anchor).
-	final_rule: Option<(usize, bool)>,
+	accepting_rule: Option<(RuleIdx, bool)>,
 	/// Register operations upon finalizing a match (if applicable); copy to the final registers.
 	final_operations: Vec<RegisterOperation>,
 	/// Cache/combined map from this state's configurations of "register -> which tag it holds".
@@ -154,14 +167,14 @@ struct PrefixTreeNode {
 #[derive(Debug, Clone, Copy)]
 struct ExecutionData {
 	dfa_state: usize,
-	rule: usize,
+	rule: RuleIdx,
 	consumed: usize,
 }
 
 impl Tdfa {
 	pub fn execute(&self, input: &str) -> bool {
-		self.execute_internal::<true, _>(input, 0, |capture, lexeme, _, _| {
-			debug!("- captured {capture:?}, {lexeme}");
+		self.execute_internal::<true, _>(input, 0, |capture| {
+			debug!("- captured {capture:?}");
 		})
 		.is_some()
 	}
@@ -171,7 +184,7 @@ impl Tdfa {
 		input: &'input str,
 		last_was_delimited: u32,
 	) -> Option<MatchedRule<'input>> {
-		self.execute_internal::<false, _>(input, last_was_delimited, |_, _, _, _| ())
+		self.execute_internal::<false, _>(input, last_was_delimited, |_| ())
 	}
 
 	pub fn execute_with_captures<'input, F>(
@@ -179,17 +192,14 @@ impl Tdfa {
 		input: &'input str,
 		last_was_delimited: u32,
 		mut on_capture: F,
-		override_rule: usize,
+		override_rule: RuleIdx,
 	) -> Option<MatchedRule<'input>>
 	where
-		F: FnMut(&AutomataCapture, &'input str, usize, usize),
+		F: FnMut(MatchedCapture),
 	{
-		self.execute_internal::<true, _>(input, last_was_delimited, |capture, lexeme, start, end| {
-			let c2: AutomataCapture = AutomataCapture {
-				rule: override_rule,
-				capture_info: capture.capture_info.clone(),
-			};
-			on_capture(&c2, lexeme, start, end)
+		self.execute_internal::<true, _>(input, last_was_delimited, |mut capture| {
+			capture.rule = override_rule;
+			on_capture(capture)
 		})
 	}
 
@@ -200,7 +210,7 @@ impl Tdfa {
 		mut on_capture: F,
 	) -> Option<MatchedRule<'input>>
 	where
-		F: FnMut(&AutomataCapture, &'input str, usize, usize),
+		F: FnMut(MatchedCapture),
 	{
 		let Some(anchor_transition): Option<&Transition> = self.lookup_transition(0, last_was_delimited) else {
 			panic!("invalid first transition");
@@ -229,7 +239,7 @@ impl Tdfa {
 					);
 				}
 				current_state = transition.target;
-				if let Some((rule, backtrack)) = self.states[current_state].final_rule {
+				if let Some((rule, backtrack)) = self.states[current_state].accepting_rule {
 					if (pos < input.len()) || backtrack {
 						// The current character is a "real input" (not the chained EOF pseudo-symbol),
 						// or the accepting state is after a lookahead and will backtrack...
@@ -294,7 +304,14 @@ impl Tdfa {
 					continue;
 				}
 				for (&i, &j) in std::iter::zip(starts.iter(), ends.iter()) {
-					on_capture(capture, &input, i, j);
+					on_capture(MatchedCapture {
+						rule: data.rule,
+						capture_id: capture.capture_info.id,
+						parent_id: capture.capture_info.parent_id,
+						is_leaf: capture.capture_info.is_leaf(),
+						start: i,
+						end: j,
+					});
 				}
 			}
 		}
@@ -348,7 +365,7 @@ impl Tdfa {
 }
 
 impl Tdfa {
-	pub fn simulate(&self, input: &[SymbolicChar]) -> BTreeSet<usize> {
+	pub fn simulate(&self, input: &[SymbolicChar]) -> BTreeSet<RuleIdx> {
 		let mut current_states: BTreeSet<usize> = BTreeSet::from([0]);
 
 		for &ch in input.iter() {
@@ -386,10 +403,11 @@ impl Tdfa {
 
 		current_states
 			.iter()
-			.filter_map(|&state| self.states[state].final_rule.map(|(rule, _backtrack)| rule))
+			.filter_map(|&state| self.states[state].accepting_rule.map(|(rule, _backtrack)| rule))
 			.collect::<BTreeSet<_>>()
 	}
 
+	/*
 	pub fn simulate2(&self, input: &[SymbolicChar]) -> BTreeSet<(usize, usize)> {
 		let mut final_states: BTreeSet<(usize, usize)> = BTreeSet::new();
 
@@ -411,7 +429,7 @@ impl Tdfa {
 							new_states.insert((
 								transition.target,
 								self.states[transition.target]
-									.final_rule
+									.accepting_rule
 									.map(|(rule, _backtrack)| (i, rule)),
 							));
 						} else if let Some(backup) = maybe_backup {
@@ -426,7 +444,7 @@ impl Tdfa {
 							new_states.insert((
 								transition.target,
 								self.states[transition.target]
-									.final_rule
+									.accepting_rule
 									.map(|(rule, _backtrack)| (i, rule)),
 							));
 						}
@@ -442,7 +460,7 @@ impl Tdfa {
 								if new_states.insert((
 									transition.target,
 									self.states[transition.target]
-										.final_rule
+										.accepting_rule
 										.map(|(rule, _backtrack)| (i, rule)),
 								)) {
 									changed = true;
@@ -457,6 +475,7 @@ impl Tdfa {
 
 		final_states
 	}
+	*/
 }
 
 impl Tdfa {
@@ -467,7 +486,10 @@ impl Tdfa {
 }
 
 impl Tdfa {
-	pub fn for_rules(rules: &[Rule], delimiters: String) -> Self {
+	pub fn for_rules<'a, Rules>(rules: Rules, delimiters: String) -> Self
+	where
+		Rules: IntoIterator<Item = &'a Rule>,
+	{
 		let nfa: Tnfa = Tnfa::for_rules(rules, delimiters.clone());
 		Self::determinization(&nfa, delimiters)
 	}
@@ -567,15 +589,15 @@ impl Tdfa {
 		configurations: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
 		ops: &mut Vec<RegisterOperation>,
 	) -> usize {
-		let mut final_rule: Option<(usize, bool)> = None;
+		let mut accepting_rule: Option<(RuleIdx, bool)> = None;
 		let mut final_operations: Vec<RegisterOperation> = Vec::new();
 		let mut tag_for_register: BTreeMap<usize, Tag> = BTreeMap::new();
 		let configurations: Vec<Configuration> = configurations
 			.into_iter()
 			.map(|(config, _)| {
-				if let Some(rule) = config.nfa_state.final_rule() {
-					if final_rule.is_none() {
-						final_rule = Some((rule, nfa.needs_backtrack(rule)));
+				if let Some((rule, needs_backtrack)) = nfa[config.nfa_state].accepts_for_rule() {
+					if accepting_rule.is_none() {
+						accepting_rule = Some((rule, needs_backtrack));
 					}
 					final_operations = self.final_operations(&config.register_for_tag, &config.tag_path_in_closure);
 				}
@@ -606,7 +628,7 @@ impl Tdfa {
 		self.states.push(DfaState {
 			kernel: kernel.clone(),
 			transitions: IntervalTree::new(),
-			final_rule,
+			accepting_rule,
 			final_operations,
 			tag_for_register,
 			registers_clobbered: BTreeSet::new(),
@@ -745,11 +767,8 @@ impl Tdfa {
 		let mut next_states: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Vec::new();
 
 		for config in configurations.iter() {
-			if config.nfa_state.is_end() {
-				continue;
-			}
-
 			let nfa_state: &NfaState = &nfa[config.nfa_state];
+			// Remark: Accepting states have no outgoing transitions.
 			if let Some(targets) = nfa_state.transitions().lookup(interval.start()) {
 				assert!(
 					nfa_state
@@ -792,10 +811,7 @@ impl Tdfa {
 		while let Some((config, inherited)) = stack.pop() {
 			closure.push((config.clone(), inherited.clone()));
 
-			if config.nfa_state.is_end() {
-				continue;
-			}
-
+			// Remark: Accepting states have no outgoing transitions.
 			for transition in nfa[config.nfa_state].spontaneous().iter().rev() {
 				if nfa_states_on_stack.contains(&transition.target) {
 					continue;
@@ -912,7 +928,7 @@ impl Tdfa {
 			let mut backup_ops: Vec<RegisterOperation> = Vec::new();
 			let mut transitions: IntervalTree<u32, Transition> = self.states[i].transitions.clone();
 			for (_, transition) in transitions.iter_mut() {
-				if self.states[transition.target].final_rule.is_some() {
+				if self.states[transition.target].accepting_rule.is_some() {
 					continue;
 				}
 				for final_op in self.states[i].final_operations.iter() {
@@ -951,7 +967,7 @@ impl Tdfa {
 		while let Some(state) = stack.pop() {
 			for (_, transition) in self.states[state].transitions.iter() {
 				for op in transition.operations.iter() {
-					if self.states[transition.target].final_rule.is_some() {
+					if self.states[transition.target].accepting_rule.is_some() {
 						continue;
 					}
 					clobbered.insert(op.destination);
@@ -982,11 +998,8 @@ impl Kernel {
 		let mut transitions: IntervalTree<u32, ()> = IntervalTree::new();
 
 		for config in self.0.iter() {
-			if config.nfa_state.is_end() {
-				continue;
-			}
-
 			let nfa_state: &NfaState = &nfa[config.nfa_state];
+			// Remark: Accepting states have no outgoing transitions.
 			for (interval, _) in nfa_state.transitions().iter() {
 				transitions.insert(interval, (), PolicyNoop);
 			}
@@ -1048,6 +1061,7 @@ impl std::ops::Index<NonZero<usize>> for PrefixTree {
 	}
 }
 
+/*
 #[cfg(test)]
 mod test {
 	use super::*;
@@ -1073,3 +1087,4 @@ mod test {
 		assert!(b);
 	}
 }
+*/

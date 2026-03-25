@@ -190,10 +190,39 @@ class TestSimple(unittest.TestCase):
 		e = p.next_log_event()
 
 		self.assertEqual(e.message, text)
-		self.assertEqual(len(e.captures), 3)
+		self.assertEqual(len(e.leaf_captures), 3)
 
-		self.assertEqual(e.captures[2].offsets.start, 7)
-		self.assertEqual(e.captures[2].offsets.stop, 10)
+		self.assertEqual(e.leaf_captures[2].offsets.start, 7)
+		self.assertEqual(e.leaf_captures[2].offsets.stop, 10)
 
-		for cap in e.captures:
+		for cap in e.leaf_captures:
 			self.assertEqual(cap.text, e.message[cap.offsets])
+
+	def test_nested_captures(self):
+		p = Parser()
+
+		p.set_delimiters(" ")
+		p.add_variable_pattern("wordint", r":(?<word>[a-z]+(?<int>[0-9]+))")
+
+		p.compile()
+
+		line = ":abc123\n"
+		N = 3
+
+		p.set_input_stream(line * N)
+
+		for i in range(N):
+			e = p.next_log_event()
+
+			self.assertEqual(e.message, line)
+			self.assertEqual(len(e.leaf_captures), 1)
+			self.assertEqual(e.leaf_captures[0].offsets, slice(len(":abc"), len(line) - 1, 1))
+
+			self.assertEqual(len(e.all_captures), 3)
+			self.assertEqual(e.all_captures[0].offsets, slice(len(":"), len(line) - 1, 1))
+			self.assertEqual(e.all_captures[1].offsets, slice(len(":abc"), len(line) - 1, 1))
+			self.assertEqual(e.all_captures[2].offsets, slice(0, len(line) - 1, 1))
+
+			self.assertEqual(len(e.variables), 1)
+			self.assertEqual(e.variables[0].offsets, slice(0, len(line) - 1, 1))
+			self.assertEqual(e.variables[0].variable_name, "wordint")

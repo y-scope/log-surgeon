@@ -41,7 +41,7 @@ pub struct RegexCapture {
 	pub id: NonZero<u32>,
 	/// ID of parent capture, if any.
 	pub parent_id: Option<NonZero<u32>>,
-	/// Total number of nested captures (arbitrarily deep);
+	/// Total number of nested captures (recursively/arbitrarily deep);
 	/// it is `0` iff this is a "leaf" capture.
 	pub descendents: usize,
 }
@@ -243,20 +243,20 @@ impl Regex {
 		}
 	}
 
-	pub fn name_captures(&self, names: &mut Vec<String>) {
+	pub fn populate_capture_info(&self, capture_info: &mut Vec<RegexCapture>) {
 		match self {
 			Self::Anchor(_) | Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
 			Self::Capture { info, item } => {
 				let i: usize = info.id.get() as usize;
-				names[i] = info.name.clone();
-				item.name_captures(names);
+				capture_info[i] = info.clone();
+				item.populate_capture_info(capture_info);
 			},
 			Self::KleeneClosure(item) | Self::BoundedRepetition { item, .. } => {
-				item.name_captures(names);
+				item.populate_capture_info(capture_info);
 			},
 			Self::Sequence(items) | Self::Alternation(items) => {
 				for sub_item in items.iter() {
-					sub_item.name_captures(names);
+					sub_item.populate_capture_info(capture_info);
 				}
 			},
 		}

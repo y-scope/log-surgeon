@@ -1,5 +1,8 @@
+/// Based on Angelo Borsotti and Ulya Trafimovich. 2022. A closer look at TDFA.
+/// - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
+/// - <https://arxiv.org/abs/2206.01398>
+///
 use std::borrow::Cow;
-use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 use crate::interval_tree::Interval;
@@ -8,13 +11,14 @@ use crate::interval_tree::Policy;
 use crate::regex::Regex;
 use crate::regex::RegexCapture;
 use crate::schema::Rule;
+use crate::schema::RuleIdx;
 
 #[derive(Debug)]
 pub struct Tnfa {
 	states: Vec<NfaState>,
 	tags: Vec<Tag>,
 	delimiters: String,
-	needs_backtrack: Vec<bool>,
+	// rules: Vec<(RuleIdx, bool)>,
 }
 
 #[derive(Debug)]
@@ -24,44 +28,13 @@ pub struct NfaState {
 	idx: NfaIdx,
 	transitions: IntervalTree<u32, Vec<NfaIdx>>,
 	spontaneous: Vec<SpontaneousTransition>,
+	maybe_accepts_for_rule: Option<(RuleIdx, bool)>,
 	/// Just to be cute, and for debugging, in that order.
 	/// See [`Nfa::new_state`].
 	#[allow(unused)]
 	name: Cow<'static, str>,
 }
 
-/// Morally, `NfaIdx` is
-///
-/// ```rust
-/// enum NfaIdx {
-/// 	ValidState { index: usize },
-/// 	EndState { rule: usize },
-/// }
-/// ```
-///
-/// where `NfaIdx::ValidState` is an `Nfa` state index
-/// and `NfaIdx::EndState` is a [`Schema`](crate::schema::Schema) rule index indicating that this rule has been matched.
-///
-/// However, such a type would be larger than a `usize` (realistically, it would be `2 * size_of::<usize>`).
-/// Unfortunately, Rust doesn't have a way to define custom bit-width integer types,
-/// **and** Rust's integer casting options are absolutely god awful,
-/// because apparently getting rid of subtle integer overflow/promotion/truncating/etc. bugs is _too much_ safety,
-/// so we're left with this archaic hack.
-///
-/// `NfaIdx` wraps a `usize`:
-/// positive values correspond to valid state indices,
-/// negative values correspond to schema rule indices.
-///
-/// Note that "overflow" is **not possible**, in the sense that:
-///
-/// 1. Rust's only real implementation is rustc,
-/// 2. rustc is built on LLVM,
-/// 3. LLVM fundamentally assumes that pointer subtraction returns a value in the C `ptrdiff_t` type,
-/// 4. so objects/arrays are at most half the address space,
-/// 5. and an array/vector of length `(isize::MAX as usize) + 1` would violate this.
-///
-/// Of course, `usize::MAX / 2` states is also massive
-/// and for practical purposes we simply wouldn't reach that length of computation.
 #[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub struct NfaIdx(usize);
 
@@ -92,195 +65,42 @@ pub enum Tag {
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct AutomataCapture {
-	/// Rule index from the schema.
-	pub rule: usize,
+	pub rule: RuleIdx,
 	pub capture_info: RegexCapture,
 }
 
 #[derive(Debug)]
 struct PolicyExtendUnique;
 
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-struct NfaSimulationData {
-	captures: BTreeMap<AutomataCapture, (Vec<usize>, Vec<usize>)>,
-}
-
 impl Tnfa {
-	pub fn new() -> Self {
-		Self {
-			states: vec![NfaState::BEGIN],
-			tags: Vec::new(),
-			delimiters: String::new(),
-			needs_backtrack: Vec::new(),
-		}
-	}
-
-	pub fn for_rules(rules: &[Rule], delimiters: String) -> Self {
-		assert_ne!(rules.len(), 0);
-
+	pub fn for_rules<'a, Rules>(rules: Rules, delimiters: String) -> Self
+	where
+		Rules: IntoIterator<Item = &'a Rule>,
+	{
 		let mut nfa: Self = Self {
 			states: vec![NfaState::BEGIN],
 			tags: Vec::new(),
 			delimiters,
-			needs_backtrack: vec![false; rules.len()],
+			// rules: Vec::new(),
 		};
 
-		let mut tags: BTreeSet<Tag> = nfa.build(0, &rules[0].regex, NfaIdx::BEGIN, NfaIdx::end(0));
-		nfa.needs_backtrack[0] = rules[0].regex.ends_with_anchor();
+		let mut tags: BTreeSet<Tag> = BTreeSet::new();
 
-		for (i, rule) in rules.iter().enumerate().skip(1) {
-			assert_eq!(i, rule.idx.index());
-			let state: NfaIdx = nfa.new_state(format!("rule {} start", rule.name));
-			// assert_eq!(state.0, rule.idx);
-			nfa[NfaIdx::BEGIN].spontaneous.push(SpontaneousTransition {
+		for rule in rules {
+			let rule_start: NfaIdx = nfa.new_state(format!("rule '{}' start", rule.name));
+			let rule_end: NfaIdx = nfa.new_state(format!("rule '{}' end", rule.name));
+			nfa[NfaState::BEGIN.idx].spontaneous.push(SpontaneousTransition {
 				kind: SpontaneousTransitionKind::Epsilon,
-				target: state,
+				target: rule_start,
 			});
-			tags = &tags | &nfa.build(rule.idx.index(), &rule.regex, state, NfaIdx::end(rule.idx.index()));
-			nfa.needs_backtrack[i] = rule.regex.ends_with_anchor();
+			tags = &tags | &nfa.build(rule.idx, &rule.regex, rule_start, rule_end);
+			nfa[rule_end].maybe_accepts_for_rule = Some((rule.idx, rule.regex.ends_with_anchor()));
+			// nfa.rules.push((rule.idx, rule.regex.ends_with_anchor()));
 		}
 
 		nfa.tags = tags.into_iter().collect::<Vec<_>>();
 
 		nfa
-	}
-
-	/// Algorithm 1 from Angelo Borsotti and Ulya Trafimovich. 2022. A closer look at TDFA.
-	/// - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
-	/// - <https://arxiv.org/abs/2206.01398>
-	pub fn execute(&self, input: &str) -> Option<usize> {
-		let start: (NfaIdx, Vec<NfaSimulationData>) = (
-			NfaIdx(0),
-			vec![NfaSimulationData {
-				captures: BTreeMap::new(),
-			}],
-		);
-
-		let mut state_set: BTreeSet<(NfaIdx, Vec<NfaSimulationData>)> = BTreeSet::new();
-		state_set.insert(start);
-		state_set = self.epsilon_closure(state_set, 0);
-
-		state_set = self.step_on_symbol(&state_set, '\0');
-		state_set = self.epsilon_closure(state_set, 0);
-
-		let mut maybe_last_match: Option<(usize, Vec<(NfaIdx, Vec<NfaSimulationData>)>)> = None;
-
-		for (i, ch) in input.char_indices() {
-			state_set = self.step_on_symbol(&state_set, ch);
-			state_set = self.epsilon_closure(state_set, i + 1);
-			if state_set.is_empty() {
-				break;
-			}
-			for (state, data) in state_set.iter() {
-				let mut any_final_states: Vec<(NfaIdx, Vec<NfaSimulationData>)> = Vec::new();
-				if state.is_end() {
-					// TODO pretty sure this nolonger true
-					assert_eq!(data.len(), 1);
-					any_final_states.push((*state, data.clone()));
-				}
-				if !any_final_states.is_empty() {
-					maybe_last_match = Some((i + ch.len_utf8(), any_final_states));
-				}
-			}
-		}
-
-		for (state, data) in state_set.iter() {
-			if state.is_end() {
-				// TODO pretty sure nolonger true
-				assert_eq!(data.len(), 1);
-				let mut m: Vec<(usize, &str, usize, usize)> = Vec::new();
-				for (capture, (starts, ends)) in data.last().unwrap().captures.iter() {
-					for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
-						m.push((capture.rule, &capture.capture_info.name, x, y));
-					}
-				}
-				return Some(input.len());
-			}
-		}
-
-		if let Some((pos, last_match)) = maybe_last_match {
-			let mut m: Vec<(usize, &str, usize, usize)> = Vec::new();
-			for (_state, last_match) in last_match.iter() {
-				for data in last_match.iter() {
-					for (capture, (starts, ends)) in data.captures.iter() {
-						for (&x, &y) in std::iter::zip(starts.iter(), ends.iter()) {
-							m.push((capture.rule, &capture.capture_info.name, x, y));
-						}
-					}
-				}
-			}
-			return Some(pos);
-		}
-
-		None
-	}
-
-	fn epsilon_closure(
-		&self,
-		state_set: BTreeSet<(NfaIdx, Vec<NfaSimulationData>)>,
-		pos: usize,
-	) -> BTreeSet<(NfaIdx, Vec<NfaSimulationData>)> {
-		let mut closure: BTreeSet<(NfaIdx, Vec<NfaSimulationData>)> = BTreeSet::new();
-		let mut states_in_closure: BTreeSet<NfaIdx> = BTreeSet::new();
-
-		let mut stack: Vec<(NfaIdx, Vec<NfaSimulationData>)> = state_set.into_iter().collect::<Vec<_>>();
-
-		while let Some((state, data)) = stack.pop() {
-			closure.insert((state, data.clone()));
-			states_in_closure.insert(state);
-
-			if state.is_end() {
-				continue;
-			}
-			let state: &NfaState = &self[state];
-
-			for transition in state.spontaneous.iter() {
-				if states_in_closure.contains(&transition.target) {
-					continue;
-				}
-
-				let mut data: Vec<NfaSimulationData> = data.clone();
-				match &transition.kind {
-					SpontaneousTransitionKind::Positive(tag) => {
-						let (Tag::StartCapture(capture) | Tag::StopCapture(capture)): &Tag = tag;
-						let (starts, ends): &mut (Vec<usize>, Vec<usize>) = data
-							.last_mut()
-							.unwrap()
-							.captures
-							.entry(capture.clone())
-							.or_insert((Vec::new(), Vec::new()));
-						let indices: &mut Vec<usize> = match tag {
-							Tag::StartCapture(_) => starts,
-							Tag::StopCapture(_) => ends,
-						};
-						indices.push(pos);
-					},
-					SpontaneousTransitionKind::Negative(_) => (),
-					SpontaneousTransitionKind::Epsilon => (),
-				}
-				stack.push((transition.target, data));
-			}
-		}
-
-		closure
-	}
-
-	fn step_on_symbol(
-		&self,
-		state_set: &BTreeSet<(NfaIdx, Vec<NfaSimulationData>)>,
-		ch: char,
-	) -> BTreeSet<(NfaIdx, Vec<NfaSimulationData>)> {
-		let mut next_states: BTreeSet<(NfaIdx, Vec<NfaSimulationData>)> = BTreeSet::new();
-
-		for (state, matches) in state_set.iter() {
-			if let Some(targets) = self[*state].transitions.lookup(u32::from(ch)) {
-				for &next in targets.iter() {
-					next_states.insert((next, matches.clone()));
-				}
-			}
-		}
-
-		next_states
 	}
 
 	fn new_state<LikeString>(&mut self, name: LikeString) -> NfaIdx
@@ -293,12 +113,13 @@ impl Tnfa {
 			name: name.into(),
 			transitions: IntervalTree::new(),
 			spontaneous: Vec::new(),
+			maybe_accepts_for_rule: None,
 		};
 		self.states.push(state);
 		idx
 	}
 
-	fn build(&mut self, rule: usize, regex: &Regex, mut current: NfaIdx, target: NfaIdx) -> BTreeSet<Tag> {
+	fn build(&mut self, rule: RuleIdx, regex: &Regex, mut current: NfaIdx, target: NfaIdx) -> BTreeSet<Tag> {
 		match regex {
 			&Regex::Anchor(_) => {
 				for ch in self.delimiters.clone().chars() {
@@ -442,7 +263,7 @@ impl Tnfa {
 
 	fn capture(
 		&mut self,
-		rule: usize,
+		rule: RuleIdx,
 		capture_info: RegexCapture,
 		item: &Regex,
 		current: NfaIdx,
@@ -474,7 +295,7 @@ impl Tnfa {
 		tags
 	}
 
-	fn alternate(&mut self, rule: usize, items: &[Regex], current: NfaIdx, target: NfaIdx) -> BTreeSet<Tag> {
+	fn alternate(&mut self, rule: RuleIdx, items: &[Regex], current: NfaIdx, target: NfaIdx) -> BTreeSet<Tag> {
 		let mut tags: BTreeSet<Tag> = BTreeSet::new();
 		let mut intermediate_states: Vec<(NfaIdx, BTreeSet<Tag>)> = Vec::new();
 
@@ -538,11 +359,7 @@ impl Tnfa {
 	}
 
 	pub fn begin(&self) -> NfaIdx {
-		NfaIdx::BEGIN
-	}
-
-	pub fn needs_backtrack(&self, rule: usize) -> bool {
-		self.needs_backtrack[rule]
+		NfaState::BEGIN.idx
 	}
 }
 
@@ -562,10 +379,11 @@ impl std::ops::IndexMut<NfaIdx> for Tnfa {
 
 impl NfaState {
 	const BEGIN: Self = Self {
-		idx: NfaIdx::BEGIN,
+		idx: NfaIdx(0),
 		name: Cow::Borrowed("begin"),
 		transitions: IntervalTree::new(),
 		spontaneous: Vec::new(),
+		maybe_accepts_for_rule: None,
 	};
 
 	pub fn transitions(&self) -> &IntervalTree<u32, Vec<NfaIdx>> {
@@ -575,21 +393,13 @@ impl NfaState {
 	pub fn spontaneous(&self) -> &[SpontaneousTransition] {
 		&self.spontaneous
 	}
-}
 
-impl NfaIdx {
-	const BEGIN: Self = Self(0);
-
-	const fn end(n: usize) -> Self {
-		Self(usize::MAX - n)
+	pub fn accepts_for_rule(&self) -> Option<(RuleIdx, bool)> {
+		self.maybe_accepts_for_rule
 	}
 
-	pub fn final_rule(&self) -> Option<usize> {
-		if self.is_end() { Some(usize::MAX - self.0) } else { None }
-	}
-
-	pub fn is_end(&self) -> bool {
-		self.0 > (isize::MAX as usize)
+	pub fn is_accepting(&self) -> bool {
+		self.maybe_accepts_for_rule.is_some()
 	}
 }
 
@@ -601,28 +411,5 @@ where
 		let mut seen: BTreeSet<T> = BTreeSet::from_iter(existing.iter().cloned());
 		new.retain(|x| seen.insert(x.clone()));
 		existing.extend(new);
-	}
-}
-
-#[cfg(test)]
-mod test {
-	use super::*;
-	use crate::regex::Regex;
-	use crate::schema::Rule;
-	use crate::schema::RuleIdx;
-
-	#[test]
-	fn stuff() {
-		let rules: &[Rule] = &[Rule {
-			idx: RuleIdx { index: 0, priority: 0 },
-			name: "hello".to_owned(),
-			regex: Regex::from_pattern("0((?<foobar>1(2[a-zA-Z])*)|(?<baz>xyz))world").unwrap(),
-			capture_names: vec![String::new(), "foobar".to_owned(), "baz".to_owned()],
-		}];
-		let nfa: Tnfa = Tnfa::for_rules(rules, " ".to_owned());
-		let b: bool = nfa.execute("012a2b2cworld").is_some();
-		assert!(b);
-		let b: bool = nfa.execute("0xyzworld").is_some();
-		assert!(b);
 	}
 }

@@ -1,7 +1,16 @@
 use crate::dfa::Tdfa;
 use crate::regex::IntoRegex;
 use crate::regex::Regex;
+use crate::regex::RegexCapture;
 use std::collections::BTreeMap;
+use std::num::NonZero;
+
+#[derive(Debug, Clone)]
+pub struct SchemaBuilder {
+	rules_by_priority: BTreeMap<i32, Vec<(String, Regex)>>,
+	delimiters: String,
+	anchor_ch: char,
+}
 
 /// A `Schema` is conceptually a list of rules and a set of delimiter characters.
 ///
@@ -9,14 +18,9 @@ use std::collections::BTreeMap;
 /// larger integer value means higher priority.
 /// Within a priority level, rules are prioritized by insertion order.
 ///
-/// Before automata construction, rules are "flattened", ordered by priority (highest first).
-/// A special `0`th rule internally represents a "newline" token.
-/// Rules are "ID"ed by their index in this flattened priority list.
-///
 #[derive(Debug, Clone)]
 pub struct Schema {
-	rules_by_priority: BTreeMap<i32, Vec<(String, Regex)>>,
-	rules_flattened: Vec<Rule>,
+	pub rules: Vec<Rule>,
 	pub delimiters: String,
 	/// Derived from `delimiters`;
 	/// used to insert "phantom characters" for start/end anchors.
@@ -28,26 +32,26 @@ pub struct Rule {
 	pub idx: RuleIdx,
 	pub name: String,
 	pub regex: Regex,
-	pub capture_names: Vec<String>,
+	pub capture_info: Vec<RegexCapture>,
 }
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+#[repr(C)]
 pub struct RuleIdx {
-	/// Index in the [`Schema`]'s flattened priority list.
-	pub index: u32,
 	/// The original priority level given by the user.
 	pub priority: i32,
+	/// Insertion order of the rule at the given priority level.
+	pub position: u16,
+	/// Index in the schema.
+	pub index: NonZero<u16>,
 }
 
-impl Schema {
-	pub const DEFAULT_DELIMITERS: &str = " \t\r\n:,!;%";
-
+impl SchemaBuilder {
 	pub fn new() -> Self {
 		Self {
 			rules_by_priority: BTreeMap::new(),
-			rules_flattened: Vec::new(),
-			delimiters: Self::DEFAULT_DELIMITERS.to_owned(),
-			anchor_ch: ' ',
+			delimiters: Schema::DEFAULT_DELIMITERS.to_owned(),
+			anchor_ch: '\n',
 		}
 	}
 
@@ -112,51 +116,94 @@ impl Schema {
 
 		Ok(())
 	}
-}
 
-impl Schema {
-	pub fn build_dfa(&mut self) -> Tdfa {
-		self.flatten_rules();
-		Tdfa::for_rules(&self.rules_flattened, self.delimiters.clone())
-	}
+	pub fn build(self) -> Schema {
+		let mut rules: Vec<Rule> = Vec::new();
+		for (priority, rules_at_priority) in self.rules_by_priority.into_iter().rev() {
+			for (position, (name, regex)) in rules_at_priority.into_iter().enumerate() {
+				let Some(index): Option<NonZero<u16>> = u16::try_from(rules.len())
+					.ok()
+					.and_then(|index| NonZero::<u16>::MIN.checked_add(index))
+				else {
+					panic!("more than u16::MAX rules (not supported)");
+				};
 
-	fn flatten_rules(&mut self) {
-		self.rules_flattened.clear();
-		self.rules_flattened.push(Rule {
-			idx: RuleIdx {
-				index: 0,
-				priority: i32::MAX,
-			},
-			name: "newline".to_owned(),
-			regex: Regex::Sequence(vec![Regex::AnyChar, Regex::Literal('\n')]),
-			capture_names: vec![String::new()],
-		});
-		for (&priority, rules) in self.rules_by_priority.iter().rev() {
-			for (name, regex) in rules.iter() {
-				// This can only fail on 32-bit platforms; i.e. (as far as rustc supports, 16-bit ones).
-				let index: u32 = u32::try_from(self.rules_flattened.len()).unwrap();
-				let mut capture_names: Vec<String> = vec![String::new(); 1 + regex.count_captures()];
-				regex.name_captures(&mut capture_names);
-				self.rules_flattened.push(Rule {
-					idx: RuleIdx { index, priority },
-					name: name.clone(),
-					regex: regex.clone(),
-					capture_names,
+				// Don't need to check; necessarily `position <= index`.
+				let position: u16 = position as u16;
+
+				let mut capture_info: Vec<RegexCapture> = vec![
+					RegexCapture {
+						name: String::new(),
+						id: NonZero::<u32>::MAX,
+						parent_id: None,
+						descendents: 0,
+					};
+					1 + regex.count_captures()
+				];
+				regex.populate_capture_info(&mut capture_info);
+
+				rules.push(Rule {
+					idx: RuleIdx {
+						priority,
+						position,
+						index,
+					},
+					name,
+					regex,
+					capture_info,
 				});
 			}
+		}
+		Schema {
+			rules,
+			delimiters: self.delimiters,
+			anchor_ch: self.anchor_ch,
 		}
 	}
 }
 
 impl Schema {
-	pub fn rules(&self) -> &[Rule] {
-		&self.rules_flattened
+	pub const DEFAULT_DELIMITERS: &str = " \t\r\n:,!;%";
+
+	pub fn build_dfa(&self) -> Tdfa {
+		Tdfa::for_rules(&self.rules, self.delimiters.clone())
+	}
+
+	// 	fn newline_rule(&self) -> Rule {
+	// 		Rule {
+	// 			idx: RuleIdx {
+	// 				position: 0,
+	// 				priority: i32::MAX,
+	// 			},
+	// 			name: "newline".to_owned(),
+	// 			regex: Regex::Sequence(vec![Regex::AnyChar, Regex::Literal('\n')]),
+	// 			capture_names: vec![String::new()],
+	// 		}
+	// 	}
+}
+
+impl std::ops::Index<RuleIdx> for Schema {
+	type Output = Rule;
+
+	fn index(&self, idx: RuleIdx) -> &Self::Output {
+		&self.rules[usize::from(idx.index.get() - 1)]
+		// let Some(rules): Option<&Vec<Rule>> = self.rules_by_priority.get(&idx.priority) else {
+		// 	panic!("schema rule idx out of range: no rules with priority {}", idx.priority);
+		// };
+		// let Some(rule): Option<&Rule> = rules.get(idx.position as usize) else {
+		// 	panic!(
+		// 		"schema rule idx out of range: position {} for {} rules at priority {}",
+		// 		idx.position,
+		// 		rules.len(),
+		// 		idx.priority,
+		// 	);
+		// };
+		// rule
 	}
 }
 
 impl RuleIdx {
-	pub fn index(&self) -> usize {
-		// This can only fail on 32-bit platforms; i.e. (as far as rustc supports, 16-bit ones).
-		usize::try_from(self.index).unwrap()
+	pub fn as_index(&self) -> usize {
+		usize::from(self.index.get() - 1)
 	}
 }

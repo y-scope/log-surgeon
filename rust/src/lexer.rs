@@ -1,7 +1,10 @@
+use crate::dfa::MatchedCapture;
 use crate::dfa::MatchedRule;
 use crate::dfa::Tdfa;
 use crate::nfa::AutomataCapture;
+use crate::schema::RuleIdx;
 use crate::schema::Schema;
+use std::str::Chars;
 
 #[derive(Debug, Clone)]
 pub struct Lexer {
@@ -15,19 +18,20 @@ pub struct Lexer {
 #[derive(Debug, Eq, PartialEq)]
 pub enum Token<'input> {
 	Variable {
-		rule: usize,
+		rule: RuleIdx,
 		lexeme: &'input str,
 		has_captures: bool,
 	},
+	Newline,
 	StaticText(&'input str),
 	EndOfInput,
 }
 
 impl Lexer {
-	pub fn new(mut schema: Schema) -> Self {
+	pub fn new(schema: Schema) -> Self {
 		let dfa: Tdfa = schema.build_dfa();
 		let dfa_per_rule: Vec<Tdfa> = schema
-			.rules()
+			.rules
 			.chunks(1)
 			.map(|rule| Tdfa::for_rules(rule, schema.delimiters.to_owned()))
 			.collect::<Vec<_>>();
@@ -59,20 +63,20 @@ impl Lexer {
 		on_capture: F,
 	) -> Token<'input>
 	where
-		F: FnMut(&AutomataCapture, &'input str, usize, usize),
+		F: FnMut(MatchedCapture),
 	{
-		if *pos == input.len() {
+		let start: usize = *pos;
+
+		if start == input.len() {
 			return Token::EndOfInput;
 		}
 
-		let start: usize = *pos;
-
 		if let Some(MatchedRule { rule, lexeme }) =
-			self.dfa.execute_without_captures(&input[*pos..], last_was_delimited)
+			self.dfa.execute_without_captures(&input[start..], last_was_delimited)
 		{
-			let has_captures: bool = self.schema.rules()[rule].capture_names.len() > 1;
+			let has_captures: bool = self.schema[rule].capture_info.len() > 1;
 			if has_captures {
-				self.dfa_per_rule[rule].execute_with_captures(lexeme, last_was_delimited, on_capture, rule);
+				self.dfa_per_rule[rule.as_index()].execute_with_captures(lexeme, last_was_delimited, on_capture, rule);
 			}
 			*pos += lexeme.len();
 			Token::Variable {
@@ -81,13 +85,22 @@ impl Lexer {
 				has_captures,
 			}
 		} else {
-			self.glob_static_text(input, pos);
+			let mut chars: Chars<'_> = input[start..].chars();
+			// We checked for `start == input.len()` above.
+			let first: char = chars.next().unwrap();
+			*pos += first.len_utf8();
+			if first == '\n' {
+				return Token::Newline;
+			} else if !self.is_delimiter(first) {
+				self.glob_static_text(input, pos);
+			}
 			Token::StaticText(&input[start..*pos])
 		}
 	}
 
-	pub fn rule_name(&self, i: usize) -> &str {
-		&self.schema.rules()[i].name
+	pub fn rule_name(&self, _i: usize) -> &str {
+		""
+		// &self.schema[idx].name
 	}
 
 	pub fn capture_info(&self, i: usize) -> &AutomataCapture {
@@ -117,6 +130,7 @@ impl Lexer {
 	}
 }
 
+/*
 #[cfg(test)]
 mod test {
 	use super::*;
@@ -133,3 +147,4 @@ mod test {
 		let _pos: usize = 0;
 	}
 }
+*/

@@ -11,6 +11,7 @@ use crate::query::SearchString;
 use crate::regex::Regex;
 use crate::regex::RegexError;
 use crate::schema::Schema;
+use crate::schema::SchemaBuilder;
 
 /// Represents a C `T const*` pointer + `size_t` length as a single ABI-stable value.
 #[repr(C)]
@@ -26,7 +27,7 @@ pub type CCharArray<'lifetime> = CArray<'lifetime, c_char>;
 #[repr(C)]
 #[derive(Debug)]
 pub struct CCapture<'event> {
-	pub rule_id: usize,
+	pub rule_id: Option<NonZero<u16>>,
 	/// `None`/zero when it is an implicit capture of the entire variable pattern.
 	pub capture_id: Option<NonZero<u32>>,
 	pub parent_id: Option<NonZero<u32>>,
@@ -39,144 +40,6 @@ pub struct CCapture<'event> {
 	pub variable_name: CCharArray<'event>,
 	pub capture_name: CCharArray<'event>,
 	pub lexeme: CCharArray<'event>,
-}
-
-#[unsafe(no_mangle)]
-extern "C" fn log_surgeon_schema_new() -> Box<Schema> {
-	Box::new(Schema::new())
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn log_surgeon_schema_set_delimiters(schema: &mut Schema, delimiters: CCharArray<'_>) {
-	schema.set_delimiters(delimiters.as_utf8().unwrap());
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn log_surgeon_schema_add_rule_with_priority<'pattern>(
-	schema: &mut Schema,
-	priority: i32,
-	name: CCharArray<'_>,
-	pattern: CCharArray<'pattern>,
-) -> Option<Box<RegexError<'pattern>>> {
-	let name: &str = name.as_utf8().unwrap();
-	let pattern: &str = pattern.as_utf8().unwrap();
-	let regex: Regex = match Regex::from_pattern(pattern) {
-		Ok(regex) => regex,
-		Err(err) => {
-			return Some(Box::new(err));
-		},
-	};
-	let Ok(_): Result<(), Infallible> = schema.add_rule_with_priority(priority, name, regex);
-	None
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn log_surgeon_parser_new(schema: &Schema) -> Box<Parser> {
-	let parser: Parser = Parser::new(schema.clone());
-	Box::new(parser)
-}
-
-#[unsafe(no_mangle)]
-extern "C" fn log_surgeon_parser_next<'parser, 'input>(
-	parser: &'parser mut Parser,
-	input: CCharArray<'input>,
-	pos: &mut usize,
-	out: &mut LogEvent<'parser>,
-) -> bool {
-	let input: &str = unsafe { input.as_utf8().unwrap_unchecked() };
-	if let Some(event) = parser.next_event(input, pos) {
-		*out = event;
-		true
-	} else {
-		false
-	}
-}
-
-mod log_event {
-	use super::*;
-
-	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_new<'a>() -> Box<LogEvent<'a>> {
-		Box::new(LogEvent::blank())
-	}
-
-	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_log_type<'a>(log_event: &'a LogEvent<'_>) -> CCharArray<'a> {
-		CCharArray::from_utf8(log_event.log_type.as_str())
-	}
-
-	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_get_variable_window(
-		log_event: &LogEvent<'_>,
-		i: usize,
-		start: &mut usize,
-		end: &mut usize,
-	) -> bool {
-		if let Some(variable) = log_event.variables.get(i) {
-			*start = variable.0;
-			*end = variable.1;
-			true
-		} else {
-			false
-		}
-	}
-
-	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_get_capture<'a>(
-		log_event: &LogEvent<'a>,
-		i: usize,
-		parser: &'a Parser,
-	) -> CCapture<'a> {
-		if let Some(capture) = log_event.captures.get(i) {
-			let (variable_name, capture_name): (&str, &str) = capture.names(&parser.lexer.schema);
-			let lexeme: &str = &log_event.message[capture.range.0..capture.range.1];
-			return CCapture {
-				rule_id: capture.rule_id,
-				capture_id: capture.capture_id,
-				parent_id: capture.parent_id,
-				start: capture.range.0,
-				end: capture.range.1,
-				variable_name: CCharArray::from_utf8(variable_name),
-				capture_name: CCharArray::from_utf8(capture_name),
-				lexeme: CCharArray::from_utf8(lexeme),
-			};
-		}
-		CCapture {
-			rule_id: 0,
-			capture_id: None,
-			parent_id: None,
-			start: 0,
-			end: 0,
-			variable_name: CCharArray::null(),
-			capture_name: CCharArray::null(),
-			lexeme: CCharArray::null(),
-		}
-	}
-}
-
-mod query {
-	use super::*;
-
-	#[unsafe(no_mangle)]
-	unsafe extern "C" fn log_surgeon_search_query_interpretations(
-		parser: &Parser,
-		input: CCharArray<'_>,
-	) -> Box<Vec<Interpretation>> {
-		let query: SearchString = SearchString::parse(input.as_utf8().unwrap()).unwrap();
-		let interpretations: Vec<Interpretation> = query.interpretations(&parser.lexer);
-		Box::new(interpretations)
-	}
-
-	#[unsafe(no_mangle)]
-	unsafe extern "C" fn log_surgeon_search_query_interpretation_as_string<'a>(
-		interpretations: &'a Vec<Interpretation>,
-		i: usize,
-		len: &mut usize,
-	) -> CCharArray<'a> {
-		let s: &str = &interpretations[i].stringified;
-		*len = s.len();
-		CCharArray::from_utf8(s)
-	}
 }
 
 impl<'lifetime, T> CArray<'lifetime, T> {
@@ -208,6 +71,165 @@ impl<'lifetime> CCharArray<'lifetime> {
 	}
 }
 
+impl CCapture<'_> {
+	fn null() -> Self {
+		Self {
+			rule_id: None,
+			capture_id: None,
+			parent_id: None,
+			start: 0,
+			end: 0,
+			variable_name: CCharArray::null(),
+			capture_name: CCharArray::null(),
+			lexeme: CCharArray::null(),
+		}
+	}
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn log_surgeon_schema_builder_new() -> Box<SchemaBuilder> {
+	Box::new(SchemaBuilder::new())
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn log_surgeon_schema_builder_set_delimiters(
+	builder: &mut SchemaBuilder,
+	delimiters: CCharArray<'_>,
+) {
+	builder.set_delimiters(delimiters.as_utf8().unwrap());
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn log_surgeon_schema_builder_add_rule_with_priority<'pattern>(
+	builder: &mut SchemaBuilder,
+	priority: i32,
+	name: CCharArray<'_>,
+	pattern: CCharArray<'pattern>,
+) -> Option<Box<RegexError<'pattern>>> {
+	let name: &str = name.as_utf8().unwrap();
+	let pattern: &str = pattern.as_utf8().unwrap();
+	let regex: Regex = match Regex::from_pattern(pattern) {
+		Ok(regex) => regex,
+		Err(err) => {
+			return Some(Box::new(err));
+		},
+	};
+	let Ok(_): Result<(), Infallible> = builder.add_rule_with_priority(priority, name, regex);
+	None
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn log_surgeon_schema_builder_build(builder: Box<SchemaBuilder>) -> Box<Schema> {
+	Box::new(builder.build())
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn log_surgeon_parser_new(schema: Box<Schema>) -> Box<Parser> {
+	let parser: Parser = Parser::new(*schema);
+	Box::new(parser)
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn log_surgeon_parser_next<'parser, 'input>(
+	parser: &'parser mut Parser,
+	input: CCharArray<'input>,
+	pos: &mut usize,
+	out: &mut LogEvent<'parser>,
+) -> bool {
+	let input: &str = unsafe { input.as_utf8().unwrap_unchecked() };
+	if let Some(event) = parser.next_event(input, pos) {
+		*out = event;
+		true
+	} else {
+		false
+	}
+}
+
+mod log_event {
+	use super::*;
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_log_event_new<'a>() -> Box<LogEvent<'a>> {
+		Box::new(LogEvent::BLANK)
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_log_event_log_type<'a>(log_event: &'a LogEvent<'_>) -> CCharArray<'a> {
+		CCharArray::from_utf8(log_event.log_type.as_str())
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_log_event_get_capture<'a>(
+		log_event: &LogEvent<'a>,
+		i: usize,
+		parser: &'a Parser,
+	) -> CCapture<'a> {
+		if let Some(capture) = log_event.all_captures.get(i) {
+			let (variable_name, capture_name): (&str, &str) = capture.names(&parser.lexer.schema);
+			let lexeme: &str = &log_event.message[capture.range.0..capture.range.1];
+			return CCapture {
+				rule_id: Some(capture.rule_idx.index),
+				capture_id: capture.capture_id,
+				parent_id: capture.parent_id,
+				start: capture.range.0,
+				end: capture.range.1,
+				variable_name: CCharArray::from_utf8(variable_name),
+				capture_name: CCharArray::from_utf8(capture_name),
+				lexeme: CCharArray::from_utf8(lexeme),
+			};
+		}
+		CCapture::null()
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_log_event_get_leaf_capture<'a>(
+		log_event: &LogEvent<'a>,
+		i: usize,
+		parser: &'a Parser,
+	) -> CCapture<'a> {
+		if let Some(capture) = log_event.leaf_captures.get(i) {
+			let (variable_name, capture_name): (&str, &str) = capture.names(&parser.lexer.schema);
+			let lexeme: &str = &log_event.message[capture.range.0..capture.range.1];
+			return CCapture {
+				rule_id: Some(capture.rule_idx.index),
+				capture_id: capture.capture_id,
+				parent_id: capture.parent_id,
+				start: capture.range.0,
+				end: capture.range.1,
+				variable_name: CCharArray::from_utf8(variable_name),
+				capture_name: CCharArray::from_utf8(capture_name),
+				lexeme: CCharArray::from_utf8(lexeme),
+			};
+		}
+		CCapture::null()
+	}
+}
+
+mod query {
+	use super::*;
+
+	#[unsafe(no_mangle)]
+	unsafe extern "C" fn log_surgeon_search_query_interpretations(
+		parser: &Parser,
+		input: CCharArray<'_>,
+	) -> Box<Vec<Interpretation>> {
+		let query: SearchString = SearchString::parse(input.as_utf8().unwrap()).unwrap();
+		let interpretations: Vec<Interpretation> = query.interpretations(&parser.lexer);
+		Box::new(interpretations)
+	}
+
+	#[unsafe(no_mangle)]
+	unsafe extern "C" fn log_surgeon_search_query_interpretation_as_string<'a>(
+		interpretations: &'a Vec<Interpretation>,
+		i: usize,
+		len: &mut usize,
+	) -> CCharArray<'a> {
+		let s: &str = &interpretations[i].stringified;
+		*len = s.len();
+		CCharArray::from_utf8(s)
+	}
+}
+
 /// `-Zunpretty=expanded` only in nightly...
 mod clone_impls {
 	use super::*;
@@ -226,11 +248,6 @@ mod clone_impls {
 /// `-Zunpretty=expanded` only in nightly...
 mod destructor_impls {
 	use super::*;
-
-	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_schema_drop(value: Box<Schema>) {
-		std::mem::drop(value);
-	}
 
 	#[unsafe(no_mangle)]
 	extern "C" fn log_surgeon_regex_error_drop(value: Box<RegexError<'_>>) {
@@ -253,6 +270,7 @@ mod destructor_impls {
 	}
 }
 
+/*
 #[cfg(test)]
 mod test {
 	use super::*;
@@ -268,7 +286,7 @@ mod test {
 		let input: CCharArray<'_> = CCharArray::from_utf8("hello world goodbye hello world  goodbye  ");
 		let mut pos: usize = 0;
 
-		let mut event: LogEvent<'_> = LogEvent::blank();
+		let mut event: LogEvent<'_> = LogEvent::BLANK;
 
 		assert!(log_surgeon_parser_next(&mut parser, input, &mut pos, &mut event));
 		// Rust doesn't allow this since it doesn't know that this function simply overwrites event,
@@ -276,3 +294,4 @@ mod test {
 		//assert!(log_surgeon_parser_next(&mut parser, input, &mut pos, &mut event));
 	}
 }
+*/

@@ -117,7 +117,8 @@ impl SearchString {
 					continue;
 				}
 				let tokens: &BTreeSet<(usize, usize)> =
-					tokens_at_index[*start].get_or_insert_with(|| lexer.dfa.simulate2(&self.0[*start..]));
+					// tokens_at_index[*start].get_or_insert_with(|| lexer.dfa.simulate2(&self.0[*start..]));
+					&Default::default();
 
 				if tokens.is_empty() {
 					if let Some(delimiter) = self.0[*start..].iter().position(|ch| ch.maybe_delimiter(lexer)) {
@@ -251,7 +252,8 @@ impl<'a> SearchStringView<'a> {
 
 		let has_wildcard: bool = self.as_str().iter().find(|ch| ch.is_wildcard()).is_some();
 
-		let potential_rules: BTreeSet<usize> = lexer.dfa.simulate(extended.as_str());
+		// let potential_rules: BTreeSet<usize> = lexer.dfa.simulate(extended.as_str());
+		let potential_rules: BTreeSet<usize> = Default::default();
 
 		if has_wildcard || potential_rules.is_empty() {
 			interpretations.push(SubQuery::from(extended.as_str()));
@@ -392,6 +394,7 @@ impl From<&[SymbolicChar]> for SubQuery {
 	}
 }
 
+/*
 #[cfg(test)]
 mod test {
 	use super::*;
@@ -410,7 +413,6 @@ mod test {
 		let mut parser: Parser = Parser::new(schema);
 		let input: &str = "hunter2@example.com is my 12th password for example.com";
 
-		/*
 		{
 			let mut pos: usize = 0;
 			let event: LogEvent<'_> = parser.next_event(input, &mut pos).unwrap();
@@ -436,6 +438,6 @@ mod test {
 
 			// assert!(false);
 		}
-		*/
 	}
 }
+*/

@@ -21,7 +21,7 @@ public:
      *
      * @param schema A borrowed `Schema const*` (doesn't take ownership).
      */
-    ParserHandle(Schema const* schema) : ParserHandle{} {
+    ParserHandle(Schema* schema) : ParserHandle{} {
         m_parser = log_surgeon_parser_new(schema);
         m_event = log_surgeon_log_event_new();
     }
@@ -115,22 +115,22 @@ public:
     }
 
     /**
-     * Used to iterate over captures of a log event;
+     * Used to iterate over leaf captures of a log event;
+     * done when this function returns `std::nullopt`.
+     *
+     * @param i Try to get the `i`th capture.
+     * @return `std::nullopt` iff out of range.
+     */
+    [[nodiscard]] auto get_leaf_capture(size_t i) const -> std::optional<CCapture>;
+
+    /**
+     * Used to iterate over all captures of a log event (including the variable itself);
      * done when this function returns `std::nullopt`.
      *
      * @param i Try to get the `i`th capture.
      * @return `std::nullopt` iff out of range.
      */
     [[nodiscard]] auto get_capture(size_t i) const -> std::optional<CCapture>;
-
-    /**
-     * Used to iterate over variable windows of a log event;
-     * done when this function returns `std::nullopt`.
-     *
-     * @param i Try to get the `i`th capture.
-     * @return `std::nullopt` iff out of range.
-     */
-    [[nodiscard]] auto get_variable_window(size_t i) const -> std::optional<std::pair<size_t, size_t>>;
 
 private:
     LogEvent const* m_event;
@@ -145,19 +145,18 @@ inline auto ParserHandle::next_event(std::string_view input, size_t* pos)
     return std::make_optional(EventHandle{m_event, m_parser});
 }
 
-inline auto EventHandle::get_capture(size_t i) const -> std::optional<CCapture> {
-    CCapture const capture{log_surgeon_log_event_get_capture(m_event, i, m_parser)};
+inline auto EventHandle::get_leaf_capture(size_t i) const -> std::optional<CCapture> {
+    CCapture const capture{log_surgeon_log_event_get_leaf_capture(m_event, i, m_parser)};
     if (nullptr != capture.lexeme.pointer) {
         return std::make_optional(capture);
     }
     return std::nullopt;
 }
 
-inline auto EventHandle::get_variable_window(size_t i) const -> std::optional<std::pair<size_t, size_t>> {
-    size_t start{0};
-    size_t end{0};
-    if (log_surgeon_log_event_get_variable_window(m_event, i, &start, &end)) {
-        return std::make_optional(std::make_pair(start, end));
+inline auto EventHandle::get_capture(size_t i) const -> std::optional<CCapture> {
+    CCapture const capture{log_surgeon_log_event_get_capture(m_event, i, m_parser)};
+    if (nullptr != capture.lexeme.pointer) {
+        return std::make_optional(capture);
     }
     return std::nullopt;
 }

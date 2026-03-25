@@ -19,6 +19,7 @@ use crate::log_type::LogType;
 use crate::parser::Parser;
 use crate::regex::Regex;
 use crate::schema::Schema;
+use crate::schema::SchemaBuilder;
 
 pyo3::create_exception!(log_surgeon, LogSurgeonException, PyRuntimeError);
 pyo3::create_exception!(log_surgeon, LogSurgeonInvalidRegexPattern, LogSurgeonException);
@@ -27,7 +28,8 @@ pyo3::create_exception!(log_surgeon, LogSurgeonInvalidRegexPattern, LogSurgeonEx
 #[derive(Debug)]
 struct PyParser {
 	input: Py<PyAny>,
-	schema: Schema,
+	schema_builder: SchemaBuilder,
+	maybe_schema: Option<Schema>,
 	maybe_parser: Option<Parser>,
 	buffer: String,
 	pos: usize,
@@ -43,7 +45,11 @@ struct PyLogEvent {
 	#[pyo3(get)]
 	message: Py<PyString>,
 	#[pyo3(get)]
-	captures: Py<PyList>,
+	leaf_captures: Py<PyList>,
+	#[pyo3(get)]
+	all_captures: Py<PyList>,
+	#[pyo3(get)]
+	variables: Py<PyList>,
 }
 
 #[pyclass(name = "LogType", eq)]
@@ -79,7 +85,8 @@ impl PyParser {
 	fn new(debug: bool) -> Self {
 		Self {
 			input: Python::attach(|py| py.None()),
-			schema: Schema::new(),
+			schema_builder: SchemaBuilder::new(),
+			maybe_schema: None,
 			maybe_parser: None,
 			buffer: String::new(),
 			pos: 0,
@@ -92,7 +99,7 @@ impl PyParser {
 	fn add_variable_pattern(&mut self, name: &str, pattern: &str, priority: i32) -> PyResult<()> {
 		let regex: Regex = Regex::from_pattern(pattern)
 			.map_err(|err| LogSurgeonInvalidRegexPattern::new_err(format!("invalid pattern: {err:?}")))?;
-		let Ok(_): Result<(), Infallible> = self.schema.add_rule_with_priority(priority, name, regex);
+		let Ok(_): Result<(), Infallible> = self.schema_builder.add_rule_with_priority(priority, name, regex);
 		Ok(())
 	}
 
@@ -101,15 +108,14 @@ impl PyParser {
 		if delimiters.is_empty() {
 			return Err(LogSurgeonException::new_err("delimiters cannot be empty"));
 		}
-		self.schema.set_delimiters(delimiters);
+		self.schema_builder.set_delimiters(delimiters);
 		Ok(())
 	}
 
 	fn compile(&mut self) -> PyResult<()> {
-		let parser: Parser = Parser::new(self.schema.clone());
-		self.schema = parser.lexer.schema.clone();
-		// self.maybe_parser = Some(Parser::new(self.schema.clone()));
-		self.maybe_parser = Some(parser);
+		let schema: Schema = self.schema_builder.clone().build();
+		self.maybe_schema = Some(schema.clone());
+		self.maybe_parser = Some(Parser::new(schema));
 		Ok(())
 	}
 
@@ -135,12 +141,16 @@ impl PyParser {
 		};
 
 		Python::attach(|py| {
-			let captures: Bound<'_, PyList> = PyList::empty(py);
+			let leaf_captures: Bound<'_, PyList> = PyList::empty(py);
+			let all_captures: Bound<'_, PyList> = PyList::empty(py);
+			let variables: Bound<'_, PyList> = PyList::empty(py);
 
-			for cap in event.captures.iter() {
-				let (variable_name, capture_name): (&str, &str) = cap.names(&self.schema);
-				captures.append(PyCapture {
-					rule_id: PyInt::new(py, cap.rule_id).unbind(),
+			let schema: &Schema = self.maybe_schema.as_ref().unwrap();
+
+			for cap in event.leaf_captures.iter() {
+				let (variable_name, capture_name): (&str, &str) = cap.names(schema);
+				leaf_captures.append(PyCapture {
+					rule_id: PyInt::new(py, cap.rule_idx.index.get()).unbind(),
 					capture_id: PyInt::new(py, cap.capture_id.map_or(0, NonZero::get)).unbind(),
 					parent_id: PyInt::new(py, cap.parent_id.map_or(0, NonZero::get)).unbind(),
 					offsets: PySlice::new(py, cap.range.0 as isize, cap.range.1 as isize, 1).unbind(),
@@ -150,10 +160,37 @@ impl PyParser {
 				})?;
 			}
 
+			for cap in event.all_captures.iter() {
+				let (variable_name, capture_name): (&str, &str) = cap.names(schema);
+				all_captures.append(PyCapture {
+					rule_id: PyInt::new(py, cap.rule_idx.index.get()).unbind(),
+					capture_id: PyInt::new(py, cap.capture_id.map_or(0, NonZero::get)).unbind(),
+					parent_id: PyInt::new(py, cap.parent_id.map_or(0, NonZero::get)).unbind(),
+					offsets: PySlice::new(py, cap.range.0 as isize, cap.range.1 as isize, 1).unbind(),
+					variable_name: PyString::new(py, variable_name).unbind(),
+					capture_name: PyString::new(py, capture_name).unbind(),
+					lexeme: PyString::new(py, &event.message[cap.range.0..cap.range.1]).unbind(),
+				})?;
+			}
+
+			for cap in event.variables.iter() {
+				variables.append(PyCapture {
+					rule_id: PyInt::new(py, cap.rule_idx.index.get()).unbind(),
+					capture_id: PyInt::new(py, 0).unbind(),
+					parent_id: PyInt::new(py, 0).unbind(),
+					offsets: PySlice::new(py, cap.range.0 as isize, cap.range.1 as isize, 1).unbind(),
+					variable_name: PyString::new(py, &schema[cap.rule_idx].name).unbind(),
+					capture_name: PyString::new(py, "").unbind(),
+					lexeme: PyString::new(py, &event.message[cap.range.0..cap.range.1]).unbind(),
+				})?;
+			}
+
 			Ok(Some(PyLogEvent {
 				log_type: Py::new(py, PyLogType(event.log_type.clone()))?,
 				message: PyString::new(py, event.message).unbind(),
-				captures: captures.unbind(),
+				leaf_captures: leaf_captures.unbind(),
+				all_captures: all_captures.unbind(),
+				variables: variables.unbind(),
 			}))
 		})
 	}

@@ -29,17 +29,15 @@ struct RegexError;
 /// larger integer value means higher priority.
 /// Within a priority level, rules are prioritized by insertion order.
 ///
-/// Before automata construction, rules are "flattened", ordered by priority (highest first).
-/// A special `0`th rule internally represents a "newline" token.
-/// Rules are "ID"ed by their index in this flattened priority list.
-///
 struct Schema;
+
+struct SchemaBuilder;
 
 template<typename T = void>
 struct Vec;
 
 struct CCapture {
-    size_t rule_id;
+    uint16_t rule_id;
     /// `None`/zero when it is an implicit capture of the entire variable pattern.
     uint32_t capture_id;
     uint32_t parent_id;
@@ -63,10 +61,9 @@ CCapture log_surgeon_log_event_get_capture(const LogEvent *log_event,
                                            size_t i,
                                            const Parser *parser);
 
-bool log_surgeon_log_event_get_variable_window(const LogEvent *log_event,
-                                               size_t i,
-                                               size_t *start,
-                                               size_t *end);
+CCapture log_surgeon_log_event_get_leaf_capture(const LogEvent *log_event,
+                                                size_t i,
+                                                const Parser *parser);
 
 CCharArray log_surgeon_log_event_log_type(const LogEvent *log_event);
 
@@ -76,22 +73,22 @@ Box<Parser> log_surgeon_parser_clone(const Parser *value);
 
 void log_surgeon_parser_drop(Box<Parser> value);
 
-Box<Parser> log_surgeon_parser_new(const Schema *schema);
+Box<Parser> log_surgeon_parser_new(Box<Schema> schema);
 
 bool log_surgeon_parser_next(Parser *parser, CCharArray input, size_t *pos, LogEvent *out);
 
 void log_surgeon_regex_error_drop(Box<RegexError> value);
 
-Option<Box<RegexError>> log_surgeon_schema_add_rule_with_priority(Schema *schema,
-                                                                  int32_t priority,
-                                                                  CCharArray name,
-                                                                  CCharArray pattern);
+Option<Box<RegexError>> log_surgeon_schema_builder_add_rule_with_priority(SchemaBuilder *builder,
+                                                                          int32_t priority,
+                                                                          CCharArray name,
+                                                                          CCharArray pattern);
 
-void log_surgeon_schema_drop(Box<Schema> value);
+Box<Schema> log_surgeon_schema_builder_build(Box<SchemaBuilder> builder);
 
-Box<Schema> log_surgeon_schema_new();
+Box<SchemaBuilder> log_surgeon_schema_builder_new();
 
-void log_surgeon_schema_set_delimiters(Schema *schema, CCharArray delimiters);
+void log_surgeon_schema_builder_set_delimiters(SchemaBuilder *builder, CCharArray delimiters);
 
 void log_surgeon_search_interpretations_drop(Box<Box<Vec<Interpretation>>> value);
 

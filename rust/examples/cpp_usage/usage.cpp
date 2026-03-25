@@ -9,11 +9,11 @@
 using namespace log_surgeon;
 
 int main() {
-    Box<Schema> schema{log_surgeon_schema_new()};
+    Box<SchemaBuilder> builder{log_surgeon_schema_builder_new()};
 
-    log_surgeon_schema_add_rule_with_priority(schema, 0, "hello"_rust, "abc|d(?<foo>[a-z])f"_rust);
+    log_surgeon_schema_builder_add_rule_with_priority(builder, 0, "hello"_rust, "abc|d(?<foo>[a-z])f"_rust);
 
-    ParserHandle parser{schema};
+    ParserHandle parser{log_surgeon_schema_builder_build(builder)};
 
     CArray<char> const input{"def foobarbaz"_rust};
     size_t pos{0};
@@ -26,20 +26,20 @@ int main() {
     // assert(event.log_type() == "%hello% foobarbaz");
     assert(event.log_type() == "d%1.1:hello.foo%f foobarbaz");
 
-    std::optional<CCapture> maybe_capture{event.get_capture(0)};
+    std::optional<CCapture> maybe_capture{event.get_leaf_capture(0)};
     assert(maybe_capture.has_value());
 
     CCapture const& cap{*maybe_capture};
     assert(cap.variable_name.as_cpp_view() == "hello");
 
-    assert(event.get_variable_window(0).has_value());
-    assert(event.get_variable_window(0) == std::make_optional(std::make_pair(0, 3)));
+    assert(!event.get_leaf_capture(1).has_value());
 
-    assert(!event.get_capture(1).has_value());
+    assert(event.get_capture(0).has_value());
+    assert(event.get_capture(1).has_value());
+    assert(!event.get_capture(2).has_value());
+
 
     printf("good!\n");
-
-    log_surgeon_schema_drop(schema);
 
     return 0;
 }

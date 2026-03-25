@@ -35,6 +35,10 @@ impl std::fmt::Display for LogType {
 }
 
 impl LogType {
+	pub const BLANK: Self = Self {
+		cached_representation: String::new(),
+	};
+
 	pub fn new(schema: &Schema, log_message: &str, captures: &[Capture]) -> Self {
 		let cached_representation: String = to_string(schema, log_message, captures);
 		Self { cached_representation }
@@ -59,7 +63,7 @@ fn to_string(schema: &Schema, log_message: &str, captures: &[Capture]) -> String
 		write!(
 			&mut buf,
 			"%{}.{}:{}.{}%",
-			&capture.rule_id,
+			&capture.rule_idx.index,
 			capture.capture_id.map_or(0, NonZero::get),
 			variable_name,
 			capture_name,
