@@ -33,6 +33,8 @@ struct Schema;
 
 struct SchemaBuilder;
 
+struct SearchResult;
+
 template<typename T = void>
 struct Vec;
 
@@ -91,6 +93,10 @@ Box<SchemaBuilder> log_surgeon_schema_builder_new();
 
 void log_surgeon_schema_builder_set_delimiters(SchemaBuilder *builder, CCharArray delimiters);
 
+Option<Box<SearchResult>> log_surgeon_search_by_named_type(const Schema *schema,
+                                                           CCharArray name,
+                                                           CCharArray value);
+
 void log_surgeon_search_interpretations_drop(Box<Box<Vec<Interpretation>>> value);
 
 CCharArray log_surgeon_search_query_interpretation_as_string(const Vec<Interpretation> *interpretations,
@@ -99,6 +105,10 @@ CCharArray log_surgeon_search_query_interpretation_as_string(const Vec<Interpret
 
 Box<Vec<Interpretation>> log_surgeon_search_query_interpretations(const Parser *parser,
                                                                   CCharArray input);
+
+void log_surgeon_search_result_drop(Box<SearchResult> value);
+
+CCapture log_surgeon_search_result_get_leaf_capture(const SearchResult *search_result, size_t i);
 
 }  // extern "C"
 

@@ -248,6 +248,9 @@ impl Regex {
 			Self::Anchor(_) | Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
 			Self::Capture { info, item } => {
 				let i: usize = info.id.get() as usize;
+				if capture_info.len() <= i {
+					capture_info.resize(i + 1, RegexCapture::NULL);
+				}
 				capture_info[i] = info.clone();
 				item.populate_capture_info(capture_info);
 			},
@@ -294,6 +297,13 @@ impl Regex {
 }
 
 impl RegexCapture {
+	pub const NULL: Self = Self {
+		name: String::new(),
+		id: NonZero::<u32>::MAX,
+		parent_id: None,
+		descendents: 0,
+	};
+
 	pub fn is_leaf(&self) -> bool {
 		self.descendents == 0
 	}

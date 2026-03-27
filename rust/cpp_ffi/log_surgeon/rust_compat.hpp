@@ -48,6 +48,13 @@ struct CArray {
         return {this->pointer, this->length};
     }
 
+    [[nodiscard]]
+    auto operator==(CArray const& other) const noexcept -> bool
+    requires std::is_same_v<T, char>
+    {
+        return this->as_cpp_view() == other.as_cpp_view();
+    }
+
     operator std::string_view() const
     requires std::is_same_v<T, char>
     {

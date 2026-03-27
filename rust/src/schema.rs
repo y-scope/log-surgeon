@@ -131,27 +131,15 @@ impl SchemaBuilder {
 				// Don't need to check; necessarily `position <= index`.
 				let position: u16 = position as u16;
 
-				let mut capture_info: Vec<RegexCapture> = vec![
-					RegexCapture {
-						name: String::new(),
-						id: NonZero::<u32>::MAX,
-						parent_id: None,
-						descendents: 0,
-					};
-					1 + regex.count_captures()
-				];
-				regex.populate_capture_info(&mut capture_info);
-
-				rules.push(Rule {
-					idx: RuleIdx {
+				rules.push(Rule::new(
+					RuleIdx {
 						priority,
 						position,
 						index,
 					},
 					name,
 					regex,
-					capture_info,
-				});
+				));
 			}
 		}
 		Schema {
@@ -199,6 +187,20 @@ impl std::ops::Index<RuleIdx> for Schema {
 		// 	);
 		// };
 		// rule
+	}
+}
+
+impl Rule {
+	pub fn new(idx: RuleIdx, name: String, regex: Regex) -> Self {
+		let mut capture_info: Vec<RegexCapture> = vec![RegexCapture::NULL; 1 + regex.count_captures()];
+		regex.populate_capture_info(&mut capture_info);
+
+		Self {
+			idx,
+			name,
+			regex,
+			capture_info,
+		}
 	}
 }
 

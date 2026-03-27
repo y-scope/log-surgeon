@@ -1,3 +1,4 @@
+#include "log_surgeon/generated_bindings.hpp"
 #include "log_surgeon/log_surgeon.hpp"
 
 #include <cassert>
@@ -7,6 +8,8 @@
 #include <string_view>
 
 using namespace log_surgeon;
+
+static void try_search();
 
 int main() {
     Box<SchemaBuilder> builder{log_surgeon_schema_builder_new()};
@@ -37,8 +40,28 @@ int main() {
     assert(event.get_non_leaf_capture(0).has_value());
     assert(!event.get_non_leaf_capture(1).has_value());
 
+    try_search();
 
     printf("good!\n");
 
     return 0;
+}
+
+static void try_search() {
+    Box<SchemaBuilder> builder{log_surgeon_schema_builder_new()};
+
+    log_surgeon_schema_builder_add_rule_with_priority(builder, 0, "foo"_rust, ":::(?<bar>[a-z]+(\\.(?<baz>[0-9]+))*)"_rust);
+
+    Box<Schema> schema{log_surgeon_schema_builder_build(builder)};
+
+    Option<Box<SearchResult>> search{log_surgeon_search_by_named_type(schema, "foo.bar"_rust, "hello.123.456"_rust)};
+
+    assert(search != nullptr);
+    assert(log_surgeon_search_result_get_leaf_capture(search, 0).rule_id != 0);
+    assert(log_surgeon_search_result_get_leaf_capture(search, 0).capture_name == "baz"_rust);
+    assert(log_surgeon_search_result_get_leaf_capture(search, 0).lexeme == "123"_rust);
+    assert(log_surgeon_search_result_get_leaf_capture(search, 1).rule_id != 0);
+    assert(log_surgeon_search_result_get_leaf_capture(search, 1).capture_name == "baz"_rust);
+    assert(log_surgeon_search_result_get_leaf_capture(search, 1).lexeme == "456"_rust);
+    assert(log_surgeon_search_result_get_leaf_capture(search, 2).rule_id == 0);
 }

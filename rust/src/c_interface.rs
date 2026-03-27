@@ -4,12 +4,15 @@ use std::marker::PhantomData;
 use std::num::NonZero;
 use std::str::Utf8Error;
 
+use crate::dfa::MatchedCapture;
+use crate::dfa::Tdfa;
 use crate::log_event::LogEvent;
 use crate::parser::Parser;
 use crate::query::Interpretation;
 use crate::query::SearchString;
 use crate::regex::Regex;
 use crate::regex::RegexError;
+use crate::schema::Rule;
 use crate::schema::Schema;
 use crate::schema::SchemaBuilder;
 
@@ -25,7 +28,7 @@ pub struct CArray<'lifetime, T> {
 pub type CCharArray<'lifetime> = CArray<'lifetime, c_char>;
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct CCapture<'event> {
 	pub rule_id: Option<NonZero<u16>>,
 	/// `None`/zero when it is an implicit capture of the entire variable pattern.
@@ -42,6 +45,13 @@ pub struct CCapture<'event> {
 	pub variable_name: CCharArray<'event>,
 	pub capture_name: CCharArray<'event>,
 	pub lexeme: CCharArray<'event>,
+}
+
+#[derive(Debug)]
+pub struct SearchResult<'a> {
+	rule: NonZero<u16>,
+	variable_name: CCharArray<'a>,
+	leaf_captures: Vec<CCapture<'a>>,
 }
 
 impl<'lifetime, T> CArray<'lifetime, T> {
@@ -233,6 +243,120 @@ mod query {
 		*len = s.len();
 		CCharArray::from_utf8(s)
 	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_search_by_named_type<'a>(
+		schema: &'a Schema,
+		name: CCharArray<'_>,
+		value: CCharArray<'a>,
+	) -> Option<Box<SearchResult<'a>>> {
+		let parts: Vec<&str> = name.as_utf8().unwrap().split('.').collect::<Vec<_>>();
+		let value: &str = value.as_utf8().unwrap();
+		let variable_name: &str = parts.first().copied()?;
+		let capture_names: &[&str] = &parts[1..];
+		for rule in schema.rules.iter() {
+			if rule.name != variable_name {
+				continue;
+			}
+			let mut leaf_captures: Vec<CCapture<'_>> = Vec::new();
+			let mut on_capture = |capture: MatchedCapture| {
+				if capture.is_leaf {
+					leaf_captures.push(CCapture {
+						rule_id: Some(rule.idx.index),
+						capture_id: Some(capture.capture_id),
+						parent_id: capture.parent_id,
+						start: capture.start,
+						end: capture.end,
+						is_leaf: true,
+						variable_name: CCharArray::from_utf8(&rule.name),
+						capture_name: CCharArray::from_utf8(&rule.capture_info[capture.capture_id.get() as usize].name),
+						lexeme: CCharArray::from_utf8(&value[capture.start..capture.end]),
+					});
+				}
+			};
+			if let Some(first) = capture_names.first().copied() {
+				find_capture(&rule.regex, first, &capture_names[1..], &mut |regex| {
+					let regex: Regex = Regex::Sequence(vec![Regex::AnyChar, regex.clone()]);
+					let dfa: Tdfa = Tdfa::for_rules(
+						std::iter::once(&Rule::new(rule.idx, rule.name.clone(), regex)),
+						schema.delimiters.clone(),
+					);
+					dfa.execute_with_captures(value, u32::from(schema.anchor_ch), &mut on_capture, rule.idx);
+				});
+				if !leaf_captures.is_empty() {
+					return Some(Box::new(SearchResult {
+						rule: rule.idx.index,
+						variable_name: CCharArray::from_utf8(&rule.name),
+						leaf_captures,
+					}));
+				}
+			} else {
+				let dfa: Tdfa = Tdfa::for_rules(std::iter::once(rule), schema.delimiters.clone());
+				if dfa
+					.execute_with_captures(value, u32::from(schema.anchor_ch), &mut on_capture, rule.idx)
+					.is_some()
+				{
+					if leaf_captures.is_empty() {
+						leaf_captures.push(CCapture {
+							rule_id: Some(rule.idx.index),
+							capture_id: None,
+							parent_id: None,
+							start: 0,
+							end: value.len(),
+							is_leaf: true,
+							variable_name: CCharArray::from_utf8(&rule.name),
+							capture_name: CCharArray::from_utf8(""),
+							lexeme: CCharArray::from_utf8(value),
+						});
+					}
+					return Some(Box::new(SearchResult {
+						rule: rule.idx.index,
+						variable_name: CCharArray::from_utf8(&rule.name),
+						leaf_captures,
+					}));
+				} else {
+					continue;
+				}
+			}
+		}
+		None
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_search_result_get_leaf_capture<'a>(
+		search_result: &SearchResult<'a>,
+		i: usize,
+	) -> CCapture<'a> {
+		if let Some(capture) = search_result.leaf_captures.get(i) {
+			*capture
+		} else {
+			CCapture::null()
+		}
+	}
+
+	fn find_capture<F>(regex: &Regex, first: &str, rest: &[&str], func: &mut F)
+	where
+		F: FnMut(&Regex),
+	{
+		match regex {
+			Regex::Anchor(_) | Regex::AnyChar | Regex::Literal(..) | Regex::Group { .. } => (),
+			Regex::Capture { info, item } => {
+				if info.name == first {
+					func(item);
+				} else if let Some(first) = rest.first().copied() {
+					find_capture(item, first, &rest[1..], func);
+				}
+			},
+			Regex::KleeneClosure(item) | Regex::BoundedRepetition { item, .. } => {
+				find_capture(item, first, rest, func);
+			},
+			Regex::Sequence(items) | Regex::Alternation(items) => {
+				for item in items.iter() {
+					find_capture(item, first, rest, func);
+				}
+			},
+		}
+	}
 }
 
 /// `-Zunpretty=expanded` only in nightly...
@@ -271,6 +395,11 @@ mod destructor_impls {
 
 	#[unsafe(no_mangle)]
 	extern "C" fn log_surgeon_search_interpretations_drop(value: Box<Box<Vec<Interpretation>>>) {
+		std::mem::drop(value);
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_search_result_drop(value: Box<SearchResult<'_>>) {
 		std::mem::drop(value);
 	}
 }
