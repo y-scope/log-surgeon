@@ -54,19 +54,15 @@ impl Parser {
 		// Currently, the start-anchor just means "must come after static text".
 		let mut last_was_delimited: u32 = u32::from(self.lexer.schema.anchor_ch);
 		loop {
-			let token_start: usize = *pos;
+			let token_start: usize = *pos - original_pos + header_len;
 			let token_starting_leaf_capture_count: usize = self.current_log.leaf_captures.len();
 			let token_starting_non_leaf_capture_count: usize = self.current_log.non_leaf_captures.len();
-			let log_event_start: usize = token_start - original_pos + header_len;
 			match self.lexer.next_token(input, pos, last_was_delimited, |regex_capture| {
 				let generalized_capture: Capture = Capture {
 					rule_idx: regex_capture.rule,
 					capture_id: Some(regex_capture.capture_id),
 					parent_id: regex_capture.parent_id,
-					range: (
-						log_event_start + regex_capture.start,
-						log_event_start + regex_capture.end,
-					),
+					range: (token_start + regex_capture.start, token_start + regex_capture.end),
 					is_leaf: regex_capture.is_leaf,
 				};
 				if regex_capture.is_leaf {
@@ -85,11 +81,11 @@ impl Parser {
 					let variable_is_implicit_capture: bool =
 						!has_captures || (token_starting_leaf_capture_count == self.current_log.leaf_captures.len());
 
-					let variable_capture: Capture = Capture {
+					let mut variable_capture: Capture = Capture {
 						rule_idx: rule,
 						capture_id: None,
 						parent_id: None,
-						range: (log_event_start, log_event_start + lexeme.len()),
+						range: (token_start, token_start + lexeme.len()),
 						is_leaf: variable_is_implicit_capture,
 					};
 
@@ -99,7 +95,7 @@ impl Parser {
 						self.current_log.non_leaf_captures.push(variable_capture.clone());
 					}
 
-					if name == "header" && (!have_header || previous_was_newline) {
+					if name == "header" && (previous_was_newline || !have_header) {
 						let pending_header: &mut WorkingLogEvent =
 							self.maybe_pending_header.get_or_insert_with(WorkingLogEvent::new);
 						assert_eq!(pending_header.message.len(), 0);
@@ -107,16 +103,36 @@ impl Parser {
 						assert_eq!(pending_header.non_leaf_captures.len(), 0);
 						assert_eq!(pending_header.variables.len(), 0);
 						pending_header.message.push_str(lexeme);
-						pending_header.leaf_captures.extend(
-							self.current_log
-								.leaf_captures
-								.drain(token_starting_leaf_capture_count..),
-						);
-						pending_header.non_leaf_captures.extend(
-							self.current_log
-								.non_leaf_captures
-								.drain(token_starting_non_leaf_capture_count..),
-						);
+						for mut capture in self
+							.current_log
+							.leaf_captures
+							.drain(token_starting_leaf_capture_count..)
+						{
+							capture.range.0 -= token_start;
+							capture.range.1 -= token_start;
+							pending_header.leaf_captures.push(capture);
+						}
+						for mut capture in self
+							.current_log
+							.non_leaf_captures
+							.drain(token_starting_non_leaf_capture_count..)
+						{
+							capture.range.0 -= token_start;
+							capture.range.1 -= token_start;
+							pending_header.non_leaf_captures.push(capture);
+						}
+						variable_capture.range.0 -= token_start;
+						variable_capture.range.1 -= token_start;
+						// pending_header.leaf_captures.extend(
+						// 	self.current_log
+						// 		.leaf_captures
+						// 		.drain(token_starting_leaf_capture_count..),
+						// );
+						// pending_header.non_leaf_captures.extend(
+						// 	self.current_log
+						// 		.non_leaf_captures
+						// 		.drain(token_starting_non_leaf_capture_count..),
+						// );
 						pending_header.variables.push(variable_capture);
 						break;
 					} else {

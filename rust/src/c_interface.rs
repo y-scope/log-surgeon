@@ -49,7 +49,9 @@ pub struct CCapture<'event> {
 
 #[derive(Debug)]
 pub struct SearchResult<'a> {
+	#[allow(unused)]
 	rule: NonZero<u16>,
+	#[allow(unused)]
 	variable_name: CCharArray<'a>,
 	leaf_captures: Vec<CCapture<'a>>,
 }
