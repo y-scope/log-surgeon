@@ -9,6 +9,7 @@
 #include <optional>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace log_surgeon {
 class ParserHandle;
@@ -107,8 +108,10 @@ class EventHandle {
 public:
     /**
      * @param event A borrowed `Event const*` (doesn't take ownership).
+     * @param parser A borrowed `Parser const*` (doesn't take ownership).
      */
-    EventHandle(LogEvent const* event, Parser const* parser) : m_event(event), m_parser(parser) {}
+    // EventHandle(LogEvent const* event, Parser const* parser) : m_event(event), m_parser(parser) {}
+    EventHandle(LogEvent const* event, Parser const* parser);
 
     [[nodiscard]] auto log_type() const -> std::string_view {
         return log_surgeon_log_event_log_type(m_event);
@@ -132,9 +135,23 @@ public:
      */
     [[nodiscard]] auto get_non_leaf_capture(size_t i) const -> std::optional<CCapture>;
 
+    [[nodiscard]] auto captures_by_id_begin(size_t i) const -> std::vector<size_t>::const_iterator {
+        return m_captures_by_id.at(i).begin();
+    }
+
+    [[nodiscard]] auto captures_by_id_end(size_t i) const -> std::vector<size_t>::const_iterator {
+        return m_captures_by_id.at(i).end();
+    }
+
+    [[nodiscard]] auto get_capture_by_iterator(size_t i) const -> CCapture const& {
+        return m_captures.at(i);
+    }
+
 private:
     LogEvent const* m_event;
     Parser const* m_parser;
+    std::vector<CCapture> m_captures;
+    std::vector<std::vector<size_t>> m_captures_by_id;
 };
 
 inline auto ParserHandle::next_event(std::string_view input, size_t* pos)
@@ -143,6 +160,35 @@ inline auto ParserHandle::next_event(std::string_view input, size_t* pos)
         return std::nullopt;
     }
     return std::make_optional(EventHandle{m_event, m_parser});
+}
+
+inline EventHandle::EventHandle(LogEvent const* event, Parser const* parser) : m_event(event), m_parser(parser) {
+    size_t i{0};
+    while (true) {
+        CCapture capture{log_surgeon_log_event_get_leaf_capture(m_event, i, m_parser)};
+        if (nullptr == capture.lexeme.pointer) {
+            break;
+        }
+        if (m_captures_by_id.size() <= capture.capture_id) {
+            m_captures_by_id.resize(capture.capture_id + 1);
+        }
+        m_captures_by_id.at(capture.capture_id).push_back(m_captures.size());
+        m_captures.push_back(capture);
+        i++;
+    }
+    i = 0;
+    while (true) {
+        CCapture capture{log_surgeon_log_event_get_non_leaf_capture(m_event, i, m_parser)};
+        if (nullptr == capture.lexeme.pointer) {
+            break;
+        }
+        if (m_captures_by_id.size() <= capture.capture_id) {
+            m_captures_by_id.resize(capture.capture_id + 1);
+        }
+        m_captures_by_id.at(capture.capture_id).push_back(m_captures.size());
+        m_captures.push_back(capture);
+        i++;
+    }
 }
 
 inline auto EventHandle::get_leaf_capture(size_t i) const -> std::optional<CCapture> {
