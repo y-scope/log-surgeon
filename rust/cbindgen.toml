@@ -39,6 +39,10 @@ includes = [
 no_includes = true
 # cpp_compat = true
 after_includes = """
+namespace log_surgeon {
+// https://github.com/mozilla/cbindgen/issues/43
+struct Capture;
+}
 """
 
 
@@ -89,6 +93,14 @@ renaming_overrides_prefixing = false
 [export.pre_body]
 
 [export.body]
+"CapturePointerLength" = """
+    // Custom
+    [[nodiscard]] auto as_cpp_view() const noexcept -> std::string_view
+    requires std::is_same_v<T, char>
+    {
+        return {this->pointer, this->length};
+    }
+"""
 
 [export.mangle]
 

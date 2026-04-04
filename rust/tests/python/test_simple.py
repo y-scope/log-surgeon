@@ -10,7 +10,7 @@ class TestSimple(unittest.TestCase):
 		pass
 
 	def test_basic(self):
-		p = Parser()
+		p = Parser(debug=True)
 
 		p.add_variable_pattern("number", r"[0-9]+")
 		p.add_variable_pattern("at_host", r"@(?<inside>[a-z]+)(?<parts>(?<dot>\.)[a-z]*(?<end>[a-z]))*")
@@ -66,7 +66,7 @@ class TestSimple(unittest.TestCase):
 		self.assertIsNone(p.next_log_event())
 
 	def test_anchors(self):
-		p = Parser()
+		p = Parser(debug=True)
 
 		p.set_delimiters(" ")
 		p.add_variable_pattern("word", r"[a-z]+")
@@ -106,7 +106,7 @@ class TestSimple(unittest.TestCase):
 		self.assertEqual(str(event.log_type), "%1.0:word.%%3.0:int2.% %1.0:word.%")
 
 	def test_log_type_eq(self):
-		p = Parser()
+		p = Parser(debug=True)
 
 		p.set_delimiters(" ")
 		p.add_variable_pattern("word", r"[a-z]+")
@@ -134,7 +134,7 @@ class TestSimple(unittest.TestCase):
 		self.assertNotEqual(e2.log_type, e3.log_type)
 
 	def test_priority(self):
-		p = Parser()
+		p = Parser(debug=True)
 
 		p.set_delimiters(" ")
 
@@ -177,7 +177,7 @@ class TestSimple(unittest.TestCase):
 		self.assertEqual(str(e4.log_type), "%2.0:var2.%\n")
 
 	def test_variable_offsets(self):
-		p = Parser()
+		p = Parser(debug=True)
 
 		p.set_delimiters(" ")
 		p.add_variable_pattern("int", r"[0-9]+")
@@ -199,7 +199,7 @@ class TestSimple(unittest.TestCase):
 			self.assertEqual(cap.text, e.message[cap.offsets])
 
 	def test_nested_captures(self):
-		p = Parser()
+		p = Parser(debug=True)
 
 		p.set_delimiters(" ")
 		p.add_variable_pattern("wordint", r":(?<word>[a-z]+(?<int>[0-9]+))")
@@ -220,14 +220,41 @@ class TestSimple(unittest.TestCase):
 			self.assertEqual(e.leaf_captures[0].text, "123")
 
 			self.assertEqual(len(e.non_leaf_captures), 2)
-			self.assertEqual(e.non_leaf_captures[0].offsets, slice(len(":"), len(line) - 1, 1))
-			self.assertEqual(e.non_leaf_captures[0].text, "abc123")
-			# self.assertEqual(e.non_leaf_captures[1].offsets, slice(len(":abc"), len(line) - 1, 1))
-			# self.assertEqual(e.non_leaf_captures[1].text, "123")
-			self.assertEqual(e.non_leaf_captures[1].offsets, slice(0, len(line) - 1, 1))
-			self.assertEqual(e.non_leaf_captures[1].text, ":abc123")
+			self.assertEqual(e.non_leaf_captures[0].offsets, slice(0, len(line) - 1, 1))
+			self.assertEqual(e.non_leaf_captures[0].text, ":abc123")
+			self.assertEqual(e.non_leaf_captures[1].offsets, slice(len(":"), len(line) - 1, 1))
+			self.assertEqual(e.non_leaf_captures[1].text, "abc123")
 
 			self.assertEqual(len(e.variables), 1)
 			self.assertEqual(e.variables[0].offsets, slice(0, len(line) - 1, 1))
 			self.assertEqual(e.variables[0].variable_name, "wordint")
 			self.assertEqual(e.variables[0].text, ":abc123")
+
+	def test_headers(self):
+		p = Parser(debug=True)
+
+		p.set_delimiters(" ")
+		p.add_variable_pattern("header", r"\d{4}\-\d{2}\-\d{2} \d{2}")
+		p.add_variable_pattern("word", r"\w+")
+
+		p.compile()
+
+		text = dedent("""\
+		1234-56-78 00 one two three four
+		1234-56-78 01 five
+		1234-56-78 02 six seven
+		""")
+
+		p.set_input_stream(text)
+
+		e = p.next_log_event()
+		self.assertEqual(len(e.variables), 5)
+
+		e = p.next_log_event()
+		self.assertEqual(len(e.variables), 2)
+
+		e = p.next_log_event()
+		self.assertEqual(len(e.variables), 3)
+
+		e = p.next_log_event()
+		self.assertIsNone(e)

@@ -268,6 +268,8 @@ impl Regex {
 	/// [`RegexCapture::id`] defaults to [`NonZero::<u32>::MAX`];
 	/// if we actually reach this, `next_id` will overflow,
 	/// so it naturally works as a placeholder/invalid value.
+	///
+	/// Invariant: `parent_id < id`.
 	fn number_captures(&mut self, id: &mut NonZero<u32>, stack: &mut Vec<NonZero<u32>>) -> Option<usize> {
 		let mut bread: usize = 0;
 		match self {

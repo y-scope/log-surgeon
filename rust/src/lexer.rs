@@ -1,6 +1,6 @@
-use crate::dfa::MatchedCapture;
 use crate::dfa::MatchedRule;
 use crate::dfa::Tdfa;
+use crate::dfa::TdfaExecution;
 use crate::nfa::AutomataCapture;
 use crate::schema::RuleIdx;
 use crate::schema::Schema;
@@ -55,16 +55,13 @@ impl Lexer {
 		}
 	}
 
-	pub fn next_token<'input, F>(
+	pub fn next_token<'input>(
 		&self,
 		input: &'input str,
 		pos: &mut usize,
 		last_was_delimited: u32,
-		on_capture: F,
-	) -> Token<'input>
-	where
-		F: FnMut(MatchedCapture),
-	{
+		data: &mut TdfaExecution,
+	) -> Token<'input> {
 		let start: usize = *pos;
 
 		if start == input.len() {
@@ -72,11 +69,12 @@ impl Lexer {
 		}
 
 		if let Some(MatchedRule { rule, lexeme }) =
-			self.dfa.execute_without_captures(&input[start..], last_was_delimited)
+			self.dfa
+				.execute_without_captures(&input[start..], last_was_delimited, data)
 		{
 			let has_captures: bool = self.schema[rule].capture_info.len() > 1;
 			if has_captures {
-				self.dfa_per_rule[rule.as_index()].execute_with_captures(lexeme, last_was_delimited, on_capture, rule);
+				self.dfa_per_rule[rule.as_index()].execute_with_captures(lexeme, last_was_delimited, data);
 			}
 			*pos += lexeme.len();
 			Token::Variable {

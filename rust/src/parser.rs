@@ -1,6 +1,10 @@
+use crate::dfa::TdfaExecution;
 use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::log_event::Capture;
+use crate::log_event::CaptureFfiPointers;
+use crate::log_event::CapturePointerLength;
+use crate::log_event::CaptureRange;
 use crate::log_event::LogEvent;
 use crate::log_type::LogType;
 use crate::schema::Schema;
@@ -10,23 +14,26 @@ pub struct Parser {
 	pub lexer: Lexer,
 	current_log: WorkingLogEvent,
 	maybe_pending_header: Option<WorkingLogEvent>,
+	dfa_execution: TdfaExecution,
 }
 
 #[derive(Debug, Clone)]
 struct WorkingLogEvent {
 	message: String,
-	leaf_captures: Vec<Capture>,
-	non_leaf_captures: Vec<Capture>,
-	variables: Vec<Capture>,
+	all_captures: Vec<Capture>,
+	leaf_indices: Vec<usize>,
+	variable_indices: Vec<usize>,
 }
 
 impl Parser {
 	pub fn new(schema: Schema) -> Self {
 		let lexer: Lexer = Lexer::new(schema);
+		let dfa_execution: TdfaExecution = lexer.dfa.execution_data();
 		Self {
 			lexer,
 			current_log: WorkingLogEvent::new(),
 			maybe_pending_header: None,
+			dfa_execution,
 		}
 	}
 
@@ -35,12 +42,11 @@ impl Parser {
 			return None;
 		}
 
-		let original_pos: usize = *pos;
+		let pos_after_header: usize = *pos;
 
 		self.current_log.clear();
 
 		let mut have_header: bool = false;
-
 		if let Some(header) = &mut self.maybe_pending_header {
 			std::mem::swap(header, &mut self.current_log);
 			have_header = true;
@@ -53,24 +59,16 @@ impl Parser {
 		// Simulates whether we can match a start-anchored pattern.
 		// Currently, the start-anchor just means "must come after static text".
 		let mut last_was_delimited: u32 = u32::from(self.lexer.schema.anchor_ch);
-		loop {
-			let token_start: usize = *pos - original_pos + header_len;
-			let token_starting_leaf_capture_count: usize = self.current_log.leaf_captures.len();
-			let token_starting_non_leaf_capture_count: usize = self.current_log.non_leaf_captures.len();
-			match self.lexer.next_token(input, pos, last_was_delimited, |regex_capture| {
-				let generalized_capture: Capture = Capture {
-					rule_idx: regex_capture.rule,
-					capture_id: Some(regex_capture.capture_id),
-					parent_id: regex_capture.parent_id,
-					range: (token_start + regex_capture.start, token_start + regex_capture.end),
-					is_leaf: regex_capture.is_leaf,
-				};
-				if regex_capture.is_leaf {
-					self.current_log.leaf_captures.push(generalized_capture);
-				} else {
-					self.current_log.non_leaf_captures.push(generalized_capture);
-				}
-			}) {
+
+		let pos_end: usize = loop {
+			let pos_before_token: usize = *pos;
+			let token_start: usize = pos_before_token - pos_after_header + header_len;
+			let token_starting_capture_count: usize = self.current_log.all_captures.len();
+			let token_starting_leaf_indices: usize = self.current_log.leaf_indices.len();
+			match self
+				.lexer
+				.next_token(input, pos, last_was_delimited, &mut self.dfa_execution)
+			{
 				Token::Variable {
 					rule,
 					lexeme,
@@ -78,71 +76,77 @@ impl Parser {
 				} => {
 					let name: &str = &self.lexer.schema[rule].name;
 
-					let variable_is_implicit_capture: bool =
-						!has_captures || (token_starting_leaf_capture_count == self.current_log.leaf_captures.len());
+					let variable_is_implicit_capture: bool = !has_captures || self.dfa_execution.captures.is_empty();
 
-					let mut variable_capture: Capture = Capture {
+					let variable_index: usize = self.current_log.all_captures.len();
+					let variable_capture: Capture = Capture {
 						rule_idx: rule,
 						capture_id: None,
 						parent_id: None,
-						range: (token_start, token_start + lexeme.len()),
+						parent_index: usize::MAX,
+						range: CaptureRange {
+							start: token_start,
+							end: token_start + lexeme.len(),
+						},
 						is_leaf: variable_is_implicit_capture,
+						ffi_pointers: CaptureFfiPointers::NULL,
 					};
 
-					if variable_capture.is_leaf {
-						self.current_log.leaf_captures.push(variable_capture.clone());
-					} else {
-						self.current_log.non_leaf_captures.push(variable_capture.clone());
+					self.current_log.all_captures.push(variable_capture);
+					if variable_is_implicit_capture {
+						self.current_log.leaf_indices.push(variable_index);
+					}
+					self.current_log.variable_indices.push(variable_index);
+
+					for regex_capture in self.dfa_execution.captures.iter() {
+						let capture_index: usize = self.current_log.all_captures.len();
+						self.current_log.all_captures.push(Capture {
+							rule_idx: regex_capture.rule,
+							capture_id: Some(regex_capture.capture_id),
+							parent_id: regex_capture.parent_id,
+							parent_index: token_starting_capture_count.saturating_add(regex_capture.parent_index),
+							range: CaptureRange {
+								start: token_start + regex_capture.begin,
+								end: token_start + regex_capture.end,
+							},
+							is_leaf: regex_capture.is_leaf,
+							ffi_pointers: CaptureFfiPointers::NULL,
+						});
+						if regex_capture.is_leaf {
+							self.current_log.leaf_indices.push(capture_index);
+						}
 					}
 
-					if name == "header" && (previous_was_newline || !have_header) {
+					if name == "header" && (previous_was_newline || (!have_header && token_start > 0)) {
 						let pending_header: &mut WorkingLogEvent =
 							self.maybe_pending_header.get_or_insert_with(WorkingLogEvent::new);
 						assert_eq!(pending_header.message.len(), 0);
-						assert_eq!(pending_header.leaf_captures.len(), 0);
-						assert_eq!(pending_header.non_leaf_captures.len(), 0);
-						assert_eq!(pending_header.variables.len(), 0);
+						assert_eq!(pending_header.all_captures.len(), 0);
+						assert_eq!(pending_header.leaf_indices.len(), 0);
+						assert_eq!(pending_header.variable_indices.len(), 0);
 						pending_header.message.push_str(lexeme);
-						for mut capture in self
-							.current_log
-							.leaf_captures
-							.drain(token_starting_leaf_capture_count..)
-						{
-							capture.range.0 -= token_start;
-							capture.range.1 -= token_start;
-							pending_header.leaf_captures.push(capture);
+						for mut capture in self.current_log.all_captures.drain(token_starting_capture_count..) {
+							capture.range.start -= token_start;
+							capture.range.end -= token_start;
+							if capture.parent_index != usize::MAX {
+								capture.parent_index -= token_starting_capture_count;
+							}
+							pending_header.all_captures.push(capture);
 						}
-						for mut capture in self
-							.current_log
-							.non_leaf_captures
-							.drain(token_starting_non_leaf_capture_count..)
-						{
-							capture.range.0 -= token_start;
-							capture.range.1 -= token_start;
-							pending_header.non_leaf_captures.push(capture);
+						for mut index in self.current_log.leaf_indices.drain(token_starting_leaf_indices..) {
+							index -= token_starting_capture_count;
+							pending_header.leaf_indices.push(index);
 						}
-						variable_capture.range.0 -= token_start;
-						variable_capture.range.1 -= token_start;
-						// pending_header.leaf_captures.extend(
-						// 	self.current_log
-						// 		.leaf_captures
-						// 		.drain(token_starting_leaf_capture_count..),
-						// );
-						// pending_header.non_leaf_captures.extend(
-						// 	self.current_log
-						// 		.non_leaf_captures
-						// 		.drain(token_starting_non_leaf_capture_count..),
-						// );
-						pending_header.variables.push(variable_capture);
-						break;
+						self.current_log.variable_indices.pop().unwrap();
+						pending_header.variable_indices.push(0);
+						break pos_before_token;
 					} else {
-						self.current_log.variables.push(variable_capture);
 						last_was_delimited = 0;
 					}
 				},
 				Token::Newline => {
 					if !have_header {
-						break;
+						break *pos;
 					}
 					previous_was_newline = true;
 					last_was_delimited = u32::from('\n');
@@ -154,53 +158,43 @@ impl Parser {
 				},
 				Token::EndOfInput => {
 					assert_eq!(*pos, input.len());
-					break;
+					break *pos;
 				},
 			}
 			previous_was_newline = false;
+		};
+
+		self.current_log.message.push_str(&input[pos_after_header..pos_end]);
+
+		let captures_base: *const Capture = self.current_log.all_captures.as_ptr();
+		for capture in self.current_log.all_captures.iter_mut() {
+			// The "more optimizable" pointer primitive `add` is technically ok here,
+			// but is/would need to be marked `unsafe`.
+			capture.ffi_pointers.parent = captures_base.wrapping_add(capture.parent_index);
+			capture.ffi_pointers.lexeme =
+				CapturePointerLength::from_str(&self.current_log.message[capture.range.start..capture.range.end]);
+			capture.ffi_pointers.variable_name =
+				CapturePointerLength::from_str(&self.lexer.schema[capture.rule_idx].name);
+			capture.ffi_pointers.capture_name = CapturePointerLength::from_str(
+				&self.lexer.schema[capture.rule_idx]
+					.capture_info(capture.capture_id)
+					.name,
+			);
 		}
-
-		self.current_log.message.push_str(&input[original_pos..*pos]);
-
-		self.current_log.leaf_captures.sort_by_key(|capture| capture.range);
-
-		// let mut variables: Vec<Variable<'_>> = Vec::new();
-
-		// for variable in self.working_variables.iter() {
-		// 	variables.push(Variable {
-		// 		rule: variable.rule,
-		// 		name: self.lexer.rule_name(variable.rule),
-		// 		lexeme: &self.current_log[variable.range.clone()],
-		// 		range: (variable.range.start, variable.range.end),
-		// 		captures: self.working_captures[variable.captures.clone()]
-		// 			.iter()
-		// 			.map(|capture| {
-		// 				let info: &AutomataCapture = self.lexer.capture_info(capture.tag);
-		// 				Capture {
-		// 					name: &info.capture_info.name,
-		// 					lexeme: &self.current_log[capture.range.clone()],
-		// 					range: (
-		// 						capture.range.start - variable.range.start,
-		// 						capture.range.end - variable.range.start,
-		// 					),
-		// 					id: info.capture_info.id,
-		// 					parent_id: info.capture_info.parent_id,
-		// 				}
-		// 			})
-		// 			.collect::<Vec<_>>(),
-		// 	});
-		// }
 
 		Some(LogEvent {
 			log_type: LogType::new(
 				&self.lexer.schema,
 				&self.current_log.message,
-				&self.current_log.leaf_captures,
+				self.current_log
+					.leaf_indices
+					.iter()
+					.map(|&i| &self.current_log.all_captures[i]),
 			),
 			message: &self.current_log.message,
-			leaf_captures: &self.current_log.leaf_captures,
-			non_leaf_captures: &self.current_log.non_leaf_captures,
-			variables: &self.current_log.variables,
+			all_captures: &self.current_log.all_captures,
+			leaf_indices: &self.current_log.leaf_indices,
+			variable_indices: &self.current_log.variable_indices,
 		})
 	}
 }
@@ -209,17 +203,17 @@ impl WorkingLogEvent {
 	fn new() -> Self {
 		Self {
 			message: String::new(),
-			leaf_captures: Vec::new(),
-			non_leaf_captures: Vec::new(),
-			variables: Vec::new(),
+			all_captures: Vec::new(),
+			leaf_indices: Vec::new(),
+			variable_indices: Vec::new(),
 		}
 	}
 
 	fn clear(&mut self) {
 		self.message.clear();
-		self.leaf_captures.clear();
-		self.non_leaf_captures.clear();
-		self.variables.clear();
+		self.all_captures.clear();
+		self.leaf_indices.clear();
+		self.variable_indices.clear();
 	}
 }
 

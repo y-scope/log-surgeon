@@ -1,4 +1,5 @@
 use crate::dfa::Tdfa;
+use crate::log_event::Capture;
 use crate::regex::IntoRegex;
 use crate::regex::Regex;
 use crate::regex::RegexCapture;
@@ -70,7 +71,6 @@ impl SchemaBuilder {
 	///
 	/// Panics if `name` is empty or one of the reserved words:
 	///
-	/// - `"newline"`
 	/// - `"delimiters"`
 	///
 	pub fn add_rule<LikeString, RegexOrPattern>(
@@ -90,7 +90,6 @@ impl SchemaBuilder {
 	///
 	/// Panics if `name` is empty or one of the reserved words:
 	///
-	/// - `"newline"`
 	/// - `"delimiters"`
 	///
 	pub fn add_rule_with_priority<LikeString, RegexOrPattern>(
@@ -105,7 +104,6 @@ impl SchemaBuilder {
 	{
 		let name: String = name.into();
 		assert!(!name.is_empty());
-		assert_ne!(name, "newline");
 		assert_ne!(name, "delimiters");
 
 		let regex: Regex = regex.into()?;
@@ -157,17 +155,11 @@ impl Schema {
 		Tdfa::for_rules(&self.rules, self.delimiters.clone())
 	}
 
-	// 	fn newline_rule(&self) -> Rule {
-	// 		Rule {
-	// 			idx: RuleIdx {
-	// 				position: 0,
-	// 				priority: i32::MAX,
-	// 			},
-	// 			name: "newline".to_owned(),
-	// 			regex: Regex::Sequence(vec![Regex::AnyChar, Regex::Literal('\n')]),
-	// 			capture_names: vec![String::new()],
-	// 		}
-	// 	}
+	pub fn names(&self, capture: &Capture) -> (&'_ str, &'_ str) {
+		let rule: &Rule = &self[capture.rule_idx];
+		let capture_id: usize = capture.capture_id.map_or(0, NonZero::get) as usize;
+		(&rule.name, &rule.capture_info[capture_id].name)
+	}
 }
 
 impl std::ops::Index<RuleIdx> for Schema {
@@ -201,6 +193,10 @@ impl Rule {
 			regex,
 			capture_info,
 		}
+	}
+
+	pub fn capture_info(&self, i: Option<NonZero<u32>>) -> &RegexCapture {
+		&self.capture_info[i.map_or(0, NonZero::get) as usize]
 	}
 }
 

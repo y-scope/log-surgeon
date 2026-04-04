@@ -403,6 +403,13 @@ impl NfaState {
 	}
 }
 
+impl Tag {
+	pub fn capture(&self) -> &AutomataCapture {
+		let (Self::StartCapture(capture) | Self::StopCapture(capture)) = self;
+		capture
+	}
+}
+
 impl<T> Policy<Vec<T>> for PolicyExtendUnique
 where
 	T: Ord + Clone,

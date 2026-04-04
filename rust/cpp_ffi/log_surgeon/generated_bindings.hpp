@@ -9,6 +9,10 @@
 #include <cstddef>
 #include <cstdint>
 #include "rust_compat.hpp"
+namespace log_surgeon {
+// https://github.com/mozilla/cbindgen/issues/43
+struct Capture;
+}
 
 
 namespace log_surgeon {
@@ -38,35 +42,71 @@ struct SearchResult;
 template<typename T = void>
 struct Vec;
 
-struct CCapture {
-    uint16_t rule_id;
-    /// `None`/zero when it is an implicit capture of the entire variable pattern.
+struct RuleIdx {
+    /// The original priority level given by the user.
+    int32_t priority;
+    /// Insertion order of the rule at the given priority level.
+    uint16_t position;
+    /// Index in the schema.
+    uint16_t index;
+};
+
+/// Only reason we don't use [`std::ops::Range`] is because it isn't `Copy`
+/// (by questionable design reasons).
+struct CaptureRange {
+    size_t start;
+    size_t end;
+};
+
+template<typename T>
+struct CapturePointerLength {
+    const T *pointer;
+    size_t length;
+    // Custom
+    [[nodiscard]] auto as_cpp_view() const noexcept -> std::string_view
+    requires std::is_same_v<T, char>
+    {
+        return {this->pointer, this->length};
+    }
+};
+
+struct CaptureFfiPointers {
+    const Capture *parent;
+    CapturePointerLength<char> lexeme;
+    CapturePointerLength<char> variable_name;
+    CapturePointerLength<char> capture_name;
+};
+
+struct Capture {
+    RuleIdx rule_idx;
+    /// Capture ID, statically assigned left-to-right based on the regex pattern;
+    /// e.g. the pattern `(?<start>[a-z]+(?<rest>\.[a-z]+)*)|(?<start>[0-9]+)` has three capture IDs.
+    /// When this variable/pattern is actually matched,
+    /// there may be multiple instances of capture ID 2 (corresponding to `"rest"`).
+    /// The capture ID also differentiates between different capture groups given the same name,
+    /// e.g. the two instances of `"start"` in the pattern.
     uint32_t capture_id;
     uint32_t parent_id;
-    /// Offset relative to start of log event message.
-    size_t start;
-    /// Offset relative to start of log event message.
-    size_t end;
+    /// `usize::MAX` if none.
+    size_t parent_index;
+    /// Offset of the capture in the log message.
+    CaptureRange range;
     bool is_leaf;
-    CCharArray variable_name;
-    CCharArray capture_name;
-    CCharArray lexeme;
+    /// DANGEROUS fields for FFI.
+    /// But it's not dangerous if you don't look at it.
+    CaptureFfiPointers ffi_pointers;
 };
 
 
 extern "C" {
 
+const Capture *log_surgeon_log_event_all_captures(const LogEvent *log_event, size_t *len);
+
 Box<LogEvent> log_surgeon_log_event_clone(const LogEvent *value);
 
 void log_surgeon_log_event_drop(Box<LogEvent> value);
 
-CCapture log_surgeon_log_event_get_leaf_capture(const LogEvent *log_event,
-                                                size_t i,
-                                                const Parser *parser);
-
-CCapture log_surgeon_log_event_get_non_leaf_capture(const LogEvent *log_event,
-                                                    size_t i,
-                                                    const Parser *parser);
+const size_t *log_surgeon_log_event_leaf_capture_indices(const LogEvent *log_event, size_t *len);
 
 CCharArray log_surgeon_log_event_log_type(const LogEvent *log_event);
 
@@ -108,7 +148,8 @@ Box<Vec<Interpretation>> log_surgeon_search_query_interpretations(const Parser *
 
 void log_surgeon_search_result_drop(Box<SearchResult> value);
 
-CCapture log_surgeon_search_result_get_leaf_capture(const SearchResult *search_result, size_t i);
+const Capture *log_surgeon_search_result_get_leaf_captures(const SearchResult *search_result,
+                                                           size_t *len);
 
 }  // extern "C"
 

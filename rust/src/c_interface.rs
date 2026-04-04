@@ -6,6 +6,11 @@ use std::str::Utf8Error;
 
 use crate::dfa::MatchedCapture;
 use crate::dfa::Tdfa;
+use crate::dfa::TdfaExecution;
+use crate::log_event::Capture;
+use crate::log_event::CaptureFfiPointers;
+use crate::log_event::CapturePointerLength;
+use crate::log_event::CaptureRange;
 use crate::log_event::LogEvent;
 use crate::parser::Parser;
 use crate::query::Interpretation;
@@ -27,33 +32,13 @@ pub struct CArray<'lifetime, T> {
 
 pub type CCharArray<'lifetime> = CArray<'lifetime, c_char>;
 
-#[repr(C)]
-#[derive(Debug, Clone, Copy)]
-pub struct CCapture<'event> {
-	pub rule_id: Option<NonZero<u16>>,
-	/// `None`/zero when it is an implicit capture of the entire variable pattern.
-	pub capture_id: Option<NonZero<u32>>,
-	pub parent_id: Option<NonZero<u32>>,
-
-	/// Offset relative to start of log event message.
-	pub start: usize,
-	/// Offset relative to start of log event message.
-	pub end: usize,
-
-	pub is_leaf: bool,
-
-	pub variable_name: CCharArray<'event>,
-	pub capture_name: CCharArray<'event>,
-	pub lexeme: CCharArray<'event>,
-}
-
 #[derive(Debug)]
 pub struct SearchResult<'a> {
 	#[allow(unused)]
 	rule: NonZero<u16>,
 	#[allow(unused)]
 	variable_name: CCharArray<'a>,
-	leaf_captures: Vec<CCapture<'a>>,
+	leaf_captures: Vec<Capture>,
 }
 
 impl<'lifetime, T> CArray<'lifetime, T> {
@@ -61,6 +46,14 @@ impl<'lifetime, T> CArray<'lifetime, T> {
 		Self {
 			pointer: std::ptr::null(),
 			length: 0,
+			_lifetime: PhantomData,
+		}
+	}
+
+	pub fn from_slice(slice: &'lifetime [T]) -> Self {
+		Self {
+			pointer: slice.as_ptr(),
+			length: slice.len(),
 			_lifetime: PhantomData,
 		}
 	}
@@ -82,22 +75,6 @@ impl<'lifetime> CCharArray<'lifetime> {
 	pub fn as_utf8(&self) -> Result<&'lifetime str, Utf8Error> {
 		let bytes: &[u8] = unsafe { std::slice::from_raw_parts(self.pointer.cast::<u8>(), self.length) };
 		str::from_utf8(bytes)
-	}
-}
-
-impl CCapture<'_> {
-	fn null() -> Self {
-		Self {
-			rule_id: None,
-			capture_id: None,
-			parent_id: None,
-			start: 0,
-			end: 0,
-			is_leaf: false,
-			variable_name: CCharArray::null(),
-			capture_name: CCharArray::null(),
-			lexeme: CCharArray::null(),
-		}
 	}
 }
 
@@ -174,51 +151,18 @@ mod log_event {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_get_leaf_capture<'a>(
-		log_event: &LogEvent<'a>,
-		i: usize,
-		parser: &'a Parser,
-	) -> CCapture<'a> {
-		if let Some(capture) = log_event.leaf_captures.get(i) {
-			let (variable_name, capture_name): (&str, &str) = capture.names(&parser.lexer.schema);
-			let lexeme: &str = &log_event.message[capture.range.0..capture.range.1];
-			return CCapture {
-				rule_id: Some(capture.rule_idx.index),
-				capture_id: capture.capture_id,
-				parent_id: capture.parent_id,
-				start: capture.range.0,
-				end: capture.range.1,
-				is_leaf: capture.is_leaf,
-				variable_name: CCharArray::from_utf8(variable_name),
-				capture_name: CCharArray::from_utf8(capture_name),
-				lexeme: CCharArray::from_utf8(lexeme),
-			};
-		}
-		CCapture::null()
+	extern "C" fn log_surgeon_log_event_all_captures<'a>(log_event: &LogEvent<'a>, len: &mut usize) -> *const Capture {
+		*len = log_event.all_captures.len();
+		log_event.all_captures.as_ptr()
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_get_non_leaf_capture<'a>(
+	extern "C" fn log_surgeon_log_event_leaf_capture_indices<'a>(
 		log_event: &LogEvent<'a>,
-		i: usize,
-		parser: &'a Parser,
-	) -> CCapture<'a> {
-		if let Some(capture) = log_event.non_leaf_captures.get(i) {
-			let (variable_name, capture_name): (&str, &str) = capture.names(&parser.lexer.schema);
-			let lexeme: &str = &log_event.message[capture.range.0..capture.range.1];
-			return CCapture {
-				rule_id: Some(capture.rule_idx.index),
-				capture_id: capture.capture_id,
-				parent_id: capture.parent_id,
-				start: capture.range.0,
-				end: capture.range.1,
-				is_leaf: capture.is_leaf,
-				variable_name: CCharArray::from_utf8(variable_name),
-				capture_name: CCharArray::from_utf8(capture_name),
-				lexeme: CCharArray::from_utf8(lexeme),
-			};
-		}
-		CCapture::null()
+		len: &mut usize,
+	) -> *const usize {
+		*len = log_event.leaf_indices.len();
+		log_event.leaf_indices.as_ptr()
 	}
 }
 
@@ -260,19 +204,27 @@ mod query {
 			if rule.name != variable_name {
 				continue;
 			}
-			let mut leaf_captures: Vec<CCapture<'_>> = Vec::new();
-			let mut on_capture = |capture: MatchedCapture| {
+			let mut leaf_captures: Vec<Capture> = Vec::new();
+			let mut on_capture = |capture: &MatchedCapture| {
 				if capture.is_leaf {
-					leaf_captures.push(CCapture {
-						rule_id: Some(rule.idx.index),
+					leaf_captures.push(Capture {
+						rule_idx: rule.idx,
 						capture_id: Some(capture.capture_id),
+						parent_index: usize::MAX,
 						parent_id: capture.parent_id,
-						start: capture.start,
-						end: capture.end,
+						range: CaptureRange {
+							start: capture.begin,
+							end: capture.end,
+						},
 						is_leaf: true,
-						variable_name: CCharArray::from_utf8(&rule.name),
-						capture_name: CCharArray::from_utf8(&rule.capture_info[capture.capture_id.get() as usize].name),
-						lexeme: CCharArray::from_utf8(&value[capture.start..capture.end]),
+						ffi_pointers: CaptureFfiPointers {
+							parent: std::ptr::null(),
+							lexeme: CapturePointerLength::from_str(&value[capture.begin..capture.end]),
+							variable_name: CapturePointerLength::from_str(&rule.name),
+							capture_name: CapturePointerLength::from_str(
+								&rule.capture_info[capture.capture_id.get() as usize].name,
+							),
+						},
 					});
 				}
 			};
@@ -283,7 +235,9 @@ mod query {
 						std::iter::once(&Rule::new(rule.idx, rule.name.clone(), regex)),
 						schema.delimiters.clone(),
 					);
-					dfa.execute_with_captures(value, u32::from(schema.anchor_ch), &mut on_capture, rule.idx);
+					let mut data: TdfaExecution = dfa.execution_data();
+					dfa.execute_with_captures(value, u32::from(schema.anchor_ch), &mut data);
+					data.captures.iter().for_each(&mut on_capture);
 				});
 				if !leaf_captures.is_empty() {
 					return Some(Box::new(SearchResult {
@@ -294,21 +248,29 @@ mod query {
 				}
 			} else {
 				let dfa: Tdfa = Tdfa::for_rules(std::iter::once(rule), schema.delimiters.clone());
+				let mut data: TdfaExecution = dfa.execution_data();
 				if dfa
-					.execute_with_captures(value, u32::from(schema.anchor_ch), &mut on_capture, rule.idx)
+					.execute_with_captures(value, u32::from(schema.anchor_ch), &mut data)
 					.is_some()
 				{
+					data.captures.iter().for_each(&mut on_capture);
 					if leaf_captures.is_empty() {
-						leaf_captures.push(CCapture {
-							rule_id: Some(rule.idx.index),
+						leaf_captures.push(Capture {
+							rule_idx: rule.idx,
 							capture_id: None,
+							parent_index: usize::MAX,
 							parent_id: None,
-							start: 0,
-							end: value.len(),
+							range: CaptureRange {
+								start: 0,
+								end: value.len(),
+							},
 							is_leaf: true,
-							variable_name: CCharArray::from_utf8(&rule.name),
-							capture_name: CCharArray::from_utf8(""),
-							lexeme: CCharArray::from_utf8(value),
+							ffi_pointers: CaptureFfiPointers {
+								parent: std::ptr::null(),
+								lexeme: CapturePointerLength::from_str(value),
+								variable_name: CapturePointerLength::from_str(&rule.name),
+								capture_name: CapturePointerLength::from_str(""),
+							},
 						});
 					}
 					return Some(Box::new(SearchResult {
@@ -325,15 +287,12 @@ mod query {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_search_result_get_leaf_capture<'a>(
-		search_result: &SearchResult<'a>,
-		i: usize,
-	) -> CCapture<'a> {
-		if let Some(capture) = search_result.leaf_captures.get(i) {
-			*capture
-		} else {
-			CCapture::null()
-		}
+	extern "C" fn log_surgeon_search_result_get_leaf_captures<'a>(
+		search_result: &'a SearchResult<'_>,
+		len: &mut usize,
+	) -> *const Capture {
+		*len = search_result.leaf_captures.len();
+		search_result.leaf_captures.as_ptr()
 	}
 
 	fn find_capture<F>(regex: &Regex, first: &str, rest: &[&str], func: &mut F)

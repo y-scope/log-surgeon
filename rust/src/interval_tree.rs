@@ -160,7 +160,7 @@ where
 				break;
 			}
 		}
-		self.invariants();
+		self.check_invariants();
 	}
 
 	pub fn iter(&self) -> impl Iterator<Item = (Interval<T>, &V)> {
@@ -177,7 +177,7 @@ where
 	T: Copy,
 {
 	fn lookup_entry(&self, pos: T) -> Option<(Interval<T>, &V)> {
-		self.invariants();
+		self.check_invariants();
 		let index: usize = self.partition_point(pos);
 		if let Some((interval, value)) = self.intervals.get(index) {
 			assert!(pos <= interval.end);
@@ -195,13 +195,13 @@ where
 	/// If `pos` is "past" every interval, returns `self.intervals.len()`.
 	/// Otherwise, `self.intervals[pos].end >= pos`.
 	fn partition_point(&self, pos: T) -> usize {
-		self.invariants();
+		self.check_invariants();
 		// `partition_point` assumes partitioning as `[true, ..., false]` and returns the index of the first `false`.
 		self.intervals.partition_point(|(interval, _)| interval.end < pos)
 	}
 
 	/// Checks that intervals are non-overlapping.
-	fn invariants(&self) {
+	fn check_invariants(&self) {
 		let mut maybe_previous: Option<T> = None;
 		for (interval, _) in self.intervals.iter() {
 			if let Some(previous) = maybe_previous {

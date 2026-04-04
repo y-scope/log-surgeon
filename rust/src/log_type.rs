@@ -39,7 +39,7 @@ impl LogType {
 		cached_representation: String::new(),
 	};
 
-	pub fn new(schema: &Schema, log_message: &str, captures: &[Capture]) -> Self {
+	pub fn new<'a>(schema: &Schema, log_message: &str, captures: impl Iterator<Item = &'a Capture>) -> Self {
 		let cached_representation: String = to_string(schema, log_message, captures);
 		Self { cached_representation }
 	}
@@ -49,17 +49,17 @@ impl LogType {
 	}
 }
 
-fn to_string(schema: &Schema, log_message: &str, captures: &[Capture]) -> String {
+fn to_string<'a>(schema: &Schema, log_message: &str, captures: impl Iterator<Item = &'a Capture>) -> String {
 	use std::fmt::Write;
 
 	let mut buf: String = String::new();
 	let mut last_pos: usize = 0;
-	for capture in captures.iter() {
-		let pos: usize = capture.range.0;
+	for capture in captures {
+		let pos: usize = capture.range.start;
 		for s in escape::<'%'>(&log_message[last_pos..pos]) {
 			buf.push_str(s);
 		}
-		let (variable_name, capture_name): (&str, &str) = capture.names(schema);
+		let (variable_name, capture_name): (&str, &str) = schema.names(capture);
 		write!(
 			&mut buf,
 			"%{}.{}:{}.{}%",
@@ -69,7 +69,7 @@ fn to_string(schema: &Schema, log_message: &str, captures: &[Capture]) -> String
 			capture_name,
 		)
 		.unwrap();
-		last_pos = capture.range.1;
+		last_pos = capture.range.end;
 	}
 	for s in escape::<'%'>(&log_message[last_pos..]) {
 		buf.push_str(s);

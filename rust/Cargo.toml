@@ -10,6 +10,9 @@ crate-type = [
 	"cdylib"
 ]
 
+[profile.release]
+overflow-checks = true
+
 [features]
 # This crate produces two types of output:
 # 1. A C library (staticlib) — used by C/C++ code, built with `cargo build`
