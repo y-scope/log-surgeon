@@ -22,29 +22,17 @@ jobs:
           - "ubuntu-24.04"
     runs-on: "${{matrix.os}}"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           submodules: "recursive"
 
-      - uses: "actions/setup-python@v5"
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-python"
         with:
-          python-version: "3.8"
+          version: "3.8"
 
-      - name: "Install task"
-        uses: "go-task/setup-task@3be4020d41929789a01026e0e427a4321ce0ad44"  # v2.0.0
-        with:
-          version: "3.48.0"
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
 
-      - name: "Install uv"
-        shell: "bash"
-        run: |-
-          curl \
-            --fail \
-            --location \
-            --silent \
-            --show-error \
-            https://astral.sh/uv/0.8.4/install.sh \
-          | sh
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
 
       - if: "matrix.os == 'macos-15'"
         name: "Set SDKROOT so clang-tidy can find the Xcode SDK."
