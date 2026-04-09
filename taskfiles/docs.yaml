@@ -36,8 +36,8 @@ tasks:
       - "{{.G_DOXYFILE_PATH}}"
       - "{{.ROOT_DIR}}/docs/**/*"
       - "{{.ROOT_DIR}}/src/**/*"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.ROOT_DIR}}/tests/**/*"
+      - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -65,7 +65,7 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_NODE_DEPS_DIR}}"
     sources:
-      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
