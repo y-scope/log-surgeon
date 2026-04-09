@@ -2,23 +2,17 @@ name: "build"
 
 on:
   pull_request:
-    paths:
+    paths: &monitored_paths
       - ".github/workflows/build.yaml"
       - "CMakeLists.txt"
       - "examples/**/*"
       - "src/**/*"
       - "taskfile.yaml"
       - "taskfiles/**/*"
+      - "tools/yscope-dev-utils"
       - "tests/**/*"
   push:
-    paths:
-      - ".github/workflows/build.yaml"
-      - "CMakeLists.txt"
-      - "examples/**/*"
-      - "src/**/*"
-      - "taskfile.yaml"
-      - "taskfiles/**/*"
-      - "tests/**/*"
+    paths: *monitored_paths
   workflow_call:
 
 concurrency:
