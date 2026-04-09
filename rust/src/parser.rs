@@ -54,7 +54,7 @@ impl Parser {
 
 		let header_len: usize = self.current_log.message.len();
 
-		let mut previous_was_newline: bool = false;
+		let mut previous_was_newline: bool = true;
 
 		// Simulates whether we can match a start-anchored pattern.
 		// Currently, the start-anchor just means "must come after static text".
@@ -117,29 +117,33 @@ impl Parser {
 						}
 					}
 
-					if name == "header" && (previous_was_newline || (!have_header && token_start > 0)) {
-						let pending_header: &mut WorkingLogEvent =
-							self.maybe_pending_header.get_or_insert_with(WorkingLogEvent::new);
-						assert_eq!(pending_header.message.len(), 0);
-						assert_eq!(pending_header.all_captures.len(), 0);
-						assert_eq!(pending_header.leaf_indices.len(), 0);
-						assert_eq!(pending_header.variable_indices.len(), 0);
-						pending_header.message.push_str(lexeme);
-						for mut capture in self.current_log.all_captures.drain(token_starting_capture_count..) {
-							capture.range.start -= token_start;
-							capture.range.end -= token_start;
-							if capture.parent_index != usize::MAX {
-								capture.parent_index -= token_starting_capture_count;
+					if name == "header" && previous_was_newline {
+						if have_header {
+							let pending_header: &mut WorkingLogEvent =
+								self.maybe_pending_header.get_or_insert_with(WorkingLogEvent::new);
+							assert_eq!(pending_header.message.len(), 0);
+							assert_eq!(pending_header.all_captures.len(), 0);
+							assert_eq!(pending_header.leaf_indices.len(), 0);
+							assert_eq!(pending_header.variable_indices.len(), 0);
+							pending_header.message.push_str(lexeme);
+							for mut capture in self.current_log.all_captures.drain(token_starting_capture_count..) {
+								capture.range.start -= token_start;
+								capture.range.end -= token_start;
+								if capture.parent_index != usize::MAX {
+									capture.parent_index -= token_starting_capture_count;
+								}
+								pending_header.all_captures.push(capture);
 							}
-							pending_header.all_captures.push(capture);
+							for mut index in self.current_log.leaf_indices.drain(token_starting_leaf_indices..) {
+								index -= token_starting_capture_count;
+								pending_header.leaf_indices.push(index);
+							}
+							self.current_log.variable_indices.pop().unwrap();
+							pending_header.variable_indices.push(0);
+							break pos_before_token;
+						} else if token_start == 0 {
+							have_header = true;
 						}
-						for mut index in self.current_log.leaf_indices.drain(token_starting_leaf_indices..) {
-							index -= token_starting_capture_count;
-							pending_header.leaf_indices.push(index);
-						}
-						self.current_log.variable_indices.pop().unwrap();
-						pending_header.variable_indices.push(0);
-						break pos_before_token;
 					} else {
 						last_was_delimited = 0;
 					}

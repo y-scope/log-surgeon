@@ -73,3 +73,29 @@ class TestSimple(unittest.TestCase):
 		event = p.next_log_event()
 		# self.assertEqual(str(event.log_type), " %role%")
 		self.assertEqual(str(event.log_type), " 'roles': [u'%1.1:role.role%']")
+
+	def test_headers(self):
+		p = Parser()
+
+		p.set_delimiters(" \t\r\n")
+		p.add_variable_pattern("header", r"\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2},\d{3}")
+
+		p.compile()
+
+		print("======")
+
+		text = dedent("""\
+		2018-06-20 00:00:09,601 DEBUG First event
+		2018-06-20 00:00:09,602 DEBUG Second event
+		seqno: 19
+		lastPacketInBlock: false
+		2018-06-20 00:00:09,603 DEBUG Third event
+		""")
+
+		p.set_input_stream(text)
+
+		n = 0
+		while p.next_log_event() is not None:
+			n += 1
+
+		self.assertEqual(n, 3)
