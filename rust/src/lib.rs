@@ -11,6 +11,7 @@ pub mod parser;
 pub mod query;
 pub mod regex;
 pub mod schema;
+pub mod utils;
 
 pub mod c_interface;
 #[cfg(feature = "python")]

@@ -1,3 +1,5 @@
+mod schema_file;
+
 use crate::dfa::Tdfa;
 use crate::log_event::Capture;
 use crate::regex::IntoRegex;
@@ -19,7 +21,7 @@ pub struct SchemaBuilder {
 /// larger integer value means higher priority.
 /// Within a priority level, rules are prioritized by insertion order.
 ///
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Schema {
 	pub rules: Vec<Rule>,
 	pub delimiters: String,
@@ -28,7 +30,7 @@ pub struct Schema {
 	pub anchor_ch: char,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Rule {
 	pub idx: RuleIdx,
 	pub name: String,

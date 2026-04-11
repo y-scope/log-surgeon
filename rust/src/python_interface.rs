@@ -187,6 +187,34 @@ impl PyParser {
 	fn done(&self) -> bool {
 		self.pos == self.buffer.len()
 	}
+
+	fn generate_schema_definition(&self) -> PyResult<String> {
+		let Some(schema): Option<&Schema> = self.maybe_schema.as_ref() else {
+			return Err(LogSurgeonException::new_err("parser has not been compiled"));
+		};
+
+		Ok(schema.to_schema_definition())
+	}
+
+	#[staticmethod]
+	#[pyo3(signature = (definition, *, debug = false))]
+	fn from_schema_definition(definition: &str, debug: bool) -> PyResult<Self> {
+		match Schema::from_schema_definition(definition) {
+			Ok(schema) => Ok(Self {
+				input: Python::attach(|py| py.None()),
+				schema_builder: SchemaBuilder::new(),
+				maybe_schema: Some(schema.clone()),
+				maybe_parser: Some(Parser::new(schema)),
+				buffer: String::new(),
+				pos: 0,
+				debug,
+			}),
+			Err(err) => Err(LogSurgeonException::new_err(format!(
+				"invalid schema definition on line {}",
+				err.line_offset + 1
+			))),
+		}
+	}
 }
 
 #[pymethods]

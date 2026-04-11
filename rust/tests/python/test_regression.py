@@ -5,7 +5,7 @@ from textwrap import dedent
 
 from log_surgeon import Parser
 
-class TestSimple(unittest.TestCase):
+class TestRegression(unittest.TestCase):
 	def setUp(self):
 		pass
 

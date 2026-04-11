@@ -121,10 +121,18 @@ impl Tnfa {
 
 	fn build(&mut self, rule: RuleIdx, regex: &Regex, mut current: NfaIdx, target: NfaIdx) -> BTreeSet<Tag> {
 		match regex {
-			&Regex::Anchor(_) => {
-				for ch in self.delimiters.clone().chars() {
+			&Regex::Anchor(anchor) => {
+				if !anchor.is_nil() {
+					for ch in self.delimiters.clone().chars() {
+						self[current].transitions.insert(
+							Interval::new(u32::from(ch), u32::from(ch)),
+							vec![target],
+							PolicyExtendUnique,
+						);
+					}
+				} else {
 					self[current].transitions.insert(
-						Interval::new(u32::from(ch), u32::from(ch)),
+						Interval::new(0, u32::from(char::MAX)),
 						vec![target],
 						PolicyExtendUnique,
 					);

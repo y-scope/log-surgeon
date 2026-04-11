@@ -74,62 +74,80 @@ impl<'lifetime> CCharArray<'lifetime> {
 	}
 }
 
-#[unsafe(no_mangle)]
-extern "C" fn log_surgeon_schema_builder_new() -> Box<SchemaBuilder> {
-	Box::new(SchemaBuilder::new())
+mod schema {
+	use super::*;
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_schema_builder_new() -> Box<SchemaBuilder> {
+		Box::new(SchemaBuilder::new())
+	}
+
+	#[unsafe(no_mangle)]
+	unsafe extern "C" fn log_surgeon_schema_builder_set_delimiters(
+		builder: &mut SchemaBuilder,
+		delimiters: CCharArray<'_>,
+	) {
+		builder.set_delimiters(delimiters.as_utf8().unwrap());
+	}
+
+	#[unsafe(no_mangle)]
+	unsafe extern "C" fn log_surgeon_schema_builder_add_rule_with_priority<'pattern>(
+		builder: &mut SchemaBuilder,
+		priority: i32,
+		name: CCharArray<'_>,
+		pattern: CCharArray<'pattern>,
+	) -> Option<Box<RegexError<'pattern>>> {
+		let name: &str = name.as_utf8().unwrap();
+		let pattern: &str = pattern.as_utf8().unwrap();
+		let regex: Regex = match Regex::from_pattern(pattern) {
+			Ok(regex) => regex,
+			Err(err) => {
+				return Some(Box::new(err));
+			},
+		};
+		let Ok(_): Result<(), Infallible> = builder.add_rule_with_priority(priority, name, regex);
+		None
+	}
+
+	#[unsafe(no_mangle)]
+	unsafe extern "C" fn log_surgeon_schema_builder_build(builder: Box<SchemaBuilder>) -> Box<Schema> {
+		Box::new(builder.build())
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_schema_from_definition(definition: CCharArray<'_>) -> Option<Box<Schema>> {
+		let definition: &str = definition.as_utf8().unwrap();
+		if let Ok(schema) = Schema::from_schema_definition(definition) {
+			Some(Box::new(schema))
+		} else {
+			None
+		}
+	}
 }
 
-#[unsafe(no_mangle)]
-unsafe extern "C" fn log_surgeon_schema_builder_set_delimiters(
-	builder: &mut SchemaBuilder,
-	delimiters: CCharArray<'_>,
-) {
-	builder.set_delimiters(delimiters.as_utf8().unwrap());
-}
+mod parser {
+	use super::*;
 
-#[unsafe(no_mangle)]
-unsafe extern "C" fn log_surgeon_schema_builder_add_rule_with_priority<'pattern>(
-	builder: &mut SchemaBuilder,
-	priority: i32,
-	name: CCharArray<'_>,
-	pattern: CCharArray<'pattern>,
-) -> Option<Box<RegexError<'pattern>>> {
-	let name: &str = name.as_utf8().unwrap();
-	let pattern: &str = pattern.as_utf8().unwrap();
-	let regex: Regex = match Regex::from_pattern(pattern) {
-		Ok(regex) => regex,
-		Err(err) => {
-			return Some(Box::new(err));
-		},
-	};
-	let Ok(_): Result<(), Infallible> = builder.add_rule_with_priority(priority, name, regex);
-	None
-}
+	#[unsafe(no_mangle)]
+	unsafe extern "C" fn log_surgeon_parser_new(schema: Box<Schema>) -> Box<Parser> {
+		let parser: Parser = Parser::new(*schema);
+		Box::new(parser)
+	}
 
-#[unsafe(no_mangle)]
-unsafe extern "C" fn log_surgeon_schema_builder_build(builder: Box<SchemaBuilder>) -> Box<Schema> {
-	Box::new(builder.build())
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn log_surgeon_parser_new(schema: Box<Schema>) -> Box<Parser> {
-	let parser: Parser = Parser::new(*schema);
-	Box::new(parser)
-}
-
-#[unsafe(no_mangle)]
-extern "C" fn log_surgeon_parser_next<'parser, 'input>(
-	parser: &'parser mut Parser,
-	input: CCharArray<'input>,
-	pos: &mut usize,
-	out: &mut LogEvent<'parser>,
-) -> bool {
-	let input: &str = unsafe { input.as_utf8().unwrap_unchecked() };
-	if let Some(event) = parser.next_event(input, pos) {
-		*out = event;
-		true
-	} else {
-		false
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_parser_next<'parser, 'input>(
+		parser: &'parser mut Parser,
+		input: CCharArray<'input>,
+		pos: &mut usize,
+		out: &mut LogEvent<'parser>,
+	) -> bool {
+		let input: &str = unsafe { input.as_utf8().unwrap_unchecked() };
+		if let Some(event) = parser.next_event(input, pos) {
+			*out = event;
+			true
+		} else {
+			false
+		}
 	}
 }
 

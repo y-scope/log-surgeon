@@ -1,3 +1,4 @@
+use crate::utils::Escaped;
 use std::num::NonZero;
 use std::str::Chars;
 
@@ -21,6 +22,7 @@ pub trait IntoRegex {
 	fn into(self) -> Result<Regex, Self::Error>;
 }
 
+// TODO: encode `+` and `?`
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Regex {
 	Anchor(Anchor),
@@ -68,6 +70,7 @@ impl PartialEq for RegexCapture {
 pub enum Anchor {
 	Preceded,
 	Followed,
+	Nil,
 }
 
 #[derive(Debug)]
@@ -81,7 +84,7 @@ pub struct RegexError<'a> {
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub enum RegexErrorKind {
+enum RegexErrorKind {
 	/// Expected a certain character, e.g. '<' after '?' in a capture group.
 	ExpectedChar(char),
 	/// Missing the closing delimiter for the following pair.
@@ -130,8 +133,8 @@ pub enum RegexErrorKind {
 
 #[derive(Debug)]
 struct RegexParsingError<'a> {
-	pub input: &'a str,
-	pub kind: RegexErrorKind,
+	input: &'a str,
+	kind: RegexErrorKind,
 }
 
 #[derive(Debug, Clone)]
@@ -229,6 +232,68 @@ impl Regex {
 			_ => false,
 		}
 	}
+
+	pub fn to_pattern(&self) -> String {
+		match self {
+			Self::Anchor(Anchor::Preceded) => "^".to_owned(),
+			Self::Anchor(Anchor::Followed) => "$".to_owned(),
+			Self::Anchor(Anchor::Nil) => String::new(),
+			Self::AnyChar => ".".to_owned(),
+			&Self::Literal(ch) => {
+				if SPECIAL_CHARACTERS.contains(ch) {
+					format!("\\{ch}")
+				} else {
+					Escaped::escape_char(ch).to_string()
+				}
+			},
+			Self::Group { negated, items } => {
+				let mut buffer: String = String::new();
+				for (lo, hi) in items.iter() {
+					let lo: Escaped = Escaped::escape_char(*lo);
+					let hi: Escaped = Escaped::escape_char(*hi);
+					lo.append_to(&mut buffer);
+					if lo != hi {
+						buffer.push('-');
+						hi.append_to(&mut buffer);
+					}
+				}
+				format!("[{}{buffer}]", if *negated { "^" } else { "" })
+			},
+			Self::Capture { info, item } => {
+				format!("(?<{}>{})", info.name, item.to_pattern())
+			},
+			Self::KleeneClosure(item) => {
+				let mut item: String = item.to_pattern();
+				item.push('*');
+				item
+			},
+			Self::BoundedRepetition { min, max, item } => {
+				let item: String = item.to_pattern();
+				if min == max {
+					format!("({item}){{{min}}}")
+				} else {
+					format!("({item}){{{min},{max}}}")
+				}
+			},
+			Self::Sequence(items) => items.iter().fold(String::new(), |mut accumulated, item| {
+				accumulated.push_str(&item.to_pattern());
+				accumulated
+			}),
+			Self::Alternation(items) => {
+				let first: String = items.first().unwrap().to_pattern();
+				if items.len() > 1 {
+					let mut buffer: String = first;
+					for item in items[1..].iter() {
+						buffer.push('|');
+						buffer.push_str(&item.to_pattern());
+					}
+					buffer
+				} else {
+					first
+				}
+			},
+		}
+	}
 }
 
 impl Regex {
@@ -311,6 +376,12 @@ impl RegexCapture {
 	}
 }
 
+impl Anchor {
+	pub fn is_nil(&self) -> bool {
+		matches!(self, Self::Nil)
+	}
+}
+
 impl RegexErrorKind {
 	fn error(self, input: &str) -> NomErr<RegexParsingError<'_>> {
 		NomErr::Error(RegexParsingError::new(input, self))
@@ -359,7 +430,7 @@ fn parse_to_end(input: &str) -> ParsingResult<'_, Regex> {
 				if starts_with_anchor {
 					Regex::Anchor(Anchor::Preceded)
 				} else {
-					Regex::AnyChar
+					Regex::Anchor(Anchor::Nil)
 				},
 			);
 			if ends_with_anchor {
@@ -371,7 +442,7 @@ fn parse_to_end(input: &str) -> ParsingResult<'_, Regex> {
 			items.push(if starts_with_anchor {
 				Regex::Anchor(Anchor::Preceded)
 			} else {
-				Regex::AnyChar
+				Regex::Anchor(Anchor::Nil)
 			});
 			items.push(std::mem::replace(regex, Regex::AnyChar));
 			if ends_with_anchor {
@@ -784,6 +855,7 @@ fn parse_standard_escape(input: &str) -> ParsingResult<'_, Literals> {
 		't' => '\t',
 		'r' => '\r',
 		'n' => '\n',
+		' ' => ' ',
 		'u' => {
 			return combinator_surrounded_cut::<'{', '}', _, _>(parse_hex_code_point)
 				.map(Literals::Single)

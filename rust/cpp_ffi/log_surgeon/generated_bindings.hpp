@@ -133,6 +133,8 @@ Box<SchemaBuilder> log_surgeon_schema_builder_new();
 
 void log_surgeon_schema_builder_set_delimiters(SchemaBuilder *builder, CCharArray delimiters);
 
+Option<Box<Schema>> log_surgeon_schema_from_definition(CCharArray definition);
+
 Box<SearchResult> log_surgeon_search_by_named_type(const Schema *schema,
                                                    CCharArray name,
                                                    CCharArray value);
