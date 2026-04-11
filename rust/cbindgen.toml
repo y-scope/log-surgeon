@@ -93,7 +93,7 @@ renaming_overrides_prefixing = false
 [export.pre_body]
 
 [export.body]
-"CapturePointerLength" = """
+"SpookyCArray" = """
     // Custom
     [[nodiscard]] auto as_cpp_view() const noexcept -> std::string_view
     requires std::is_same_v<T, char>

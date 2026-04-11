@@ -2,9 +2,19 @@
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::num::NonZero;
 
 use crate::dfa::Tdfa;
+use crate::dfa::TdfaExecution;
+use crate::ffi::SpookyCArray;
 use crate::lexer::Lexer;
+use crate::log_event::Capture;
+use crate::log_event::CaptureFfiPointers;
+use crate::log_event::CaptureRange;
+use crate::regex::Regex;
+use crate::schema::Rule;
+use crate::schema::Schema;
+use crate::schema::VariableOrCaptures;
 
 #[derive(Debug)]
 pub struct SearchString(Vec<SymbolicChar>);
@@ -25,6 +35,20 @@ pub enum SymbolicChar {
 pub struct Interpretation {
 	sub_queries: Vec<SubQuery>,
 	pub stringified: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct Interpretation2 {
+	// pub tokens: Vec<SymbolicToken>,
+	pub leaf_captures: Vec<Capture>,
+}
+
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[repr(C)]
+pub struct SymbolicToken {
+	rule_idx: Option<NonZero<u16>>,
+	start: usize,
+	end: usize,
 }
 
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
@@ -101,6 +125,91 @@ impl SearchString {
 			last_was_escape = false;
 		}
 		Ok(Self(chars))
+	}
+
+	pub fn interpretations_for_name(&self, schema: &Schema, name: &str) -> Vec<Interpretation2> {
+		let mut interpretations: Vec<Interpretation2> = Vec::new();
+
+		let Some(rows): Option<VariableOrCaptures<Regex>> = schema.regexes_for_name(name) else {
+			return interpretations;
+		};
+
+		match rows {
+			VariableOrCaptures::Variable(rows) => {
+				for (rule_idx, _regex) in rows.into_iter() {
+					let rule: &Rule = &schema[rule_idx];
+					let dfa: Tdfa = Tdfa::for_rules(std::iter::once(rule), schema.delimiters.clone());
+					let mut data: TdfaExecution = dfa.execution_data();
+					for (_rule, captures) in dfa.simulate(&self.0) {
+						let mut leaf_captures: Vec<Capture> = Vec::new();
+						for capture in captures.iter() {
+							if capture.is_leaf {
+								leaf_captures.push(Capture {
+									rule_idx: rule.idx,
+									capture_id: Some(capture.capture_id),
+									parent_index: capture.parent_index,
+									parent_id: capture.parent_id,
+									range: CaptureRange {
+										start: capture.begin,
+										end: capture.end,
+									},
+									is_leaf: true,
+									ffi_pointers: CaptureFfiPointers {
+										parent: std::ptr::null(),
+										lexeme: SpookyCArray::NULL,
+										variable_name: SpookyCArray::NULL,
+										capture_name: SpookyCArray::NULL,
+									},
+								});
+							}
+						}
+						if !leaf_captures.is_empty() {
+							interpretations.push(Interpretation2 { leaf_captures });
+						}
+					}
+				}
+			},
+			VariableOrCaptures::Captures(rows) => {
+				for (rule_idx, _info, regex) in rows.into_iter() {
+					let rule: &Rule = &schema[rule_idx];
+					let dfa: Tdfa = Tdfa::for_rules(std::iter::once(rule), schema.delimiters.clone());
+					let regex: Regex = Regex::Sequence(vec![Regex::AnyChar, regex]);
+					let dfa: Tdfa = Tdfa::for_rules(
+						std::iter::once(&Rule::new(rule.idx, rule.name.clone(), regex)),
+						schema.delimiters.clone(),
+					);
+					for (_rule, captures) in dfa.simulate(&self.0) {
+						let mut leaf_captures: Vec<Capture> = Vec::new();
+						for capture in captures.iter() {
+							if capture.is_leaf {
+								leaf_captures.push(Capture {
+									rule_idx: rule.idx,
+									capture_id: Some(capture.capture_id),
+									parent_index: capture.parent_index,
+									parent_id: capture.parent_id,
+									range: CaptureRange {
+										start: capture.begin,
+										end: capture.end,
+									},
+									is_leaf: true,
+									ffi_pointers: CaptureFfiPointers {
+										parent: std::ptr::null(),
+										lexeme: SpookyCArray::NULL,
+										variable_name: SpookyCArray::NULL,
+										capture_name: SpookyCArray::NULL,
+									},
+								});
+							}
+						}
+						if !leaf_captures.is_empty() {
+							interpretations.push(Interpretation2 { leaf_captures });
+						}
+					}
+				}
+			},
+		}
+
+		interpretations
 	}
 
 	pub fn interpretations(&self, lexer: &Lexer) -> Vec<Interpretation> {
@@ -394,50 +503,7 @@ impl From<&[SymbolicChar]> for SubQuery {
 	}
 }
 
-/*
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::log_event::LogEvent;
-	use crate::parser::Parser;
-	use crate::schema::Schema;
-
-	#[test]
-	fn query_test() {
-		let mut schema: Schema = Schema::new();
-
-		schema.add_rule("username", r"[a-z]+\d+\w*").unwrap();
-		schema.add_rule("domain", r"(\w+\.)+\w+").unwrap();
-		schema.add_rule("number", r"\d+").unwrap();
-
-		let mut parser: Parser = Parser::new(schema);
-		let input: &str = "hunter2@example.com is my 12th password for example.com";
-
-		{
-			let mut pos: usize = 0;
-			let event: LogEvent<'_> = parser.next_event(input, &mut pos).unwrap();
-			assert_eq!(pos, input.len());
-
-			assert_eq!(
-				event.log_type.as_str(),
-				"%username%@example.com is my %number%th password for %domain%"
-			);
-			assert_eq!(event.captures.len(), 3);
-		}
-
-		{
-			let query: SearchString = SearchString::parse("hunter2* is my name for example.com now").unwrap();
-
-			println!("query is {query:?}");
-
-			let interpretations: Vec<Interpretation> = query.interpretations(&parser.lexer);
-
-			for int in interpretations.iter() {
-				println!("- {}", int.stringify());
-			}
-
-			// assert!(false);
-		}
-	}
 }
-*/

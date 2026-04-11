@@ -1,6 +1,7 @@
 use std::ffi::c_char;
 use std::num::NonZero;
 
+use crate::ffi::SpookyCArray;
 use crate::log_type::LogType;
 use crate::schema::RuleIdx;
 
@@ -54,21 +55,14 @@ pub struct CaptureRange {
 #[repr(C)]
 pub struct CaptureFfiPointers {
 	pub parent: *const Capture,
-	pub lexeme: CapturePointerLength<c_char>,
-	pub variable_name: CapturePointerLength<c_char>,
-	pub capture_name: CapturePointerLength<c_char>,
-}
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-#[repr(C)]
-pub struct CapturePointerLength<T> {
-	pointer: *const T,
-	length: usize,
+	pub lexeme: SpookyCArray<c_char>,
+	pub variable_name: SpookyCArray<c_char>,
+	pub capture_name: SpookyCArray<c_char>,
 }
 
 /// Rust is annoying about Send/Sync for pointers, even when it technically **is** safe.
-unsafe impl Send for Capture {}
-unsafe impl Sync for Capture {}
+unsafe impl Send for CaptureFfiPointers {}
+unsafe impl Sync for CaptureFfiPointers {}
 
 impl<'parser> LogEvent<'parser> {
 	/// Blank `LogEvent`; default value required for C FFI.
@@ -95,24 +89,8 @@ impl<'parser> LogEvent<'parser> {
 impl CaptureFfiPointers {
 	pub const NULL: Self = Self {
 		parent: std::ptr::null(),
-		lexeme: CapturePointerLength::NULL,
-		variable_name: CapturePointerLength::NULL,
-		capture_name: CapturePointerLength::NULL,
+		lexeme: SpookyCArray::NULL,
+		variable_name: SpookyCArray::NULL,
+		capture_name: SpookyCArray::NULL,
 	};
-}
-
-impl<T> CapturePointerLength<T> {
-	pub const NULL: Self = Self {
-		pointer: std::ptr::null(),
-		length: 0,
-	};
-}
-
-impl CapturePointerLength<c_char> {
-	pub fn from_str(s: &str) -> Self {
-		Self {
-			pointer: s.as_ptr().cast::<c_char>(),
-			length: s.len(),
-		}
-	}
 }

@@ -1,6 +1,7 @@
 extern crate tracing;
 
 pub mod dfa;
+pub mod ffi;
 pub mod interval_tree;
 pub mod lexer;
 pub mod log_event;

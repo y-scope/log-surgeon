@@ -37,7 +37,7 @@ pub struct Tdfa {
 	anchor_ch: char,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct TdfaExecution {
 	pub captures: Vec<MatchedCapture>,
 	registers: Vec<Option<NonZero<usize>>>,
@@ -50,7 +50,7 @@ pub struct MatchedRule<'input> {
 	pub lexeme: &'input str,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub struct MatchedCapture {
 	pub rule: RuleIdx,
 	pub capture_id: NonZero<u32>,
@@ -157,12 +157,12 @@ enum SymbolicPosition {
 	Nil,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 struct PrefixTree {
 	nodes: Vec<PrefixTreeNode>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 struct PrefixTreeNode {
 	maybe_predecessor: Option<NonZero<usize>>,
 	lexeme_position: usize,
@@ -372,117 +372,180 @@ impl Tdfa {
 }
 
 impl Tdfa {
-	pub fn simulate(&self, input: &[SymbolicChar]) -> BTreeSet<RuleIdx> {
-		let mut current_states: BTreeSet<usize> = BTreeSet::from([0]);
-
-		for &ch in input.iter() {
-			let mut new_states: BTreeSet<usize> = BTreeSet::new();
-			match ch {
-				SymbolicChar::Literal(ch) => {
-					for &state in current_states.iter() {
-						if let Some(transition) = self.lookup_transition(state, u32::from(ch)) {
-							new_states.insert(transition.target);
-						}
-					}
-				},
-				SymbolicChar::WildcardOne => {
-					for &state in current_states.iter() {
-						for (_interval, transition) in self.states[state].transitions.iter() {
-							new_states.insert(transition.target);
-						}
-					}
-				},
-				SymbolicChar::WildcardStar => {
-					let mut changed: bool = true;
-					while changed {
-						changed = false;
-						for &state in current_states.iter() {
-							for (_interval, transition) in self.states[state].transitions.iter() {
-								// Care: Don't short circuit.
-								changed |= new_states.insert(transition.target);
-							}
-						}
-					}
-				},
-			}
-			current_states = new_states;
+	pub fn simulate(&self, input: &[SymbolicChar]) -> Vec<(RuleIdx, Vec<MatchedCapture>)> {
+		#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+		struct Path {
+			position: usize,
+			state: usize,
+			registers: Vec<Option<NonZero<usize>>>,
+			prefix_tree: PrefixTree,
 		}
-
-		current_states
-			.iter()
-			.filter_map(|&state| self.states[state].accepting_rule.map(|(rule, _backtrack)| rule))
-			.collect::<BTreeSet<_>>()
-	}
-
-	/*
-	pub fn simulate2(&self, input: &[SymbolicChar]) -> BTreeSet<(usize, usize)> {
-		let mut final_states: BTreeSet<(usize, usize)> = BTreeSet::new();
 
 		let Some(anchor_transition): Option<&Transition> = self.lookup_transition(0, u32::from(self.anchor_ch)) else {
 			panic!("invalid first transition");
 		};
-		let mut current_states: BTreeSet<(usize, Option<(usize, usize)>)> =
-			BTreeSet::from([(anchor_transition.target, None)]);
 
-		for (i, &ch) in input.iter().enumerate() {
-			if current_states.is_empty() {
-				return final_states;
-			}
-			let mut new_states: BTreeSet<(usize, Option<(usize, usize)>)> = BTreeSet::new();
+		let initial_path: Path = Path {
+			position: 0,
+			state: anchor_transition.target,
+			registers: vec![None; self.number_of_registers],
+			prefix_tree: PrefixTree::new(),
+		};
+
+		let mut current_paths: Vec<Path> = vec![initial_path];
+		let mut seen: BTreeSet<Path> = BTreeSet::from_iter(current_paths.iter().cloned());
+		let mut final_states: Vec<(RuleIdx, Vec<MatchedCapture>)> = Vec::new();
+
+		while let Some(mut path) = current_paths.pop() {
+			let registers: &mut Vec<Option<NonZero<usize>>> = &mut path.registers;
+			let prefix_tree: &mut PrefixTree = &mut path.prefix_tree;
+			let Some(ch): Option<SymbolicChar> = input.get(path.position).copied() else {
+				if let Some((rule, needs_backtrack)) = self.states[path.state].accepting_rule {
+					if needs_backtrack {
+						todo!();
+					}
+					self.apply_operations(
+						registers,
+						prefix_tree,
+						path.position,
+						&self.states[path.state].final_operations,
+						&self.states[path.state].tag_for_register,
+					);
+					let mut captures: Vec<MatchedCapture> = Vec::new();
+					for (start, stop) in self.tag_pairs.iter().enumerate().rev() {
+						let capture: &AutomataCapture = self.tags[start].capture();
+
+						let mut maybe_start: Option<NonZero<usize>> = registers[self.tags.len() + start];
+						let mut maybe_stop: Option<NonZero<usize>> = registers[self.tags.len() + stop];
+
+						while let Some(start_node) = maybe_start {
+							let stop_node: NonZero<usize> = maybe_stop.unwrap();
+
+							let begin: usize = prefix_tree[start_node].lexeme_position;
+							let end: usize = prefix_tree[stop_node].lexeme_position;
+							captures.push(MatchedCapture {
+								rule,
+								capture_id: capture.capture_info.id,
+								parent_id: capture.capture_info.parent_id,
+								parent_index: usize::MAX,
+								is_leaf: capture.capture_info.is_leaf(),
+								begin,
+								end,
+							});
+							maybe_start = prefix_tree[start_node].maybe_predecessor;
+							maybe_stop = prefix_tree[stop_node].maybe_predecessor;
+						}
+					}
+					captures.sort_by(|lhs, rhs| {
+						lhs.begin
+							.cmp(&rhs.begin)
+							.then(lhs.end.cmp(&rhs.end).reverse())
+							.then(lhs.capture_id.cmp(&rhs.capture_id))
+					});
+					for i in 0..captures.len() {
+						if let Some(parent_id) = captures[i].parent_id {
+							// Linear search since it should usually be small.
+							for j in 0..i {
+								if captures[j].capture_id == parent_id
+									&& (captures[j].begin <= captures[i].begin)
+									&& (captures[i].end <= captures[j].end)
+								{
+									captures[i].parent_index = j;
+								}
+							}
+							// TODO Happens in search.
+							// assert_ne!(captures[i].parent_index, usize::MAX);
+						}
+					}
+					final_states.push((rule, captures));
+				}
+				continue;
+			};
 			match ch {
 				SymbolicChar::Literal(ch) => {
-					for &(state, maybe_backup) in current_states.iter() {
-						if let Some(transition) = self.lookup_transition(state, u32::from(ch)) {
-							new_states.insert((
-								transition.target,
-								self.states[transition.target]
-									.accepting_rule
-									.map(|(rule, _backtrack)| (i, rule)),
-							));
-						} else if let Some(backup) = maybe_backup {
-							final_states.insert(backup);
+					if let Some(transition) = self.lookup_transition(path.state, u32::from(ch)) {
+						self.apply_operations(
+							registers,
+							prefix_tree,
+							path.position,
+							&transition.operations,
+							&self.states[path.state].tag_for_register,
+						);
+						let new_path: Path = Path {
+							position: path.position + 1,
+							state: transition.target,
+							registers: path.registers,
+							prefix_tree: path.prefix_tree,
+						};
+						if !seen.contains(&new_path) {
+							current_paths.push(new_path.clone());
+							seen.insert(new_path);
 						}
 					}
 				},
 				SymbolicChar::WildcardOne => {
-					new_states = current_states.clone();
-					for &(state, _maybe_backup) in current_states.iter() {
-						for (_interval, transition) in self.states[state].transitions.iter() {
-							new_states.insert((
-								transition.target,
-								self.states[transition.target]
-									.accepting_rule
-									.map(|(rule, _backtrack)| (i, rule)),
-							));
+					for (_interval, transition) in self.states[path.state].transitions.iter() {
+						self.apply_operations(
+							registers,
+							prefix_tree,
+							path.position,
+							&transition.operations,
+							&self.states[path.state].tag_for_register,
+						);
+						let new_path: Path = Path {
+							position: path.position + 1,
+							state: transition.target,
+							registers: registers.clone(),
+							prefix_tree: prefix_tree.clone(),
+						};
+						if !seen.contains(&new_path) {
+							current_paths.push(new_path.clone());
+							seen.insert(new_path);
 						}
 					}
 				},
 				SymbolicChar::WildcardStar => {
-					new_states = current_states.clone();
-					let mut changed: bool = true;
-					while changed {
-						changed = false;
-						for &(state, _maybe_backup) in new_states.clone().iter() {
-							for (_interval, transition) in self.states[state].transitions.iter() {
-								if new_states.insert((
-									transition.target,
-									self.states[transition.target]
-										.accepting_rule
-										.map(|(rule, _backtrack)| (i, rule)),
-								)) {
-									changed = true;
-								}
+					for (_interval, transition) in self.states[path.state].transitions.iter() {
+						self.apply_operations(
+							registers,
+							prefix_tree,
+							path.position,
+							&transition.operations,
+							&self.states[path.state].tag_for_register,
+						);
+						{
+							// Wildcard, didn't advance.
+							let new_path: Path = Path {
+								position: path.position,
+								state: transition.target,
+								registers: registers.clone(),
+								prefix_tree: prefix_tree.clone(),
+							};
+							if !seen.contains(&new_path) {
+								current_paths.push(new_path.clone());
+								seen.insert(new_path);
+							}
+						}
+						{
+							// Wildcard, advanced.
+							let new_path: Path = Path {
+								position: path.position + 1,
+								state: transition.target,
+								registers: registers.clone(),
+								prefix_tree: prefix_tree.clone(),
+							};
+							if !seen.contains(&new_path) {
+								current_paths.push(new_path.clone());
+								seen.insert(new_path);
 							}
 						}
 					}
 				},
 			}
-			current_states = new_states;
 		}
 
 		final_states
 	}
-	*/
 }
 
 impl Tdfa {

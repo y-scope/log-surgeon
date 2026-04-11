@@ -1,9 +1,9 @@
 use crate::dfa::TdfaExecution;
+use crate::ffi::SpookyCArray;
 use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::log_event::Capture;
 use crate::log_event::CaptureFfiPointers;
-use crate::log_event::CapturePointerLength;
 use crate::log_event::CaptureRange;
 use crate::log_event::LogEvent;
 use crate::log_type::LogType;
@@ -176,10 +176,9 @@ impl Parser {
 			// but is/would need to be marked `unsafe`.
 			capture.ffi_pointers.parent = captures_base.wrapping_add(capture.parent_index);
 			capture.ffi_pointers.lexeme =
-				CapturePointerLength::from_str(&self.current_log.message[capture.range.start..capture.range.end]);
-			capture.ffi_pointers.variable_name =
-				CapturePointerLength::from_str(&self.lexer.schema[capture.rule_idx].name);
-			capture.ffi_pointers.capture_name = CapturePointerLength::from_str(
+				SpookyCArray::from_str(&self.current_log.message[capture.range.start..capture.range.end]);
+			capture.ffi_pointers.variable_name = SpookyCArray::from_str(&self.lexer.schema[capture.rule_idx].name);
+			capture.ffi_pointers.capture_name = SpookyCArray::from_str(
 				&self.lexer.schema[capture.rule_idx]
 					.capture_info(capture.capture_id)
 					.name,

@@ -59,7 +59,7 @@ struct CaptureRange {
 };
 
 template<typename T>
-struct CapturePointerLength {
+struct SpookyCArray {
     const T *pointer;
     size_t length;
     // Custom
@@ -72,9 +72,9 @@ struct CapturePointerLength {
 
 struct CaptureFfiPointers {
     const Capture *parent;
-    CapturePointerLength<char> lexeme;
-    CapturePointerLength<char> variable_name;
-    CapturePointerLength<char> capture_name;
+    SpookyCArray<char> lexeme;
+    SpookyCArray<char> variable_name;
+    SpookyCArray<char> capture_name;
 };
 
 struct Capture {
@@ -133,9 +133,9 @@ Box<SchemaBuilder> log_surgeon_schema_builder_new();
 
 void log_surgeon_schema_builder_set_delimiters(SchemaBuilder *builder, CCharArray delimiters);
 
-Option<Box<SearchResult>> log_surgeon_search_by_named_type(const Schema *schema,
-                                                           CCharArray name,
-                                                           CCharArray value);
+Box<SearchResult> log_surgeon_search_by_named_type(const Schema *schema,
+                                                   CCharArray name,
+                                                   CCharArray value);
 
 void log_surgeon_search_interpretations_drop(Box<Box<Vec<Interpretation>>> value);
 

@@ -1,15 +1,14 @@
 use std::convert::Infallible;
 use std::ffi::c_char;
 use std::marker::PhantomData;
-use std::num::NonZero;
 use std::str::Utf8Error;
 
 use crate::dfa::MatchedCapture;
 use crate::dfa::Tdfa;
 use crate::dfa::TdfaExecution;
+use crate::ffi::SpookyCArray;
 use crate::log_event::Capture;
 use crate::log_event::CaptureFfiPointers;
-use crate::log_event::CapturePointerLength;
 use crate::log_event::CaptureRange;
 use crate::log_event::LogEvent;
 use crate::parser::Parser;
@@ -20,6 +19,7 @@ use crate::regex::RegexError;
 use crate::schema::Rule;
 use crate::schema::Schema;
 use crate::schema::SchemaBuilder;
+use crate::schema::VariableOrCaptures;
 
 /// Represents a C `T const*` pointer + `size_t` length as a single ABI-stable value.
 #[repr(C)]
@@ -33,11 +33,7 @@ pub struct CArray<'lifetime, T> {
 pub type CCharArray<'lifetime> = CArray<'lifetime, c_char>;
 
 #[derive(Debug)]
-pub struct SearchResult<'a> {
-	#[allow(unused)]
-	rule: NonZero<u16>,
-	#[allow(unused)]
-	variable_name: CCharArray<'a>,
+pub struct SearchResult {
 	leaf_captures: Vec<Capture>,
 }
 
@@ -195,128 +191,101 @@ mod query {
 		schema: &'a Schema,
 		name: CCharArray<'_>,
 		value: CCharArray<'a>,
-	) -> Option<Box<SearchResult<'a>>> {
-		let parts: Vec<&str> = name.as_utf8().unwrap().split('.').collect::<Vec<_>>();
+	) -> Box<SearchResult> {
+		let name: &str = name.as_utf8().unwrap();
 		let value: &str = value.as_utf8().unwrap();
-		let variable_name: &str = parts.first().copied()?;
-		let capture_names: &[&str] = &parts[1..];
-		for rule in schema.rules.iter() {
-			if rule.name != variable_name {
-				continue;
+
+		let mut leaf_captures: Vec<Capture> = Vec::new();
+		let on_capture: fn(&mut Vec<Capture>, &Rule, &MatchedCapture, &str) = |leaf_captures, rule, capture, value| {
+			if capture.is_leaf {
+				leaf_captures.push(Capture {
+					rule_idx: rule.idx,
+					capture_id: Some(capture.capture_id),
+					parent_index: usize::MAX,
+					parent_id: capture.parent_id,
+					range: CaptureRange {
+						start: capture.begin,
+						end: capture.end,
+					},
+					is_leaf: true,
+					ffi_pointers: CaptureFfiPointers {
+						parent: std::ptr::null(),
+						lexeme: SpookyCArray::from_str(&value[capture.begin..capture.end]),
+						variable_name: SpookyCArray::from_str(&rule.name),
+						capture_name: SpookyCArray::from_str(
+							&rule.capture_info[capture.capture_id.get() as usize].name,
+						),
+					},
+				});
 			}
-			let mut leaf_captures: Vec<Capture> = Vec::new();
-			let mut on_capture = |capture: &MatchedCapture| {
-				if capture.is_leaf {
-					leaf_captures.push(Capture {
-						rule_idx: rule.idx,
-						capture_id: Some(capture.capture_id),
-						parent_index: usize::MAX,
-						parent_id: capture.parent_id,
-						range: CaptureRange {
-							start: capture.begin,
-							end: capture.end,
-						},
-						is_leaf: true,
-						ffi_pointers: CaptureFfiPointers {
-							parent: std::ptr::null(),
-							lexeme: CapturePointerLength::from_str(&value[capture.begin..capture.end]),
-							variable_name: CapturePointerLength::from_str(&rule.name),
-							capture_name: CapturePointerLength::from_str(
-								&rule.capture_info[capture.capture_id.get() as usize].name,
-							),
-						},
-					});
+		};
+
+		let Some(rows): Option<VariableOrCaptures<Regex>> = schema.regexes_for_name(name) else {
+			return Box::new(SearchResult { leaf_captures });
+		};
+
+		match rows {
+			VariableOrCaptures::Variable(rows) => {
+				for (rule_idx, _regex) in rows.into_iter() {
+					let rule: &Rule = &schema[rule_idx];
+					let dfa: Tdfa = Tdfa::for_rules(std::iter::once(rule), schema.delimiters.clone());
+					let mut data: TdfaExecution = dfa.execution_data();
+					if dfa
+						.execute_with_captures(value, u32::from(schema.anchor_ch), &mut data)
+						.is_some()
+					{
+						data.captures
+							.iter()
+							.for_each(|capture| on_capture(&mut leaf_captures, rule, capture, value));
+						if leaf_captures.is_empty() {
+							leaf_captures.push(Capture {
+								rule_idx: rule.idx,
+								capture_id: None,
+								parent_index: usize::MAX,
+								parent_id: None,
+								range: CaptureRange {
+									start: 0,
+									end: value.len(),
+								},
+								is_leaf: true,
+								ffi_pointers: CaptureFfiPointers {
+									parent: std::ptr::null(),
+									lexeme: SpookyCArray::from_str(value),
+									variable_name: SpookyCArray::from_str(&rule.name),
+									capture_name: SpookyCArray::from_str(""),
+								},
+							});
+						}
+					}
 				}
-			};
-			if let Some(first) = capture_names.first().copied() {
-				find_capture(&rule.regex, first, &capture_names[1..], &mut |regex| {
-					let regex: Regex = Regex::Sequence(vec![Regex::AnyChar, regex.clone()]);
+			},
+			VariableOrCaptures::Captures(rows) => {
+				for (rule_idx, _info, regex) in rows.into_iter() {
+					let rule: &Rule = &schema[rule_idx];
+					let regex: Regex = Regex::Sequence(vec![Regex::AnyChar, regex]);
 					let dfa: Tdfa = Tdfa::for_rules(
 						std::iter::once(&Rule::new(rule.idx, rule.name.clone(), regex)),
 						schema.delimiters.clone(),
 					);
 					let mut data: TdfaExecution = dfa.execution_data();
 					dfa.execute_with_captures(value, u32::from(schema.anchor_ch), &mut data);
-					data.captures.iter().for_each(&mut on_capture);
-				});
-				if !leaf_captures.is_empty() {
-					return Some(Box::new(SearchResult {
-						rule: rule.idx.index,
-						variable_name: CCharArray::from_utf8(&rule.name),
-						leaf_captures,
-					}));
+					data.captures
+						.iter()
+						.for_each(|capture| on_capture(&mut leaf_captures, rule, capture, value));
 				}
-			} else {
-				let dfa: Tdfa = Tdfa::for_rules(std::iter::once(rule), schema.delimiters.clone());
-				let mut data: TdfaExecution = dfa.execution_data();
-				if dfa
-					.execute_with_captures(value, u32::from(schema.anchor_ch), &mut data)
-					.is_some()
-				{
-					data.captures.iter().for_each(&mut on_capture);
-					if leaf_captures.is_empty() {
-						leaf_captures.push(Capture {
-							rule_idx: rule.idx,
-							capture_id: None,
-							parent_index: usize::MAX,
-							parent_id: None,
-							range: CaptureRange {
-								start: 0,
-								end: value.len(),
-							},
-							is_leaf: true,
-							ffi_pointers: CaptureFfiPointers {
-								parent: std::ptr::null(),
-								lexeme: CapturePointerLength::from_str(value),
-								variable_name: CapturePointerLength::from_str(&rule.name),
-								capture_name: CapturePointerLength::from_str(""),
-							},
-						});
-					}
-					return Some(Box::new(SearchResult {
-						rule: rule.idx.index,
-						variable_name: CCharArray::from_utf8(&rule.name),
-						leaf_captures,
-					}));
-				} else {
-					continue;
-				}
-			}
+			},
 		}
-		None
+
+		Box::new(SearchResult { leaf_captures })
 	}
 
 	#[unsafe(no_mangle)]
 	extern "C" fn log_surgeon_search_result_get_leaf_captures<'a>(
-		search_result: &'a SearchResult<'_>,
+		search_result: &'a SearchResult,
 		len: &mut usize,
 	) -> *const Capture {
 		*len = search_result.leaf_captures.len();
 		search_result.leaf_captures.as_ptr()
-	}
-
-	fn find_capture<F>(regex: &Regex, first: &str, rest: &[&str], func: &mut F)
-	where
-		F: FnMut(&Regex),
-	{
-		match regex {
-			Regex::Anchor(_) | Regex::AnyChar | Regex::Literal(..) | Regex::Group { .. } => (),
-			Regex::Capture { info, item } => {
-				if info.name == first {
-					func(item);
-				} else if let Some(first) = rest.first().copied() {
-					find_capture(item, first, &rest[1..], func);
-				}
-			},
-			Regex::KleeneClosure(item) | Regex::BoundedRepetition { item, .. } => {
-				find_capture(item, first, rest, func);
-			},
-			Regex::Sequence(items) | Regex::Alternation(items) => {
-				for item in items.iter() {
-					find_capture(item, first, rest, func);
-				}
-			},
-		}
 	}
 }
 
@@ -360,7 +329,7 @@ mod destructor_impls {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_search_result_drop(value: Box<SearchResult<'_>>) {
+	extern "C" fn log_surgeon_search_result_drop(value: Box<SearchResult>) {
 		std::mem::drop(value);
 	}
 }

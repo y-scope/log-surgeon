@@ -47,6 +47,12 @@ pub struct RuleIdx {
 	pub index: NonZero<u16>,
 }
 
+#[derive(Debug)]
+pub enum VariableOrCaptures<T> {
+	Variable(Vec<(RuleIdx, T)>),
+	Captures(Vec<(RuleIdx, RegexCapture, T)>),
+}
+
 impl SchemaBuilder {
 	pub fn new() -> Self {
 		Self {
@@ -159,6 +165,59 @@ impl Schema {
 		let rule: &Rule = &self[capture.rule_idx];
 		let capture_id: usize = capture.capture_id.map_or(0, NonZero::get) as usize;
 		(&rule.name, &rule.capture_info[capture_id].name)
+	}
+
+	pub fn regexes_for_name(&self, name: &str) -> Option<VariableOrCaptures<Regex>> {
+		let parts: Vec<&str> = name.split('.').collect::<Vec<_>>();
+		let rule_name: &str = parts.first().copied()?;
+		let capture_names: &[&str] = &parts[1..];
+
+		if let Some(first) = capture_names.first().copied() {
+			let mut possibilities: Vec<(RuleIdx, RegexCapture, Regex)> = Vec::new();
+			for rule in self.rules.iter() {
+				if rule.name != rule_name {
+					continue;
+				}
+				Self::find_capture(&rule.regex, first, &capture_names[1..], &mut |info, regex| {
+					possibilities.push((rule.idx, info.clone(), regex.clone()));
+				});
+			}
+			Some(VariableOrCaptures::Captures(possibilities))
+		} else {
+			Some(VariableOrCaptures::Variable(
+				self.rules
+					.iter()
+					.filter(|rule| rule.name == rule_name)
+					.map(|rule| (rule.idx, rule.regex.clone()))
+					.collect::<Vec<_>>(),
+			))
+		}
+	}
+
+	fn find_capture<F>(regex: &Regex, first: &str, rest: &[&str], func: &mut F)
+	where
+		F: FnMut(&RegexCapture, &Regex),
+	{
+		match regex {
+			Regex::Anchor(_) | Regex::AnyChar | Regex::Literal(..) | Regex::Group { .. } => (),
+			Regex::Capture { info, item } => {
+				if info.name == first {
+					if let Some(first) = rest.first().copied() {
+						Self::find_capture(item, first, &rest[1..], func);
+					} else {
+						func(info, item);
+					}
+				}
+			},
+			Regex::KleeneClosure(item) | Regex::BoundedRepetition { item, .. } => {
+				Self::find_capture(item, first, rest, func);
+			},
+			Regex::Sequence(items) | Regex::Alternation(items) => {
+				for item in items.iter() {
+					Self::find_capture(item, first, rest, func);
+				}
+			},
+		}
 	}
 }
 
