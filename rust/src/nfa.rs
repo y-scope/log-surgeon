@@ -18,7 +18,6 @@ pub struct Tnfa {
 	states: Vec<NfaState>,
 	tags: Vec<Tag>,
 	delimiters: String,
-	// rules: Vec<(RuleIdx, bool)>,
 }
 
 #[derive(Debug)]

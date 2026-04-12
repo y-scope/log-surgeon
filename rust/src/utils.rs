@@ -4,6 +4,15 @@ pub enum Escaped {
 	NeedsEscape(char),
 }
 
+// TODO: replace with `std::range::Range` when stable.
+/// Rust's `std::ops::Range` is not `Copy` for... reasons.
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+#[repr(C)]
+pub struct Range<Idx> {
+	pub start: Idx,
+	pub end: Idx,
+}
+
 impl Escaped {
 	pub fn escape_char(ch: char) -> Self {
 		let ch: char = match ch {

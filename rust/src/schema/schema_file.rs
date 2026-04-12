@@ -140,10 +140,7 @@ fn parse_delimiters(mut input: &str) -> Result<String, NomErr<NomError<&str>>> {
 	let mut delimiters: String = String::new();
 
 	loop {
-		let Some((rest, chars)): Option<(&str, &str)> = take_non_escaped(input).ok() else {
-			break;
-		};
-
+		let (rest, chars): (&str, &str) = take_non_escaped(input)?;
 		delimiters.push_str(chars);
 
 		let Some((rest, _)): Option<(&str, ())> = take_backslash(rest).ok() else {
@@ -160,7 +157,7 @@ fn parse_delimiters(mut input: &str) -> Result<String, NomErr<NomError<&str>>> {
 }
 
 fn take_non_escaped(input: &str) -> IResult<&str, &str> {
-	use nom::bytes::take_while;
+	use nom::bytes::complete::take_while;
 
 	take_while(|ch| ch != '\\').parse(input)
 }

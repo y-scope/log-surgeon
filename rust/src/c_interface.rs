@@ -6,10 +6,9 @@ use std::str::Utf8Error;
 use crate::dfa::MatchedCapture;
 use crate::dfa::Tdfa;
 use crate::dfa::TdfaExecution;
-use crate::ffi::SpookyCArray;
+use crate::ffi::UncheckedCArray;
 use crate::log_event::Capture;
 use crate::log_event::CaptureFfiPointers;
-use crate::log_event::CaptureRange;
 use crate::log_event::LogEvent;
 use crate::parser::Parser;
 use crate::query::Interpretation;
@@ -20,6 +19,7 @@ use crate::schema::Rule;
 use crate::schema::Schema;
 use crate::schema::SchemaBuilder;
 use crate::schema::VariableOrCaptures;
+use crate::utils::Range;
 
 /// Represents a C `T const*` pointer + `size_t` length as a single ABI-stable value.
 #[repr(C)]
@@ -221,16 +221,13 @@ mod query {
 					capture_id: Some(capture.capture_id),
 					parent_index: usize::MAX,
 					parent_id: capture.parent_id,
-					range: CaptureRange {
-						start: capture.begin,
-						end: capture.end,
-					},
+					range: capture.range,
 					is_leaf: true,
 					ffi_pointers: CaptureFfiPointers {
 						parent: std::ptr::null(),
-						lexeme: SpookyCArray::from_str(&value[capture.begin..capture.end]),
-						variable_name: SpookyCArray::from_str(&rule.name),
-						capture_name: SpookyCArray::from_str(
+						lexeme: UncheckedCArray::from_str(&value[capture.range.start..capture.range.end]),
+						variable_name: UncheckedCArray::from_str(&rule.name),
+						capture_name: UncheckedCArray::from_str(
 							&rule.capture_info[capture.capture_id.get() as usize].name,
 						),
 					},
@@ -261,16 +258,16 @@ mod query {
 								capture_id: None,
 								parent_index: usize::MAX,
 								parent_id: None,
-								range: CaptureRange {
+								range: Range {
 									start: 0,
 									end: value.len(),
 								},
 								is_leaf: true,
 								ffi_pointers: CaptureFfiPointers {
 									parent: std::ptr::null(),
-									lexeme: SpookyCArray::from_str(value),
-									variable_name: SpookyCArray::from_str(&rule.name),
-									capture_name: SpookyCArray::from_str(""),
+									lexeme: UncheckedCArray::from_str(value),
+									variable_name: UncheckedCArray::from_str(&rule.name),
+									capture_name: UncheckedCArray::from_str(""),
 								},
 							});
 						}

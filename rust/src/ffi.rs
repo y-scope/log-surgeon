@@ -15,14 +15,14 @@ unsafe impl Sync for CUtf8<'_> {}
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(C)]
-pub struct SpookyCArray<T> {
+pub struct UncheckedCArray<T> {
 	pub pointer: *const T,
 	pub length: usize,
 }
 
 /// Rust is annoying about Send/Sync for pointers, even when it technically **is** safe.
-unsafe impl<T> Send for SpookyCArray<T> {}
-unsafe impl<T> Sync for SpookyCArray<T> {}
+unsafe impl<T> Send for UncheckedCArray<T> {}
+unsafe impl<T> Sync for UncheckedCArray<T> {}
 
 impl<'lifetime> CUtf8<'lifetime> {
 	pub const NULL: Self = Self {
@@ -53,14 +53,14 @@ impl std::ops::Deref for CUtf8<'_> {
 	}
 }
 
-impl<T> SpookyCArray<T> {
+impl<T> UncheckedCArray<T> {
 	pub const NULL: Self = Self {
 		pointer: std::ptr::null(),
 		length: 0,
 	};
 }
 
-impl SpookyCArray<c_char> {
+impl UncheckedCArray<c_char> {
 	pub fn from_str(s: &str) -> Self {
 		Self {
 			pointer: s.as_bytes().as_ptr().cast::<c_char>(),

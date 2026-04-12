@@ -247,14 +247,26 @@ impl Regex {
 				}
 			},
 			Self::Group { negated, items } => {
+				fn escape(ch: char, buffer: &mut String) {
+					match Escaped::escape_char(ch) {
+						Escaped::NoEscape(ch) => {
+							if SPECIAL_CHARACTERS_IN_BRACKETED_EXPRESSIONS.contains(ch) {
+								buffer.push('\\');
+							}
+							buffer.push(ch);
+						},
+						Escaped::NeedsEscape(ch) => {
+							buffer.push('\\');
+							buffer.push(ch);
+						},
+					}
+				}
 				let mut buffer: String = String::new();
-				for (lo, hi) in items.iter() {
-					let lo: Escaped = Escaped::escape_char(*lo);
-					let hi: Escaped = Escaped::escape_char(*hi);
-					lo.append_to(&mut buffer);
+				for &(lo, hi) in items.iter() {
+					escape(lo, &mut buffer);
 					if lo != hi {
 						buffer.push('-');
-						hi.append_to(&mut buffer);
+						escape(hi, &mut buffer);
 					}
 				}
 				format!("[{}{buffer}]", if *negated { "^" } else { "" })
@@ -263,9 +275,7 @@ impl Regex {
 				format!("(?<{}>{})", info.name, item.to_pattern())
 			},
 			Self::KleeneClosure(item) => {
-				let mut item: String = item.to_pattern();
-				item.push('*');
-				item
+				format!("({})*", item.to_pattern())
 			},
 			Self::BoundedRepetition { min, max, item } => {
 				let item: String = item.to_pattern();

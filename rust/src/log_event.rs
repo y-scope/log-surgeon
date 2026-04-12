@@ -1,7 +1,8 @@
+use crate::utils::Range;
 use std::ffi::c_char;
 use std::num::NonZero;
 
-use crate::ffi::SpookyCArray;
+use crate::ffi::UncheckedCArray;
 use crate::log_type::LogType;
 use crate::schema::RuleIdx;
 
@@ -29,11 +30,12 @@ pub struct Capture {
 	pub capture_id: Option<NonZero<u32>>,
 	pub parent_id: Option<NonZero<u32>>,
 
-	/// `usize::MAX` if none.
+	/// Index of the parent in the full list of captures (including variables).
+	/// For a variable, the parent index equals its own index.
 	pub parent_index: usize,
 
-	/// Offset of the capture in the log message.
-	pub range: CaptureRange,
+	/// Relative to the start of the log message.
+	pub range: Range<usize>,
 
 	pub is_leaf: bool,
 
@@ -42,22 +44,13 @@ pub struct Capture {
 	pub ffi_pointers: CaptureFfiPointers,
 }
 
-/// Only reason we don't use [`std::ops::Range`] is because it isn't `Copy`
-/// (by questionable design reasons).
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-#[repr(C)]
-pub struct CaptureRange {
-	pub start: usize,
-	pub end: usize,
-}
-
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[repr(C)]
 pub struct CaptureFfiPointers {
 	pub parent: *const Capture,
-	pub lexeme: SpookyCArray<c_char>,
-	pub variable_name: SpookyCArray<c_char>,
-	pub capture_name: SpookyCArray<c_char>,
+	pub lexeme: UncheckedCArray<c_char>,
+	pub variable_name: UncheckedCArray<c_char>,
+	pub capture_name: UncheckedCArray<c_char>,
 }
 
 /// Rust is annoying about Send/Sync for pointers, even when it technically **is** safe.
@@ -89,8 +82,8 @@ impl<'parser> LogEvent<'parser> {
 impl CaptureFfiPointers {
 	pub const NULL: Self = Self {
 		parent: std::ptr::null(),
-		lexeme: SpookyCArray::NULL,
-		variable_name: SpookyCArray::NULL,
-		capture_name: SpookyCArray::NULL,
+		lexeme: UncheckedCArray::NULL,
+		variable_name: UncheckedCArray::NULL,
+		capture_name: UncheckedCArray::NULL,
 	};
 }

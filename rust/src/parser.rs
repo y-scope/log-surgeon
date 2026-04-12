@@ -1,13 +1,13 @@
 use crate::dfa::TdfaExecution;
-use crate::ffi::SpookyCArray;
+use crate::ffi::UncheckedCArray;
 use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::log_event::Capture;
 use crate::log_event::CaptureFfiPointers;
-use crate::log_event::CaptureRange;
 use crate::log_event::LogEvent;
 use crate::log_type::LogType;
 use crate::schema::Schema;
+use crate::utils::Range;
 
 #[derive(Debug, Clone)]
 pub struct Parser {
@@ -78,13 +78,12 @@ impl Parser {
 
 					let variable_is_implicit_capture: bool = !has_captures || self.dfa_execution.captures.is_empty();
 
-					let variable_index: usize = self.current_log.all_captures.len();
 					let variable_capture: Capture = Capture {
 						rule_idx: rule,
 						capture_id: None,
 						parent_id: None,
-						parent_index: usize::MAX,
-						range: CaptureRange {
+						parent_index: token_starting_capture_count,
+						range: Range {
 							start: token_start,
 							end: token_start + lexeme.len(),
 						},
@@ -94,9 +93,9 @@ impl Parser {
 
 					self.current_log.all_captures.push(variable_capture);
 					if variable_is_implicit_capture {
-						self.current_log.leaf_indices.push(variable_index);
+						self.current_log.leaf_indices.push(token_starting_capture_count);
 					}
-					self.current_log.variable_indices.push(variable_index);
+					self.current_log.variable_indices.push(token_starting_capture_count);
 
 					for regex_capture in self.dfa_execution.captures.iter() {
 						let capture_index: usize = self.current_log.all_captures.len();
@@ -104,10 +103,10 @@ impl Parser {
 							rule_idx: regex_capture.rule,
 							capture_id: Some(regex_capture.capture_id),
 							parent_id: regex_capture.parent_id,
-							parent_index: token_starting_capture_count.saturating_add(regex_capture.parent_index),
-							range: CaptureRange {
-								start: token_start + regex_capture.begin,
-								end: token_start + regex_capture.end,
+							parent_index: token_starting_capture_count + regex_capture.parent_index,
+							range: Range {
+								start: token_start + regex_capture.range.start,
+								end: token_start + regex_capture.range.end,
 							},
 							is_leaf: regex_capture.is_leaf,
 							ffi_pointers: CaptureFfiPointers::NULL,
@@ -129,9 +128,7 @@ impl Parser {
 							for mut capture in self.current_log.all_captures.drain(token_starting_capture_count..) {
 								capture.range.start -= token_start;
 								capture.range.end -= token_start;
-								if capture.parent_index != usize::MAX {
-									capture.parent_index -= token_starting_capture_count;
-								}
+								capture.parent_index -= token_starting_capture_count;
 								pending_header.all_captures.push(capture);
 							}
 							for mut index in self.current_log.leaf_indices.drain(token_starting_leaf_indices..) {
@@ -176,9 +173,9 @@ impl Parser {
 			// but is/would need to be marked `unsafe`.
 			capture.ffi_pointers.parent = captures_base.wrapping_add(capture.parent_index);
 			capture.ffi_pointers.lexeme =
-				SpookyCArray::from_str(&self.current_log.message[capture.range.start..capture.range.end]);
-			capture.ffi_pointers.variable_name = SpookyCArray::from_str(&self.lexer.schema[capture.rule_idx].name);
-			capture.ffi_pointers.capture_name = SpookyCArray::from_str(
+				UncheckedCArray::from_str(&self.current_log.message[capture.range.start..capture.range.end]);
+			capture.ffi_pointers.variable_name = UncheckedCArray::from_str(&self.lexer.schema[capture.rule_idx].name);
+			capture.ffi_pointers.capture_name = UncheckedCArray::from_str(
 				&self.lexer.schema[capture.rule_idx]
 					.capture_info(capture.capture_id)
 					.name,
@@ -219,104 +216,3 @@ impl WorkingLogEvent {
 		self.variable_indices.clear();
 	}
 }
-
-/*
-#[cfg(test)]
-mod test {
-	use std::num::NonZero;
-
-	use super::*;
-
-	#[test]
-	fn hmmm() {
-		let mut schema: Schema = Schema::new();
-		schema.add_rule("hello", "abc|d(?<foo>[a-z])f").unwrap();
-
-		let mut parser: Parser = Parser::new(schema);
-		let mut pos: usize = 0;
-
-		let input: &str = "def foobarbaz";
-
-		{
-			let event: LogEvent<'_> = parser.next_event(input, &mut pos).unwrap();
-			assert_eq!(pos, input.len());
-
-			assert_eq!(event.leaf_captures[0].rule_idx, 1);
-			assert_eq!(event.leaf_captures[0].capture_id, Some(NonZero::<u32>::MIN));
-			assert_eq!(event.leaf_captures[0].range, (1, 2));
-		}
-		{
-			assert_eq!(parser.next_event(input, &mut pos), None);
-		}
-	}
-
-	#[test]
-	fn hmmm2() {
-		let mut schema: Schema = Schema::new();
-		schema.add_rule("number", "[0-9]+").unwrap();
-		schema
-			.add_rule(
-				"username",
-				r"@(?<inside>[a-z]+)(?<parts>(?<dot>\.)[a-z]*(?<end>[a-z]))*",
-			)
-			.unwrap();
-
-		let mut parser: Parser = Parser::new(schema);
-		let mut pos: usize = 0;
-
-		let input: &str = "\n123 awesrgesrgesrg 6346346 @someone foo@username @someone.foo.bar.baz\n";
-
-		{
-			let event: LogEvent<'_> = parser.next_event(input, &mut pos).unwrap();
-			assert_eq!(pos, 1);
-
-			assert_eq!(event.log_type.as_str(), "\n");
-			assert_eq!(event.variables.len(), 0);
-		}
-		{
-			let event: LogEvent<'_> = parser.next_event(input, &mut pos).unwrap();
-			assert_eq!(pos, input.len());
-
-			assert_eq!(
-				event.log_type.as_str(),
-				"%number% awesrgesrgesrg %number% %username% foo@username %username%\n"
-			);
-
-			assert_eq!(event.variables[0].name, "number");
-			assert_eq!(event.variables[0].lexeme, "123");
-
-			assert_eq!(event.variables[1].name, "number");
-			assert_eq!(event.variables[1].lexeme, "6346346");
-
-			assert_eq!(event.variables[2].name, "username");
-			assert_eq!(event.variables[2].lexeme, "@someone");
-
-			assert_eq!(event.variables[3].name, "username");
-			assert_eq!(event.variables[3].lexeme, "@someone.foo.bar.baz");
-			assert_eq!(event.variables[3].captures[0].name, "inside");
-			assert_eq!(event.variables[3].captures[0].lexeme, "someone");
-			assert_eq!(event.variables[3].captures[1].name, "parts");
-			assert_eq!(event.variables[3].captures[1].lexeme, ".foo");
-			assert_eq!(event.variables[3].captures[2].name, "parts");
-			assert_eq!(event.variables[3].captures[2].lexeme, ".bar");
-			assert_eq!(event.variables[3].captures[3].name, "parts");
-			assert_eq!(event.variables[3].captures[3].lexeme, ".baz");
-			assert_eq!(event.variables[3].captures[4].name, "dot");
-			assert_eq!(event.variables[3].captures[4].lexeme, ".");
-			assert_eq!(event.variables[3].captures[5].name, "dot");
-			assert_eq!(event.variables[3].captures[5].lexeme, ".");
-			assert_eq!(event.variables[3].captures[6].name, "dot");
-			assert_eq!(event.variables[3].captures[6].lexeme, ".");
-			assert_eq!(event.variables[3].captures[7].name, "end");
-			assert_eq!(event.variables[3].captures[7].lexeme, "o");
-			assert_eq!(event.variables[3].captures[8].name, "end");
-			assert_eq!(event.variables[3].captures[8].lexeme, "r");
-			assert_eq!(event.variables[3].captures[9].name, "end");
-			assert_eq!(event.variables[3].captures[9].lexeme, "z");
-		}
-		{
-			assert_eq!(parser.next_event(input, &mut pos), None);
-		}
-	}
-}
-*/

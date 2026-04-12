@@ -20,6 +20,7 @@ use crate::nfa::Tnfa;
 use crate::query::SymbolicChar;
 use crate::schema::Rule;
 use crate::schema::RuleIdx;
+use crate::utils::Range;
 
 #[derive(Debug, Clone)]
 pub struct Tdfa {
@@ -58,9 +59,7 @@ pub struct MatchedCapture {
 	pub parent_index: usize,
 	pub is_leaf: bool,
 	/// Relative to rule/variable match.
-	pub begin: usize,
-	/// Relative to rule/variable match.
-	pub end: usize,
+	pub range: Range<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -285,7 +284,7 @@ impl Tdfa {
 				while let Some(start_node) = maybe_start {
 					let stop_node: NonZero<usize> = maybe_stop.unwrap();
 
-					let begin: usize = prefix_tree[start_node].lexeme_position;
+					let start: usize = prefix_tree[start_node].lexeme_position;
 					let end: usize = prefix_tree[stop_node].lexeme_position;
 					captures.push(MatchedCapture {
 						rule: backup.rule,
@@ -293,17 +292,17 @@ impl Tdfa {
 						parent_id: capture.capture_info.parent_id,
 						parent_index: usize::MAX,
 						is_leaf: capture.capture_info.is_leaf(),
-						begin,
-						end,
+						range: Range { start, end },
 					});
 					maybe_start = prefix_tree[start_node].maybe_predecessor;
 					maybe_stop = prefix_tree[stop_node].maybe_predecessor;
 				}
 			}
 			captures.sort_by(|lhs, rhs| {
-				lhs.begin
-					.cmp(&rhs.begin)
-					.then(lhs.end.cmp(&rhs.end).reverse())
+				lhs.range
+					.start
+					.cmp(&rhs.range.start)
+					.then(lhs.range.end.cmp(&rhs.range.end).reverse())
 					.then(lhs.capture_id.cmp(&rhs.capture_id))
 			});
 			for i in 0..captures.len() {
@@ -311,14 +310,16 @@ impl Tdfa {
 					// Linear search since it should usually be small.
 					for j in 0..i {
 						if captures[j].capture_id == parent_id
-							&& (captures[j].begin <= captures[i].begin)
-							&& (captures[i].end <= captures[j].end)
+							&& (captures[j].range.start <= captures[i].range.start)
+							&& (captures[i].range.end <= captures[j].range.end)
 						{
 							captures[i].parent_index = j;
 						}
 					}
 					// TODO Happens in search.
 					// assert_ne!(captures[i].parent_index, usize::MAX);
+				} else {
+					captures[i].parent_index = 0;
 				}
 			}
 		}
@@ -421,7 +422,7 @@ impl Tdfa {
 						while let Some(start_node) = maybe_start {
 							let stop_node: NonZero<usize> = maybe_stop.unwrap();
 
-							let begin: usize = prefix_tree[start_node].lexeme_position;
+							let start: usize = prefix_tree[start_node].lexeme_position;
 							let end: usize = prefix_tree[stop_node].lexeme_position;
 							captures.push(MatchedCapture {
 								rule,
@@ -429,17 +430,17 @@ impl Tdfa {
 								parent_id: capture.capture_info.parent_id,
 								parent_index: usize::MAX,
 								is_leaf: capture.capture_info.is_leaf(),
-								begin,
-								end,
+								range: Range { start, end },
 							});
 							maybe_start = prefix_tree[start_node].maybe_predecessor;
 							maybe_stop = prefix_tree[stop_node].maybe_predecessor;
 						}
 					}
 					captures.sort_by(|lhs, rhs| {
-						lhs.begin
-							.cmp(&rhs.begin)
-							.then(lhs.end.cmp(&rhs.end).reverse())
+						lhs.range
+							.start
+							.cmp(&rhs.range.start)
+							.then(lhs.range.end.cmp(&rhs.range.end).reverse())
 							.then(lhs.capture_id.cmp(&rhs.capture_id))
 					});
 					for i in 0..captures.len() {
@@ -447,8 +448,8 @@ impl Tdfa {
 							// Linear search since it should usually be small.
 							for j in 0..i {
 								if captures[j].capture_id == parent_id
-									&& (captures[j].begin <= captures[i].begin)
-									&& (captures[i].end <= captures[j].end)
+									&& (captures[j].range.start <= captures[i].range.start)
+									&& (captures[i].range.end <= captures[j].range.end)
 								{
 									captures[i].parent_index = j;
 								}

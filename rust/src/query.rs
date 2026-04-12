@@ -6,15 +6,15 @@ use std::num::NonZero;
 
 use crate::dfa::Tdfa;
 use crate::dfa::TdfaExecution;
-use crate::ffi::SpookyCArray;
+use crate::ffi::UncheckedCArray;
 use crate::lexer::Lexer;
 use crate::log_event::Capture;
 use crate::log_event::CaptureFfiPointers;
-use crate::log_event::CaptureRange;
 use crate::regex::Regex;
 use crate::schema::Rule;
 use crate::schema::Schema;
 use crate::schema::VariableOrCaptures;
+use crate::utils::Range;
 
 #[derive(Debug)]
 pub struct SearchString(Vec<SymbolicChar>);
@@ -149,16 +149,13 @@ impl SearchString {
 									capture_id: Some(capture.capture_id),
 									parent_index: capture.parent_index,
 									parent_id: capture.parent_id,
-									range: CaptureRange {
-										start: capture.begin,
-										end: capture.end,
-									},
+									range: capture.range,
 									is_leaf: true,
 									ffi_pointers: CaptureFfiPointers {
 										parent: std::ptr::null(),
-										lexeme: SpookyCArray::NULL,
-										variable_name: SpookyCArray::NULL,
-										capture_name: SpookyCArray::NULL,
+										lexeme: UncheckedCArray::NULL,
+										variable_name: UncheckedCArray::NULL,
+										capture_name: UncheckedCArray::NULL,
 									},
 								});
 							}
@@ -187,16 +184,13 @@ impl SearchString {
 									capture_id: Some(capture.capture_id),
 									parent_index: capture.parent_index,
 									parent_id: capture.parent_id,
-									range: CaptureRange {
-										start: capture.begin,
-										end: capture.end,
-									},
+									range: capture.range,
 									is_leaf: true,
 									ffi_pointers: CaptureFfiPointers {
 										parent: std::ptr::null(),
-										lexeme: SpookyCArray::NULL,
-										variable_name: SpookyCArray::NULL,
-										capture_name: SpookyCArray::NULL,
+										lexeme: UncheckedCArray::NULL,
+										variable_name: UncheckedCArray::NULL,
+										capture_name: UncheckedCArray::NULL,
 									},
 								});
 							}

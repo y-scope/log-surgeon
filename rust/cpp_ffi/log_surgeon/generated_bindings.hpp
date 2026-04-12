@@ -51,15 +51,15 @@ struct RuleIdx {
     uint16_t index;
 };
 
-/// Only reason we don't use [`std::ops::Range`] is because it isn't `Copy`
-/// (by questionable design reasons).
-struct CaptureRange {
-    size_t start;
-    size_t end;
+/// Rust's `std::ops::Range` is not `Copy` for... reasons.
+template<typename Idx>
+struct Range {
+    Idx start;
+    Idx end;
 };
 
 template<typename T>
-struct SpookyCArray {
+struct UncheckedCArray {
     const T *pointer;
     size_t length;
     // Custom
@@ -72,9 +72,9 @@ struct SpookyCArray {
 
 struct CaptureFfiPointers {
     const Capture *parent;
-    SpookyCArray<char> lexeme;
-    SpookyCArray<char> variable_name;
-    SpookyCArray<char> capture_name;
+    UncheckedCArray<char> lexeme;
+    UncheckedCArray<char> variable_name;
+    UncheckedCArray<char> capture_name;
 };
 
 struct Capture {
@@ -87,10 +87,11 @@ struct Capture {
     /// e.g. the two instances of `"start"` in the pattern.
     uint32_t capture_id;
     uint32_t parent_id;
-    /// `usize::MAX` if none.
+    /// Index of the parent in the full list of captures (including variables).
+    /// For a variable, the parent index equals its own index.
     size_t parent_index;
-    /// Offset of the capture in the log message.
-    CaptureRange range;
+    /// Relative to the start of the log message.
+    Range<size_t> range;
     bool is_leaf;
     /// DANGEROUS fields for FFI.
     /// But it's not dangerous if you don't look at it.
