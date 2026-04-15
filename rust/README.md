@@ -1,8 +1,8 @@
 # log-surgeon (Rust)
 
-Rust implementation of [log-surgeon](https://github.com/y-scope/log-surgeon), a
-high-performance log parsing library. This crate provides the core parsing
-engine and exposes it through multiple language bindings.
+Rust implementation of [log-surgeon](https://github.com/y-scope/log-surgeon),
+a high-performance log parsing library.
+This crate provides the core parsing engine and exposes it through multiple language bindings.
 
 ## Components
 

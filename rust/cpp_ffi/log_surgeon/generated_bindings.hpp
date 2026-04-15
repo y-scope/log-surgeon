@@ -101,6 +101,8 @@ struct Capture {
 
 extern "C" {
 
+void log_surgeon_enable_tracing();
+
 const Capture *log_surgeon_log_event_all_captures(const LogEvent *log_event, size_t *len);
 
 Box<LogEvent> log_surgeon_log_event_clone(const LogEvent *value);

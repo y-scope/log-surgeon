@@ -82,8 +82,6 @@ class TestRegression(unittest.TestCase):
 
 		p.compile()
 
-		print("======")
-
 		text = dedent("""\
 		2018-06-20 00:00:09,601 DEBUG First event
 		2018-06-20 00:00:09,602 DEBUG Second event

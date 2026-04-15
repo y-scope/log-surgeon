@@ -1,7 +1,7 @@
-/// Based on Angelo Borsotti and Ulya Trafimovich. 2022. A closer look at TDFA.
-/// - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
-/// - <https://arxiv.org/abs/2206.01398>
-///
+//! Based on Angelo Borsotti and Ulya Trafimovich. 2022. A closer look at TDFA.
+//! - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
+//! - <https://arxiv.org/abs/2206.01398>
+//!
 use std::borrow::Cow;
 use std::collections::BTreeSet;
 

@@ -1,7 +1,7 @@
-/// Based on Angelo Borsotti and Ulya Trafimovich. 2022. A closer look at TDFA.
-/// - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
-/// - <https://arxiv.org/abs/2206.01398>
-///
+//! Based on Angelo Borsotti and Ulya Trafimovich. 2022. A closer look at TDFA.
+//! - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
+//! - <https://arxiv.org/abs/2206.01398>
+//!
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::btree_map::Entry;
@@ -573,7 +573,7 @@ impl Tdfa {
 	}
 
 	/// Algorithm 3 in the paper.
-	#[tracing::instrument]
+	#[tracing::instrument(skip_all, level = "trace")]
 	fn determinization(nfa: &Tnfa, delimiters: String) -> Self {
 		assert_eq!(nfa.tags().len() % 2, 0);
 		let mut tag_pairs: Vec<usize> = Vec::with_capacity(nfa.tags().len() / 2);

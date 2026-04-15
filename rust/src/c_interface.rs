@@ -74,6 +74,11 @@ impl<'lifetime> CCharArray<'lifetime> {
 	}
 }
 
+#[unsafe(no_mangle)]
+unsafe extern "C" fn log_surgeon_enable_tracing() {
+	crate::enable_tracing();
+}
+
 mod schema {
 	use super::*;
 

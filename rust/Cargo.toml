@@ -34,6 +34,7 @@ cbindgen = "0.29"
 [dependencies]
 nom = "8"
 tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dependencies.pyo3]
 version = "0.27"

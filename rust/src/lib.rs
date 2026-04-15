@@ -17,6 +17,18 @@ pub mod c_interface;
 #[cfg(feature = "python")]
 pub mod python_interface;
 
+pub fn enable_tracing() {
+	tracing_subscriber::fmt::fmt()
+		// .without_time()
+		.with_timer(())
+		.with_target(false)
+		.with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+		.with_file(true)
+		.with_line_number(true)
+		.with_env_filter(tracing_subscriber::filter::EnvFilter::from_env("LOG_SURGEON_LOG"))
+		.init()
+}
+
 /// A `usize` that comes from a "length" of things is at most `isize::MAX as usize` (aka `usize::MAX / 2`):
 ///
 /// 1. Rust's only real implementation is rustc,

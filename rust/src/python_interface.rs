@@ -330,6 +330,8 @@ fn python_unicode_or_bytes_as_str<'a>(input: &'a Bound<'_, PyAny>) -> PyResult<O
 
 #[pymodule]
 mod log_surgeon_ffi {
+	use super::*;
+
 	#[pymodule_export]
 	use super::PyCapture;
 	#[pymodule_export]
@@ -338,4 +340,9 @@ mod log_surgeon_ffi {
 	use super::PyLogType;
 	#[pymodule_export]
 	use super::PyParser;
+
+	#[pyfunction]
+	fn enable_tracing() {
+		crate::enable_tracing();
+	}
 }
