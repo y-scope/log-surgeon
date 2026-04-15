@@ -210,6 +210,7 @@ mod query {
 	}
 
 	#[unsafe(no_mangle)]
+	#[tracing::instrument(skip_all, level = "trace")]
 	extern "C" fn log_surgeon_search_by_named_type<'a>(
 		schema: &'a Schema,
 		name: CCharArray<'_>,
@@ -251,7 +252,7 @@ mod query {
 					let dfa: Tdfa = Tdfa::for_rules(std::iter::once(rule), schema.delimiters.clone());
 					let mut data: TdfaExecution = dfa.execution_data();
 					if dfa
-						.execute_with_captures(value, u32::from(schema.anchor_ch), &mut data)
+						.execute_with_captures_for_search(value, u32::from(schema.anchor_ch), &mut data)
 						.is_some()
 					{
 						data.captures
@@ -288,7 +289,7 @@ mod query {
 						schema.delimiters.clone(),
 					);
 					let mut data: TdfaExecution = dfa.execution_data();
-					dfa.execute_with_captures(value, u32::from(schema.anchor_ch), &mut data);
+					dfa.execute_with_captures_for_search(value, u32::from(schema.anchor_ch), &mut data);
 					data.captures
 						.iter()
 						.for_each(|capture| on_capture(&mut leaf_captures, rule, capture, value));

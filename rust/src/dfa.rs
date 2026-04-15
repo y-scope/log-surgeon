@@ -198,6 +198,16 @@ impl Tdfa {
 		self.execute_internal::<true>(input, last_was_delimited, data)
 	}
 
+	#[tracing::instrument(skip_all, level = "trace")]
+	pub fn execute_with_captures_for_search<'input>(
+		&self,
+		input: &'input str,
+		last_was_delimited: u32,
+		data: &mut TdfaExecution,
+	) -> Option<MatchedRule<'input>> {
+		self.execute_internal::<true>(input, last_was_delimited, data)
+	}
+
 	fn execute_internal<'input, const CAPTURE: bool>(
 		&self,
 		input: &'input str,
