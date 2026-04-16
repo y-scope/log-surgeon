@@ -43,6 +43,7 @@ pub struct TdfaExecution {
 	pub captures: Vec<MatchedCapture>,
 	registers: Vec<Option<NonZero<usize>>>,
 	prefix_tree: PrefixTree,
+	num_tags: usize,
 }
 
 #[derive(Debug)]
@@ -569,6 +570,7 @@ impl Tdfa {
 			captures: Vec::new(),
 			registers: vec![None; self.number_of_registers],
 			prefix_tree: PrefixTree::new(),
+			num_tags: self.tags.len(),
 		}
 	}
 }
@@ -1080,6 +1082,9 @@ impl TdfaExecution {
 		self.captures.clear();
 		self.prefix_tree.clear();
 		// TODO explain why don't need to clear registers
+		for register in self.registers[0..self.num_tags].iter_mut() {
+			*register = None;
+		}
 	}
 }
 
