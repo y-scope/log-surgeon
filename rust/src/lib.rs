@@ -1,3 +1,4 @@
+#[macro_use(debug)]
 extern crate tracing;
 
 pub mod dfa;

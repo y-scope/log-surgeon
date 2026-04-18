@@ -1,11 +1,22 @@
 use super::*;
-use crate::search::SearchString;
 use crate::search::SymbolicChar;
 
 #[derive(Debug)]
 pub enum Derivative {
 	Regex(Regex),
 	Capture(RegexCapture, Regex),
+}
+
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub enum DerivativeChar {
+	Char(SymbolicChar),
+	Derivative(RegexCapture, SymbolicChar),
+}
+
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub struct SimulationToken {
+	pub maybe_capture: Option<RegexCapture>,
+	pub value: Vec<SymbolicChar>,
 }
 
 /// Alternation.
@@ -59,63 +70,172 @@ impl std::ops::Mul for Regex {
 }
 
 impl Regex {
-	pub fn simulate(&self, input: &SearchString) -> Vec<Vec<(RegexCapture, usize, usize)>> {
-		let regex: Self = Self::Sequence(vec![self.clone(), Self::Literal('\0')]);
+	pub fn simulate(&self, input: &[SymbolicChar]) -> Vec<Vec<SimulationToken>> {
+		let regex: Self = Self::Sequence(vec![self.clone(), Self::AnyChar]);
 
-		let mut all_paths: Vec<Vec<(RegexCapture, usize)>> = regex.simulate_internal(input.as_slice(), 0);
+		let mut all_paths: Vec<Vec<DerivativeChar>> = regex.simulate_internal(input);
 		all_paths.sort();
 		all_paths.dedup();
-		for path in all_paths.iter_mut() {
-			path.reverse();
-		}
 
-		let mut interpretations: Vec<Vec<(RegexCapture, usize, usize)>> = Vec::with_capacity(all_paths.len());
-		let mut stacks: Vec<Vec<usize>> = vec![Vec::new(); 1 + self.count_captures()];
-		for path in all_paths.iter() {
-			stacks.iter_mut().for_each(Vec::clear);
-			let mut leaves: Vec<(RegexCapture, usize, usize)> = Vec::new();
-			for (capture, pos) in path.iter() {
-				if !capture.is_leaf() {
-					continue;
-				}
-				let stack: &mut Vec<usize> = &mut stacks[capture.id.get() as usize];
-				if capture.close {
-					let start: usize = stack.pop().unwrap();
-					leaves.push((capture.clone(), start, *pos));
-				} else {
-					stack.push(*pos);
+		let mut interpretations: Vec<Vec<SimulationToken>> = Vec::new();
+
+		for path in all_paths.into_iter() {
+			let mut tokens: Vec<SimulationToken> = Vec::new();
+			let mut value: Vec<SymbolicChar> = Vec::new();
+			let mut maybe_start: Option<RegexCapture> = None;
+
+			for ch in path.into_iter() {
+				match ch {
+					DerivativeChar::Char(ch) => {
+						value.push(ch);
+					},
+					DerivativeChar::Derivative(capture, _ch) => {
+						if !capture.close {
+							if !value.is_empty() {
+								tokens.push(SimulationToken {
+									maybe_capture: None,
+									value: std::mem::replace(&mut value, Vec::new()),
+								});
+							}
+							maybe_start = Some(capture);
+							// value.push(ch);
+						} else {
+							tokens.push(SimulationToken {
+								maybe_capture: Some(maybe_start.take().unwrap()),
+								value: std::mem::replace(&mut value, Vec::new()),
+							});
+							// value.push(ch);
+						}
+					},
 				}
 			}
-			interpretations.push(leaves);
+			if !value.is_empty() {
+				tokens.push(SimulationToken {
+					maybe_capture: None,
+					value: std::mem::replace(&mut value, Vec::new()),
+				});
+			}
+
+			assert!(maybe_start.is_none());
+
+			tokens.pop().unwrap();
+			interpretations.push(tokens);
 		}
+
+		// let mut interpretations: Vec<Vec<(RegexCapture, usize, usize)>> = Vec::with_capacity(all_paths.len());
+		// let mut stacks: Vec<Vec<usize>> = vec![Vec::new(); 1 + self.count_captures()];
+		// for path in all_paths.iter() {
+		// 	stacks.iter_mut().for_each(Vec::clear);
+		// 	let mut leaves: Vec<(RegexCapture, usize, usize)> = Vec::new();
+		// 	for (capture, pos) in path.iter() {
+		// 		if !capture.is_leaf() {
+		// 			continue;
+		// 		}
+		// 		let stack: &mut Vec<usize> = &mut stacks[capture.id.get() as usize];
+		// 		if capture.close {
+		// 			let start: usize = stack.pop().unwrap();
+		// 			leaves.push((capture.clone(), start, *pos));
+		// 		} else {
+		// 			stack.push(*pos);
+		// 		}
+		// 	}
+		// 	interpretations.push(leaves);
+		// }
+
+		// interpretations.retain(|path| path.iter().all(|(_, start, end)| start < end));
+		interpretations.sort();
+		interpretations.dedup();
 
 		interpretations
 	}
 
-	fn simulate_internal(&self, input: &[SymbolicChar], i: usize) -> Vec<Vec<(RegexCapture, usize)>> {
-		let Some(ch): Option<SymbolicChar> = input.first().copied() else {
-			return if self.allows_epsilon_string() {
-				vec![Vec::new()]
-			} else {
-				Vec::new()
-			};
-		};
+	fn simulate_internal(&self, input: &[SymbolicChar]) -> Vec<Vec<DerivativeChar>> {
+		let mut completed_paths: Vec<Vec<DerivativeChar>> = Vec::new();
+		let mut queue: Vec<(Regex, usize, Vec<DerivativeChar>)> = vec![(self.clone(), 0, Vec::new())];
 
-		let mut all_paths: Vec<Vec<(RegexCapture, usize)>> = Vec::new();
-
-		println!("simulating {ch:?} with {self:?}");
-
-		match ch {
-			SymbolicChar::Literal(_) => {
-				recurse(self.apply_derivative(ch), ch, input, i, &mut all_paths);
-			},
-			SymbolicChar::WildcardOne | SymbolicChar::WildcardStar => {
-				all_paths.extend(self.simulate_internal(&input[1..], i + 1).into_iter());
-				recurse(self.apply_derivative(ch), ch, input, i, &mut all_paths);
-			},
+		while let Some((regex, i, path)) = queue.pop() {
+			if i > input.len() {
+				if regex.allows_epsilon_string() {
+					// println!("- pushing completed path {path:?}");
+					completed_paths.push(path);
+				}
+				continue;
+			}
+			// // Anchor - any character can be used.
+			let ch: SymbolicChar = input.get(i).copied().unwrap_or(SymbolicChar::Literal('$'));
+			// let Some(ch): Option<SymbolicChar> = input.get(i).copied() else {
+			// 	if regex.allows_epsilon_string() {
+			// 		completed_paths.push(path);
+			// 	}
+			// 	continue;
+			// };
+			let offset: usize = if ch == SymbolicChar::WildcardStar { 0 } else { 1 };
+			// let mut any: bool = false;
+			if ch.is_wildcard() {
+				// println!("\t- skipping over {i}, {regex:?}");
+				queue.push((regex.clone(), i + 1, path.clone()));
+			}
+			// println!("- path ({i}, {ch:?}) {regex:?} ");
+			for derivative in regex.apply_derivative(ch).into_iter().rev() {
+				// any = true;
+				match derivative {
+					Derivative::Regex(derivative) => {
+						if derivative.is_empty_set() {
+							continue;
+						}
+						// println!(
+						// 	"- path ({i}, {ch:?})^-1 {regex:?} | {:?}",
+						// 	std::fmt::from_fn(|fmt| {
+						// 		for path in paths.iter() {
+						// 			for capture in path.iter() {
+						// 				fmt.write_fmt(format_args!(
+						// 					"({}, {}, {}), ",
+						// 					capture.0.qualified_name, capture.0.close, capture.1
+						// 				))?;
+						// 			}
+						// 		}
+						// 		Ok(())
+						// 	})
+						// );
+						let mut path: Vec<DerivativeChar> = path.clone();
+						path.push(DerivativeChar::Char(ch));
+						// println!("\t - pushing derivative '{derivative:?}'");
+						queue.push((derivative, i + offset, path.clone()));
+					},
+					Derivative::Capture(capture, derivative) => {
+						if derivative.is_empty_set() {
+							continue;
+						}
+						// println!(
+						// 	"- path ({i}, {ch:?})^-1 {regex:?} | {:?}",
+						// 	std::fmt::from_fn(|fmt| {
+						// 		for path in paths.iter() {
+						// 			for capture in path.iter() {
+						// 				fmt.write_fmt(format_args!(
+						// 					"({}, {}, {}), ",
+						// 					capture.0.qualified_name, capture.0.close, capture.1
+						// 				))?;
+						// 			}
+						// 		}
+						// 		Ok(())
+						// 	})
+						// );
+						// println!("\t- pushing derivative {derivative:?} with capture");
+						let mut path: Vec<DerivativeChar> = path.clone();
+						path.push(DerivativeChar::Derivative(capture.clone(), ch));
+						// let j: usize = if capture.close { i + offset } else { i };
+						// println!("\t - pushing capture derivative {derivative:?}, {i}");
+						// paths.iter_mut().for_each(|path| {
+						// path.push((capture.clone(), i));
+						// });
+						// let j: usize = if capture.close { i + 1 - offset } else { i };
+						queue.push((derivative, i, path));
+					},
+				}
+			}
 		}
 
-		all_paths
+		completed_paths
 	}
 }
 
@@ -123,7 +243,7 @@ impl Regex {
 	const EPSILON: Self = Self::Sequence(Vec::new());
 	// const NIL: Self = Self::Alternation(Vec::new());
 
-	pub fn apply_derivative(&self, input: SymbolicChar) -> Vec<Derivative> {
+	fn apply_derivative(&self, input: SymbolicChar) -> Vec<Derivative> {
 		let epsilon: Vec<Derivative> = vec![Derivative::Regex(Self::EPSILON)];
 		let nil: Vec<Derivative> = Vec::new();
 
@@ -171,36 +291,42 @@ impl Regex {
 					return nil;
 				};
 				let rest: Self = Self::Sequence(items[1..].to_vec());
+				// println!("- first {first:?}, rest {rest:?}");
 				if let Self::Capture { info, .. } = first {
 					if info.close {
 						return vec![Derivative::Capture(info.clone(), rest)];
 					}
 				}
 				let mut paths: Vec<Derivative> = Vec::new();
-				println!("\t- applying derivative to {first:?}, {input:?}");
+				// println!("\t\t- applying derivative to {first:?}");
+				// let front_derivatives: Vec<Derivative> = first.apply_derivative(input);
+				// println!("\t\t\t- derivative of {first:?} is {:?}", first.apply_derivative(input));
 				paths.extend(
 					first
 						.apply_derivative(input)
 						.into_iter()
 						.map(|derivative| match derivative {
 							Derivative::Regex(next) => {
-								println!("\t- next is {next:?}");
 								let mut items: Vec<Self> = items.clone();
 								items[0] = next;
+								// println!("- adding items {items:?}");
 								Derivative::Regex(Regex::Sequence(items))
 							},
 							Derivative::Capture(info, next) => {
 								let mut items: Vec<Self> = items.clone();
 								items[0] = next;
+								// println!("- adding items {items:?}");
 								Derivative::Capture(info, Regex::Sequence(items))
 							},
 						}),
 				);
 				if first.allows_epsilon_string() {
-					println!("\t- {first:?} allows epsilon {rest:?}");
+					// println!("- first allows epsilon {first:?}, {rest:?}");
+					// println!("\t\t\t- extended with {:?}", rest.apply_derivative(input));
 					paths.extend(rest.apply_derivative(input).into_iter());
 				}
-				println!("- nexts for {input:?} is {paths:?}");
+				// println!("\t\t- returning for {self:?}: {paths:?} ({first:?})");
+				// println!("- input {input:?} on {first:?}, {rest:?}, returning {paths:?}");
 				paths
 			},
 			Self::Alternation(items) => items
@@ -224,20 +350,19 @@ impl Regex {
 				regex.apply_derivative(input)
 			},
 			Self::KleeneClosure(item) => {
-				let mut paths: Vec<Derivative> = Vec::new();
-				if matches!(input, SymbolicChar::WildcardStar) {
-					paths.extend(item.apply_derivative(input).into_iter());
+				if input == SymbolicChar::WildcardStar {
+					item.apply_derivative(input)
 				} else {
-					paths.extend(
-						Self::Sequence(vec![(**item).clone(), self.clone()])
-							.apply_derivative(input)
-							.into_iter(),
-					);
+					Self::Sequence(vec![(**item).clone(), self.clone()]).apply_derivative(input)
 				}
-				paths.extend(epsilon.into_iter());
-				paths
 			},
-			Self::KleenePlus(item) => item.into_kleene_plus().apply_derivative(input),
+			Self::KleenePlus(item) => {
+				if input == SymbolicChar::WildcardStar {
+					item.apply_derivative(input)
+				} else {
+					item.into_kleene_plus().apply_derivative(input)
+				}
+			},
 		}
 	}
 
@@ -247,7 +372,7 @@ impl Regex {
 		match self {
 			Self::AnyChar | Self::Literal(_) => false,
 			Self::Group { .. } => false,
-			Self::Capture { info, item } => !info.close && item.allows_epsilon_string(),
+			Self::Capture { .. } => false,
 			Self::KleeneClosure { .. } => true,
 			Self::KleenePlus { .. } => false,
 			Self::BoundedRepetition { min, .. } => *min == 0,
@@ -277,62 +402,132 @@ impl Regex {
 	}
 }
 
-fn recurse(
-	derivatives: Vec<Derivative>,
-	ch: SymbolicChar,
-	input: &[SymbolicChar],
-	i: usize,
-	all_paths: &mut Vec<Vec<(RegexCapture, usize)>>,
-) {
-	let mut next_input: &[SymbolicChar] = &input[1..];
-	let mut next_i: usize = i + 1;
-	if matches!(ch, SymbolicChar::WildcardStar) {
-		next_input = input;
-		next_i = i;
-	}
-	for d in derivatives.into_iter() {
-		match d {
-			Derivative::Regex(next) => {
-				if !next.is_empty_set() {
-					all_paths.extend(next.simulate_internal(&next_input[..], next_i).into_iter());
-				}
-			},
-			Derivative::Capture(info, next) => {
-				if !next.is_empty_set() {
-					all_paths.extend(next.simulate_internal(input, i).into_iter().map(|mut path| {
-						path.push((info.clone(), i));
-						path
-					}));
-				}
-			},
-		}
-	}
-}
-
 #[cfg(test)]
 mod test {
 	use super::*;
+	use crate::search::SearchString;
+
+	/*
+	#[test]
+	fn basic2() {
+		dbg!(
+			Regex::from_pattern("b*")
+				.unwrap()
+				.inner
+				.apply_derivative(SymbolicChar::Literal('b'))
+		);
+		panic!();
+	}
+	*/
+
+	// #[test]
+	// fn basic() {
+	// 	// let regex: TopLevelRegex = Regex::from_pattern(r"(?<user>\w+)@(?<parts>\w+\.)+(?<tld>\w+)").unwrap();
+	// 	// let regex: TopLevelRegex = Regex::from_pattern(r"(?<user>\w+)@(?<tld>\w+)").unwrap();
+	// 	// let regex: TopLevelRegex = Regex::from_pattern(r"(?<user>\w+)@").unwrap();
+	// 	let regex: TopLevelRegex = Regex::from_pattern(r"(?<user>aa*)@a").unwrap();
+
+	// 	// let regex: Regex = Regex::from_pattern(r"a@example.com").unwrap();
+	// 	{
+	// 		// let search: SearchString = SearchString::parse("a*@*com").unwrap();
+	// 		let search: SearchString = SearchString::parse("a*@*").unwrap();
+
+	// 		let interpretations: Vec<Vec<(RegexCapture, usize, usize)>> = regex.inner.simulate(search.as_slice());
+
+	// 		println!("interpretations: ");
+	// 		for i in interpretations.iter() {
+	// 			println!(
+	// 				"- {:?}",
+	// 				i.iter()
+	// 					.map(|(capture, i, j)| (&capture.name, i, j))
+	// 					.collect::<Vec<_>>()
+	// 			);
+	// 		}
+	// 		panic!();
+	// 	}
+	// }
+
+	// #[test]
+	// fn basic3() {
+	// 	let regex = Regex::Sequence(vec![
+	// 		Regex::KleeneClosure(Box::new(Regex::Literal('a'))),
+	// 		Regex::Capture {
+	// 			info: RegexCapture::NULL,
+	// 			item: Box::new(Regex::EPSILON),
+	// 		},
+	// 	]);
+
+	// 	dbg!(regex.apply_derivative(SymbolicChar::Literal('@')));
+	// 	panic!();
+	// }
 
 	#[test]
-	fn basic() {
+	fn email() {
 		let regex: TopLevelRegex = Regex::from_pattern(r"(?<user>\w+)@(?<parts>\w+\.)+(?<tld>\w+)").unwrap();
 
-		// let regex: Regex = Regex::from_pattern(r"a@example.com").unwrap();
 		{
-			let search: SearchString = SearchString::parse("a*com").unwrap();
+			let search: SearchString = SearchString::parse("a@bc.def").unwrap();
 
-			let interpretations: Vec<Vec<(RegexCapture, usize, usize)>> = regex.inner.simulate(&search);
+			let interpretations: Vec<Vec<SimulationToken>> = regex.inner.simulate(search.as_slice());
+			let interpretations: Vec<String> = interpretations.into_iter().map(to_s).collect::<Vec<_>>();
 
-			println!("interpretations: ");
-			for i in interpretations.iter() {
-				println!(
-					"- {:?}",
-					i.iter()
-						.map(|(capture, i, j)| (&capture.name, i, j))
-						.collect::<Vec<_>>()
-				);
-			}
-			panic!();
+			assert_eq!(interpretations[0], "(?<user>a)@(?<parts>bc.)(?<tld>def)");
+			assert_eq!(interpretations.len(), 1);
+
+			// println!("interpretations: ");
+			// for i in interpretations.iter() {
+			// 	println!("- {i}");
+			// }
 		}
+
+		{
+			let search: SearchString = SearchString::parse("a@*").unwrap();
+
+			let interpretations: Vec<Vec<SimulationToken>> = regex.inner.simulate(search.as_slice());
+			let interpretations: Vec<String> = interpretations.into_iter().map(to_s).collect::<Vec<_>>();
+
+			assert_eq!(interpretations[0], "(?<user>a)@(?<parts>**)(?<tld>*)");
+			assert_eq!(interpretations.len(), 1);
+		}
+
+		{
+			let search: SearchString = SearchString::parse("a*").unwrap();
+
+			let interpretations: Vec<Vec<SimulationToken>> = regex.inner.simulate(search.as_slice());
+			let interpretations: Vec<String> = interpretations.into_iter().map(to_s).collect::<Vec<_>>();
+
+			assert_eq!(interpretations[0], "(?<user>a)*(?<parts>**)(?<tld>*)");
+			assert_eq!(interpretations[1], "(?<user>a*)*(?<parts>**)(?<tld>*)");
+			assert_eq!(interpretations.len(), 2);
+		}
+
+		{
+			let search: SearchString = SearchString::parse("a*@*").unwrap();
+
+			let interpretations: Vec<Vec<SimulationToken>> = regex.inner.simulate(search.as_slice());
+			let interpretations: Vec<String> = interpretations.into_iter().map(to_s).collect::<Vec<_>>();
+
+			assert_eq!(interpretations[0], "(?<user>a)@(?<parts>**)(?<tld>*)");
+			assert_eq!(interpretations[1], "(?<user>a*)@(?<parts>**)(?<tld>*)");
+			assert_eq!(interpretations.len(), 2);
+		}
+	}
+
+	fn to_s(interpretation: Vec<SimulationToken>) -> String {
+		interpretation
+			.into_iter()
+			.map(|token| {
+				let value: String = token
+					.value
+					.iter()
+					.map(SymbolicChar::escape_for_search_string)
+					.collect::<String>();
+				if let Some(capture) = token.maybe_capture {
+					format!("(?<{}>{})", capture.name, value)
+				} else {
+					value
+				}
+			})
+			.collect::<String>()
 	}
 }

@@ -32,7 +32,7 @@ pub struct TopLevelRegex {
 }
 
 // TODO: encode `+` and `?`
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Regex {
 	AnyChar,
 	Literal(char),
@@ -45,6 +45,12 @@ pub enum Regex {
 	Alternation(Vec<Regex>),
 }
 
+impl std::fmt::Debug for Regex {
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		fmt.write_str(&self.to_pattern())
+	}
+}
+
 #[derive(Debug, Clone, Eq)]
 pub struct RegexCapture {
 	pub name: String,
@@ -55,6 +61,10 @@ pub struct RegexCapture {
 	/// Total number of nested captures (recursively/arbitrarily deep);
 	/// it is `0` iff this is a "leaf" capture.
 	pub descendents: usize,
+
+	/// Qualified name w.r.t captures;
+	/// a top-level capture is ".a", a second-level capture is ".a.b".
+	pub qualified_name: String,
 
 	/// Used for derivative simulation.
 	pub close: bool,
@@ -346,14 +356,16 @@ impl Regex {
 	/// so it naturally works as a placeholder/invalid value.
 	///
 	/// Invariant: `parent_id < id`.
-	fn number_captures(&mut self, id: &mut NonZero<u32>, stack: &mut Vec<NonZero<u32>>) -> Option<usize> {
+	fn number_captures(&mut self, id: &mut NonZero<u32>, stack: &mut Vec<(NonZero<u32>, String)>) -> Option<usize> {
 		let mut bread: usize = 0;
 		match self {
 			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
 			Self::Capture { info, item } => {
-				info.parent_id = stack.last().copied();
+				let maybe_parent: Option<&(NonZero<u32>, String)> = stack.last();
+				info.parent_id = maybe_parent.map(|(id, _)| *id);
 				info.id = *id;
-				stack.push(*id);
+				info.qualified_name = format!("{}.{}", maybe_parent.map_or("", |(_, name)| name), info.name);
+				stack.push((info.id, info.qualified_name.clone()));
 				// `id` is `u32`.
 				*id = id.checked_add(1)?;
 				info.descendents = item.number_captures(id, stack)?;
@@ -380,6 +392,7 @@ impl RegexCapture {
 		id: NonZero::<u32>::MAX,
 		parent_id: None,
 		descendents: 0,
+		qualified_name: String::new(),
 		close: false,
 	};
 
@@ -642,6 +655,7 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 				id: NonZero::<u32>::MAX,
 				parent_id: None,
 				descendents: 0,
+				qualified_name: String::new(),
 				close: false,
 			},
 			item: Box::new(regex),

@@ -1,5 +1,6 @@
 use std::ffi::c_char;
 use std::marker::PhantomData;
+use std::num::NonZero;
 use std::str::Utf8Error;
 
 use crate::dfa::MatchedCapture;
@@ -19,6 +20,7 @@ use crate::schema::SchemaBuilder;
 use crate::schema::VariableOrCaptures;
 use crate::search::Interpretation;
 use crate::search::SearchString;
+use crate::search::SubQuery;
 use crate::utils::Range;
 
 /// Represents a C `T const*` pointer + `size_t` length as a single ABI-stable value.
@@ -188,9 +190,11 @@ mod query {
 	unsafe extern "C" fn log_surgeon_search_query_interpretations(
 		parser: &Parser,
 		input: CCharArray<'_>,
+		name: CCharArray<'_>,
 	) -> Box<Vec<Interpretation>> {
 		let query: SearchString = SearchString::parse(input.as_utf8().unwrap()).unwrap();
-		let interpretations: Vec<Interpretation> = query.interpretations(&parser.lexer);
+		let name: &str = name.as_utf8().unwrap();
+		let interpretations: Vec<Interpretation> = query.interpretations_for_name(&parser.lexer.schema, name);
 		Box::new(interpretations)
 	}
 
@@ -203,6 +207,34 @@ mod query {
 		let s: &str = &interpretations[i].stringified;
 		*len = s.len();
 		CCharArray::from_utf8(s)
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_search_get_interpretation(
+		interpretations: &Vec<Interpretation>,
+		i: usize,
+	) -> Option<&Interpretation> {
+		interpretations.get(i)
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_search_get_sub_query(interpretation: &Interpretation, i: usize) -> Option<&SubQuery> {
+		interpretation.sub_queries.get(i)
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_search_get_sub_query_rule(sub_query: &SubQuery) -> Option<NonZero<u16>> {
+		sub_query.rule_idx
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_search_get_sub_query_name(sub_query: &SubQuery) -> CCharArray<'_> {
+		CCharArray::from_utf8(&sub_query.name)
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_search_get_sub_query_value(sub_query: &SubQuery) -> CCharArray<'_> {
+		CCharArray::from_utf8(&sub_query.value)
 	}
 
 	#[unsafe(no_mangle)]
@@ -349,7 +381,7 @@ mod destructor_impls {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_search_interpretations_drop(value: Box<Box<Vec<Interpretation>>>) {
+	extern "C" fn log_surgeon_search_interpretations_drop(value: Box<Vec<Interpretation>>) {
 		std::mem::drop(value);
 	}
 

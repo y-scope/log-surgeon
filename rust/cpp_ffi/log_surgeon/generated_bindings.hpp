@@ -39,6 +39,8 @@ struct SchemaBuilder;
 
 struct SearchResult;
 
+struct SubQuery;
+
 template<typename T = void>
 struct Vec;
 
@@ -142,14 +144,26 @@ Box<SearchResult> log_surgeon_search_by_named_type(const Schema *schema,
                                                    CCharArray name,
                                                    CCharArray value);
 
-void log_surgeon_search_interpretations_drop(Box<Box<Vec<Interpretation>>> value);
+const Interpretation *log_surgeon_search_get_interpretation(const Vec<Interpretation> *interpretations,
+                                                            size_t i);
+
+const SubQuery *log_surgeon_search_get_sub_query(const Interpretation *interpretation, size_t i);
+
+CCharArray log_surgeon_search_get_sub_query_name(const SubQuery *sub_query);
+
+uint16_t log_surgeon_search_get_sub_query_rule(const SubQuery *sub_query);
+
+CCharArray log_surgeon_search_get_sub_query_value(const SubQuery *sub_query);
+
+void log_surgeon_search_interpretations_drop(Box<Vec<Interpretation>> value);
 
 CCharArray log_surgeon_search_query_interpretation_as_string(const Vec<Interpretation> *interpretations,
                                                              size_t i,
                                                              size_t *len);
 
 Box<Vec<Interpretation>> log_surgeon_search_query_interpretations(const Parser *parser,
-                                                                  CCharArray input);
+                                                                  CCharArray input,
+                                                                  CCharArray name);
 
 void log_surgeon_search_result_drop(Box<SearchResult> value);
 
