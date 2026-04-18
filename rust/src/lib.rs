@@ -8,9 +8,9 @@ pub mod log_event;
 pub mod log_type;
 pub mod nfa;
 pub mod parser;
-pub mod query;
 pub mod regex;
 pub mod schema;
+pub mod search;
 pub mod utils;
 
 pub mod c_interface;

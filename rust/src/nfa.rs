@@ -85,16 +85,46 @@ impl Tnfa {
 
 		let mut tags: BTreeSet<Tag> = BTreeSet::new();
 
-		for rule in rules {
+		for rule in rules.into_iter() {
 			let rule_start: NfaIdx = nfa.new_state(format!("rule '{}' start", rule.name));
+			let rule_inner_start: NfaIdx = nfa.new_state(format!("rule '{}' inner start", rule.name));
+			let rule_inner_end: NfaIdx = nfa.new_state(format!("rule '{}' inner end", rule.name));
 			let rule_end: NfaIdx = nfa.new_state(format!("rule '{}' end", rule.name));
 			nfa[NfaState::BEGIN.idx].spontaneous.push(SpontaneousTransition {
 				kind: SpontaneousTransitionKind::Epsilon,
 				target: rule_start,
 			});
-			tags = &tags | &nfa.build(rule.idx, &rule.regex, rule_start, rule_end);
-			nfa[rule_end].maybe_accepts_for_rule = Some((rule.idx, rule.regex.ends_with_anchor()));
-			// nfa.rules.push((rule.idx, rule.regex.ends_with_anchor()));
+			if rule.regex.anchor_before {
+				for ch in nfa.delimiters.clone().chars() {
+					nfa[rule_start].transitions.insert(
+						Interval::new(u32::from(ch), u32::from(ch)),
+						vec![rule_inner_start],
+						PolicyExtendUnique,
+					);
+				}
+			} else {
+				nfa[rule_start].transitions.insert(
+					Interval::new(0, u32::from(char::MAX)),
+					vec![rule_inner_start],
+					PolicyExtendUnique,
+				);
+			}
+			tags = &tags | &nfa.build(rule.idx, &rule.regex.inner, rule_inner_start, rule_inner_end);
+			if rule.regex.anchor_after {
+				for ch in nfa.delimiters.clone().chars() {
+					nfa[rule_inner_end].transitions.insert(
+						Interval::new(u32::from(ch), u32::from(ch)),
+						vec![rule_end],
+						PolicyExtendUnique,
+					);
+				}
+			} else {
+				nfa[rule_inner_end].spontaneous.push(SpontaneousTransition {
+					kind: SpontaneousTransitionKind::Epsilon,
+					target: rule_end,
+				});
+			}
+			nfa[rule_end].maybe_accepts_for_rule = Some((rule.idx, rule.regex.anchor_after));
 		}
 
 		nfa.tags = tags.into_iter().collect::<Vec<_>>();
@@ -120,24 +150,6 @@ impl Tnfa {
 
 	fn build(&mut self, rule: RuleIdx, regex: &Regex, mut current: NfaIdx, target: NfaIdx) -> BTreeSet<Tag> {
 		match regex {
-			&Regex::Anchor(anchor) => {
-				if !anchor.is_nil() {
-					for ch in self.delimiters.clone().chars() {
-						self[current].transitions.insert(
-							Interval::new(u32::from(ch), u32::from(ch)),
-							vec![target],
-							PolicyExtendUnique,
-						);
-					}
-				} else {
-					self[current].transitions.insert(
-						Interval::new(0, u32::from(char::MAX)),
-						vec![target],
-						PolicyExtendUnique,
-					);
-				}
-				BTreeSet::new()
-			},
 			Regex::AnyChar => {
 				self[current].transitions.insert(
 					Interval::new(0, u32::from(char::MAX)),
@@ -212,6 +224,7 @@ impl Tnfa {
 
 				tags
 			},
+			Regex::KleenePlus(item) => self.build(rule, &item.into_kleene_plus(), current, target),
 			Regex::BoundedRepetition { min, max, item } => {
 				// Should have been verified during regex pattern parsing.
 				assert!(*max > 0);

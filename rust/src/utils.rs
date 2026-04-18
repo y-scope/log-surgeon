@@ -52,3 +52,24 @@ impl std::fmt::Display for Escaped {
 		}
 	}
 }
+
+impl<Idx> std::fmt::Display for Range<Idx>
+where
+	Idx: std::fmt::Display,
+{
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		fmt.write_fmt(format_args!("{}..{}", self.start, self.end))
+	}
+}
+
+impl<Idx> Range<Idx>
+where
+	Idx: Copy,
+{
+	pub fn native(&self) -> std::ops::Range<Idx> {
+		std::ops::Range {
+			start: self.start,
+			end: self.end,
+		}
+	}
+}

@@ -37,11 +37,16 @@ impl Schema {
 		std::iter::once(format!("delimiters:{}", escape_delimiters(&self.delimiters)))
 			// Empty line, pretty.
 			.chain(std::iter::once(String::new()))
-			.chain(
-				self.rules
-					.iter()
-					.map(|rule| format!("{} ({}): {}", rule.name, rule.idx.priority, rule.regex.to_pattern())),
-			)
+			.chain(self.rules.iter().map(|rule| {
+				format!(
+					"{} ({}): {}{}{}",
+					rule.name,
+					rule.idx.priority,
+					if rule.regex.anchor_before { "^" } else { "" },
+					rule.regex.inner.to_pattern(),
+					if rule.regex.anchor_after { "$" } else { "" },
+				)
+			}))
 			.fold(String::new(), |mut accumulated, line| {
 				accumulated.push_str(&line);
 				accumulated.push('\n');

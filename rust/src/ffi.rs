@@ -67,4 +67,8 @@ impl UncheckedCArray<c_char> {
 			length: s.as_bytes().len(),
 		}
 	}
+
+	pub unsafe fn as_str(&self) -> &str {
+		unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(self.pointer.cast::<u8>(), self.length)) }
+	}
 }

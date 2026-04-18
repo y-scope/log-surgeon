@@ -1,3 +1,5 @@
+mod derivative;
+
 use crate::utils::Escaped;
 use std::num::NonZero;
 use std::str::Chars;
@@ -19,18 +21,25 @@ const SPECIAL_CHARACTERS_IN_BRACKETED_EXPRESSIONS: &str = r"\[]";
 pub trait IntoRegex {
 	type Error;
 
-	fn into(self) -> Result<Regex, Self::Error>;
+	fn into(self) -> Result<TopLevelRegex, Self::Error>;
+}
+
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub struct TopLevelRegex {
+	pub anchor_before: bool,
+	pub anchor_after: bool,
+	pub inner: Regex,
 }
 
 // TODO: encode `+` and `?`
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Regex {
-	Anchor(Anchor),
 	AnyChar,
 	Literal(char),
 	Capture { info: RegexCapture, item: Box<Regex> },
 	Group { negated: bool, items: Vec<(char, char)> },
 	KleeneClosure(Box<Regex>),
+	KleenePlus(Box<Regex>),
 	BoundedRepetition { min: u32, max: u32, item: Box<Regex> },
 	Sequence(Vec<Regex>),
 	Alternation(Vec<Regex>),
@@ -46,6 +55,9 @@ pub struct RegexCapture {
 	/// Total number of nested captures (recursively/arbitrarily deep);
 	/// it is `0` iff this is a "leaf" capture.
 	pub descendents: usize,
+
+	/// Used for derivative simulation.
+	pub close: bool,
 }
 
 impl Ord for RegexCapture {
@@ -170,10 +182,10 @@ impl<'a> RegexParsingError<'a> {
 
 type ParsingResult<'a, T> = IResult<&'a str, T, RegexParsingError<'a>>;
 
-impl IntoRegex for Regex {
+impl IntoRegex for TopLevelRegex {
 	type Error = std::convert::Infallible;
 
-	fn into(self) -> Result<Regex, Self::Error> {
+	fn into(self) -> Result<TopLevelRegex, Self::Error> {
 		Ok(self)
 	}
 }
@@ -181,17 +193,18 @@ impl IntoRegex for Regex {
 impl<'a> IntoRegex for &'a str {
 	type Error = RegexError<'a>;
 
-	fn into(self) -> Result<Regex, Self::Error> {
+	fn into(self) -> Result<TopLevelRegex, Self::Error> {
 		Regex::from_pattern(self)
 	}
 }
 
 impl Regex {
-	pub fn from_pattern(pattern: &str) -> Result<Self, RegexError<'_>> {
+	pub fn from_pattern(pattern: &str) -> Result<TopLevelRegex, RegexError<'_>> {
 		match parse_to_end(pattern) {
 			Ok((remaining, mut regex)) => {
 				assert_eq!(remaining, "");
 				regex
+					.inner
 					.number_captures(&mut { NonZero::<u32>::MIN }, &mut Vec::new())
 					.ok_or(RegexError {
 						consumed: pattern,
@@ -215,29 +228,8 @@ impl Regex {
 		}
 	}
 
-	pub fn starts_with_anchor(&self) -> bool {
-		match self {
-			Self::Sequence(items) => items
-				.first()
-				.map_or(false, |first| matches!(first, Self::Anchor(Anchor::Preceded))),
-			_ => false,
-		}
-	}
-
-	pub fn ends_with_anchor(&self) -> bool {
-		match self {
-			Self::Sequence(items) => items
-				.last()
-				.map_or(false, |last| matches!(last, Self::Anchor(Anchor::Followed))),
-			_ => false,
-		}
-	}
-
 	pub fn to_pattern(&self) -> String {
 		match self {
-			Self::Anchor(Anchor::Preceded) => "^".to_owned(),
-			Self::Anchor(Anchor::Followed) => "$".to_owned(),
-			Self::Anchor(Anchor::Nil) => String::new(),
 			Self::AnyChar => ".".to_owned(),
 			&Self::Literal(ch) => {
 				if SPECIAL_CHARACTERS.contains(ch) {
@@ -277,6 +269,9 @@ impl Regex {
 			Self::KleeneClosure(item) => {
 				format!("({})*", item.to_pattern())
 			},
+			Self::KleenePlus(item) => {
+				format!("({})+", item.to_pattern())
+			},
 			Self::BoundedRepetition { min, max, item } => {
 				let item: String = item.to_pattern();
 				if min == max {
@@ -304,14 +299,20 @@ impl Regex {
 			},
 		}
 	}
+
+	pub fn into_kleene_plus(&self) -> Self {
+		Self::Sequence(vec![self.clone(), Regex::KleeneClosure(Box::new(self.clone()))])
+	}
 }
 
 impl Regex {
 	pub fn count_captures(&self) -> usize {
 		match self {
-			Self::Anchor(_) | Self::AnyChar | Self::Literal(..) | Self::Group { .. } => 0,
+			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => 0,
 			Self::Capture { info, .. } => 1 + info.descendents,
-			Self::KleeneClosure(item) | Self::BoundedRepetition { item, .. } => item.count_captures(),
+			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
+				item.count_captures()
+			},
 			Self::Sequence(items) | Self::Alternation(items) => {
 				items.iter().fold(0, |total, item| total + item.count_captures())
 			},
@@ -320,7 +321,7 @@ impl Regex {
 
 	pub fn populate_capture_info(&self, capture_info: &mut Vec<RegexCapture>) {
 		match self {
-			Self::Anchor(_) | Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
+			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
 			Self::Capture { info, item } => {
 				let i: usize = info.id.get() as usize;
 				if capture_info.len() <= i {
@@ -329,7 +330,7 @@ impl Regex {
 				capture_info[i] = info.clone();
 				item.populate_capture_info(capture_info);
 			},
-			Self::KleeneClosure(item) | Self::BoundedRepetition { item, .. } => {
+			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
 				item.populate_capture_info(capture_info);
 			},
 			Self::Sequence(items) | Self::Alternation(items) => {
@@ -348,7 +349,7 @@ impl Regex {
 	fn number_captures(&mut self, id: &mut NonZero<u32>, stack: &mut Vec<NonZero<u32>>) -> Option<usize> {
 		let mut bread: usize = 0;
 		match self {
-			Self::Anchor(_) | Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
+			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
 			Self::Capture { info, item } => {
 				info.parent_id = stack.last().copied();
 				info.id = *id;
@@ -360,7 +361,7 @@ impl Regex {
 				bread = 1 + info.descendents;
 				stack.pop();
 			},
-			Self::KleeneClosure(item) | Self::BoundedRepetition { item, .. } => {
+			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
 				bread += item.number_captures(id, stack)?;
 			},
 			Self::Sequence(items) | Self::Alternation(items) => {
@@ -379,6 +380,7 @@ impl RegexCapture {
 		id: NonZero::<u32>::MAX,
 		parent_id: None,
 		descendents: 0,
+		close: false,
 	};
 
 	pub fn is_leaf(&self) -> bool {
@@ -408,10 +410,10 @@ impl RegexErrorKind {
 
 // ==================================
 
-fn parse_to_end(input: &str) -> ParsingResult<'_, Regex> {
+fn parse_to_end(input: &str) -> ParsingResult<'_, TopLevelRegex> {
 	use nom::combinator::opt;
 
-	let (input, starts_with_anchor): (&str, bool) = opt(parse_char::<'^'>)
+	let (input, anchor_before): (&str, bool) = opt(parse_char::<'^'>)
 		.map(|maybe_anchor| maybe_anchor.is_some())
 		.parse(input)?;
 
@@ -423,9 +425,9 @@ fn parse_to_end(input: &str) -> ParsingResult<'_, Regex> {
 	// we look for the closing parenthesis.
 	// Here, after reaching the end of the list, we ensure we're at the end of input,
 	// otherwise "reproduce" the invalid term error.
-	let (input, mut regex): (&str, Regex) = parse_alternation(input)?;
+	let (input, regex): (&str, Regex) = parse_alternation(input)?;
 
-	let (input, ends_with_anchor): (&str, bool) = opt(parse_char::<'$'>)
+	let (input, anchor_after): (&str, bool) = opt(parse_char::<'$'>)
 		.map(|maybe_anchor| maybe_anchor.is_some())
 		.parse(input)?;
 
@@ -433,36 +435,14 @@ fn parse_to_end(input: &str) -> ParsingResult<'_, Regex> {
 		return Err(RegexErrorKind::InvalidTerm.error(input));
 	}
 
-	match &mut regex {
-		Regex::Sequence(items) => {
-			items.insert(
-				0,
-				if starts_with_anchor {
-					Regex::Anchor(Anchor::Preceded)
-				} else {
-					Regex::Anchor(Anchor::Nil)
-				},
-			);
-			if ends_with_anchor {
-				items.push(Regex::Anchor(Anchor::Followed));
-			}
+	Ok((
+		input,
+		TopLevelRegex {
+			anchor_before,
+			anchor_after,
+			inner: regex,
 		},
-		regex => {
-			let mut items: Vec<Regex> = Vec::with_capacity(3);
-			items.push(if starts_with_anchor {
-				Regex::Anchor(Anchor::Preceded)
-			} else {
-				Regex::Anchor(Anchor::Nil)
-			});
-			items.push(std::mem::replace(regex, Regex::AnyChar));
-			if ends_with_anchor {
-				items.push(Regex::Anchor(Anchor::Followed));
-			}
-			*regex = Regex::Sequence(items);
-		},
-	}
-
-	Ok((input, regex))
+	))
 }
 
 fn parse_alternation(input: &str) -> ParsingResult<'_, Regex> {
@@ -567,11 +547,7 @@ fn parse_suffixed(input: &str) -> ParsingResult<'_, Regex> {
 				},
 			)),
 			Suffix::Star => Ok((input, Regex::KleeneClosure(Box::new(regex)))),
-			Suffix::Plus => {
-				let one: Regex = regex.clone();
-				let star: Regex = Regex::KleeneClosure(Box::new(regex));
-				Ok((input, Regex::Sequence(vec![one, star])))
-			},
+			Suffix::Plus => Ok((input, Regex::KleenePlus(Box::new(regex)))),
 			Suffix::Question => Ok((
 				input,
 				Regex::BoundedRepetition {
@@ -666,6 +642,7 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 				id: NonZero::<u32>::MAX,
 				parent_id: None,
 				descendents: 0,
+				close: false,
 			},
 			item: Box::new(regex),
 		},

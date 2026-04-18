@@ -11,6 +11,7 @@ use crate::lexer::Lexer;
 use crate::log_event::Capture;
 use crate::log_event::CaptureFfiPointers;
 use crate::regex::Regex;
+use crate::regex::TopLevelRegex;
 use crate::schema::Rule;
 use crate::schema::Schema;
 use crate::schema::VariableOrCaptures;
@@ -124,7 +125,13 @@ impl SearchString {
 			}
 			last_was_escape = false;
 		}
+		// Anchor
+		chars.push(SymbolicChar::Literal('\0'));
 		Ok(Self(chars))
+	}
+
+	pub fn as_slice(&self) -> &[SymbolicChar] {
+		&self.0
 	}
 
 	pub fn interpretations_for_name(&self, schema: &Schema, name: &str) -> Vec<Interpretation2> {
@@ -172,7 +179,15 @@ impl SearchString {
 					let dfa: Tdfa = Tdfa::for_rules(std::iter::once(rule), schema.delimiters.clone());
 					let regex: Regex = Regex::Sequence(vec![Regex::AnyChar, regex]);
 					let dfa: Tdfa = Tdfa::for_rules(
-						std::iter::once(&Rule::new(rule.idx, rule.name.clone(), regex)),
+						std::iter::once(&Rule::new(
+							rule.idx,
+							rule.name.clone(),
+							TopLevelRegex {
+								anchor_before: false,
+								anchor_after: false,
+								inner: regex,
+							},
+						)),
 						schema.delimiters.clone(),
 					);
 					for (_rule, captures) in dfa.simulate(&self.0) {
@@ -335,6 +350,15 @@ impl SearchString {
 	}
 }
 
+impl std::fmt::Display for SearchString {
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		for ch in self.0.iter() {
+			ch.fmt(fmt)?;
+		}
+		Ok(())
+	}
+}
+
 impl<'a> SearchStringView<'a> {
 	fn single_token_interpretations(&self, lexer: &Lexer) -> Vec<SubQuery> {
 		assert!(!self.as_str().is_empty());
@@ -440,7 +464,7 @@ impl std::fmt::Display for SymbolicChar {
 			Self::Literal('?') => "\\?",
 			Self::Literal('\\') => "\\\\",
 			Self::Literal(ch) => {
-				return fmt.write_fmt(format_args!("{ch}"));
+				return ch.fmt(fmt);
 			},
 			Self::WildcardStar => "*",
 			Self::WildcardOne => "?",

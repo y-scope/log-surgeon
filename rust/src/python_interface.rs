@@ -1,4 +1,3 @@
-use std::convert::Infallible;
 use std::num::NonZero;
 
 use pyo3::buffer::PyBuffer;
@@ -17,7 +16,6 @@ use pyo3::types::PyString;
 use crate::log_event::LogEvent;
 use crate::log_type::LogType;
 use crate::parser::Parser;
-use crate::regex::Regex;
 use crate::schema::Schema;
 use crate::schema::SchemaBuilder;
 
@@ -98,9 +96,9 @@ impl PyParser {
 	/// (see [`SchemaBuilder::add_rule_with_priority`]).
 	#[pyo3(signature = (name, pattern, *, priority=0))]
 	fn add_variable_pattern(&mut self, name: &str, pattern: &str, priority: i32) -> PyResult<()> {
-		let regex: Regex = Regex::from_pattern(pattern)
+		self.schema_builder
+			.add_rule_with_priority(priority, name, pattern)
 			.map_err(|err| LogSurgeonInvalidRegexPattern::new_err(format!("invalid pattern: {err:?}")))?;
-		let Ok(_): Result<(), Infallible> = self.schema_builder.add_rule_with_priority(priority, name, regex);
 		Ok(())
 	}
 

@@ -5,12 +5,13 @@ use crate::log_event::Capture;
 use crate::regex::IntoRegex;
 use crate::regex::Regex;
 use crate::regex::RegexCapture;
+use crate::regex::TopLevelRegex;
 use std::collections::BTreeMap;
 use std::num::NonZero;
 
 #[derive(Debug, Clone)]
 pub struct SchemaBuilder {
-	rules_by_priority: BTreeMap<i32, Vec<(String, Regex)>>,
+	rules_by_priority: BTreeMap<i32, Vec<(String, TopLevelRegex)>>,
 	delimiters: String,
 	anchor_ch: char,
 }
@@ -34,7 +35,7 @@ pub struct Schema {
 pub struct Rule {
 	pub idx: RuleIdx,
 	pub name: String,
-	pub regex: Regex,
+	pub regex: TopLevelRegex,
 	pub capture_info: Vec<RegexCapture>,
 }
 
@@ -65,7 +66,7 @@ impl SchemaBuilder {
 	}
 
 	/// Panics if `delimiters` is empty.
-	pub fn set_delimiters<LikeString>(&mut self, delimiters: LikeString)
+	pub fn set_delimiters<LikeString>(&mut self, delimiters: LikeString) -> &mut Self
 	where
 		LikeString: Into<String>,
 	{
@@ -73,6 +74,7 @@ impl SchemaBuilder {
 		assert!(!delimiters.is_empty());
 		self.anchor_ch = delimiters.chars().next().unwrap();
 		self.delimiters = delimiters;
+		self
 	}
 
 	/// Adds a rule with the default priority `0`.
@@ -85,7 +87,7 @@ impl SchemaBuilder {
 		&mut self,
 		name: LikeString,
 		regex: RegexOrPattern,
-	) -> Result<(), RegexOrPattern::Error>
+	) -> Result<&mut Self, RegexOrPattern::Error>
 	where
 		LikeString: Into<String>,
 		RegexOrPattern: IntoRegex,
@@ -105,7 +107,7 @@ impl SchemaBuilder {
 		priority: i32,
 		name: LikeString,
 		regex: RegexOrPattern,
-	) -> Result<(), RegexOrPattern::Error>
+	) -> Result<&mut Self, RegexOrPattern::Error>
 	where
 		LikeString: Into<String>,
 		RegexOrPattern: IntoRegex,
@@ -114,13 +116,13 @@ impl SchemaBuilder {
 		assert!(!name.is_empty());
 		assert_ne!(name, "delimiters");
 
-		let regex: Regex = regex.into()?;
+		let regex: TopLevelRegex = regex.into()?;
 
-		let rules: &mut Vec<(String, Regex)> = self.rules_by_priority.entry(priority).or_insert_with(Vec::new);
+		let rules: &mut Vec<(String, TopLevelRegex)> = self.rules_by_priority.entry(priority).or_insert_with(Vec::new);
 
 		rules.push((name, regex));
 
-		Ok(())
+		Ok(self)
 	}
 
 	pub fn build(self) -> Schema {
@@ -180,7 +182,7 @@ impl Schema {
 				if rule.name != rule_name {
 					continue;
 				}
-				Self::find_capture(&rule.regex, first, &capture_names[1..], &mut |info, regex| {
+				Self::find_capture(&rule.regex.inner, first, &capture_names[1..], &mut |info, regex| {
 					possibilities.push((rule.idx, info.clone(), regex.clone()));
 				});
 			}
@@ -190,7 +192,7 @@ impl Schema {
 				self.rules
 					.iter()
 					.filter(|rule| rule.name == rule_name)
-					.map(|rule| (rule.idx, rule.regex.clone()))
+					.map(|rule| (rule.idx, rule.regex.inner.clone()))
 					.collect::<Vec<_>>(),
 			))
 		}
@@ -201,7 +203,7 @@ impl Schema {
 		F: FnMut(&RegexCapture, &Regex),
 	{
 		match regex {
-			Regex::Anchor(_) | Regex::AnyChar | Regex::Literal(..) | Regex::Group { .. } => (),
+			Regex::AnyChar | Regex::Literal(..) | Regex::Group { .. } => (),
 			Regex::Capture { info, item } => {
 				if info.name == first {
 					if let Some(first) = rest.first().copied() {
@@ -211,7 +213,7 @@ impl Schema {
 					}
 				}
 			},
-			Regex::KleeneClosure(item) | Regex::BoundedRepetition { item, .. } => {
+			Regex::KleeneClosure(item) | Regex::KleenePlus(item) | Regex::BoundedRepetition { item, .. } => {
 				Self::find_capture(item, first, rest, func);
 			},
 			Regex::Sequence(items) | Regex::Alternation(items) => {
@@ -244,9 +246,9 @@ impl std::ops::Index<RuleIdx> for Schema {
 }
 
 impl Rule {
-	pub fn new(idx: RuleIdx, name: String, regex: Regex) -> Self {
-		let mut capture_info: Vec<RegexCapture> = vec![RegexCapture::NULL; 1 + regex.count_captures()];
-		regex.populate_capture_info(&mut capture_info);
+	pub fn new(idx: RuleIdx, name: String, regex: TopLevelRegex) -> Self {
+		let mut capture_info: Vec<RegexCapture> = vec![RegexCapture::NULL; 1 + regex.inner.count_captures()];
+		regex.inner.populate_capture_info(&mut capture_info);
 
 		Self {
 			idx,

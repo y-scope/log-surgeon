@@ -17,9 +17,9 @@ use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tag;
 use crate::nfa::Tnfa;
-use crate::query::SymbolicChar;
 use crate::schema::Rule;
 use crate::schema::RuleIdx;
+use crate::search::SymbolicChar;
 use crate::utils::Range;
 
 #[derive(Debug, Clone)]
@@ -1081,7 +1081,7 @@ impl TdfaExecution {
 	fn clear(&mut self) {
 		self.captures.clear();
 		self.prefix_tree.clear();
-		// TODO explain why don't need to clear registers
+		// TODO explain why don't need to clear rest of the registers
 		for register in self.registers[0..self.num_tags].iter_mut() {
 			*register = None;
 		}

@@ -79,6 +79,30 @@ impl<'parser> LogEvent<'parser> {
 	}
 }
 
+impl std::fmt::Display for Capture {
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		fmt.write_fmt(format_args!(
+			"Capture(rule: {}, id: {}, parent: {}, range: {})",
+			self.rule_idx.index,
+			self.capture_id.map_or(0, NonZero::get),
+			self.parent_id.map_or(0, NonZero::get),
+			self.range
+		))
+	}
+}
+
+impl Capture {
+	pub unsafe fn show(&self) -> String {
+		format!(
+			"Capture(rule: {}, id: {}, parent: {}, {:?})",
+			self.rule_idx.index,
+			self.capture_id.map_or(0, NonZero::get),
+			self.parent_id.map_or(0, NonZero::get),
+			unsafe { self.ffi_pointers.lexeme.as_str() },
+		)
+	}
+}
+
 impl CaptureFfiPointers {
 	pub const NULL: Self = Self {
 		parent: std::ptr::null(),

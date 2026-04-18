@@ -1,4 +1,3 @@
-use std::convert::Infallible;
 use std::ffi::c_char;
 use std::marker::PhantomData;
 use std::str::Utf8Error;
@@ -11,14 +10,15 @@ use crate::log_event::Capture;
 use crate::log_event::CaptureFfiPointers;
 use crate::log_event::LogEvent;
 use crate::parser::Parser;
-use crate::query::Interpretation;
-use crate::query::SearchString;
 use crate::regex::Regex;
 use crate::regex::RegexError;
+use crate::regex::TopLevelRegex;
 use crate::schema::Rule;
 use crate::schema::Schema;
 use crate::schema::SchemaBuilder;
 use crate::schema::VariableOrCaptures;
+use crate::search::Interpretation;
+use crate::search::SearchString;
 use crate::utils::Range;
 
 /// Represents a C `T const*` pointer + `size_t` length as a single ABI-stable value.
@@ -104,13 +104,9 @@ mod schema {
 	) -> Option<Box<RegexError<'pattern>>> {
 		let name: &str = name.as_utf8().unwrap();
 		let pattern: &str = pattern.as_utf8().unwrap();
-		let regex: Regex = match Regex::from_pattern(pattern) {
-			Ok(regex) => regex,
-			Err(err) => {
-				return Some(Box::new(err));
-			},
-		};
-		let Ok(_): Result<(), Infallible> = builder.add_rule_with_priority(priority, name, regex);
+		if let Err(err) = builder.add_rule_with_priority(priority, name, pattern) {
+			return Some(Box::new(err));
+		}
 		None
 	}
 
@@ -285,7 +281,15 @@ mod query {
 					let rule: &Rule = &schema[rule_idx];
 					let regex: Regex = Regex::Sequence(vec![Regex::AnyChar, regex]);
 					let dfa: Tdfa = Tdfa::for_rules(
-						std::iter::once(&Rule::new(rule.idx, rule.name.clone(), regex)),
+						std::iter::once(&Rule::new(
+							rule.idx,
+							rule.name.clone(),
+							TopLevelRegex {
+								anchor_before: false,
+								anchor_after: false,
+								inner: regex,
+							},
+						)),
 						schema.delimiters.clone(),
 					);
 					let mut data: TdfaExecution = dfa.execution_data();
