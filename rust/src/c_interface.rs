@@ -199,17 +199,6 @@ mod query {
 	}
 
 	#[unsafe(no_mangle)]
-	unsafe extern "C" fn log_surgeon_search_query_interpretation_as_string<'a>(
-		interpretations: &'a Vec<Interpretation>,
-		i: usize,
-		len: &mut usize,
-	) -> CCharArray<'a> {
-		let s: &str = &interpretations[i].stringified;
-		*len = s.len();
-		CCharArray::from_utf8(s)
-	}
-
-	#[unsafe(no_mangle)]
 	extern "C" fn log_surgeon_search_get_interpretation(
 		interpretations: &Vec<Interpretation>,
 		i: usize,
@@ -223,18 +212,19 @@ mod query {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_search_get_sub_query_rule(sub_query: &SubQuery) -> Option<NonZero<u16>> {
+	extern "C" fn log_surgeon_search_sub_query_get_rule(sub_query: &SubQuery) -> Option<NonZero<u16>> {
 		sub_query.rule_idx
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_search_get_sub_query_name(sub_query: &SubQuery) -> CCharArray<'_> {
+	extern "C" fn log_surgeon_search_sub_query_get_name(sub_query: &SubQuery) -> CCharArray<'_> {
 		CCharArray::from_utf8(&sub_query.name)
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_search_get_sub_query_value(sub_query: &SubQuery) -> CCharArray<'_> {
-		CCharArray::from_utf8(&sub_query.value)
+	extern "C" fn log_surgeon_search_sub_query_match_input(sub_query: &SubQuery, input: CCharArray<'_>) -> bool {
+		let input: &str = input.as_utf8().unwrap();
+		sub_query.execute(input)
 	}
 
 	#[unsafe(no_mangle)]

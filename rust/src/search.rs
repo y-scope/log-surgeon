@@ -34,18 +34,77 @@ pub enum SymbolicChar {
 	WildcardOne,
 }
 
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Interpretation {
 	pub sub_queries: Vec<SubQuery>,
-	pub stringified: String,
 }
 
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+impl std::fmt::Debug for Interpretation {
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let Some(first): Option<&SubQuery> = self.sub_queries.first() else {
+			return fmt.write_str("[]");
+		};
+		fmt.write_str("[")?;
+		first.fmt(fmt)?;
+		for sub_query in self.sub_queries[1..].iter() {
+			fmt.write_str(", ")?;
+			sub_query.fmt(fmt)?;
+		}
+		fmt.write_str("]")?;
+		Ok(())
+	}
+}
+
+#[derive(Clone)]
 pub struct SubQuery {
 	pub group: usize,
 	pub rule_idx: Option<NonZero<u16>>,
 	pub name: String,
-	pub value: String,
+	pub value: Vec<SymbolicChar>,
+	pub is_all_wildcards: bool,
+	pub dfa: Tdfa,
+}
+
+impl Eq for SubQuery {}
+
+impl Ord for SubQuery {
+	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+		(&self.group, &self.rule_idx, &self.name, &self.value)
+			.cmp(&(&other.group, &other.rule_idx, &other.name, &other.value))
+	}
+}
+
+impl PartialOrd for SubQuery {
+	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+		Some(self.cmp(other))
+	}
+}
+
+impl PartialEq for SubQuery {
+	fn eq(&self, other: &Self) -> bool {
+		self.cmp(other).is_eq()
+	}
+}
+
+impl std::fmt::Debug for SubQuery {
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let value: String = self
+			.value
+			.iter()
+			.map(SymbolicChar::escape_for_search_string)
+			.collect::<String>();
+		if self.is_static_text() {
+			fmt.write_fmt(format_args!("({}:{})", self.group, value))
+		} else {
+			fmt.write_fmt(format_args!(
+				"({}:?<{}:{}>{})",
+				self.group,
+				self.rule_idx.map_or(0, NonZero::get),
+				self.name,
+				value,
+			))
+		}
+	}
 }
 
 #[derive(Clone, Copy)]
@@ -118,7 +177,7 @@ impl SearchString {
 		if !name.is_empty() {
 			return self
 				.view(0, self.0.len())
-				.interpretations_for_name_internal(schema, &rows);
+				.interpretations_for_name_internal(schema, &rows, 0);
 		}
 
 		if self.0.is_empty() {
@@ -139,7 +198,8 @@ impl SearchString {
 				}
 
 				let single_token_interpretations: Vec<Interpretation> =
-					sub_view.single_token_interpretations(schema, &rows);
+					sub_view.single_token_interpretations(schema, &rows, group);
+				group += 1;
 
 				if single_token_interpretations.is_empty() {
 					continue;
@@ -190,28 +250,32 @@ impl std::fmt::Display for SearchString {
 }
 
 impl<'a> SearchStringView<'a> {
-	fn single_token_interpretations(&self, schema: &Schema, rows: &VariableOrCaptures<Regex>) -> Vec<Interpretation> {
+	fn single_token_interpretations(
+		&self,
+		schema: &Schema,
+		rows: &VariableOrCaptures<Regex>,
+		group: usize,
+	) -> Vec<Interpretation> {
 		assert!(!self.is_empty());
 
-		let extended: Self = self.extend();
+		let extended: Self = self.extend_with_greedy_wildcards();
 
 		let mut interpretations: Vec<Interpretation> = Vec::new();
 
 		if self.as_str() == &[SymbolicChar::WildcardStar] {
 			interpretations.push(Interpretation {
-				sub_queries: vec![SubQuery::new_static_text(self.as_str())],
-				stringified: String::new(),
+				sub_queries: vec![SubQuery::new_static_text(self.as_str(), schema, group)],
 			});
 		}
 
-		let has_wildcard: bool = self.as_str().iter().find(|ch| ch.is_wildcard()).is_some();
+		let has_wildcard: bool = self.as_str().iter().copied().find(SymbolicChar::is_wildcard).is_some();
 
-		let potential_interpretations: Vec<Interpretation> = extended.interpretations_for_name_internal(schema, rows);
+		let potential_interpretations: Vec<Interpretation> =
+			extended.interpretations_for_name_internal(schema, rows, group);
 
 		if has_wildcard || potential_interpretations.is_empty() {
 			interpretations.push(Interpretation {
-				sub_queries: vec![SubQuery::new_static_text(extended.as_str())],
-				stringified: String::new(),
+				sub_queries: vec![SubQuery::new_static_text(extended.as_str(), schema, group)],
 			});
 		}
 
@@ -220,22 +284,14 @@ impl<'a> SearchStringView<'a> {
 		interpretations
 	}
 
-	fn extend(&self) -> Self {
+	fn extend_with_greedy_wildcards(&self) -> Self {
 		let mut new_start: usize = self.start;
 		let mut new_end: usize = self.end;
-		while new_start > 0 {
-			if self.full_string.0[new_start] == SymbolicChar::WildcardStar {
-				new_start -= 1;
-			} else {
-				break;
-			}
+		while (new_start > 0) && (self.full_string.0[new_start] == SymbolicChar::WildcardStar) {
+			new_start -= 1;
 		}
-		while new_end < self.full_string.0.len() {
-			if self.full_string.0[new_end] == SymbolicChar::WildcardStar {
-				new_end += 1;
-			} else {
-				break;
-			}
+		while (new_end < self.full_string.0.len()) && (self.full_string.0[new_end] == SymbolicChar::WildcardStar) {
+			new_end += 1;
 		}
 		Self {
 			full_string: self.full_string,
@@ -252,6 +308,7 @@ impl<'a> SearchStringView<'a> {
 		&self,
 		schema: &Schema,
 		rows: &VariableOrCaptures<Regex>,
+		group: usize,
 	) -> Vec<Interpretation> {
 		let mut interpretations: Vec<Interpretation> = Vec::new();
 
@@ -272,54 +329,20 @@ impl<'a> SearchStringView<'a> {
 				let mut sub_queries: Vec<SubQuery> = Vec::new();
 
 				if self[0].is_wildcard() {
-					sub_queries.push(SubQuery {
-						group: 0,
-						rule_idx: None,
-						name: String::new(),
-						value: "*".to_owned(),
-					});
+					sub_queries.push(SubQuery::new_static_text(&self[0..1], schema, group));
 				}
 
 				let mut last_pos: usize = 0;
 
 				for token in path.into_iter() {
-					if let Some(capture) = &token.maybe_capture {
-						sub_queries.push(SubQuery {
-							group: 0,
-							rule_idx: Some(rule.idx.index),
-							name: format!("{}{}", rule.name, capture.qualified_name),
-							value: token
-								.value
-								.iter()
-								.map(SymbolicChar::escape_for_search_string)
-								.collect::<String>(),
-						});
+					if let Some(capture) = token.maybe_capture {
+						let name: String = format!("{}{}", rule.name, capture.qualified_name);
+						sub_queries.push(SubQuery::new_leaf(rule, capture, name, token.value, schema, group));
 					} else {
-						sub_queries.push(SubQuery::new_static_text(&token.value));
+						sub_queries.push(SubQuery::new_static_text(&token.value, schema, group));
 					}
-					// if last_pos < start {
-					// 	sub_queries.push(SubQuery::new_static_text(&self[last_pos..start]));
-					// }
-					// let mut value: String = String::new();
-					// for &ch in self[start..end].iter() {
-					// 	value.push_str(&ch.escape_for_search_string());
-					// }
-					// sub_queries.push(SubQuery {
-					// 	group: 0,
-					// 	rule_idx: Some(rule.idx.index),
-					// 	name: format!("{}{}", rule.name, capture.qualified_name),
-					// 	value: value.clone(),
-					// });
-					// last_pos = end;
 				}
-				// let end: usize = self.len() - 1;
-				// if last_pos < end {
-				// 	sub_queries.push(SubQuery::new_static_text(&self[last_pos..end]));
-				// }
-				interpretations.push(Interpretation {
-					sub_queries,
-					stringified: String::new(),
-				});
+				interpretations.push(Interpretation { sub_queries });
 			}
 		}
 
@@ -383,51 +406,108 @@ impl std::fmt::Display for SymbolicChar {
 }
 
 impl Interpretation {
-	pub fn stringify(&self) -> String {
-		let mut buf: String = String::new();
-		for sub_query in self.sub_queries.iter() {
-			if sub_query.is_static_text() {
-				buf += &sub_query.value;
-			} else {
-				buf += &format!("<{}:{}>(", sub_query.rule_idx.map_or(0, NonZero::get), sub_query.name);
-				buf += &sub_query.value;
-				buf += ")";
-			}
-		}
-		buf
-	}
-
-	fn append_sub_query(&mut self, suffix: Interpretation) {
-		assert!(!suffix.sub_queries.is_empty());
-
-		let Some(last): Option<&mut SubQuery> = self.sub_queries.last_mut() else {
-			panic!("`Interpretation` should not be empty");
+	fn append_sub_query(&mut self, mut suffix: Interpretation) {
+		let Some(suffix_first): Option<&mut SubQuery> = suffix.sub_queries.first_mut() else {
+			return;
+		};
+		let Some(me_last): Option<&mut SubQuery> = self.sub_queries.last_mut() else {
+			return;
 		};
 
-		self.sub_queries.extend(suffix.sub_queries.into_iter());
-		// if last.is_static_text() && suffix.is_static_text() {
-		// 	last.symbols.extend(&suffix.symbols[..]);
-		// } else {
-		// 	self.sub_queries.push(suffix);
-		// }
+		if me_last.is_static_text() && suffix_first.is_static_text() {
+			me_last.value.extend(suffix_first.value.drain(..));
+			self.sub_queries.extend(suffix.sub_queries.drain(1..));
+		} else {
+			self.sub_queries.extend(suffix.sub_queries.into_iter());
+		}
 	}
 }
 
 impl SubQuery {
-	fn new_static_text(symbols: &[SymbolicChar]) -> Self {
+	#[tracing::instrument(skip_all, level = "trace")]
+	pub fn execute(&self, input: &str) -> bool {
+		if self.is_all_wildcards {
+			return true;
+		}
+		self.dfa
+			.execute_without_captures(input, u32::from('\n'), &mut self.dfa.execution_data())
+			.map_or(false, |matched_rule| matched_rule.lexeme.len() == input.len())
+	}
+
+	fn new_static_text(symbols: &[SymbolicChar], schema: &Schema, group: usize) -> Self {
+		let is_all_wildcards: bool = symbols.iter().all(|&ch| ch == SymbolicChar::WildcardStar);
 		Self {
-			group: 0,
+			group,
 			rule_idx: None,
 			name: String::new(),
-			value: symbols
-				.iter()
-				.map(SymbolicChar::escape_for_search_string)
-				.collect::<String>(),
+			value: symbols.to_vec(),
+			is_all_wildcards,
+			dfa: Self::dfa_for(symbols, &schema.delimiters),
+		}
+	}
+
+	fn new_leaf(
+		rule: &Rule,
+		capture: RegexCapture,
+		name: String,
+		symbols: Vec<SymbolicChar>,
+		schema: &Schema,
+		group: usize,
+	) -> Self {
+		let is_all_wildcards: bool = symbols.iter().all(|&ch| ch == SymbolicChar::WildcardStar);
+		let dfa: Tdfa = Self::dfa_for(&symbols, &schema.delimiters);
+		Self {
+			group,
+			rule_idx: Some(rule.idx.index),
+			name,
+			value: symbols,
+			is_all_wildcards,
+			dfa,
 		}
 	}
 
 	fn is_static_text(&self) -> bool {
 		self.rule_idx.is_none()
+	}
+
+	#[tracing::instrument(skip_all, level = "trace")]
+	fn dfa_for(symbols: &[SymbolicChar], delimiters: &str) -> Tdfa {
+		let mut sequence: Vec<Regex> = Vec::new();
+		for &ch in symbols.iter() {
+			match ch {
+				SymbolicChar::Literal(ch) => {
+					sequence.push(Regex::Literal(ch));
+				},
+				SymbolicChar::WildcardOne => {
+					sequence.push(Regex::BoundedRepetition {
+						min: 0,
+						max: 1,
+						item: Box::new(Regex::AnyChar),
+					});
+				},
+				SymbolicChar::WildcardStar => {
+					sequence.push(Regex::KleeneClosure(Box::new(Regex::AnyChar)));
+				},
+			}
+		}
+		let regex: Regex = Regex::Sequence(sequence);
+		Tdfa::for_rules(
+			&[Rule {
+				idx: RuleIdx {
+					priority: 0,
+					position: 0,
+					index: NonZero::<u16>::MAX,
+				},
+				name: String::new(),
+				regex: TopLevelRegex {
+					anchor_before: false,
+					anchor_after: false,
+					inner: regex,
+				},
+				capture_info: Vec::new(),
+			}],
+			delimiters.to_owned(),
+		)
 	}
 }
 
@@ -450,11 +530,55 @@ mod test {
 			let search: SearchString = SearchString::parse("a*c").unwrap();
 			let search: SearchString = SearchString::parse("a*@*com").unwrap();
 
-			for tokens in search.interpretations_for_name(&schema, "email") {
-				println!("- {tokens:?}");
-			}
-		}
+			let interpretations: Vec<Interpretation> = search.interpretations_for_name(&schema, "email");
 
-		// panic!();
+			for i in interpretations.iter() {
+				println!("- {i:?}");
+			}
+
+			assert!(interpretations[0].sub_queries[0].execute("a"));
+			assert!(!interpretations[0].sub_queries[0].execute("b"));
+			assert!(interpretations[1].sub_queries[0].execute("abc"));
+			assert!(!interpretations[1].sub_queries[0].execute("b"));
+
+			assert!(interpretations[0].sub_queries[1].execute("@"));
+			assert!(!interpretations[0].sub_queries[1].execute("@@"));
+			assert!(interpretations[1].sub_queries[1].execute("@"));
+			assert!(!interpretations[1].sub_queries[1].execute("@@"));
+
+			assert!(interpretations[0].sub_queries[2].execute("example."));
+			assert!(interpretations[0].sub_queries[2].execute("foo.example."));
+			assert!(interpretations[0].sub_queries[2].execute("example"));
+			assert!(interpretations[0].sub_queries[2].execute(""));
+			assert!(interpretations[0].sub_queries[2].execute(".example"));
+
+			assert!(interpretations[1].sub_queries[2].execute("example."));
+			assert!(interpretations[1].sub_queries[2].execute("foo.example."));
+			assert!(interpretations[1].sub_queries[2].execute("example"));
+			assert!(interpretations[1].sub_queries[2].execute(""));
+			assert!(interpretations[1].sub_queries[2].execute(".example"));
+
+			assert!(interpretations[0].sub_queries[3].execute("com"));
+			assert!(!interpretations[0].sub_queries[3].execute("org"));
+			assert!(interpretations[1].sub_queries[3].execute("com"));
+			assert!(!interpretations[1].sub_queries[3].execute("org"));
+		}
 	}
+
+	// #[test]
+	// fn full_log_search() {
+	// 	let mut builder: SchemaBuilder = SchemaBuilder::new();
+	// 	builder
+	// 		.add_rule("email", r"(?<user>\w+)@(?<parts>\w+\.)+(?<tld>\w+)")
+	// 		.unwrap();
+
+	// 	let schema: Schema = builder.build();
+
+	// 	let search: SearchString = SearchString::parse("a@com*").unwrap();
+
+	// 	println!("=== Interpretations");
+	// 	for interpretation in search.interpretations_for_name(&schema, "") {
+	// 		println!("- {interpretation:?}");
+	// 	}
+	// }
 }

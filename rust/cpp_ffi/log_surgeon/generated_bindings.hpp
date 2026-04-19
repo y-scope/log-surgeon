@@ -149,17 +149,7 @@ const Interpretation *log_surgeon_search_get_interpretation(const Vec<Interpreta
 
 const SubQuery *log_surgeon_search_get_sub_query(const Interpretation *interpretation, size_t i);
 
-CCharArray log_surgeon_search_get_sub_query_name(const SubQuery *sub_query);
-
-uint16_t log_surgeon_search_get_sub_query_rule(const SubQuery *sub_query);
-
-CCharArray log_surgeon_search_get_sub_query_value(const SubQuery *sub_query);
-
 void log_surgeon_search_interpretations_drop(Box<Vec<Interpretation>> value);
-
-CCharArray log_surgeon_search_query_interpretation_as_string(const Vec<Interpretation> *interpretations,
-                                                             size_t i,
-                                                             size_t *len);
 
 Box<Vec<Interpretation>> log_surgeon_search_query_interpretations(const Parser *parser,
                                                                   CCharArray input,
@@ -169,6 +159,12 @@ void log_surgeon_search_result_drop(Box<SearchResult> value);
 
 const Capture *log_surgeon_search_result_get_leaf_captures(const SearchResult *search_result,
                                                            size_t *len);
+
+CCharArray log_surgeon_search_sub_query_get_name(const SubQuery *sub_query);
+
+uint16_t log_surgeon_search_sub_query_get_rule(const SubQuery *sub_query);
+
+bool log_surgeon_search_sub_query_match_input(const SubQuery *sub_query, CCharArray input);
 
 }  // extern "C"
 

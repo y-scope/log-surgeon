@@ -1,5 +1,7 @@
 mod derivative;
 
+pub use derivative::*;
+
 use crate::utils::Escaped;
 use std::num::NonZero;
 use std::str::Chars;
