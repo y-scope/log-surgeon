@@ -13,12 +13,26 @@ struct Derivative {
 	next: Regex,
 }
 
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 enum DerivativeChar {
 	Char(SymbolicChar),
 	Derivative(RegexCapture),
 }
 
+impl std::fmt::Debug for DerivativeChar {
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			&Self::Char(ch) => ch.fmt(fmt),
+			Self::Derivative(capture) => {
+				if !capture.close {
+					fmt.write_fmt(format_args!("(?<{}>)", capture.qualified_name))
+				} else {
+					fmt.write_fmt(format_args!("(<{}>?)", capture.qualified_name))
+				}
+			},
+		}
+	}
+}
 /// Alternation.
 /// We use `|` instead of `+` to avoid confusion.
 impl std::ops::BitOr for Regex {
@@ -110,7 +124,7 @@ impl Regex {
 			if !value.is_empty() {
 				tokens.push(SimulationToken {
 					maybe_capture: None,
-					value: std::mem::replace(&mut value, Vec::new()),
+					value,
 				});
 			}
 
@@ -168,6 +182,9 @@ impl Regex {
 			// };
 			if ch.is_wildcard() {
 				queue.push((regex.clone(), i + 1, path.clone()));
+			}
+			if i == 1 {
+				println!("- char {ch:?}, path {path:?}, remaining {regex:?}");
 			}
 			for derivative in regex.apply_derivative(ch).into_iter().rev() {
 				if derivative.next.is_empty_set() {
@@ -410,6 +427,16 @@ mod test {
 			assert_eq!(interpretations[0], "(?<user>a)@(?<parts>**)(?<tld>*)");
 			assert_eq!(interpretations[1], "(?<user>a*)@(?<parts>**)(?<tld>*)");
 			assert_eq!(&interpretations[2..], &[] as &[String]);
+		}
+
+		{
+			let interpretations: Vec<String> = search(&regex, "*a@example.com");
+
+			println!("- inter is {interpretations:?}");
+
+			// assert_eq!(interpretations[0], "(?<user>a)@(?<parts>**)(?<tld>*)");
+			// assert_eq!(interpretations[1], "(?<user>a*)@(?<parts>**)(?<tld>*)");
+			// assert_eq!(&interpretations[2..], &[] as &[String]);
 		}
 	}
 

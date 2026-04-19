@@ -27,11 +27,24 @@ pub enum SearchStringError<'input> {
 	InvalidEscape { before: &'input str, after: &'input str },
 }
 
-#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub enum SymbolicChar {
 	Literal(char),
 	WildcardStar,
 	WildcardOne,
+}
+
+impl std::fmt::Debug for SymbolicChar {
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match *self {
+			Self::Literal('*') => r"\*".fmt(fmt),
+			Self::Literal('?') => r"\?".fmt(fmt),
+			Self::Literal('\\') => r"\\".fmt(fmt),
+			Self::Literal(ch) => ch.fmt(fmt),
+			Self::WildcardStar => fmt.write_str("*"),
+			Self::WildcardOne => fmt.write_str("?"),
+		}
+	}
 }
 
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
@@ -197,13 +210,14 @@ impl SearchString {
 					continue;
 				}
 
-				let single_token_interpretations: Vec<Interpretation> =
+				let mut single_token_interpretations: Vec<Interpretation> =
 					sub_view.single_token_interpretations(schema, &rows, group);
-				group += 1;
 
 				if single_token_interpretations.is_empty() {
 					continue;
 				}
+
+				group += 1;
 
 				if start == 0 {
 					for suffix in single_token_interpretations.into_iter() {
@@ -268,7 +282,7 @@ impl<'a> SearchStringView<'a> {
 			});
 		}
 
-		let has_wildcard: bool = self.as_str().iter().copied().find(SymbolicChar::is_wildcard).is_some();
+		let has_wildcard: bool = self.as_str().iter().any(SymbolicChar::is_wildcard);
 
 		let potential_interpretations: Vec<Interpretation> =
 			extended.interpretations_for_name_internal(schema, rows, group);
@@ -336,6 +350,9 @@ impl<'a> SearchStringView<'a> {
 
 				for token in path.into_iter() {
 					if let Some(capture) = token.maybe_capture {
+						if token.value.iter().all(|&ch| ch == SymbolicChar::WildcardStar) {
+							continue;
+						}
 						let name: String = format!("{}{}", rule.name, capture.qualified_name);
 						sub_queries.push(SubQuery::new_leaf(rule, capture, name, token.value, schema, group));
 					} else {
@@ -406,6 +423,21 @@ impl std::fmt::Display for SymbolicChar {
 }
 
 impl Interpretation {
+	pub fn execute(&self, input_parts: &[&str]) -> bool {
+		assert_eq!(self.sub_queries.len(), input_parts.len());
+
+		std::iter::zip(self.sub_queries.iter(), input_parts.iter().copied())
+			.all(|(sub_query, input)| sub_query.execute(input))
+	}
+
+	pub fn any<'a>(mut interpretations: impl Iterator<Item = &'a Self>, input_parts: &[&str]) -> bool {
+		interpretations.any(|interp| interp.execute(input_parts))
+	}
+
+	// 	pub fn all<'a>(mut interpretations: impl Iterator<Item = &'a Self>, input_parts: &[&str]) -> bool {
+	// 		interpretations.all(|interp| interp.execute(input_parts))
+	// 	}
+
 	fn append_sub_query(&mut self, mut suffix: Interpretation) {
 		let Some(suffix_first): Option<&mut SubQuery> = suffix.sub_queries.first_mut() else {
 			return;
@@ -517,52 +549,46 @@ mod test {
 	use crate::schema::SchemaBuilder;
 
 	#[test]
-	fn basic() {
+	fn search_email() {
 		let mut builder: SchemaBuilder = SchemaBuilder::new();
 		builder
-			.add_rule("email", r"(?<user>\w+)@(?<parts>\w+\.)+(?<tld>\w+)")
+			.add_rule("email", r"(?<user>\w+)@((?<parts>\w+)\.)+(?<tld>\w+)")
 			.unwrap();
 
 		let schema: Schema = builder.build();
 
 		{
-			println!("===");
-			let search: SearchString = SearchString::parse("a*c").unwrap();
-			let search: SearchString = SearchString::parse("a*@*com").unwrap();
+			let interpretations: Vec<Interpretation> = search(&schema, "a*@*com", "email");
 
-			let interpretations: Vec<Interpretation> = search.interpretations_for_name(&schema, "email");
+			assert!(interpretations.iter().any(execute(&["a", "@", "example", "com"])));
+			assert!(interpretations.iter().any(execute(&["aa", "@", "example", "com"])));
+			assert!(interpretations.iter().any(execute(&["aa", "@", "", "com"])));
+
+			assert!(!interpretations.iter().any(execute(&["", "@", "example", "com"])));
+			assert!(!interpretations.iter().any(execute(&["aa", "@@", "example", "com"])));
+			assert!(!interpretations.iter().any(execute(&["a", "@", "example", "org"])));
+		}
+
+		{
+			println!("===");
+			let interpretations: Vec<Interpretation> = search(&schema, "*a@foo.*", "email");
 
 			for i in interpretations.iter() {
 				println!("- {i:?}");
 			}
-
-			assert!(interpretations[0].sub_queries[0].execute("a"));
-			assert!(!interpretations[0].sub_queries[0].execute("b"));
-			assert!(interpretations[1].sub_queries[0].execute("abc"));
-			assert!(!interpretations[1].sub_queries[0].execute("b"));
-
-			assert!(interpretations[0].sub_queries[1].execute("@"));
-			assert!(!interpretations[0].sub_queries[1].execute("@@"));
-			assert!(interpretations[1].sub_queries[1].execute("@"));
-			assert!(!interpretations[1].sub_queries[1].execute("@@"));
-
-			assert!(interpretations[0].sub_queries[2].execute("example."));
-			assert!(interpretations[0].sub_queries[2].execute("foo.example."));
-			assert!(interpretations[0].sub_queries[2].execute("example"));
-			assert!(interpretations[0].sub_queries[2].execute(""));
-			assert!(interpretations[0].sub_queries[2].execute(".example"));
-
-			assert!(interpretations[1].sub_queries[2].execute("example."));
-			assert!(interpretations[1].sub_queries[2].execute("foo.example."));
-			assert!(interpretations[1].sub_queries[2].execute("example"));
-			assert!(interpretations[1].sub_queries[2].execute(""));
-			assert!(interpretations[1].sub_queries[2].execute(".example"));
-
-			assert!(interpretations[0].sub_queries[3].execute("com"));
-			assert!(!interpretations[0].sub_queries[3].execute("org"));
-			assert!(interpretations[1].sub_queries[3].execute("com"));
-			assert!(!interpretations[1].sub_queries[3].execute("org"));
 		}
+	}
+
+	fn search(schema: &Schema, query: &str, name: &str) -> Vec<Interpretation> {
+		let query: SearchString = SearchString::parse(query).unwrap();
+
+		let interpretations: Vec<Interpretation> = query.interpretations_for_name(&schema, name);
+
+		interpretations
+	}
+
+	fn execute(parts: &[&str]) -> impl Fn(&Interpretation) -> bool {
+		|interp| interp.execute(parts)
 	}
 
 	// #[test]
