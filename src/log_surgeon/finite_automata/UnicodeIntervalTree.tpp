@@ -87,11 +87,9 @@ auto UnicodeIntervalTree<T>::pop(Interval interval) -> std::unique_ptr<std::vect
 }
 
 template <class T>
-auto UnicodeIntervalTree<T>::Node::pop(
-        std::unique_ptr<Node> node,
-        Interval interval,
-        std::unique_ptr<Node>* ret
-) -> std::unique_ptr<Node> {
+auto UnicodeIntervalTree<T>::Node::pop(std::unique_ptr<Node> node,
+                                       Interval interval,
+                                       std::unique_ptr<Node>* ret) -> std::unique_ptr<Node> {
     if (node == nullptr) {
         return nullptr;
     }

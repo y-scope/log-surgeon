@@ -38,8 +38,8 @@ public:
      * @return std::nullopt if `m_dest_state` is not in `state_ids`.
      */
     [[nodiscard]] auto serialize(
-            std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids
-    ) const -> std::optional<std::string>;
+            std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids) const
+            -> std::optional<std::string>;
 
 private:
     std::vector<TagOperation> m_tag_ops;
@@ -48,19 +48,17 @@ private:
 
 template <typename TypedNfaState>
 auto NfaSpontaneousTransition<TypedNfaState>::serialize(
-        std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids
-) const -> std::optional<std::string> {
+        std::unordered_map<TypedNfaState const*, uint32_t> const& state_ids) const
+        -> std::optional<std::string> {
     if (false == state_ids.contains(m_dest_state)) {
         return std::nullopt;
     }
     auto transformed_operations
             = m_tag_ops | std::ranges::views::transform(&TagOperation::serialize);
 
-    return fmt::format(
-            "{}[{}]",
-            state_ids.at(m_dest_state),
-            fmt::join(transformed_operations, ",")
-    );
+    return fmt::format("{}[{}]",
+                       state_ids.at(m_dest_state),
+                       fmt::join(transformed_operations, ","));
 }
 }  // namespace log_surgeon::finite_automata
 

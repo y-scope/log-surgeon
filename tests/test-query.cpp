@@ -38,12 +38,10 @@ namespace {
  * @param schema_rules A vector of strings, each string representing a schema rule.
  * @param expected_serialized_interpretations  The expected set of serialized interpretations.
  */
-auto test_query(
-        string_view raw_query_string,
-        string_view expected_processed_query_string,
-        vector<string> const& schema_rules,
-        set<string> const& expected_serialized_interpretations
-) -> void;
+auto test_query(string_view raw_query_string,
+                string_view expected_processed_query_string,
+                vector<string> const& schema_rules,
+                set<string> const& expected_serialized_interpretations) -> void;
 
 /**
  * Initializes a `ByteLexer` with space as a delimiter and the given `schema_rules`.
@@ -53,12 +51,10 @@ auto test_query(
  */
 auto make_test_lexer(vector<string> const& schema_rules) -> ByteLexer;
 
-auto test_query(
-        string_view const raw_query_string,
-        string_view const expected_processed_query_string,
-        vector<string> const& schema_rules,
-        set<string> const& expected_serialized_interpretations
-) -> void {
+auto test_query(string_view const raw_query_string,
+                string_view const expected_processed_query_string,
+                vector<string> const& schema_rules,
+                set<string> const& expected_serialized_interpretations) -> void {
     auto const lexer{make_test_lexer(schema_rules)};
 
     Query const query{string(raw_query_string)};
@@ -107,12 +103,10 @@ TEST_CASE("empty_query", "[Query]") {
     vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
     set<string> const expected_serialized_interpretations;
 
-    test_query(
-            cRawQueryString,
-            cProcessedQueryString,
-            schema_rules,
-            expected_serialized_interpretations
-    );
+    test_query(cRawQueryString,
+               cProcessedQueryString,
+               schema_rules,
+               expected_serialized_interpretations);
 }
 
 /**
@@ -125,12 +119,10 @@ TEST_CASE("greedy_wildcard_query", "[Query]") {
     vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
     set<string> const expected_serialized_interpretations{"logtype='*', contains_wildcard='0'"};
 
-    test_query(
-            cRawQueryString,
-            cProcessedQueryString,
-            schema_rules,
-            expected_serialized_interpretations
-    );
+    test_query(cRawQueryString,
+               cProcessedQueryString,
+               schema_rules,
+               expected_serialized_interpretations);
 }
 
 /**
@@ -147,15 +139,12 @@ TEST_CASE("repeated_greedy_wildcard_query", "[Query]") {
             "logtype='<0>(a*)**b', contains_wildcard='10'",
             "logtype='<0>(a*)*<0>(*b)', contains_wildcard='101'",
             "logtype='<0>(a*b)', contains_wildcard='1'",
-            "logtype='a**<0>(*b)', contains_wildcard='01'"
-    };
+            "logtype='a**<0>(*b)', contains_wildcard='01'"};
 
-    test_query(
-            cRawQueryString,
-            cProcessedQueryString,
-            schema_rules,
-            expected_serialized_interpretations
-    );
+    test_query(cRawQueryString,
+               cProcessedQueryString,
+               schema_rules,
+               expected_serialized_interpretations);
 }
 
 /**
@@ -172,15 +161,12 @@ TEST_CASE("mixed_wildcard_query", "[Query]") {
             "logtype='<0>(a?*)**b', contains_wildcard='10'",
             "logtype='<0>(a?*)*<0>(*b)', contains_wildcard='101'",
             "logtype='<0>(a?*b)', contains_wildcard='1'",
-            "logtype='a?**<0>(*b)', contains_wildcard='01'"
-    };
+            "logtype='a?**<0>(*b)', contains_wildcard='01'"};
 
-    test_query(
-            cRawQueryString,
-            cProcessedQueryString,
-            schema_rules,
-            expected_serialized_interpretations
-    );
+    test_query(cRawQueryString,
+               cProcessedQueryString,
+               schema_rules,
+               expected_serialized_interpretations);
 }
 
 /**
@@ -239,15 +225,12 @@ TEST_CASE("repeated_non_greedy_wildcard_query", "[Query]") {
             R"(logtype='<0>(a??)<0>(?)<0>(?b)', contains_wildcard='111')",
             R"(logtype='a?<0>(?)<0>(?)<0>(?b)', contains_wildcard='0111')",
 
-            R"(logtype='<0>(a?)<0>(?)<0>(?)<0>(?b)', contains_wildcard='1111')"
-    };
+            R"(logtype='<0>(a?)<0>(?)<0>(?)<0>(?b)', contains_wildcard='1111')"};
 
-    test_query(
-            cRawQueryString,
-            cProcessedQueryString,
-            schema_rules,
-            expected_serialized_interpretations
-    );
+    test_query(cRawQueryString,
+               cProcessedQueryString,
+               schema_rules,
+               expected_serialized_interpretations);
 }
 
 /**
@@ -259,15 +242,12 @@ TEST_CASE("escaped_star_query", "[Query]") {
     constexpr string_view cProcessedQueryString{R"(a\*b)"};
     vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
     set<string> const expected_serialized_interpretations{
-            R"(logtype='a\*b', contains_wildcard='0')"
-    };
+            R"(logtype='a\*b', contains_wildcard='0')"};
 
-    test_query(
-            cRawQueryString,
-            cProcessedQueryString,
-            schema_rules,
-            expected_serialized_interpretations
-    );
+    test_query(cRawQueryString,
+               cProcessedQueryString,
+               schema_rules,
+               expected_serialized_interpretations);
 }
 
 /**
@@ -279,15 +259,12 @@ TEST_CASE("escaped_question_mark_query", "[Query]") {
     constexpr string_view cProcessedQueryString{R"(a\?b)"};
     vector<string> const schema_rules{{R"(hasNumber:[A-Za-z]*\d+[A-Za-z]*)"}};
     set<string> const expected_serialized_interpretations{
-            R"(logtype='a\?b', contains_wildcard='0')"
-    };
+            R"(logtype='a\?b', contains_wildcard='0')"};
 
-    test_query(
-            cRawQueryString,
-            cProcessedQueryString,
-            schema_rules,
-            expected_serialized_interpretations
-    );
+    test_query(cRawQueryString,
+               cProcessedQueryString,
+               schema_rules,
+               expected_serialized_interpretations);
 }
 
 /**
@@ -306,15 +283,12 @@ TEST_CASE("int_query", "[Query]") {
     vector<string> const schema_rules{{R"(int:\d+)"}};
     set<string> const expected_serialized_interpretations{
             R"(logtype='123', contains_wildcard='0')",
-            R"(logtype='<0>(123)', contains_wildcard='0')"
-    };
+            R"(logtype='<0>(123)', contains_wildcard='0')"};
 
-    test_query(
-            cRawQueryString,
-            cProcessedQueryString,
-            schema_rules,
-            expected_serialized_interpretations
-    );
+    test_query(cRawQueryString,
+               cProcessedQueryString,
+               schema_rules,
+               expected_serialized_interpretations);
 }
 
 /**
@@ -336,15 +310,12 @@ TEST_CASE("non_wildcard_multi_variable_query", "[Query]") {
                 R"(logtype='abc123 123', contains_wildcard='0')",
                 R"(logtype='abc123 <0>(123)', contains_wildcard='00')",
                 R"(logtype='<1>(abc123) 123', contains_wildcard='00')",
-                R"(logtype='<1>(abc123) <0>(123)', contains_wildcard='000')"
-        };
+                R"(logtype='<1>(abc123) <0>(123)', contains_wildcard='000')"};
 
-        test_query(
-                cRawQueryString,
-                cProcessedQueryString,
-                schema_rules,
-                expected_serialized_interpretations
-        );
+        test_query(cRawQueryString,
+                   cProcessedQueryString,
+                   schema_rules,
+                   expected_serialized_interpretations);
     }
 
     SECTION("has_number_priority") {
@@ -353,15 +324,12 @@ TEST_CASE("non_wildcard_multi_variable_query", "[Query]") {
                 R"(logtype='abc123 123', contains_wildcard='0')",
                 R"(logtype='abc123 <0>(123)', contains_wildcard='00')",
                 R"(logtype='<0>(abc123) 123', contains_wildcard='00')",
-                R"(logtype='<0>(abc123) <0>(123)', contains_wildcard='000')"
-        };
+                R"(logtype='<0>(abc123) <0>(123)', contains_wildcard='000')"};
 
-        test_query(
-                cRawQueryString,
-                cProcessedQueryString,
-                schema_rules,
-                expected_serialized_interpretations
-        );
+        test_query(cRawQueryString,
+                   cProcessedQueryString,
+                   schema_rules,
+                   expected_serialized_interpretations);
     }
 }
 
@@ -391,13 +359,10 @@ TEST_CASE("wildcard_multi_variable_query", "[Query]") {
             R"(logtype='<1>(abc123*)** *123', contains_wildcard='10')",
             R"(logtype='<1>(abc123*)** ***123', contains_wildcard='10')",
             R"(logtype='<1>(abc123*)** **<0>(*123)', contains_wildcard='101')",
-            R"(logtype='<1>(abc123*)** **<1>(*123)', contains_wildcard='101')"
-    };
+            R"(logtype='<1>(abc123*)** **<1>(*123)', contains_wildcard='101')"};
 
-    test_query(
-            cRawQueryString,
-            cProcessedQueryString,
-            schema_rules,
-            expected_serialized_interpretations
-    );
+    test_query(cRawQueryString,
+               cProcessedQueryString,
+               schema_rules,
+               expected_serialized_interpretations);
 }

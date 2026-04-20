@@ -39,11 +39,9 @@ public:
         append_static_token(query_substring);
     }
 
-    QueryInterpretation(
-            uint32_t const variable_type,
-            std::string query_substring,
-            bool const contains_wildcard
-    ) {
+    QueryInterpretation(uint32_t const variable_type,
+                        std::string query_substring,
+                        bool const contains_wildcard) {
         append_variable_token(variable_type, std::move(query_substring), contains_wildcard);
     }
 
@@ -90,14 +88,11 @@ public:
      */
     auto append_static_token(std::string const& query_substring) -> void;
 
-    auto append_variable_token(
-            uint32_t const variable_type,
-            std::string query_substring,
-            bool const contains_wildcard
-    ) -> void {
+    auto append_variable_token(uint32_t const variable_type,
+                               std::string query_substring,
+                               bool const contains_wildcard) -> void {
         m_tokens.emplace_back(
-                VariableQueryToken(variable_type, std::move(query_substring), contains_wildcard)
-        );
+                VariableQueryToken(variable_type, std::move(query_substring), contains_wildcard));
     }
 
     [[nodiscard]] auto get_logtype() const
@@ -112,11 +107,9 @@ public:
 
 private:
     std::vector<std::variant<StaticQueryToken, VariableQueryToken>> m_tokens;
-    static_assert(
-            IsStronglyThreeWayComparableVariant<decltype(m_tokens)::value_type>::cValue,
-            "All variant types in `m_tokens` must have `operator<=>` returning "
-            "`std::strong_ordering`."
-    );
+    static_assert(IsStronglyThreeWayComparableVariant<decltype(m_tokens)::value_type>::cValue,
+                  "All variant types in `m_tokens` must have `operator<=>` returning "
+                  "`std::strong_ordering`.");
 };
 }  // namespace log_surgeon::wildcard_query_parser
 

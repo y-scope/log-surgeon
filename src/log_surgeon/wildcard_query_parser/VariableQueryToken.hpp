@@ -16,11 +16,9 @@ namespace log_surgeon::wildcard_query_parser {
  */
 class VariableQueryToken {
 public:
-    VariableQueryToken(
-            uint32_t const variable_type,
-            std::string query_substring,
-            bool const contains_wildcard
-    )
+    VariableQueryToken(uint32_t const variable_type,
+                       std::string query_substring,
+                       bool const contains_wildcard)
             : m_variable_type(variable_type),
               m_query_substring(std::move(query_substring)),
               m_contains_wildcard(contains_wildcard) {}

@@ -18,17 +18,13 @@ namespace {
     while (std::nullopt == line_num) {
         assert(!symbols.empty());
         MatchedSymbol& curr_symbol = symbols.top();
-        std::visit(
-                Overloaded{
-                        [&line_num](Token& token) { line_num = token.get_line_num(); },
-                        [&symbols](NonTerminal& m) {
-                            for (size_t i{0}; i < m.get_production()->m_body.size(); ++i) {
-                                symbols.push(m.move_symbol(i));
-                            }
-                        }
-                },
-                curr_symbol
-        );
+        std::visit(Overloaded{[&line_num](Token& token) { line_num = token.get_line_num(); },
+                              [&symbols](NonTerminal& m) {
+                                  for (size_t i{0}; i < m.get_production()->m_body.size(); ++i) {
+                                      symbols.push(m.move_symbol(i));
+                                  }
+                              }},
+                   curr_symbol);
         symbols.pop();
     }
     return *line_num;
@@ -66,8 +62,7 @@ Lalr1Parser<TypedNfaState, TypedDfaState>::Lalr1Parser() {
 template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_rule(
         std::string const& name,
-        std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule
-) -> void {
+        std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> rule) -> void {
     Parser<TypedNfaState, TypedDfaState>::add_rule(name, std::move(rule));
     m_terminals.insert(m_lexer.m_symbol_id[name]);
 }
@@ -75,16 +70,13 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_rule(
 template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_token_group(
         std::string const& name,
-        std::unique_ptr<finite_automata::RegexASTGroup<TypedNfaState>> rule_group
-) -> void {
+        std::unique_ptr<finite_automata::RegexASTGroup<TypedNfaState>> rule_group) -> void {
     add_rule(name, std::move(rule_group));
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_token_chain(
-        std::string const& name,
-        std::string const& chain
-) -> void {
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_token_chain(std::string const& name,
+                                                                std::string const& chain) -> void {
     assert(chain.size() > 1);
     auto first_char_rule
             = std::make_unique<finite_automata::RegexASTLiteral<TypedNfaState>>(chain[0]);
@@ -92,26 +84,23 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_token_chain(
             = std::make_unique<finite_automata::RegexASTLiteral<TypedNfaState>>(chain[1]);
     auto rule_chain = std::make_unique<finite_automata::RegexASTCat<TypedNfaState>>(
             std::move(first_char_rule),
-            std::move(second_char_rule)
-    );
+            std::move(second_char_rule));
     for (uint32_t i = 2; i < chain.size(); i++) {
         auto next_char = chain[i];
         auto next_char_rule
                 = std::make_unique<finite_automata::RegexASTLiteral<TypedNfaState>>(next_char);
         rule_chain = std::make_unique<finite_automata::RegexASTCat<TypedNfaState>>(
                 std::move(rule_chain),
-                std::move(next_char_rule)
-        );
+                std::move(next_char_rule));
     }
     add_rule(name, std::move(rule_chain));
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_production(
-        std::string const& head,
-        std::vector<std::string> const& body,
-        SemanticRule semantic_rule
-) -> uint32_t {
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::add_production(std::string const& head,
+                                                               std::vector<std::string> const& body,
+                                                               SemanticRule semantic_rule)
+        -> uint32_t {
     if (m_lexer.m_symbol_id.find(head) == m_lexer.m_symbol_id.end()) {
         m_lexer.m_symbol_id[head] = m_lexer.m_symbol_id.size();
         m_lexer.m_id_symbol[m_lexer.m_symbol_id[head]] = head;
@@ -188,11 +177,9 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr0_kernels() -> void {
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lalr1Parser<TypedNfaState, TypedDfaState>::lr_closure_helper(
-        ItemSet* item_set_ptr,
-        Item const* item,
-        uint32_t* next_symbol
-) -> bool {
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::lr_closure_helper(ItemSet* item_set_ptr,
+                                                                  Item const* item,
+                                                                  uint32_t* next_symbol) -> bool {
     // add {S'->(dot)S, ""}
     if (!item_set_ptr->m_closure.insert(*item).second) {
         return true;
@@ -210,10 +197,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::lr_closure_helper(
 template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr0_closure(ItemSet* item_set_ptr)
         -> void {
-    std::deque<Item> q(
-            item_set_ptr->m_kernel.begin(),
-            item_set_ptr->m_kernel.end()
-    );  // {{S'->(dot)S, ""}}
+    std::deque<Item> q(item_set_ptr->m_kernel.begin(),
+                       item_set_ptr->m_kernel.end());  // {{S'->(dot)S, ""}}
     while (!q.empty()) {
         auto item = q.back();  // {S'->(dot)S, ""}
         q.pop_back();
@@ -232,10 +217,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr0_closure(ItemSet* it
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lalr1Parser<TypedNfaState, TypedDfaState>::go_to(
-        ItemSet* from_item_set,
-        uint32_t const& next_symbol
-) -> ItemSet* {
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::go_to(ItemSet* from_item_set,
+                                                      uint32_t const& next_symbol) -> ItemSet* {
     auto next_item_set_ptr = std::make_unique<ItemSet>();
     assert(from_item_set != nullptr);
     for (auto const& item : from_item_set->m_closure) {
@@ -243,8 +226,9 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::go_to(
             continue;
         }
         if (item.next_symbol() == next_symbol) {
-            next_item_set_ptr->m_kernel
-                    .emplace(item.m_production, item.m_dot + 1, item.m_lookahead);
+            next_item_set_ptr->m_kernel.emplace(item.m_production,
+                                                item.m_dot + 1,
+                                                item.m_lookahead);
         }
     }
     if (next_item_set_ptr->m_kernel.empty()) {
@@ -318,10 +302,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_item_sets() -> void
     std::map<Item, std::set<int>> lookaheads;
     for (auto const& kv : m_lr0_item_sets) {
         for (auto const& l0_item : kv.second->m_kernel) {
-            lookaheads[l0_item].insert(
-                    m_spontaneous_map[l0_item.m_production].begin(),
-                    m_spontaneous_map[l0_item.m_production].end()
-            );
+            lookaheads[l0_item].insert(m_spontaneous_map[l0_item.m_production].begin(),
+                                       m_spontaneous_map[l0_item.m_production].end());
             if (l0_item.m_production == m_productions[m_root_production_id].get()) {
                 lookaheads[l0_item].insert((uint32_t)SymbolId::TokenEnd);
             }
@@ -334,10 +316,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_item_sets() -> void
             auto item_from = kv.first;
             for (auto const& item_to : kv.second) {
                 auto size_before = lookaheads[item_to].size();
-                lookaheads[item_to].insert(
-                        lookaheads[item_from].begin(),
-                        lookaheads[item_from].end()
-                );
+                lookaheads[item_to].insert(lookaheads[item_from].begin(),
+                                           lookaheads[item_from].end());
                 auto size_after = lookaheads[item_to].size();
                 changed = changed || size_after > size_before;
             }
@@ -389,11 +369,9 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lr1_closure(ItemSet* it
         while (pos < item.m_production->m_body.size()) {
             auto symbol = item.m_production->m_body.at(pos);
             auto symbol_firsts = m_firsts.find(symbol)->second;
-            lookaheads.insert(
-                    lookaheads.end(),
-                    std::make_move_iterator(symbol_firsts.begin()),
-                    std::make_move_iterator(symbol_firsts.end())
-            );
+            lookaheads.insert(lookaheads.end(),
+                              std::make_move_iterator(symbol_firsts.begin()),
+                              std::make_move_iterator(symbol_firsts.end()));
             if (m_nullable.find(symbol) == m_nullable.end()) {
                 break;
             }
@@ -509,35 +487,30 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::generate_lalr1_action() -> void 
 
 template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_after_last_newline(
-        std::stack<MatchedSymbol>& parse_stack_matches
-) -> std::string {
+        std::stack<MatchedSymbol>& parse_stack_matches) -> std::string {
     std::string error_message_reversed;
     bool done = false;
     while (!parse_stack_matches.empty() && !done) {
         MatchedSymbol top_symbol{std::move(parse_stack_matches.top())};
         parse_stack_matches.pop();
-        std::visit(
-                Overloaded{
-                        [&error_message_reversed, &done](Token& token) {
-                            if (token.to_string() == "\r" || token.to_string() == "\n") {
-                                done = true;
-                            } else {
-                                // input is being read backwards, so reverse
-                                // each token so that when the entire input is
-                                // reversed each token is displayed correctly
-                                auto token_string = token.to_string();
-                                std::reverse(token_string.begin(), token_string.end());
-                                error_message_reversed += token_string;
-                            }
-                        },
-                        [&parse_stack_matches](NonTerminal& m) {
-                            for (size_t i{0}; i < m.get_production()->m_body.size(); ++i) {
-                                parse_stack_matches.push(m.move_symbol(i));
-                            }
-                        }
-                },
-                top_symbol
-        );
+        std::visit(Overloaded{[&error_message_reversed, &done](Token& token) {
+                                  if (token.to_string() == "\r" || token.to_string() == "\n") {
+                                      done = true;
+                                  } else {
+                                      // input is being read backwards, so reverse
+                                      // each token so that when the entire input is
+                                      // reversed each token is displayed correctly
+                                      auto token_string = token.to_string();
+                                      std::reverse(token_string.begin(), token_string.end());
+                                      error_message_reversed += token_string;
+                                  }
+                              },
+                              [&parse_stack_matches](NonTerminal& m) {
+                                  for (size_t i{0}; i < m.get_production()->m_body.size(); ++i) {
+                                      parse_stack_matches.push(m.move_symbol(i));
+                                  }
+                              }},
+                   top_symbol);
     }
     std::reverse(error_message_reversed.begin(), error_message_reversed.end());
     return error_message_reversed;
@@ -547,9 +520,8 @@ template <typename TypedNfaState, typename TypedDfaState>
 auto Lalr1Parser<TypedNfaState, TypedDfaState>::get_input_until_next_newline(Token* error_token)
         -> std::string {
     std::string rest_of_line;
-    bool next_is_end_token{
-            error_token->get_type_ids()->at(0) == static_cast<uint32_t>(SymbolId::TokenEnd)
-    };
+    bool next_is_end_token{error_token->get_type_ids()->at(0)
+                           == static_cast<uint32_t>(SymbolId::TokenEnd)};
     bool next_has_newline = (error_token->to_string().find('\n') != std::string::npos)
                             || (error_token->to_string().find('\r') != std::string::npos);
     while (!next_has_newline && !next_is_end_token) {
@@ -596,8 +568,7 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::report_error() -> std::string {
                 error_type += "'";
                 if (auto* regex_ast_literal
                     = dynamic_cast<finite_automata::RegexASTLiteral<TypedNfaState>*>(
-                            m_lexer.get_highest_priority_rule(i)
-                    ))
+                            m_lexer.get_highest_priority_rule(i)))
                 {
                     error_type += unescape(char(regex_ast_literal->get_character()));
                 } else {
@@ -683,11 +654,9 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse_advance(Token& next_token,
 }
 
 template <typename TypedNfaState, typename TypedDfaState>
-auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse_symbol(
-        uint32_t const& type_id,
-        Token& next_token,
-        bool* accept
-) -> bool {
+auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse_symbol(uint32_t const& type_id,
+                                                             Token& next_token,
+                                                             bool* accept) -> bool {
     auto* curr = m_parse_stack_states.top();
     auto& it = curr->m_actions[type_id];
     bool ret = false;
@@ -715,23 +684,19 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse_symbol(
                         matched_non_terminal.resize_symbols(n);
                         for (size_t i = 0; i < n; i++) {
                             m_parse_stack_states.pop();
-                            matched_non_terminal.set_symbol(
-                                    n - i - 1,
-                                    std::move(m_parse_stack_matches.top())
-                            );
+                            matched_non_terminal.set_symbol(n - i - 1,
+                                                            std::move(m_parse_stack_matches.top()));
                             m_parse_stack_matches.pop();
                         }
                         if (reduce->m_semantic_rule != nullptr) {
                             if (0 == m_next_token->get_start_pos()) {
-                                m_input_buffer.set_consumed_pos(
-                                        m_input_buffer.storage().size() - 1
-                                );
+                                m_input_buffer.set_consumed_pos(m_input_buffer.storage().size()
+                                                                - 1);
                             } else {
                                 m_input_buffer.set_consumed_pos(m_next_token->get_start_pos() - 1);
                             }
                             matched_non_terminal.set_parser_ast(
-                                    reduce->m_semantic_rule(&matched_non_terminal)
-                            );
+                                    reduce->m_semantic_rule(&matched_non_terminal));
                         }
                         auto* curr = m_parse_stack_states.top();
                         auto const& it
@@ -740,10 +705,8 @@ auto Lalr1Parser<TypedNfaState, TypedDfaState>::parse_symbol(
                         m_parse_stack_matches.emplace(std::move(matched_non_terminal));
                         ret = true;
                         return;
-                    }
-            },
-            it
-    );
+                    }},
+            it);
     return ret;
 }
 }  // namespace log_surgeon

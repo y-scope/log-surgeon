@@ -61,8 +61,8 @@ public:
      * @return Forwards `DfaTransition::serialize`'s return value (std::nullopt) on failure.
      */
     [[nodiscard]] auto serialize(
-            std::unordered_map<DfaState const*, uint32_t> const& state_ids
-    ) const -> std::optional<std::string>;
+            std::unordered_map<DfaState const*, uint32_t> const& state_ids) const
+            -> std::optional<std::string>;
 
     /**
      * @param character The character (byte or utf8) to transition on.
@@ -93,13 +93,12 @@ template <>
 
 template <StateType state_type>
 auto DfaState<state_type>::serialize(
-        std::unordered_map<DfaState const*, uint32_t> const& state_ids
-) const -> std::optional<std::string> {
+        std::unordered_map<DfaState const*, uint32_t> const& state_ids) const
+        -> std::optional<std::string> {
     auto const accepting_tags_string{
             is_accepting()
                     ? fmt::format("accepting_tags={{{}}},", fmt::join(m_matching_variable_ids, ","))
-                    : ""
-    };
+                    : ""};
 
     std::vector<std::string> accepting_op_strings;
     for (auto const& accepting_op : m_accepting_ops) {
@@ -108,13 +107,10 @@ auto DfaState<state_type>::serialize(
             accepting_op_strings.push_back(serialized_accepting_op.value());
         }
     }
-    auto const accepting_ops_string{
-            is_accepting() ? fmt::format(
-                                     "accepting_operations={{{}}},",
-                                     fmt::join(accepting_op_strings, ",")
-                             )
-                           : ""
-    };
+    auto const accepting_ops_string{is_accepting()
+                                            ? fmt::format("accepting_operations={{{}}},",
+                                                          fmt::join(accepting_op_strings, ","))
+                                            : ""};
 
     std::vector<std::string> transition_strings;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
@@ -125,18 +121,16 @@ auto DfaState<state_type>::serialize(
         if (false == optional_byte_transition_string.has_value()) {
             return std::nullopt;
         }
-        transition_strings.emplace_back(
-                fmt::format("{}{}", static_cast<char>(idx), optional_byte_transition_string.value())
-        );
+        transition_strings.emplace_back(fmt::format("{}{}",
+                                                    static_cast<char>(idx),
+                                                    optional_byte_transition_string.value()));
     }
 
-    return fmt::format(
-            "{}:{}{}byte_transitions={{{}}}",
-            state_ids.at(this),
-            accepting_tags_string,
-            accepting_ops_string,
-            fmt::join(transition_strings, ",")
-    );
+    return fmt::format("{}:{}{}byte_transitions={{{}}}",
+                       state_ids.at(this),
+                       accepting_tags_string,
+                       accepting_ops_string,
+                       fmt::join(transition_strings, ","));
 }
 }  // namespace log_surgeon::finite_automata
 

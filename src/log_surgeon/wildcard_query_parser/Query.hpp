@@ -119,8 +119,7 @@ private:
      */
     [[nodiscard]] static auto get_all_single_token_interpretations(
             ExpressionView const& original_view,
-            lexers::ByteLexer const& lexer
-    ) -> std::vector<QueryInterpretation>;
+            lexers::ByteLexer const& lexer) -> std::vector<QueryInterpretation>;
 
     /**
      * Determines the set of variable types matched by the lexer for all strings generated from the
@@ -132,8 +131,8 @@ private:
      * @param lexer The lexer whose DFA is used for matching.
      * @return The set of all matching variable type IDs.
      */
-    [[nodiscard]] static auto
-    get_matching_variable_types(std::string const& regex_string, lexers::ByteLexer const& lexer)
+    [[nodiscard]] static auto get_matching_variable_types(std::string const& regex_string,
+                                                          lexers::ByteLexer const& lexer)
             -> std::set<uint32_t>;
 
     std::string m_processed_query_string;
