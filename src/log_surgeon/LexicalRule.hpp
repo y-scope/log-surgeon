@@ -12,10 +12,8 @@ template <typename TypedNfaState>
 class LexicalRule {
 public:
     // Constructor
-    LexicalRule(
-            uint32_t const variable_id,
-            std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> regex
-    )
+    LexicalRule(uint32_t const variable_id,
+                std::unique_ptr<finite_automata::RegexAST<TypedNfaState>> regex)
             : m_variable_id(variable_id),
               m_regex(std::move(regex)) {}
 

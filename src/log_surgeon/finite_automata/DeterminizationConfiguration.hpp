@@ -37,12 +37,10 @@ namespace log_surgeon::finite_automata {
 template <typename TypedNfaState>
 class DeterminizationConfiguration {
 public:
-    DeterminizationConfiguration(
-            TypedNfaState const* nfa_state,
-            std::map<tag_id_t, reg_id_t> tag_id_to_reg_ids,
-            std::vector<TagOperation> tag_history,
-            std::vector<TagOperation> tag_lookahead
-    )
+    DeterminizationConfiguration(TypedNfaState const* nfa_state,
+                                 std::map<tag_id_t, reg_id_t> tag_id_to_reg_ids,
+                                 std::vector<TagOperation> tag_history,
+                                 std::vector<TagOperation> tag_lookahead)
             : m_nfa_state{nfa_state},
               m_tag_id_to_reg_ids{std::move(tag_id_to_reg_ids)},
               m_history{std::move(tag_history)},
@@ -83,12 +81,10 @@ public:
 
     auto child_configuration_with_new_state(TypedNfaState const* new_nfa_state) const
             -> DeterminizationConfiguration {
-        return DeterminizationConfiguration(
-                new_nfa_state,
-                m_tag_id_to_reg_ids,
-                m_history,
-                m_lookahead
-        );
+        return DeterminizationConfiguration(new_nfa_state,
+                                            m_tag_id_to_reg_ids,
+                                            m_history,
+                                            m_lookahead);
     }
 
     /**
@@ -103,16 +99,13 @@ public:
      */
     [[nodiscard]] auto child_configuration_with_new_state_and_tag(
             TypedNfaState const* new_nfa_state,
-            TagOperation const& tag_op
-    ) const -> DeterminizationConfiguration {
+            TagOperation const& tag_op) const -> DeterminizationConfiguration {
         auto lookahead{m_lookahead};
         lookahead.push_back(tag_op);
-        return DeterminizationConfiguration(
-                new_nfa_state,
-                m_tag_id_to_reg_ids,
-                m_history,
-                lookahead
-        );
+        return DeterminizationConfiguration(new_nfa_state,
+                                            m_tag_id_to_reg_ids,
+                                            m_history,
+                                            lookahead);
     }
 
     /**
@@ -170,17 +163,14 @@ private:
 
 template <typename TypedNfaState>
 auto DeterminizationConfiguration<TypedNfaState>::update_reachable_configs(
-        std::stack<DeterminizationConfiguration>& unexplored_stack
-) const -> void {
+        std::stack<DeterminizationConfiguration>& unexplored_stack) const -> void {
     for (auto const& nfa_spontaneous_transition : m_nfa_state->get_spontaneous_transitions()) {
         auto child_config{this->child_configuration_with_new_state(
-                nfa_spontaneous_transition.get_dest_state()
-        )};
+                nfa_spontaneous_transition.get_dest_state())};
         for (auto const tag_op : nfa_spontaneous_transition.get_tag_ops()) {
             child_config = child_config.child_configuration_with_new_state_and_tag(
                     nfa_spontaneous_transition.get_dest_state(),
-                    tag_op
-            );
+                    tag_op);
         }
         unexplored_stack.push(child_config);
     }

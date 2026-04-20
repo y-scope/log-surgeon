@@ -13,8 +13,7 @@ auto Token::get_cached_string() -> std::string const& {
             m_cached_string = std::string{token.begin(), token.end()};
         } else {
             auto const token_start{
-                    m_buffer.subspan(get_start_pos(), get_buffer_size() - get_start_pos())
-            };
+                    m_buffer.subspan(get_start_pos(), get_buffer_size() - get_start_pos())};
             auto const token_end{m_buffer.subspan(0, get_end_pos())};
             m_cached_string = std::string{token_start.begin(), token_start.end()}
                               + std::string{token_end.begin(), token_end.end()};

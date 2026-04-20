@@ -135,10 +135,9 @@ public:
      * - LogEventErrorCodeEnum::NoCaptureGroupMatch if `root_var` contains no valid match positions
      *   for `capture`.
      */
-    [[nodiscard]] auto get_capture_position(
-            Token const& root_var,
-            finite_automata::Capture const* const& capture
-    ) const -> ystdlib::error_handling::Result<Token::CaptureMatchPosition>;
+    [[nodiscard]] auto get_capture_position(Token const& root_var,
+                                            finite_automata::Capture const* const& capture) const
+            -> ystdlib::error_handling::Result<Token::CaptureMatchPosition>;
 
     /**
      * Returns the capture group matches within `root_var` sorted by their appearance within the

@@ -55,13 +55,11 @@ public:
               m_accepting{true},
               m_matching_variable_id{matching_variable_id} {}
 
-    NfaState(
-            state_id_t const id,
-            TagOperationType const op_type,
-            std::vector<tag_id_t> const& tag_ids,
-            NfaState const* dest_state,
-            bool const multi_valued
-    )
+    NfaState(state_id_t const id,
+             TagOperationType const op_type,
+             std::vector<tag_id_t> const& tag_ids,
+             NfaState const* dest_state,
+             bool const multi_valued)
             : m_id{id} {
         add_spontaneous_transition(op_type, tag_ids, dest_state, multi_valued);
     }
@@ -70,12 +68,10 @@ public:
         m_spontaneous_transitions.emplace_back(std::vector<TagOperation>{}, dest_state);
     }
 
-    auto add_spontaneous_transition(
-            TagOperationType const op_type,
-            std::vector<tag_id_t> const& tag_ids,
-            NfaState const* dest_state,
-            bool const multi_valued
-    ) -> void {
+    auto add_spontaneous_transition(TagOperationType const op_type,
+                                    std::vector<tag_id_t> const& tag_ids,
+                                    NfaState const* dest_state,
+                                    bool const multi_valued) -> void {
         std::vector<TagOperation> tag_ops;
         tag_ops.reserve(tag_ids.size());
         for (auto const tag_id : tag_ids) {
@@ -102,8 +98,8 @@ public:
      * failure.
      */
     [[nodiscard]] auto serialize(
-            std::unordered_map<NfaState const*, uint32_t> const& state_ids
-    ) const -> std::optional<std::string>;
+            std::unordered_map<NfaState const*, uint32_t> const& state_ids) const
+            -> std::optional<std::string>;
 
     [[nodiscard]] auto is_accepting() const -> bool const& { return m_accepting; }
 
@@ -158,21 +154,15 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
             tree_states.push_back(dest_state);
             m_tree_transitions.insert(Interval(overlap_low, overlap_high), tree_states);
             if (data.m_interval.first < interval.first) {
-                m_tree_transitions.insert(
-                        Interval(data.m_interval.first, interval.first - 1),
-                        data.m_value
-                );
+                m_tree_transitions.insert(Interval(data.m_interval.first, interval.first - 1),
+                                          data.m_value);
             } else if (data.m_interval.first > interval.first) {
-                m_tree_transitions.insert(
-                        Interval(interval.first, data.m_interval.first - 1),
-                        {dest_state}
-                );
+                m_tree_transitions.insert(Interval(interval.first, data.m_interval.first - 1),
+                                          {dest_state});
             }
             if (data.m_interval.second > interval.second) {
-                m_tree_transitions.insert(
-                        Interval(interval.second + 1, data.m_interval.second),
-                        data.m_value
-                );
+                m_tree_transitions.insert(Interval(interval.second + 1, data.m_interval.second),
+                                          data.m_value);
             }
             interval.first = data.m_interval.second + 1;
         }
@@ -184,18 +174,16 @@ auto NfaState<state_type>::add_interval(Interval interval, NfaState* dest_state)
 
 template <StateType state_type>
 auto NfaState<state_type>::serialize(
-        std::unordered_map<NfaState const*, uint32_t> const& state_ids
-) const -> std::optional<std::string> {
+        std::unordered_map<NfaState const*, uint32_t> const& state_ids) const
+        -> std::optional<std::string> {
     auto const accepting_tag_string{
-            m_accepting ? fmt::format("accepting_tag={},", m_matching_variable_id) : ""
-    };
+            m_accepting ? fmt::format("accepting_tag={},", m_matching_variable_id) : ""};
 
     std::vector<std::string> byte_transitions;
     for (uint32_t idx{0}; idx < cSizeOfByte; ++idx) {
         for (auto const* dest_state : m_bytes_transitions.at(idx)) {
             byte_transitions.emplace_back(
-                    fmt::format("{}-->{}", static_cast<char>(idx), state_ids.at(dest_state))
-            );
+                    fmt::format("{}-->{}", static_cast<char>(idx), state_ids.at(dest_state)));
         }
     }
 
@@ -208,13 +196,11 @@ auto NfaState<state_type>::serialize(
         serialized_spontaneous_transitions.emplace_back(optional_serialized_transition.value());
     }
 
-    return fmt::format(
-            "{}:{}byte_transitions={{{}}},spontaneous_transition={{{}}}",
-            state_ids.at(this),
-            accepting_tag_string,
-            fmt::join(byte_transitions, ","),
-            fmt::join(serialized_spontaneous_transitions, ",")
-    );
+    return fmt::format("{}:{}byte_transitions={{{}}},spontaneous_transition={{{}}}",
+                       state_ids.at(this),
+                       accepting_tag_string,
+                       fmt::join(byte_transitions, ","),
+                       fmt::join(serialized_spontaneous_transitions, ","));
 }
 }  // namespace log_surgeon::finite_automata
 

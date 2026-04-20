@@ -10,10 +10,10 @@ auto PrefixTree::get_reversed_positions(id_t const node_id) const -> std::vector
     }
 
     std::vector<position_t> reversed_positions;
-    auto current_node{m_nodes[node_id]};
+    auto current_node{m_nodes.at(node_id)};
     while (false == current_node.is_root()) {
         reversed_positions.push_back(current_node.get_position());
-        current_node = m_nodes[current_node.get_parent_id_unsafe()];
+        current_node = m_nodes.at(current_node.get_parent_id_unsafe());
     }
     return reversed_positions;
 }

@@ -112,8 +112,7 @@ TEST_CASE("append_tokens", "[QueryInterpretation]") {
     constexpr uint32_t cFloatId{1};
     constexpr uint32_t cIntId{2};
     constexpr string_view cExpectedSerialization{
-            "logtype='start <2>(*123*) middle <1>(12.3) end', contains_wildcard='01000'"
-    };
+            "logtype='start <2>(*123*) middle <1>(12.3) end', contains_wildcard='01000'"};
 
     QueryInterpretation query_interpretation;
     query_interpretation.append_static_token("start ");

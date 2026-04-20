@@ -40,7 +40,7 @@ public:
 
     [[nodiscard]] auto starts_or_ends_with_greedy_wildcard() const -> bool {
         return false == m_chars.empty()
-               && (m_chars[0].is_greedy_wildcard() || m_chars.back().is_greedy_wildcard());
+               && (m_chars.front().is_greedy_wildcard() || m_chars.back().is_greedy_wildcard());
     }
 
     /**
@@ -60,8 +60,7 @@ public:
      * @return true when both boundaries are satisfied; false otherwise.
      */
     [[nodiscard]] auto is_surrounded_by_delims_or_wildcards(
-            std::array<bool, cSizeOfByte> const& delim_table
-    ) const -> bool;
+            std::array<bool, cSizeOfByte> const& delim_table) const -> bool;
 
     /**
      * Checks whether this `ExpressionView` represents a well-formed subrange.

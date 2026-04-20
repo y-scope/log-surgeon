@@ -87,16 +87,14 @@ auto LogEventView::get_logtype() const -> std::string {
         auto prev_end_pos{token_view.get_start_pos()};
         for (auto const& match : matches.value()) {
             if (match.m_leaf) {
-                logtype.append(
-                        token_view.get_sub_token(prev_end_pos, match.m_pos.m_start).to_string_view()
-                );
+                logtype.append(token_view.get_sub_token(prev_end_pos, match.m_pos.m_start)
+                                       .to_string_view());
                 logtype.append("<" + match.m_capture->get_name() + ">");
                 prev_end_pos = match.m_pos.m_end;
             }
         }
         logtype.append(
-                token_view.get_sub_token(prev_end_pos, token_view.get_end_pos()).to_string_view()
-        );
+                token_view.get_sub_token(prev_end_pos, token_view.get_end_pos()).to_string_view());
     }
     return logtype;
 }
@@ -104,8 +102,7 @@ auto LogEventView::get_logtype() const -> std::string {
 auto LogEventView::get_capture_matches(Token const& root_var) const
         -> ystdlib::error_handling::Result<std::vector<Token::CaptureMatch>> {
     auto captures{
-            get_log_parser().m_lexer.get_captures_from_rule_id(root_var.get_type_ids()->at(0))
-    };
+            get_log_parser().m_lexer.get_captures_from_rule_id(root_var.get_type_ids()->at(0))};
     if (false == captures.has_value()) {
         return LogEventErrorCode{LogEventErrorCodeEnum::NoCaptureGroups};
     }
@@ -146,13 +143,11 @@ auto LogEventView::get_capture_matches(Token const& root_var) const
     return matches;
 }
 
-auto LogEventView::get_capture_position(
-        Token const& root_var,
-        finite_automata::Capture const* const& capture
-) const -> ystdlib::error_handling::Result<Token::CaptureMatchPosition> {
-    auto const [start_reg_id, end_reg_id]{
-            get_log_parser().m_lexer.get_reg_ids_from_capture(capture)
-    };
+auto LogEventView::get_capture_position(Token const& root_var,
+                                        finite_automata::Capture const* const& capture) const
+        -> ystdlib::error_handling::Result<Token::CaptureMatchPosition> {
+    auto const [start_reg_id,
+                end_reg_id]{get_log_parser().m_lexer.get_reg_ids_from_capture(capture)};
     auto const start_positions{root_var.get_reversed_reg_positions(start_reg_id)};
     auto const end_positions{root_var.get_reversed_reg_positions(end_reg_id)};
     if (start_positions.empty() || 0 > start_positions[0] || end_positions.empty()
@@ -190,14 +185,12 @@ LogEvent::LogEvent(LogEventView const& src) : LogEventView{src.get_log_parser()}
             curr_pos++;
         }
         // TODO: this is bad the token class should handle this copy, now the regs are missing
-        Token copied_token{
-                start_pos,
-                curr_pos,
-                m_buffer.data(),
-                buffer_size,
-                0,
-                token.get_type_ids()
-        };
+        Token copied_token{start_pos,
+                           curr_pos,
+                           m_buffer.data(),
+                           buffer_size,
+                           0,
+                           token.get_type_ids()};
         m_log_output_buffer->set_curr_token(copied_token);
         m_log_output_buffer->advance_to_next_token();
     }
