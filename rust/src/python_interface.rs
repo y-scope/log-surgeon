@@ -48,6 +48,8 @@ struct PyLogEvent {
 	non_leaf_captures: Py<PyList>,
 	#[pyo3(get)]
 	variables: Py<PyList>,
+	#[pyo3(get)]
+	all_captures: Py<PyList>,
 }
 
 #[pyclass(name = "LogType", eq)]
@@ -63,6 +65,9 @@ struct PyCapture {
 	capture_id: Py<PyInt>,
 	#[pyo3(get)]
 	parent_id: Py<PyInt>,
+
+	#[pyo3(get)]
+	parent_index: Py<PyInt>,
 
 	#[pyo3(get)]
 	offsets: Py<PySlice>,
@@ -147,6 +152,7 @@ impl PyParser {
 			let leaf_captures: Bound<'_, PyList> = PyList::empty(py);
 			let non_leaf_captures: Bound<'_, PyList> = PyList::empty(py);
 			let variables: Bound<'_, PyList> = PyList::empty(py);
+			let all_captures: Bound<'_, PyList> = PyList::empty(py);
 
 			let schema: &Schema = self.maybe_schema.as_ref().unwrap();
 
@@ -156,6 +162,7 @@ impl PyParser {
 					rule_id: PyInt::new(py, cap.rule_idx.index.get()).unbind(),
 					capture_id: PyInt::new(py, cap.capture_id.map_or(0, NonZero::get)).unbind(),
 					parent_id: PyInt::new(py, cap.parent_id.map_or(0, NonZero::get)).unbind(),
+					parent_index: PyInt::new(py, cap.parent_index).unbind(),
 					offsets: PySlice::new(py, cap.range.start as isize, cap.range.end as isize, 1).unbind(),
 					variable_name: PyString::new(py, variable_name).unbind(),
 					capture_name: PyString::new(py, capture_name).unbind(),
@@ -166,10 +173,11 @@ impl PyParser {
 					variables.append(py_cap.clone())?;
 				}
 				if cap.is_leaf {
-					leaf_captures.append(py_cap)?;
+					leaf_captures.append(py_cap.clone())?;
 				} else {
-					non_leaf_captures.append(py_cap)?;
+					non_leaf_captures.append(py_cap.clone())?;
 				}
+				all_captures.append(py_cap)?;
 			}
 
 			Ok(Some(PyLogEvent {
@@ -178,6 +186,7 @@ impl PyParser {
 				leaf_captures: leaf_captures.unbind(),
 				non_leaf_captures: non_leaf_captures.unbind(),
 				variables: variables.unbind(),
+				all_captures: all_captures.unbind(),
 			}))
 		})
 	}

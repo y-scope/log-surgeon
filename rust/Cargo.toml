@@ -24,6 +24,7 @@ overflow-checks = true
 # in pyproject.toml).
 default = []
 python = [
+	"dep:pyo3",
 	"pyo3/extension-module",
 	"pyo3/macros",
 ]
@@ -39,5 +40,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 [dependencies.pyo3]
 version = "0.27"
 default-features = false
+optional = true
 
 [workspace]
