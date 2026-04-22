@@ -324,7 +324,7 @@ impl Tdfa {
 							&& (captures[j].range.start <= captures[i].range.start)
 							&& (captures[i].range.end <= captures[j].range.end)
 						{
-							captures[i].parent_index = j;
+							captures[i].parent_index = 1 + j;
 						}
 					}
 					// TODO Happens in search.

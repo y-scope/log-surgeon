@@ -50,18 +50,6 @@ class TestSimple(unittest.TestCase):
 			"\n",
 		]
 		self.assertEqual(str(event.log_type), ''.join(parts))
-		# self.assertEqual(event.variables[0].name, "number")
-		# self.assertEqual(event.variables[0].text, "123")
-		# self.assertEqual(event.variables[1].name, "number")
-		# self.assertEqual(event.variables[1].text, "4567")
-		# self.assertEqual(event.variables[2].name, "at_host")
-		# self.assertEqual(event.variables[2].text, "@example")
-		# self.assertEqual(event.variables[3].name, "at_host")
-		# self.assertEqual(event.variables[3].text, "@example.foo.bar.baz")
-		# self.assertEqual(event.variables[3].captures["dot"], ["."] * 3)
-		# self.assertEqual(event.variables[3].captures["end"], ["o", "r", "z"])
-		# self.assertEqual(event.variables[3].captures["inside"], ["example"])
-		# self.assertEqual(event.variables[3].captures["parts"], [".foo", ".bar", ".baz"])
 
 		self.assertIsNone(p.next_log_event())
 
@@ -258,3 +246,37 @@ class TestSimple(unittest.TestCase):
 
 		e = p.next_log_event()
 		self.assertIsNone(e)
+
+	def test_parent_captures(self):
+		p = Parser(debug=True)
+
+		p.set_delimiters(" ")
+		p.add_variable_pattern("zero", r"0(?<one>1(?<two>2(?<three>3)))")
+
+		p.compile()
+
+		text = "0123"
+
+		p.set_input_stream(text)
+
+		e = p.next_log_event()
+
+		self.assertEqual(len(e.variables), 1)
+		self.assertEqual(len(e.leaf_captures), 1)
+		self.assertEqual(len(e.all_captures), 4)
+
+		leaf = e.leaf_captures[0]
+
+		self.assertEqual(leaf.name, "three")
+		self.assertEqual(leaf.text, "3")
+
+		self.assertEqual(leaf.parent.name, "two")
+		self.assertEqual(leaf.parent.text, "23")
+
+		self.assertEqual(leaf.parent.parent.name, "one")
+		self.assertEqual(leaf.parent.parent.text, "123")
+
+		self.assertEqual(leaf.parent.parent.parent.name, "zero")
+		self.assertEqual(leaf.parent.parent.parent.text, "0123")
+
+		self.assertIsNone(leaf.parent.parent.parent.parent)

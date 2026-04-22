@@ -63,15 +63,15 @@ struct PyCapture {
 	rule_id: Py<PyInt>,
 	#[pyo3(get)]
 	capture_id: Py<PyInt>,
-	#[pyo3(get)]
-	parent_id: Py<PyInt>,
 
 	#[pyo3(get)]
-	parent_index: Py<PyInt>,
+	parent: Option<Py<PyCapture>>,
 
 	#[pyo3(get)]
 	offsets: Py<PySlice>,
 
+	#[pyo3(get)]
+	name: Py<PyString>,
 	#[pyo3(get)]
 	variable_name: Py<PyString>,
 	#[pyo3(get)]
@@ -152,18 +152,24 @@ impl PyParser {
 			let leaf_captures: Bound<'_, PyList> = PyList::empty(py);
 			let non_leaf_captures: Bound<'_, PyList> = PyList::empty(py);
 			let variables: Bound<'_, PyList> = PyList::empty(py);
-			let all_captures: Bound<'_, PyList> = PyList::empty(py);
+			let mut all_captures: Vec<Bound<'_, PyCapture>> = Vec::new();
 
 			let schema: &Schema = self.maybe_schema.as_ref().unwrap();
 
-			for cap in event.all_captures.iter() {
+			for (i, cap) in event.all_captures.iter().enumerate() {
 				let (variable_name, capture_name): (&str, &str) = schema.names(cap);
+				let (name, parent): (&str, Option<Py<PyCapture>>) = if cap.parent_index < i {
+					(capture_name, Some(all_captures[cap.parent_index].clone().unbind()))
+				} else {
+					(variable_name, None)
+				};
+				let name: Py<PyString> = PyString::new(py, name).unbind();
 				let py_cap: Bound<'_, PyCapture> = PyCapture {
 					rule_id: PyInt::new(py, cap.rule_idx.index.get()).unbind(),
 					capture_id: PyInt::new(py, cap.capture_id.map_or(0, NonZero::get)).unbind(),
-					parent_id: PyInt::new(py, cap.parent_id.map_or(0, NonZero::get)).unbind(),
-					parent_index: PyInt::new(py, cap.parent_index).unbind(),
+					parent,
 					offsets: PySlice::new(py, cap.range.start as isize, cap.range.end as isize, 1).unbind(),
+					name,
 					variable_name: PyString::new(py, variable_name).unbind(),
 					capture_name: PyString::new(py, capture_name).unbind(),
 					lexeme: PyString::new(py, &event.message[cap.range.start..cap.range.end]).unbind(),
@@ -177,8 +183,9 @@ impl PyParser {
 				} else {
 					non_leaf_captures.append(py_cap.clone())?;
 				}
-				all_captures.append(py_cap)?;
+				all_captures.push(py_cap);
 			}
+			let all_captures: Bound<'_, PyList> = PyList::new(py, all_captures)?;
 
 			Ok(Some(PyLogEvent {
 				log_type: Py::new(py, PyLogType(event.log_type.clone()))?,
