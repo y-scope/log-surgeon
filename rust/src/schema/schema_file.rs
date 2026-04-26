@@ -41,7 +41,7 @@ impl Schema {
 				format!(
 					"{} ({}): {}{}{}",
 					rule.name,
-					rule.idx.priority,
+					rule.priority,
 					if rule.regex.anchor_before { "^" } else { "" },
 					rule.regex.inner.to_pattern(),
 					if rule.regex.anchor_after { "$" } else { "" },
@@ -175,36 +175,18 @@ fn take_backslash(input: &str) -> IResult<&str, ()> {
 
 fn parse_escape(input: &str) -> IResult<&str, char> {
 	use nom::combinator::fail;
-	use std::str::Chars;
 
-	let mut chars: Chars<'_> = input.chars();
-
-	let Some(ch): Option<char> = chars.next() else {
-		return fail().parse(input);
-	};
-
-	let ch: char = match ch {
-		' ' => ' ',
-		'\\' => '\\',
-		't' => '\t',
-		'r' => '\r',
-		'n' => '\n',
-		_ => {
-			return fail().parse(input);
-		},
-	};
-
-	Ok((chars.as_str(), ch))
+	match Escaped::unescape(input) {
+		Ok((input, ch)) => Ok((input, ch)),
+		Err(_) => fail().parse(input),
+	}
 }
 
 fn escape_delimiters(input: &str) -> String {
 	input
 		.chars()
-		.map(Escaped::escape_char)
-		.fold(String::new(), |mut accumulated, ch| {
-			ch.append_to(&mut accumulated);
-			accumulated
-		})
+		.map(|ch| Escaped::escape(ch).to_string())
+		.collect::<String>()
 }
 
 #[cfg(test)]

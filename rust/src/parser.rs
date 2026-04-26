@@ -1,7 +1,6 @@
 use crate::dfa::TdfaExecution;
 use crate::ffi::UncheckedCArray;
-use crate::lexer::Lexer;
-use crate::lexer::Token;
+use crate::lexing::Token;
 use crate::log_event::Capture;
 use crate::log_event::CaptureFfiPointers;
 use crate::log_event::LogEvent;
@@ -11,7 +10,7 @@ use crate::utils::Range;
 
 #[derive(Debug, Clone)]
 pub struct Parser {
-	pub lexer: Lexer,
+	pub schema: Schema,
 	current_log: WorkingLogEvent,
 	maybe_pending_header: Option<WorkingLogEvent>,
 	dfa_execution: TdfaExecution,
@@ -27,10 +26,15 @@ struct WorkingLogEvent {
 
 impl Parser {
 	pub fn new(schema: Schema) -> Self {
-		let lexer: Lexer = Lexer::new(schema);
-		let dfa_execution: TdfaExecution = lexer.dfa.execution_data();
+		let mut registers: usize = 0;
+		let mut tags: usize = 0;
+		for rule in schema.rules.iter() {
+			registers = registers.max(rule.dfa.number_of_registers);
+			tags = tags.max(rule.dfa.tags.len());
+		}
+		let dfa_execution: TdfaExecution = TdfaExecution::new(registers, tags);
 		Self {
-			lexer,
+			schema,
 			current_log: WorkingLogEvent::new(),
 			maybe_pending_header: None,
 			dfa_execution,
@@ -58,7 +62,7 @@ impl Parser {
 
 		// Simulates whether we can match a start-anchored pattern.
 		// Currently, the start-anchor just means "must come after static text".
-		let mut last_was_delimited: u32 = u32::from(self.lexer.schema.anchor_ch);
+		let mut last_was_delimited: u32 = u32::from(self.schema.anchor_ch);
 
 		let pos_end: usize = loop {
 			let pos_before_token: usize = *pos;
@@ -66,7 +70,7 @@ impl Parser {
 			let token_starting_capture_count: usize = self.current_log.all_captures.len();
 			let token_starting_leaf_indices: usize = self.current_log.leaf_indices.len();
 			match self
-				.lexer
+				.schema
 				.next_token(input, pos, last_was_delimited, &mut self.dfa_execution)
 			{
 				Token::Variable {
@@ -74,12 +78,12 @@ impl Parser {
 					lexeme,
 					has_captures,
 				} => {
-					let name: &str = &self.lexer.schema[rule].name;
+					let name: &str = &rule.name;
 
 					let variable_is_implicit_capture: bool = !has_captures || self.dfa_execution.captures.is_empty();
 
 					let variable_capture: Capture = Capture {
-						rule_idx: rule,
+						rule_idx: rule.idx,
 						capture_id: None,
 						parent_id: None,
 						parent_index: token_starting_capture_count,
@@ -99,8 +103,9 @@ impl Parser {
 
 					for regex_capture in self.dfa_execution.captures.iter() {
 						let capture_index: usize = self.current_log.all_captures.len();
+						assert_eq!(rule.idx, regex_capture.rule_idx);
 						self.current_log.all_captures.push(Capture {
-							rule_idx: regex_capture.rule,
+							rule_idx: rule.idx,
 							capture_id: Some(regex_capture.capture_id),
 							parent_id: regex_capture.parent_id,
 							parent_index: token_starting_capture_count + regex_capture.parent_index,
@@ -155,7 +160,7 @@ impl Parser {
 				},
 				Token::StaticText(static_text) => {
 					assert!(!static_text.is_empty());
-					last_was_delimited = u32::from(self.lexer.schema.anchor_ch);
+					last_was_delimited = u32::from(self.schema.anchor_ch);
 				},
 				Token::EndOfInput => {
 					assert_eq!(*pos, input.len());
@@ -174,17 +179,14 @@ impl Parser {
 			capture.ffi_pointers.parent = captures_base.wrapping_add(capture.parent_index);
 			capture.ffi_pointers.lexeme =
 				UncheckedCArray::from_str(&self.current_log.message[capture.range.start..capture.range.end]);
-			capture.ffi_pointers.variable_name = UncheckedCArray::from_str(&self.lexer.schema[capture.rule_idx].name);
-			capture.ffi_pointers.capture_name = UncheckedCArray::from_str(
-				&self.lexer.schema[capture.rule_idx]
-					.capture_info(capture.capture_id)
-					.name,
-			);
+			capture.ffi_pointers.variable_name = UncheckedCArray::from_str(&self.schema[capture.rule_idx].name);
+			capture.ffi_pointers.capture_name =
+				UncheckedCArray::from_str(&self.schema[capture.rule_idx].capture_info(capture.capture_id).name());
 		}
 
 		Some(LogEvent {
 			log_type: LogType::new(
-				&self.lexer.schema,
+				&self.schema,
 				&self.current_log.message,
 				self.current_log
 					.leaf_indices

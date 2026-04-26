@@ -61,11 +61,11 @@ static void try_search() {
     Capture const* captures{log_surgeon_search_result_get_leaf_captures(search, &len)};
     assert(len == 2);
 
-    assert(captures[0].rule_idx.index != 0);
+    assert(captures[0].rule_idx != 0);
     assert(captures[0].ffi_pointers.capture_name.as_cpp_view() == "baz");
     assert(captures[0].ffi_pointers.lexeme.as_cpp_view() == "123");
 
-    assert(captures[1].rule_idx.index != 0);
+    assert(captures[1].rule_idx != 0);
     assert(captures[1].ffi_pointers.capture_name.as_cpp_view() == "baz");
     assert(captures[1].ffi_pointers.lexeme.as_cpp_view() == "456");
 }

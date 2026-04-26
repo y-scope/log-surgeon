@@ -21,14 +21,14 @@ pub struct LogEvent<'parser> {
 #[repr(C)]
 pub struct Capture {
 	pub rule_idx: RuleIdx,
-	/// Capture ID, statically assigned left-to-right based on the regex pattern;
-	/// e.g. the pattern `(?<start>[a-z]+(?<rest>\.[a-z]+)*)|(?<start>[0-9]+)` has three capture IDs.
+	/// Capture ID local to the current/containing rule/variable/regex pattern;
+	/// see [`RegexCapture`](crate::regex::RegexCapture).
 	/// When this variable/pattern is actually matched,
 	/// there may be multiple instances of capture ID 2 (corresponding to `"rest"`).
 	/// The capture ID also differentiates between different capture groups given the same name,
 	/// e.g. the two instances of `"start"` in the pattern.
-	pub capture_id: Option<NonZero<u32>>,
-	pub parent_id: Option<NonZero<u32>>,
+	pub capture_id: Option<NonZero<u16>>,
+	pub parent_id: Option<NonZero<u16>>,
 
 	/// Index of the parent in the full list of captures (including variables).
 	/// For a variable, the parent index equals its own index.
@@ -83,7 +83,7 @@ impl std::fmt::Display for Capture {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		fmt.write_fmt(format_args!(
 			"Capture(rule: {}, id: {}, parent: {}, range: {})",
-			self.rule_idx.index,
+			self.rule_idx,
 			self.capture_id.map_or(0, NonZero::get),
 			self.parent_id.map_or(0, NonZero::get),
 			self.range
@@ -95,11 +95,15 @@ impl Capture {
 	pub unsafe fn show(&self) -> String {
 		format!(
 			"Capture(rule: {}, id: {}, parent: {}, {:?})",
-			self.rule_idx.index,
+			self.rule_idx,
 			self.capture_id.map_or(0, NonZero::get),
 			self.parent_id.map_or(0, NonZero::get),
 			unsafe { self.ffi_pointers.lexeme.as_str() },
 		)
+	}
+
+	pub fn id_as_usize(&self) -> usize {
+		usize::from(self.capture_id.map_or(0, NonZero::get))
 	}
 }
 

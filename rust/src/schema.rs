@@ -2,16 +2,16 @@ mod schema_file;
 
 use crate::dfa::Tdfa;
 use crate::log_event::Capture;
+use crate::regex::AnchoredRegex;
 use crate::regex::IntoRegex;
 use crate::regex::Regex;
-use crate::regex::RegexCapture;
-use crate::regex::TopLevelRegex;
+use crate::regex::SubRule;
 use std::collections::BTreeMap;
 use std::num::NonZero;
 
 #[derive(Debug, Clone)]
 pub struct SchemaBuilder {
-	rules_by_priority: BTreeMap<i32, Vec<(String, TopLevelRegex)>>,
+	rules_by_priority: BTreeMap<i32, Vec<(String, AnchoredRegex)>>,
 	delimiters: String,
 	anchor_ch: char,
 }
@@ -22,38 +22,73 @@ pub struct SchemaBuilder {
 /// larger integer value means higher priority.
 /// Within a priority level, rules are prioritized by insertion order.
 ///
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Schema {
-	pub rules: Vec<Rule>,
+	pub rules: Vec<RootRule>,
+
 	pub delimiters: String,
+
+	pub main_dfa: Tdfa,
+
 	/// Derived from `delimiters`;
 	/// used to insert "phantom characters" for start/end anchors.
 	pub anchor_ch: char,
+	pub ascii_delimiters: [bool; 0x80],
+	pub non_ascii_delimiters: String,
+}
+
+impl Eq for Schema {}
+
+impl PartialEq for Schema {
+	fn eq(&self, other: &Self) -> bool {
+		(&self.rules, &self.delimiters).eq(&(&other.rules, &other.delimiters))
+	}
+}
+
+#[derive(Debug, Clone)]
+pub struct RootRule {
+	pub idx: RuleIdx,
+	/// Priority level given by the user.
+	pub name: String,
+	pub priority: i32,
+
+	pub regex: AnchoredRegex,
+	pub capture_info: Vec<RuleInfo>,
+
+	pub dfa: Tdfa,
+}
+
+impl Eq for RootRule {}
+
+impl PartialEq for RootRule {
+	fn eq(&self, other: &Self) -> bool {
+		(self.idx, &self.name, self.priority, &self.regex)
+			.cmp(&(other.idx, &other.name, other.priority, &other.regex))
+			.is_eq()
+	}
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Rule {
-	pub idx: RuleIdx,
-	pub name: String,
-	pub regex: TopLevelRegex,
-	pub capture_info: Vec<RegexCapture>,
+pub enum RuleInfo {
+	Root,
+	Sub(SubRule),
 }
 
+/// Index in the schema, offset by 1.
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-#[repr(C)]
-pub struct RuleIdx {
-	/// The original priority level given by the user.
-	pub priority: i32,
-	/// Insertion order of the rule at the given priority level.
-	pub position: u16,
-	/// Index in the schema.
-	pub index: NonZero<u16>,
+#[repr(transparent)]
+pub struct RuleIdx(NonZero<u16>);
+
+impl std::fmt::Display for RuleIdx {
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		self.0.fmt(fmt)
+	}
 }
 
 #[derive(Debug)]
 pub enum VariableOrCaptures<T> {
 	Variable(Vec<(RuleIdx, T)>),
-	Captures(Vec<(RuleIdx, RegexCapture, T)>),
+	Captures(Vec<(RuleIdx, SubRule, T)>),
 }
 
 impl SchemaBuilder {
@@ -116,9 +151,9 @@ impl SchemaBuilder {
 		assert!(!name.is_empty());
 		assert_ne!(name, "delimiters");
 
-		let regex: TopLevelRegex = regex.into()?;
+		let regex: AnchoredRegex = regex.into()?;
 
-		let rules: &mut Vec<(String, TopLevelRegex)> = self.rules_by_priority.entry(priority).or_insert_with(Vec::new);
+		let rules: &mut Vec<(String, AnchoredRegex)> = self.rules_by_priority.entry(priority).or_insert_with(Vec::new);
 
 		rules.push((name, regex));
 
@@ -126,34 +161,40 @@ impl SchemaBuilder {
 	}
 
 	pub fn build(self) -> Schema {
-		let mut rules: Vec<Rule> = Vec::new();
+		let mut rules: Vec<RootRule> = Vec::new();
+		let mut index: NonZero<u16> = NonZero::<u16>::MIN;
 		for (priority, rules_at_priority) in self.rules_by_priority.into_iter().rev() {
-			for (position, (name, regex)) in rules_at_priority.into_iter().enumerate() {
-				let Some(index): Option<NonZero<u16>> = u16::try_from(rules.len())
-					.ok()
-					.and_then(|index| NonZero::<u16>::MIN.checked_add(index))
-				else {
+			for (name, regex) in rules_at_priority.into_iter() {
+				rules.push(RootRule::new(RuleIdx(index), name, priority, regex));
+
+				let Some(next): Option<NonZero<u16>> = index.checked_add(1) else {
 					panic!("more than u16::MAX rules (not supported)");
 				};
-
-				// Don't need to check; necessarily `position <= index`.
-				let position: u16 = position as u16;
-
-				rules.push(Rule::new(
-					RuleIdx {
-						priority,
-						position,
-						index,
-					},
-					name,
-					regex,
-				));
+				index = next;
 			}
 		}
+
+		let main_dfa: Tdfa = Tdfa::for_rules(rules.iter(), self.delimiters.clone());
+
+		let mut ascii_delimiters: [bool; 0x80] = [false; 0x80];
+		let mut non_ascii_delimiters: String = String::new();
+		for ch in self.delimiters.chars() {
+			if let Ok(i) = u8::try_from(ch)
+				&& let Some(entry) = ascii_delimiters.get_mut(usize::from(i))
+			{
+				*entry = true;
+			} else {
+				non_ascii_delimiters.push(ch);
+			}
+		}
+
 		Schema {
 			rules,
 			delimiters: self.delimiters,
+			main_dfa,
 			anchor_ch: self.anchor_ch,
+			ascii_delimiters,
+			non_ascii_delimiters,
 		}
 	}
 }
@@ -166,9 +207,8 @@ impl Schema {
 	}
 
 	pub fn names(&self, capture: &Capture) -> (&'_ str, &'_ str) {
-		let rule: &Rule = &self[capture.rule_idx];
-		let capture_id: usize = capture.capture_id.map_or(0, NonZero::get) as usize;
-		(&rule.name, &rule.capture_info[capture_id].name)
+		let rule: &RootRule = &self[capture.rule_idx];
+		(&rule.name, &rule.capture_info[capture.id_as_usize()].name())
 	}
 
 	pub fn regexes_for_name(&self, name: &str) -> Option<VariableOrCaptures<Regex>> {
@@ -177,7 +217,7 @@ impl Schema {
 		let capture_names: &[&str] = &parts[1..];
 
 		if let Some(first) = capture_names.first().copied() {
-			let mut possibilities: Vec<(RuleIdx, RegexCapture, Regex)> = Vec::new();
+			let mut possibilities: Vec<(RuleIdx, SubRule, Regex)> = Vec::new();
 			for rule in self.rules.iter() {
 				if rule.name != rule_name {
 					continue;
@@ -200,7 +240,7 @@ impl Schema {
 
 	fn find_capture<F>(regex: &Regex, first: &str, rest: &[&str], func: &mut F)
 	where
-		F: FnMut(&RegexCapture, &Regex),
+		F: FnMut(&SubRule, &Regex),
 	{
 		match regex {
 			Regex::AnyChar | Regex::Literal(..) | Regex::Group { .. } => (),
@@ -226,45 +266,56 @@ impl Schema {
 }
 
 impl std::ops::Index<RuleIdx> for Schema {
-	type Output = Rule;
+	type Output = RootRule;
 
 	fn index(&self, idx: RuleIdx) -> &Self::Output {
-		&self.rules[usize::from(idx.index.get() - 1)]
-		// let Some(rules): Option<&Vec<Rule>> = self.rules_by_priority.get(&idx.priority) else {
-		// 	panic!("schema rule idx out of range: no rules with priority {}", idx.priority);
-		// };
-		// let Some(rule): Option<&Rule> = rules.get(idx.position as usize) else {
-		// 	panic!(
-		// 		"schema rule idx out of range: position {} for {} rules at priority {}",
-		// 		idx.position,
-		// 		rules.len(),
-		// 		idx.priority,
-		// 	);
-		// };
-		// rule
+		&self.rules[idx.as_usize()]
 	}
 }
 
-impl Rule {
-	pub fn new(idx: RuleIdx, name: String, regex: TopLevelRegex) -> Self {
-		let mut capture_info: Vec<RegexCapture> = vec![RegexCapture::NULL; 1 + regex.inner.count_captures()];
+impl RootRule {
+	pub fn new(idx: RuleIdx, name: String, priority: i32, regex: AnchoredRegex) -> Self {
+		let mut capture_info: Vec<RuleInfo> = Vec::with_capacity(1 + regex.inner.count_captures());
+		capture_info.push(RuleInfo::Root);
 		regex.inner.populate_capture_info(&mut capture_info);
+
+		for info in capture_info[1..].iter() {
+			assert_ne!(info, &RuleInfo::Root);
+		}
+
+		let dfa: Tdfa = Tdfa::for_single_rule(idx, &name, &regex.inner);
 
 		Self {
 			idx,
 			name,
+			priority,
 			regex,
 			capture_info,
+			dfa,
 		}
 	}
 
-	pub fn capture_info(&self, i: Option<NonZero<u32>>) -> &RegexCapture {
-		&self.capture_info[i.map_or(0, NonZero::get) as usize]
+	pub fn capture_info(&self, i: Option<NonZero<u16>>) -> &RuleInfo {
+		let i: usize = usize::from(i.map_or(0, NonZero::get));
+		&self.capture_info[i]
 	}
 }
 
 impl RuleIdx {
-	pub fn as_index(&self) -> usize {
-		usize::from(self.index.get() - 1)
+	pub fn get(&self) -> NonZero<u16> {
+		self.0
+	}
+
+	pub fn as_usize(&self) -> usize {
+		usize::from(self.0.get() - 1)
+	}
+}
+
+impl RuleInfo {
+	pub fn name(&self) -> &str {
+		match self {
+			Self::Root => "",
+			Self::Sub(rule) => &rule.qualified_name,
+		}
 	}
 }

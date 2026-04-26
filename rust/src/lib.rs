@@ -1,10 +1,11 @@
+#[allow(unused)]
 #[macro_use(debug)]
 extern crate tracing;
 
 pub mod dfa;
 pub mod ffi;
 pub mod interval_tree;
-pub mod lexer;
+pub mod lexing;
 pub mod log_event;
 pub mod log_type;
 pub mod nfa;

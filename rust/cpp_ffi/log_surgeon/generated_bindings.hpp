@@ -44,14 +44,8 @@ struct SubQuery;
 template<typename T = void>
 struct Vec;
 
-struct RuleIdx {
-    /// The original priority level given by the user.
-    int32_t priority;
-    /// Insertion order of the rule at the given priority level.
-    uint16_t position;
-    /// Index in the schema.
-    uint16_t index;
-};
+/// Index in the schema, offset by 1.
+using RuleIdx = uint16_t;
 
 /// Rust's `std::ops::Range` is not `Copy` for... reasons.
 template<typename Idx>
@@ -81,14 +75,14 @@ struct CaptureFfiPointers {
 
 struct Capture {
     RuleIdx rule_idx;
-    /// Capture ID, statically assigned left-to-right based on the regex pattern;
-    /// e.g. the pattern `(?<start>[a-z]+(?<rest>\.[a-z]+)*)|(?<start>[0-9]+)` has three capture IDs.
+    /// Capture ID local to the current/containing rule/variable/regex pattern;
+    /// see [`RegexCapture`](crate::regex::RegexCapture).
     /// When this variable/pattern is actually matched,
     /// there may be multiple instances of capture ID 2 (corresponding to `"rest"`).
     /// The capture ID also differentiates between different capture groups given the same name,
     /// e.g. the two instances of `"start"` in the pattern.
-    uint32_t capture_id;
-    uint32_t parent_id;
+    uint16_t capture_id;
+    uint16_t parent_id;
     /// Index of the parent in the full list of captures (including variables).
     /// For a variable, the parent index equals its own index.
     size_t parent_index;

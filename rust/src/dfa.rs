@@ -17,9 +17,9 @@ use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tag;
 use crate::nfa::Tnfa;
-use crate::schema::Rule;
+use crate::regex::Regex;
+use crate::schema::RootRule;
 use crate::schema::RuleIdx;
-use crate::search::SymbolicChar;
 use crate::utils::Range;
 
 #[derive(Debug, Clone)]
@@ -27,13 +27,14 @@ pub struct Tdfa {
 	states: Vec<DfaState>,
 	kernels: BTreeMap<Kernel, usize>,
 	/// Bijection between `tags` and `{ 0..tags.len() }`.
-	tags: Vec<Tag>,
+	pub tags: Vec<Tag>,
+	/// Bijection between corresponding starting and ending tags.
 	tag_pairs: Vec<usize>,
 	/// During construction, this is the "current" count;
 	/// after construction, this is the "total required".
 	/// The first `tags.len()` are initial registers for the corresponding tags.
 	/// The second `tags.len()` (i.e. `tags.len()..(2 * tags.len())`) are the corresponding final registers.
-	number_of_registers: usize,
+	pub number_of_registers: usize,
 	// delimiters: String,
 	anchor_ch: char,
 }
@@ -48,15 +49,15 @@ pub struct TdfaExecution {
 
 #[derive(Debug)]
 pub struct MatchedRule<'input> {
-	pub rule: RuleIdx,
+	pub rule_idx: RuleIdx,
 	pub lexeme: &'input str,
 }
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub struct MatchedCapture {
-	pub rule: RuleIdx,
-	pub capture_id: NonZero<u32>,
-	pub parent_id: Option<NonZero<u32>>,
+	pub rule_idx: RuleIdx,
+	pub capture_id: NonZero<u16>,
+	pub parent_id: Option<NonZero<u16>>,
 	pub parent_index: usize,
 	pub is_leaf: bool,
 	/// Relative to rule/variable match.
@@ -170,55 +171,30 @@ struct PrefixTreeNode {
 
 #[derive(Debug, Clone, Copy)]
 struct BackupState {
-	dfa_state: usize,
 	rule: RuleIdx,
 	consumed: usize,
 }
 
 impl Tdfa {
 	pub fn execute(&self, input: &str) -> bool {
-		self.execute_without_captures(input, 0, &mut self.execution_data())
-			.is_some()
+		self.execute_without_captures(input, 0).is_some()
 	}
 
 	pub fn execute_without_captures<'input>(
 		&self,
 		input: &'input str,
 		last_was_delimited: u32,
-		execution_data: &mut TdfaExecution,
 	) -> Option<MatchedRule<'input>> {
-		self.execute_internal::<false>(input, last_was_delimited, execution_data)
+		self.execute_internal::<false>(input, last_was_delimited)
 	}
 
 	pub fn execute_with_captures<'input>(
 		&self,
 		input: &'input str,
-		last_was_delimited: u32,
-		data: &mut TdfaExecution,
-	) -> Option<MatchedRule<'input>> {
-		self.execute_internal::<true>(input, last_was_delimited, data)
-	}
-
-	#[tracing::instrument(skip_all, level = "trace")]
-	pub fn execute_with_captures_for_search<'input>(
-		&self,
-		input: &'input str,
-		last_was_delimited: u32,
-		data: &mut TdfaExecution,
-	) -> Option<MatchedRule<'input>> {
-		self.execute_internal::<true>(input, last_was_delimited, data)
-	}
-
-	fn execute_internal<'input, const CAPTURE: bool>(
-		&self,
-		input: &'input str,
-		last_was_delimited: u32,
 		execution_data: &mut TdfaExecution,
-	) -> Option<MatchedRule<'input>> {
-		let Some(anchor_transition): Option<&Transition> = self.lookup_transition(0, last_was_delimited) else {
-			panic!("invalid first transition");
-		};
-		let mut current_state: usize = anchor_transition.target;
+		rule_idx: RuleIdx,
+	) -> bool {
+		let mut current_state: usize = 0;
 
 		execution_data.clear();
 
@@ -226,6 +202,101 @@ impl Tdfa {
 		let registers: &mut [Option<NonZero<usize>>] = &mut execution_data.registers;
 		let prefix_tree: &mut PrefixTree = &mut execution_data.prefix_tree;
 		let captures: &mut Vec<MatchedCapture> = &mut execution_data.captures;
+		assert!(captures.is_empty());
+
+		for (pos, ch) in input.char_indices() {
+			if let Some(transition) = self.lookup_transition(current_state, u32::from(ch)) {
+				// Apply transition operations before updating position; lookahead 1 in TDFA(1).
+				self.apply_operations(
+					registers,
+					prefix_tree,
+					pos,
+					&transition.operations,
+					&self.states[current_state].tag_for_register,
+				);
+				current_state = transition.target;
+			} else {
+				return false;
+			}
+		}
+
+		self.apply_operations(
+			registers,
+			prefix_tree,
+			input.len(),
+			&self.states[current_state].final_operations,
+			&self.states[current_state].tag_for_register,
+		);
+
+		for (start, stop) in self.tag_pairs.iter().enumerate().rev() {
+			let capture: &AutomataCapture = self.tags[start].capture();
+
+			let mut maybe_start: Option<NonZero<usize>> = registers[self.tags.len() + start];
+			let mut maybe_stop: Option<NonZero<usize>> = registers[self.tags.len() + stop];
+
+			while let Some(start_node) = maybe_start {
+				let stop_node: NonZero<usize> = maybe_stop.unwrap();
+
+				let start: usize = prefix_tree[start_node].lexeme_position;
+				let end: usize = prefix_tree[stop_node].lexeme_position;
+				captures.push(MatchedCapture {
+					rule_idx,
+					capture_id: capture.capture_info.id,
+					parent_id: capture.capture_info.parent_id,
+					parent_index: usize::MAX,
+					is_leaf: capture.capture_info.is_leaf(),
+					range: Range { start, end },
+				});
+				maybe_start = prefix_tree[start_node].maybe_predecessor;
+				maybe_stop = prefix_tree[stop_node].maybe_predecessor;
+			}
+		}
+		captures.sort_by(|lhs, rhs| {
+			lhs.range
+				.start
+				.cmp(&rhs.range.start)
+				.then(lhs.range.end.cmp(&rhs.range.end).reverse())
+				.then(lhs.capture_id.cmp(&rhs.capture_id))
+		});
+		for i in 0..captures.len() {
+			if let Some(parent_id) = captures[i].parent_id {
+				// Linear search since it should usually be small.
+				for j in (0..i).rev() {
+					if captures[j].capture_id == parent_id
+						&& (captures[j].range.start <= captures[i].range.start)
+						&& (captures[i].range.end <= captures[j].range.end)
+					{
+						captures[i].parent_index = 1 + j;
+					}
+				}
+				// TODO Happens in search.
+				// assert_ne!(captures[i].parent_index, usize::MAX);
+			} else {
+				captures[i].parent_index = 0;
+			}
+		}
+		true
+	}
+
+	#[tracing::instrument(skip_all, level = "trace")]
+	pub fn execute_with_captures_for_search<'input>(
+		&self,
+		input: &'input str,
+		data: &mut TdfaExecution,
+		rule: RuleIdx,
+	) -> bool {
+		self.execute_with_captures(input, data, rule)
+	}
+
+	fn execute_internal<'input, const CAPTURE: bool>(
+		&self,
+		input: &'input str,
+		last_was_delimited: u32,
+	) -> Option<MatchedRule<'input>> {
+		let Some(anchor_transition): Option<&Transition> = self.lookup_transition(0, last_was_delimited) else {
+			panic!("invalid first transition");
+		};
+		let mut current_state: usize = anchor_transition.target;
 
 		let mut maybe_backup: Option<BackupState> = None;
 
@@ -234,16 +305,6 @@ impl Tdfa {
 			.chain(std::iter::once((input.len(), self.anchor_ch)))
 		{
 			if let Some(transition) = self.lookup_transition(current_state, u32::from(ch)) {
-				if CAPTURE {
-					// Apply transition operations before updating position; lookahead 1 in TDFA(1).
-					self.apply_operations(
-						registers,
-						prefix_tree,
-						pos,
-						&transition.operations,
-						&self.states[current_state].tag_for_register,
-					);
-				}
 				current_state = transition.target;
 				if let Some((rule, backtrack)) = self.states[current_state].accepting_rule {
 					if (pos < input.len()) || backtrack {
@@ -263,11 +324,7 @@ impl Tdfa {
 							continue;
 						}
 
-						maybe_backup = Some(BackupState {
-							dfa_state: current_state,
-							rule,
-							consumed,
-						});
+						maybe_backup = Some(BackupState { rule, consumed });
 					}
 				}
 			} else {
@@ -277,66 +334,8 @@ impl Tdfa {
 
 		let backup: BackupState = maybe_backup?;
 
-		if CAPTURE {
-			self.apply_operations(
-				registers,
-				prefix_tree,
-				backup.consumed,
-				&self.states[backup.dfa_state].final_operations,
-				&self.states[backup.dfa_state].tag_for_register,
-			);
-
-			for (start, stop) in self.tag_pairs.iter().enumerate().rev() {
-				let capture: &AutomataCapture = self.tags[start].capture();
-
-				let mut maybe_start: Option<NonZero<usize>> = registers[self.tags.len() + start];
-				let mut maybe_stop: Option<NonZero<usize>> = registers[self.tags.len() + stop];
-
-				while let Some(start_node) = maybe_start {
-					let stop_node: NonZero<usize> = maybe_stop.unwrap();
-
-					let start: usize = prefix_tree[start_node].lexeme_position;
-					let end: usize = prefix_tree[stop_node].lexeme_position;
-					captures.push(MatchedCapture {
-						rule: backup.rule,
-						capture_id: capture.capture_info.id,
-						parent_id: capture.capture_info.parent_id,
-						parent_index: usize::MAX,
-						is_leaf: capture.capture_info.is_leaf(),
-						range: Range { start, end },
-					});
-					maybe_start = prefix_tree[start_node].maybe_predecessor;
-					maybe_stop = prefix_tree[stop_node].maybe_predecessor;
-				}
-			}
-			captures.sort_by(|lhs, rhs| {
-				lhs.range
-					.start
-					.cmp(&rhs.range.start)
-					.then(lhs.range.end.cmp(&rhs.range.end).reverse())
-					.then(lhs.capture_id.cmp(&rhs.capture_id))
-			});
-			for i in 0..captures.len() {
-				if let Some(parent_id) = captures[i].parent_id {
-					// Linear search since it should usually be small.
-					for j in 0..i {
-						if captures[j].capture_id == parent_id
-							&& (captures[j].range.start <= captures[i].range.start)
-							&& (captures[i].range.end <= captures[j].range.end)
-						{
-							captures[i].parent_index = 1 + j;
-						}
-					}
-					// TODO Happens in search.
-					// assert_ne!(captures[i].parent_index, usize::MAX);
-				} else {
-					captures[i].parent_index = 0;
-				}
-			}
-		}
-
 		Some(MatchedRule {
-			rule: backup.rule,
+			rule_idx: backup.rule,
 			lexeme: &input[..backup.consumed],
 		})
 	}
@@ -384,183 +383,6 @@ impl Tdfa {
 }
 
 impl Tdfa {
-	pub fn simulate(&self, input: &[SymbolicChar]) -> Vec<(RuleIdx, Vec<MatchedCapture>)> {
-		#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-		struct Path {
-			position: usize,
-			state: usize,
-			registers: Vec<Option<NonZero<usize>>>,
-			prefix_tree: PrefixTree,
-		}
-
-		let Some(anchor_transition): Option<&Transition> = self.lookup_transition(0, u32::from(self.anchor_ch)) else {
-			panic!("invalid first transition");
-		};
-
-		let initial_path: Path = Path {
-			position: 0,
-			state: anchor_transition.target,
-			registers: vec![None; self.number_of_registers],
-			prefix_tree: PrefixTree::new(),
-		};
-
-		let mut current_paths: Vec<Path> = vec![initial_path];
-		let mut seen: BTreeSet<Path> = BTreeSet::from_iter(current_paths.iter().cloned());
-		let mut final_states: Vec<(RuleIdx, Vec<MatchedCapture>)> = Vec::new();
-
-		while let Some(mut path) = current_paths.pop() {
-			let registers: &mut Vec<Option<NonZero<usize>>> = &mut path.registers;
-			let prefix_tree: &mut PrefixTree = &mut path.prefix_tree;
-			let Some(ch): Option<SymbolicChar> = input.get(path.position).copied() else {
-				if let Some((rule, needs_backtrack)) = self.states[path.state].accepting_rule {
-					if needs_backtrack {
-						todo!();
-					}
-					self.apply_operations(
-						registers,
-						prefix_tree,
-						path.position,
-						&self.states[path.state].final_operations,
-						&self.states[path.state].tag_for_register,
-					);
-					let mut captures: Vec<MatchedCapture> = Vec::new();
-					for (start, stop) in self.tag_pairs.iter().enumerate().rev() {
-						let capture: &AutomataCapture = self.tags[start].capture();
-
-						let mut maybe_start: Option<NonZero<usize>> = registers[self.tags.len() + start];
-						let mut maybe_stop: Option<NonZero<usize>> = registers[self.tags.len() + stop];
-
-						while let Some(start_node) = maybe_start {
-							let stop_node: NonZero<usize> = maybe_stop.unwrap();
-
-							let start: usize = prefix_tree[start_node].lexeme_position;
-							let end: usize = prefix_tree[stop_node].lexeme_position;
-							captures.push(MatchedCapture {
-								rule,
-								capture_id: capture.capture_info.id,
-								parent_id: capture.capture_info.parent_id,
-								parent_index: usize::MAX,
-								is_leaf: capture.capture_info.is_leaf(),
-								range: Range { start, end },
-							});
-							maybe_start = prefix_tree[start_node].maybe_predecessor;
-							maybe_stop = prefix_tree[stop_node].maybe_predecessor;
-						}
-					}
-					captures.sort_by(|lhs, rhs| {
-						lhs.range
-							.start
-							.cmp(&rhs.range.start)
-							.then(lhs.range.end.cmp(&rhs.range.end).reverse())
-							.then(lhs.capture_id.cmp(&rhs.capture_id))
-					});
-					for i in 0..captures.len() {
-						if let Some(parent_id) = captures[i].parent_id {
-							// Linear search since it should usually be small.
-							for j in 0..i {
-								if captures[j].capture_id == parent_id
-									&& (captures[j].range.start <= captures[i].range.start)
-									&& (captures[i].range.end <= captures[j].range.end)
-								{
-									captures[i].parent_index = j;
-								}
-							}
-							// TODO Happens in search.
-							// assert_ne!(captures[i].parent_index, usize::MAX);
-						}
-					}
-					final_states.push((rule, captures));
-				}
-				continue;
-			};
-			match ch {
-				SymbolicChar::Literal(ch) => {
-					if let Some(transition) = self.lookup_transition(path.state, u32::from(ch)) {
-						self.apply_operations(
-							registers,
-							prefix_tree,
-							path.position,
-							&transition.operations,
-							&self.states[path.state].tag_for_register,
-						);
-						let new_path: Path = Path {
-							position: path.position + 1,
-							state: transition.target,
-							registers: path.registers,
-							prefix_tree: path.prefix_tree,
-						};
-						if !seen.contains(&new_path) {
-							current_paths.push(new_path.clone());
-							seen.insert(new_path);
-						}
-					}
-				},
-				SymbolicChar::WildcardOne => {
-					for (_interval, transition) in self.states[path.state].transitions.iter() {
-						self.apply_operations(
-							registers,
-							prefix_tree,
-							path.position,
-							&transition.operations,
-							&self.states[path.state].tag_for_register,
-						);
-						let new_path: Path = Path {
-							position: path.position + 1,
-							state: transition.target,
-							registers: registers.clone(),
-							prefix_tree: prefix_tree.clone(),
-						};
-						if !seen.contains(&new_path) {
-							current_paths.push(new_path.clone());
-							seen.insert(new_path);
-						}
-					}
-				},
-				SymbolicChar::WildcardStar => {
-					for (_interval, transition) in self.states[path.state].transitions.iter() {
-						self.apply_operations(
-							registers,
-							prefix_tree,
-							path.position,
-							&transition.operations,
-							&self.states[path.state].tag_for_register,
-						);
-						{
-							// Wildcard, didn't advance.
-							let new_path: Path = Path {
-								position: path.position,
-								state: transition.target,
-								registers: registers.clone(),
-								prefix_tree: prefix_tree.clone(),
-							};
-							if !seen.contains(&new_path) {
-								current_paths.push(new_path.clone());
-								seen.insert(new_path);
-							}
-						}
-						{
-							// Wildcard, advanced.
-							let new_path: Path = Path {
-								position: path.position + 1,
-								state: transition.target,
-								registers: registers.clone(),
-								prefix_tree: prefix_tree.clone(),
-							};
-							if !seen.contains(&new_path) {
-								current_paths.push(new_path.clone());
-								seen.insert(new_path);
-							}
-						}
-					}
-				},
-			}
-		}
-
-		final_states
-	}
-}
-
-impl Tdfa {
 	pub fn capture_info(&self, i: usize) -> &AutomataCapture {
 		self.tags[i].capture()
 	}
@@ -578,10 +400,15 @@ impl Tdfa {
 impl Tdfa {
 	pub fn for_rules<'a, Rules>(rules: Rules, delimiters: String) -> Self
 	where
-		Rules: IntoIterator<Item = &'a Rule>,
+		Rules: IntoIterator<Item = &'a RootRule>,
 	{
 		let nfa: Tnfa = Tnfa::for_rules(rules, delimiters.clone());
 		Self::determinization(&nfa, delimiters)
+	}
+
+	pub fn for_single_rule(rule: RuleIdx, name: &str, regex: &Regex) -> Self {
+		let nfa: Tnfa = Tnfa::for_single_rule(rule, name, regex);
+		Self::determinization(&nfa, "\n".to_owned())
 	}
 
 	/// Algorithm 3 in the paper.
@@ -1078,7 +905,16 @@ impl Tdfa {
 }
 
 impl TdfaExecution {
-	fn clear(&mut self) {
+	pub fn new(registers: usize, tags: usize) -> Self {
+		Self {
+			captures: Vec::new(),
+			registers: vec![None; registers],
+			prefix_tree: PrefixTree::new(),
+			num_tags: tags,
+		}
+	}
+
+	pub fn clear(&mut self) {
 		self.captures.clear();
 		self.prefix_tree.clear();
 		// TODO explain why don't need to clear rest of the registers

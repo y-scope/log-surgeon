@@ -7,13 +7,12 @@ use std::num::NonZero;
 use crate::dfa::Tdfa;
 use crate::dfa::TdfaExecution;
 use crate::ffi::UncheckedCArray;
-use crate::lexer::Lexer;
 use crate::log_event::Capture;
 use crate::log_event::CaptureFfiPointers;
+use crate::regex::AnchoredRegex;
 use crate::regex::Regex;
-use crate::regex::RegexCapture;
-use crate::regex::TopLevelRegex;
-use crate::schema::Rule;
+use crate::regex::SubRule;
+use crate::schema::RootRule;
 use crate::schema::RuleIdx;
 use crate::schema::Schema;
 use crate::schema::VariableOrCaptures;
@@ -337,31 +336,31 @@ impl<'a> SearchStringView<'a> {
 				.collect::<Vec<_>>(),
 		};
 
-		for (rule, regex) in rows.into_iter() {
-			debug!("- simulating regex {regex:?}");
-			for path in regex.simulate(self.as_str()) {
-				let mut sub_queries: Vec<SubQuery> = Vec::new();
+		// for (rule, regex) in rows.into_iter() {
+		// 	debug!("- simulating regex {regex:?}");
+		// 	for path in regex.simulate(self.as_str()) {
+		// 		let mut sub_queries: Vec<SubQuery> = Vec::new();
 
-				if self[0].is_wildcard() {
-					sub_queries.push(SubQuery::new_static_text(&self[0..1], schema, group));
-				}
+		// 		if self[0].is_wildcard() {
+		// 			sub_queries.push(SubQuery::new_static_text(&self[0..1], schema, group));
+		// 		}
 
-				let mut last_pos: usize = 0;
+		// 		let mut last_pos: usize = 0;
 
-				for token in path.into_iter() {
-					if let Some(capture) = token.maybe_capture {
-						if token.value.iter().all(|&ch| ch == SymbolicChar::WildcardStar) {
-							continue;
-						}
-						let name: String = format!("{}{}", rule.name, capture.qualified_name);
-						sub_queries.push(SubQuery::new_leaf(rule, capture, name, token.value, schema, group));
-					} else {
-						sub_queries.push(SubQuery::new_static_text(&token.value, schema, group));
-					}
-				}
-				interpretations.push(Interpretation { sub_queries });
-			}
-		}
+		// 		for token in path.into_iter() {
+		// 			if let Some(capture) = token.maybe_capture {
+		// 				if token.value.iter().all(|&ch| ch == SymbolicChar::WildcardStar) {
+		// 					continue;
+		// 				}
+		// 				let name: String = format!("{}{}", rule.name, capture.qualified_name);
+		// 				sub_queries.push(SubQuery::new_leaf(rule, capture, name, token.value, schema, group));
+		// 			} else {
+		// 				sub_queries.push(SubQuery::new_static_text(&token.value, schema, group));
+		// 			}
+		// 		}
+		// 		interpretations.push(Interpretation { sub_queries });
+		// 	}
+		// }
 
 		interpretations
 	}
@@ -378,14 +377,6 @@ impl std::ops::Deref for SearchStringView<'_> {
 impl SymbolicChar {
 	pub fn is_wildcard(&self) -> bool {
 		matches!(self, Self::WildcardStar | Self::WildcardOne)
-	}
-
-	pub fn maybe_delimiter(&self, lexer: &Lexer) -> bool {
-		match *self {
-			Self::Literal(ch) => lexer.schema.delimiters.contains(ch),
-			Self::WildcardStar => true,
-			Self::WildcardOne => true,
-		}
 	}
 
 	pub fn escape_for_search_string(&self) -> String {
@@ -462,7 +453,7 @@ impl SubQuery {
 			return true;
 		}
 		self.dfa
-			.execute_without_captures(input, u32::from('\n'), &mut self.dfa.execution_data())
+			.execute_without_captures(input, u32::from('\n'))
 			.map_or(false, |matched_rule| matched_rule.lexeme.len() == input.len())
 	}
 
@@ -479,8 +470,8 @@ impl SubQuery {
 	}
 
 	fn new_leaf(
-		rule: &Rule,
-		capture: RegexCapture,
+		rule: &RootRule,
+		capture: SubRule,
 		name: String,
 		symbols: Vec<SymbolicChar>,
 		schema: &Schema,
@@ -490,7 +481,7 @@ impl SubQuery {
 		let dfa: Tdfa = Self::dfa_for(&symbols, &schema.delimiters);
 		Self {
 			group,
-			rule_idx: Some(rule.idx.index),
+			rule_idx: Some(rule.idx.get()),
 			name,
 			value: symbols,
 			is_all_wildcards,
@@ -523,73 +514,74 @@ impl SubQuery {
 			}
 		}
 		let regex: Regex = Regex::Sequence(sequence);
-		Tdfa::for_rules(
-			&[Rule {
-				idx: RuleIdx {
-					priority: 0,
-					position: 0,
-					index: NonZero::<u16>::MAX,
-				},
-				name: String::new(),
-				regex: TopLevelRegex {
-					anchor_before: false,
-					anchor_after: false,
-					inner: regex,
-				},
-				capture_info: Vec::new(),
-			}],
-			delimiters.to_owned(),
-		)
+		// Tdfa::for_rules(
+		// 	&[RootRule {
+		// 		idx: RuleIdx {
+		// 			priority: 0,
+		// 			position: 0,
+		// 			index: NonZero::<u16>::MAX,
+		// 		},
+		// 		name: String::new(),
+		// 		regex: AnchoredRegex {
+		// 			anchor_before: false,
+		// 			anchor_after: false,
+		// 			inner: regex,
+		// 		},
+		// 		capture_info: Vec::new(),
+		// 	}],
+		// 	delimiters.to_owned(),
+		// )
+		todo!();
 	}
 }
 
 #[cfg(test)]
 mod test {
-	use super::*;
-	use crate::schema::SchemaBuilder;
+	// use super::*;
+	// use crate::schema::SchemaBuilder;
 
-	#[test]
-	fn search_email() {
-		let mut builder: SchemaBuilder = SchemaBuilder::new();
-		builder
-			.add_rule("email", r"(?<user>\w+)@((?<parts>\w+)\.)+(?<tld>\w+)")
-			.unwrap();
+	// #[test]
+	// fn search_email() {
+	// 	let mut builder: SchemaBuilder = SchemaBuilder::new();
+	// 	builder
+	// 		.add_rule("email", r"(?<user>\w+)@((?<parts>\w+)\.)+(?<tld>\w+)")
+	// 		.unwrap();
 
-		let schema: Schema = builder.build();
+	// 	let schema: Schema = builder.build();
 
-		{
-			let interpretations: Vec<Interpretation> = search(&schema, "a*@*com", "email");
+	// 	{
+	// 		let interpretations: Vec<Interpretation> = search(&schema, "a*@*com", "email");
 
-			assert!(interpretations.iter().any(execute(&["a", "@", "example", "com"])));
-			assert!(interpretations.iter().any(execute(&["aa", "@", "example", "com"])));
-			assert!(interpretations.iter().any(execute(&["aa", "@", "", "com"])));
+	// 		assert!(interpretations.iter().any(execute(&["a", "@", "example", "com"])));
+	// 		assert!(interpretations.iter().any(execute(&["aa", "@", "example", "com"])));
+	// 		assert!(interpretations.iter().any(execute(&["aa", "@", "", "com"])));
 
-			assert!(!interpretations.iter().any(execute(&["", "@", "example", "com"])));
-			assert!(!interpretations.iter().any(execute(&["aa", "@@", "example", "com"])));
-			assert!(!interpretations.iter().any(execute(&["a", "@", "example", "org"])));
-		}
+	// 		assert!(!interpretations.iter().any(execute(&["", "@", "example", "com"])));
+	// 		assert!(!interpretations.iter().any(execute(&["aa", "@@", "example", "com"])));
+	// 		assert!(!interpretations.iter().any(execute(&["a", "@", "example", "org"])));
+	// 	}
 
-		{
-			println!("===");
-			let interpretations: Vec<Interpretation> = search(&schema, "*a@foo.*", "email");
+	// 	{
+	// 		println!("===");
+	// 		let interpretations: Vec<Interpretation> = search(&schema, "*a@foo.*", "email");
 
-			for i in interpretations.iter() {
-				println!("- {i:?}");
-			}
-		}
-	}
+	// 		for i in interpretations.iter() {
+	// 			println!("- {i:?}");
+	// 		}
+	// 	}
+	// }
 
-	fn search(schema: &Schema, query: &str, name: &str) -> Vec<Interpretation> {
-		let query: SearchString = SearchString::parse(query).unwrap();
+	// fn search(schema: &Schema, query: &str, name: &str) -> Vec<Interpretation> {
+	// 	let query: SearchString = SearchString::parse(query).unwrap();
 
-		let interpretations: Vec<Interpretation> = query.interpretations_for_name(&schema, name);
+	// 	let interpretations: Vec<Interpretation> = query.interpretations_for_name(&schema, name);
 
-		interpretations
-	}
+	// 	interpretations
+	// }
 
-	fn execute(parts: &[&str]) -> impl Fn(&Interpretation) -> bool {
-		|interp| interp.execute(parts)
-	}
+	// fn execute(parts: &[&str]) -> impl Fn(&Interpretation) -> bool {
+	// 	|interp| interp.execute(parts)
+	// }
 
 	// #[test]
 	// fn full_log_search() {

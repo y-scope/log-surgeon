@@ -13,8 +13,7 @@ use crate::log_event::LogEvent;
 use crate::parser::Parser;
 use crate::regex::Regex;
 use crate::regex::RegexError;
-use crate::regex::TopLevelRegex;
-use crate::schema::Rule;
+use crate::schema::RootRule;
 use crate::schema::Schema;
 use crate::schema::SchemaBuilder;
 use crate::schema::VariableOrCaptures;
@@ -194,7 +193,7 @@ mod query {
 	) -> Box<Vec<Interpretation>> {
 		let query: SearchString = SearchString::parse(input.as_utf8().unwrap()).unwrap();
 		let name: &str = name.as_utf8().unwrap();
-		let interpretations: Vec<Interpretation> = query.interpretations_for_name(&parser.lexer.schema, name);
+		let interpretations: Vec<Interpretation> = query.interpretations_for_name(&parser.schema, name);
 		Box::new(interpretations)
 	}
 
@@ -238,26 +237,27 @@ mod query {
 		let value: &str = value.as_utf8().unwrap();
 
 		let mut leaf_captures: Vec<Capture> = Vec::new();
-		let on_capture: fn(&mut Vec<Capture>, &Rule, &MatchedCapture, &str) = |leaf_captures, rule, capture, value| {
-			if capture.is_leaf {
-				leaf_captures.push(Capture {
-					rule_idx: rule.idx,
-					capture_id: Some(capture.capture_id),
-					parent_index: usize::MAX,
-					parent_id: capture.parent_id,
-					range: capture.range,
-					is_leaf: true,
-					ffi_pointers: CaptureFfiPointers {
-						parent: std::ptr::null(),
-						lexeme: UncheckedCArray::from_str(&value[capture.range.start..capture.range.end]),
-						variable_name: UncheckedCArray::from_str(&rule.name),
-						capture_name: UncheckedCArray::from_str(
-							&rule.capture_info[capture.capture_id.get() as usize].name,
-						),
-					},
-				});
-			}
-		};
+		let on_capture: fn(&mut Vec<Capture>, &RootRule, &MatchedCapture, &str) =
+			|leaf_captures, rule, capture, value| {
+				if capture.is_leaf {
+					leaf_captures.push(Capture {
+						rule_idx: rule.idx,
+						capture_id: Some(capture.capture_id),
+						parent_index: usize::MAX,
+						parent_id: capture.parent_id,
+						range: capture.range,
+						is_leaf: true,
+						ffi_pointers: CaptureFfiPointers {
+							parent: std::ptr::null(),
+							lexeme: UncheckedCArray::from_str(&value[capture.range.start..capture.range.end]),
+							variable_name: UncheckedCArray::from_str(&rule.name),
+							capture_name: UncheckedCArray::from_str(
+								&rule.capture_info[capture.capture_id.get() as usize].name(),
+							),
+						},
+					});
+				}
+			};
 
 		let Some(rows): Option<VariableOrCaptures<Regex>> = schema.regexes_for_name(name) else {
 			return Box::new(SearchResult { leaf_captures });
@@ -266,13 +266,10 @@ mod query {
 		match rows {
 			VariableOrCaptures::Variable(rows) => {
 				for (rule_idx, _regex) in rows.into_iter() {
-					let rule: &Rule = &schema[rule_idx];
+					let rule: &RootRule = &schema[rule_idx];
 					let dfa: Tdfa = Tdfa::for_rules(std::iter::once(rule), schema.delimiters.clone());
 					let mut data: TdfaExecution = dfa.execution_data();
-					if dfa
-						.execute_with_captures_for_search(value, u32::from(schema.anchor_ch), &mut data)
-						.is_some()
-					{
+					if dfa.execute_with_captures_for_search(value, &mut data, rule.idx) {
 						data.captures
 							.iter()
 							.for_each(|capture| on_capture(&mut leaf_captures, rule, capture, value));
@@ -300,22 +297,24 @@ mod query {
 			},
 			VariableOrCaptures::Captures(rows) => {
 				for (rule_idx, _info, regex) in rows.into_iter() {
-					let rule: &Rule = &schema[rule_idx];
-					let regex: Regex = Regex::Sequence(vec![Regex::AnyChar, regex]);
-					let dfa: Tdfa = Tdfa::for_rules(
-						std::iter::once(&Rule::new(
-							rule.idx,
-							rule.name.clone(),
-							TopLevelRegex {
-								anchor_before: false,
-								anchor_after: false,
-								inner: regex,
-							},
-						)),
-						schema.delimiters.clone(),
-					);
+					let rule: &RootRule = &schema[rule_idx];
+					// let regex: Regex = Regex::Sequence(vec![Regex::AnyChar, regex]);
+					// let dfa: Tdfa = Tdfa::for_rules(
+					// 	std::iter::once(&RootRule::new(
+					// 		rule.idx,
+					// 		rule.name.clone(),
+					// 		AnchoredRegex {
+					// 			anchor_before: false,
+					// 			anchor_after: false,
+					// 			inner: regex,
+					// 		},
+					// 	)),
+					// 	schema.delimiters.clone(),
+					// );
+					let dfa: Tdfa = Tdfa::for_single_rule(rule_idx, &rule.name, &regex);
 					let mut data: TdfaExecution = dfa.execution_data();
-					dfa.execute_with_captures_for_search(value, u32::from(schema.anchor_ch), &mut data);
+					// dfa.execute_with_captures_for_search(value, u32::from(schema.anchor_ch), &mut data);
+					dfa.execute_with_captures(value, &mut data, rule_idx);
 					data.captures
 						.iter()
 						.for_each(|capture| on_capture(&mut leaf_captures, rule, capture, value));

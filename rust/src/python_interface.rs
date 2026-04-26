@@ -165,7 +165,7 @@ impl PyParser {
 				};
 				let name: Py<PyString> = PyString::new(py, name).unbind();
 				let py_cap: Bound<'_, PyCapture> = PyCapture {
-					rule_id: PyInt::new(py, cap.rule_idx.index.get()).unbind(),
+					rule_id: PyInt::new(py, cap.rule_idx.get()).unbind(),
 					capture_id: PyInt::new(py, cap.capture_id.map_or(0, NonZero::get)).unbind(),
 					parent,
 					offsets: PySlice::new(py, cap.range.start as isize, cap.range.end as isize, 1).unbind(),

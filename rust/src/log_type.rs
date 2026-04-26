@@ -63,7 +63,7 @@ fn to_string<'a>(schema: &Schema, log_message: &str, captures: impl Iterator<Ite
 		write!(
 			&mut buf,
 			"%{}.{}:{}.{}%",
-			&capture.rule_idx.index,
+			capture.rule_idx,
 			capture.capture_id.map_or(0, NonZero::get),
 			variable_name,
 			capture_name,
