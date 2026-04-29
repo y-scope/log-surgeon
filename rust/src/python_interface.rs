@@ -16,6 +16,7 @@ use pyo3::types::PyString;
 use crate::log_event::LogEvent;
 use crate::log_type::LogType;
 use crate::parser::Parser;
+use crate::schema::RootRule;
 use crate::schema::Schema;
 use crate::schema::SchemaBuilder;
 
@@ -42,14 +43,14 @@ struct PyLogEvent {
 	log_type: Py<PyLogType>,
 	#[pyo3(get)]
 	message: Py<PyString>,
-	#[pyo3(get)]
-	leaf_captures: Py<PyList>,
-	#[pyo3(get)]
-	non_leaf_captures: Py<PyList>,
-	#[pyo3(get)]
-	variables: Py<PyList>,
-	#[pyo3(get)]
-	all_captures: Py<PyList>,
+	#[pyo3(get, name = "leaf_captures")]
+	leaf_matches: Py<PyList>,
+	#[pyo3(get, name = "non_leaf_captures")]
+	non_leaf_matches: Py<PyList>,
+	#[pyo3(get, name = "variables")]
+	root_matches: Py<PyList>,
+	#[pyo3(get, name = "all_captures")]
+	all_matches: Py<PyList>,
 }
 
 #[pyclass(name = "LogType", eq)]
@@ -58,24 +59,30 @@ struct PyLogType(LogType);
 
 #[pyclass(name = "Capture")]
 #[derive(Debug)]
-struct PyCapture {
+struct PyMatch {
 	#[pyo3(get)]
 	rule_id: Py<PyInt>,
 	#[pyo3(get)]
-	capture_id: Py<PyInt>,
+	sub_rule_id: Py<PyInt>,
 
 	#[pyo3(get)]
-	parent: Option<Py<PyCapture>>,
+	parent: Option<Py<PyMatch>>,
 
 	#[pyo3(get)]
 	offsets: Py<PySlice>,
 
+	/// Non-qualified name of this match.
 	#[pyo3(get)]
 	name: Py<PyString>,
-	#[pyo3(get)]
-	variable_name: Py<PyString>,
-	#[pyo3(get)]
-	capture_name: Py<PyString>,
+	// /// Fully-qualified name of this match.
+	// #[pyo3(get)]
+	// qualified_name: Py<PyString>,
+	/// Name of the containing root rule.
+	#[pyo3(get, name = "variable_name")]
+	root_rule_name: Py<PyString>,
+	/// Name of this sub rule (if applicable); empty string if this is a root rule.
+	#[pyo3(get, name = "capture_name")]
+	sub_rule_name: Py<PyString>,
 
 	#[pyo3(get, name = "text")]
 	lexeme: Py<PyString>,
@@ -149,51 +156,56 @@ impl PyParser {
 		}
 
 		Python::attach(|py| {
-			let leaf_captures: Bound<'_, PyList> = PyList::empty(py);
-			let non_leaf_captures: Bound<'_, PyList> = PyList::empty(py);
-			let variables: Bound<'_, PyList> = PyList::empty(py);
-			let mut all_captures: Vec<Bound<'_, PyCapture>> = Vec::new();
+			let leaf_matches: Bound<'_, PyList> = PyList::empty(py);
+			let non_leaf_matches: Bound<'_, PyList> = PyList::empty(py);
+			let root_matches: Bound<'_, PyList> = PyList::empty(py);
+			let mut all_matches: Vec<Bound<'_, PyMatch>> = Vec::new();
 
 			let schema: &Schema = self.maybe_schema.as_ref().unwrap();
 
-			for (i, cap) in event.all_captures.iter().enumerate() {
-				let (variable_name, capture_name): (&str, &str) = schema.names(cap);
-				let (name, parent): (&str, Option<Py<PyCapture>>) = if cap.parent_index < i {
-					(capture_name, Some(all_captures[cap.parent_index].clone().unbind()))
+			for (i, cap) in event.all_matches.iter().enumerate() {
+				let rule: &RootRule = &schema[cap.rule_idx];
+				let root_rule_name: &str = &rule.name;
+				let sub_rule_name: &str = rule.rule_info(cap.sub_rule_id).name();
+				let (name, parent): (&str, Option<Py<PyMatch>>) = if cap.parent_index < i {
+					(sub_rule_name, Some(all_matches[cap.parent_index].clone().unbind()))
 				} else {
-					(variable_name, None)
+					(root_rule_name, None)
 				};
+				// let qualified_name: String =
+				// 	format!("{}{}", root_rule_name, rule.rule_info(cap.sub_rule_id).qualified_name());
 				let name: Py<PyString> = PyString::new(py, name).unbind();
-				let py_cap: Bound<'_, PyCapture> = PyCapture {
+				let py_cap: Bound<'_, PyMatch> = PyMatch {
 					rule_id: PyInt::new(py, cap.rule_idx.get()).unbind(),
-					capture_id: PyInt::new(py, cap.capture_id.map_or(0, NonZero::get)).unbind(),
+					sub_rule_id: PyInt::new(py, cap.sub_rule_id.map_or(0, NonZero::get)).unbind(),
 					parent,
 					offsets: PySlice::new(py, cap.range.start as isize, cap.range.end as isize, 1).unbind(),
 					name,
-					variable_name: PyString::new(py, variable_name).unbind(),
-					capture_name: PyString::new(py, capture_name).unbind(),
+					// qualified_name: PyString::new(py, &qualified_name).unbind(),
+					root_rule_name: PyString::new(py, root_rule_name).unbind(),
+					sub_rule_name: PyString::new(py, sub_rule_name).unbind(),
 					lexeme: PyString::new(py, &event.message[cap.range.start..cap.range.end]).unbind(),
 				}
 				.into_pyobject(py)?;
-				if cap.capture_id.is_none() {
-					variables.append(py_cap.clone())?;
+				if cap.sub_rule_id.is_none() {
+					root_matches.append(py_cap.clone())?;
 				}
 				if cap.is_leaf {
-					leaf_captures.append(py_cap.clone())?;
+					leaf_matches.append(py_cap.clone())?;
 				} else {
-					non_leaf_captures.append(py_cap.clone())?;
+					non_leaf_matches.append(py_cap.clone())?;
 				}
-				all_captures.push(py_cap);
+				all_matches.push(py_cap);
 			}
-			let all_captures: Bound<'_, PyList> = PyList::new(py, all_captures)?;
+			let all_matches: Bound<'_, PyList> = PyList::new(py, all_matches)?;
 
 			Ok(Some(PyLogEvent {
 				log_type: Py::new(py, PyLogType(event.log_type.clone()))?,
 				message: PyString::new(py, event.message).unbind(),
-				leaf_captures: leaf_captures.unbind(),
-				non_leaf_captures: non_leaf_captures.unbind(),
-				variables: variables.unbind(),
-				all_captures: all_captures.unbind(),
+				leaf_matches: leaf_matches.unbind(),
+				non_leaf_matches: non_leaf_matches.unbind(),
+				root_matches: root_matches.unbind(),
+				all_matches: all_matches.unbind(),
 			}))
 		})
 	}
@@ -266,7 +278,7 @@ impl PyLogType {
 }
 
 #[pymethods]
-impl PyCapture {
+impl PyMatch {
 	// #[pyo3(name = "__getitem__")]
 	// fn get_item(&self, key: &str) -> PyResult<Vec<String>> {
 	// 	if let Some(captures) = self.captures.get(key) {
@@ -347,11 +359,11 @@ mod log_surgeon_ffi {
 	use super::*;
 
 	#[pymodule_export]
-	use super::PyCapture;
-	#[pymodule_export]
 	use super::PyLogEvent;
 	#[pymodule_export]
 	use super::PyLogType;
+	#[pymodule_export]
+	use super::PyMatch;
 	#[pymodule_export]
 	use super::PyParser;
 

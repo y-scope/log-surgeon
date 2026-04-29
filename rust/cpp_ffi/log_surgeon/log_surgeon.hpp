@@ -2,17 +2,23 @@
 #define LOG_SURGEON_LOG_SURGEON_HPP
 
 #include "log_surgeon/generated_bindings.hpp"
+#include "log_surgeon/rust_compat.hpp"
 
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
+#include <span>
+#include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace log_surgeon {
 class ParserHandle;
 class EventHandle;
+struct SubQuery;
 
 class ParserHandle {
 public:
@@ -92,6 +98,15 @@ public:
     [[nodiscard]] auto next_event(std::string_view input, size_t* pos)
             -> std::optional<EventHandle>;
 
+    /**
+     * Computes interpretations for a query.
+     *
+     * @param name
+     * @param query
+     */
+    [[nodiscard]] auto query_interpretations(std::string_view name, std::string_view query)
+            -> std::vector<std::vector<SubQuery>>;
+
 private:
     /**
      * Last piece of copy-and-swap;
@@ -117,21 +132,28 @@ public:
         return log_surgeon_log_event_log_type(m_event);
     }
 
-    [[nodiscard]] auto get_all_captures() const -> std::span<Capture const> { return m_captures; }
+    [[nodiscard]] auto get_all_matches() const -> std::span<Match const> { return m_matches; }
 
     /**
-     * Used to iterate over leaf captures of a log event;
+     * Used to iterate over leaf matches of a log event;
      * done when this function returns `std::nullopt`.
      *
-     * @param i Try to get the `i`th capture.
+     * @param i Try to get the `i`th match.
      * @return `std::nullopt` iff out of range.
      */
-    [[nodiscard]] auto get_leaf_capture(size_t i) const -> std::optional<Capture>;
+    [[nodiscard]] auto get_leaf_match(size_t i) const -> std::optional<Match>;
 
 private:
     LogEvent const* m_event;
-    std::span<Capture const> m_captures;
+    std::span<Match const> m_matches;
     std::span<size_t const> m_leaf_indices;
+};
+
+struct SubQuery {
+    uint16_t rule_idx;
+    std::string rule_name;
+    std::string qualified_name;
+    std::string value;
 };
 
 inline auto ParserHandle::next_event(std::string_view input, size_t* pos)
@@ -142,17 +164,64 @@ inline auto ParserHandle::next_event(std::string_view input, size_t* pos)
     return std::make_optional(EventHandle{m_event});
 }
 
+inline auto ParserHandle::query_interpretations(std::string_view name, std::string_view query)
+        -> std::vector<std::vector<SubQuery>> {
+    std::vector<std::vector<SubQuery>> interpretations;
+
+    Box<Vec<Interpretation>> rust_interpretations{log_surgeon_search_query_interpretations(m_parser, CCharArray::from_string_view(query), CCharArray::from_string_view(name))};
+
+    size_t i{0};
+    while (true) {
+        Interpretation const* interpretation{log_surgeon_search_get_interpretation(rust_interpretations, i)};
+        if (nullptr == interpretation) {
+            break;
+        }
+
+        std::vector<SubQuery> sub_queries;
+        size_t j{0};
+        while (true) {
+            InternalSubQuery const* sub_query{log_surgeon_search_get_sub_query(interpretation, j)};
+            if (nullptr == sub_query) {
+                break;
+            }
+
+            uint16_t const rule_idx{log_surgeon_search_sub_query_get_rule(sub_query)};
+            std::string_view const rule_name{log_surgeon_search_sub_query_get_rule_name(sub_query)};
+            std::string_view const qualified_name{log_surgeon_search_sub_query_get_qualified_name(sub_query)};
+            std::string_view const value{log_surgeon_search_sub_query_get_value(sub_query)};
+
+            sub_queries.push_back({
+                .rule_idx=rule_idx,
+                .rule_name=std::string(rule_name),
+                .qualified_name=std::string(qualified_name),
+                .value=std::string(value),
+            });
+
+            j++;
+        }
+        interpretations.push_back(std::move(sub_queries));
+
+        i++;
+    }
+
+    log_surgeon_search_interpretations_drop(rust_interpretations);
+
+    return interpretations;
+}
+
 inline EventHandle::EventHandle(LogEvent const* event) : m_event(event) {
     size_t len{0};
-    Capture const* captures{log_surgeon_log_event_all_captures(event, &len)};
-    m_captures = {captures, len};
-    size_t const* leaf_indices{log_surgeon_log_event_leaf_capture_indices(event, &len)};
+    Match const* matches{log_surgeon_log_event_all_matches(event, &len)};
+    m_matches = {matches, len};
+    size_t const* leaf_indices{log_surgeon_log_event_leaf_match_indices(event, &len)};
     m_leaf_indices = {leaf_indices, len};
 }
 
-inline auto EventHandle::get_leaf_capture(size_t i) const -> std::optional<Capture> {
+inline auto EventHandle::get_leaf_match(size_t i) const -> std::optional<Match> {
     if (i < m_leaf_indices.size()) {
-        return std::make_optional(m_captures[m_leaf_indices[i]]);
+        // `std::span` doesn't have `.at()` until C++26...
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+        return std::make_optional(m_matches[m_leaf_indices[i]]);
     }
     return std::nullopt;
 }

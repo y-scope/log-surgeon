@@ -41,7 +41,7 @@ no_includes = true
 after_includes = """
 namespace log_surgeon {
 // https://github.com/mozilla/cbindgen/issues/43
-struct Capture;
+struct Match;
 }
 """
 
@@ -89,6 +89,7 @@ renaming_overrides_prefixing = false
 
 
 [export.rename]
+"SubQuery" = "InternalSubQuery"
 
 [export.pre_body]
 

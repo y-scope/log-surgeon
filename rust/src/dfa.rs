@@ -7,17 +7,16 @@ use std::collections::BTreeSet;
 use std::collections::btree_map::Entry;
 use std::num::NonZero;
 
-use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
 use crate::interval_tree::PolicyFunction;
-use crate::interval_tree::PolicyNoop;
-use crate::nfa::AutomataCapture;
 use crate::nfa::NfaIdx;
 use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tag;
 use crate::nfa::Tnfa;
+use crate::nfa::Transitions;
 use crate::regex::Regex;
+use crate::regex::SubRule;
 use crate::schema::RootRule;
 use crate::schema::RuleIdx;
 use crate::utils::Range;
@@ -69,9 +68,8 @@ struct DfaState {
 	kernel: Kernel,
 	transitions: IntervalTree<u32, Transition>,
 	/// If this is a final state (the kernel contains an accepting NFA state),
-	/// the rule that this state has matched for,
-	/// and whether we should "backtrack" a symbol (used to implement ends-with lookahead/anchor).
-	accepting_rule: Option<(RuleIdx, bool)>,
+	/// the rule that this state has matched for.
+	accepting_rule: Option<RuleIdx>,
 	/// Register operations upon finalizing a match (if applicable); copy to the final registers.
 	final_operations: Vec<RegisterOperation>,
 	/// Cache/combined map from this state's configurations of "register -> which tag it holds".
@@ -177,7 +175,7 @@ struct BackupState {
 
 impl Tdfa {
 	pub fn execute(&self, input: &str) -> bool {
-		self.execute_without_captures(input, 0).is_some()
+		self.execute_with_captures(input, &mut self.execution_data(), RuleIdx::NIL)
 	}
 
 	pub fn execute_without_captures<'input>(
@@ -229,7 +227,7 @@ impl Tdfa {
 		);
 
 		for (start, stop) in self.tag_pairs.iter().enumerate().rev() {
-			let capture: &AutomataCapture = self.tags[start].capture();
+			let sub_rule: &SubRule = self.tags[start].capture();
 
 			let mut maybe_start: Option<NonZero<usize>> = registers[self.tags.len() + start];
 			let mut maybe_stop: Option<NonZero<usize>> = registers[self.tags.len() + stop];
@@ -241,10 +239,10 @@ impl Tdfa {
 				let end: usize = prefix_tree[stop_node].lexeme_position;
 				captures.push(MatchedCapture {
 					rule_idx,
-					capture_id: capture.capture_info.id,
-					parent_id: capture.capture_info.parent_id,
+					capture_id: sub_rule.id,
+					parent_id: sub_rule.parent_id,
 					parent_index: usize::MAX,
-					is_leaf: capture.capture_info.is_leaf(),
+					is_leaf: sub_rule.is_leaf(),
 					range: Range { start, end },
 				});
 				maybe_start = prefix_tree[start_node].maybe_predecessor;
@@ -306,26 +304,27 @@ impl Tdfa {
 		{
 			if let Some(transition) = self.lookup_transition(current_state, u32::from(ch)) {
 				current_state = transition.target;
-				if let Some((rule, backtrack)) = self.states[current_state].accepting_rule {
-					if (pos < input.len()) || backtrack {
-						// The current character is a "real input" (not the chained EOF pseudo-symbol),
-						// or the accepting state is after a lookahead and will backtrack...
+				if let Some(rule) = self.states[current_state].accepting_rule {
+					maybe_backup = Some(BackupState { rule, consumed: pos });
+					// if (pos < input.len()) || backtrack {
+					// 	// The current character is a "real input" (not the chained EOF pseudo-symbol),
+					// 	// or the accepting state is after a lookahead and will backtrack...
 
-						let consumed: usize = pos + if backtrack { 0 } else { ch.len_utf8() };
+					// 	let consumed: usize = pos + if backtrack { 0 } else { ch.len_utf8() };
 
-						if let Some(backup) = maybe_backup
-							&& backup.consumed >= consumed
-						{
-							// If the previously matched rule's lexeme was at least as long
-							// (technically, it can only be exactly as long, since it can't be longer),
-							// then keep the previous rule, since it has higher priority.
-							// Equivalently, "if we matched via an anchor, don't overwrite the previous rule
-							// if it also matched the full text".
-							continue;
-						}
+					// 	if let Some(backup) = maybe_backup
+					// 		&& backup.consumed >= consumed
+					// 	{
+					// 		// If the previously matched rule's lexeme was at least as long
+					// 		// (technically, it can only be exactly as long, since it can't be longer),
+					// 		// then keep the previous rule, since it has higher priority.
+					// 		// Equivalently, "if we matched via an anchor, don't overwrite the previous rule
+					// 		// if it also matched the full text".
+					// 		continue;
+					// 	}
 
-						maybe_backup = Some(BackupState { rule, consumed });
-					}
+					// 	maybe_backup = Some(BackupState { rule, consumed });
+					// }
 				}
 			} else {
 				break;
@@ -383,10 +382,6 @@ impl Tdfa {
 }
 
 impl Tdfa {
-	pub fn capture_info(&self, i: usize) -> &AutomataCapture {
-		self.tags[i].capture()
-	}
-
 	pub fn execution_data(&self) -> TdfaExecution {
 		TdfaExecution {
 			captures: Vec::new(),
@@ -445,7 +440,7 @@ impl Tdfa {
 			Vec::new(),
 		);
 
-		let initial: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Self::epsilon_closure(nfa, vec![initial]);
+		let initial: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Self::epsilon_closure(nfa, &vec![initial]);
 
 		dfa.add_state(nfa, initial, &mut Vec::new());
 
@@ -459,9 +454,7 @@ impl Tdfa {
 			let kernel: Kernel = dfa.states[i].kernel.clone();
 
 			let mut register_action_tag: BTreeMap<(Tag, RegisterAction), usize> = BTreeMap::new();
-			for &interval in kernel.nontrivial_transitions(nfa).iter() {
-				let next: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> =
-					Self::step_on_interval(nfa, kernel.0.clone(), interval);
+			for (interval, next) in kernel.step_on_intervals(nfa).iter() {
 				let next: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Self::epsilon_closure(nfa, next);
 
 				let (next, mut operations): (
@@ -512,15 +505,15 @@ impl Tdfa {
 		configurations: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
 		ops: &mut Vec<RegisterOperation>,
 	) -> usize {
-		let mut accepting_rule: Option<(RuleIdx, bool)> = None;
+		let mut accepting_rule: Option<RuleIdx> = None;
 		let mut final_operations: Vec<RegisterOperation> = Vec::new();
 		let mut tag_for_register: BTreeMap<usize, Tag> = BTreeMap::new();
 		let configurations: Vec<Configuration> = configurations
 			.into_iter()
 			.map(|(config, _)| {
-				if let Some((rule, needs_backtrack)) = nfa[config.nfa_state].accepts_for_rule() {
+				if let Some(rule) = nfa[config.nfa_state].maybe_accepts_for_rule {
 					if accepting_rule.is_none() {
-						accepting_rule = Some((rule, needs_backtrack));
+						accepting_rule = Some(rule);
 					}
 					final_operations = self.final_operations(&config.register_for_tag, &config.tag_path_in_closure);
 				}
@@ -682,44 +675,9 @@ impl Tdfa {
 		(!nontrivial_cycle).then_some(new_ops)
 	}
 
-	fn step_on_interval(
-		nfa: &Tnfa,
-		configurations: Vec<Configuration>,
-		interval: Interval<u32>,
-	) -> Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> {
-		let mut next_states: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Vec::new();
-
-		for config in configurations.iter() {
-			let nfa_state: &NfaState = &nfa[config.nfa_state];
-			// Remark: Accepting states have no outgoing transitions.
-			if let Some(targets) = nfa_state.transitions().lookup(interval.start()) {
-				assert!(
-					nfa_state
-						.transitions()
-						.lookup_interval(interval.start())
-						.unwrap()
-						.contains(&interval)
-				);
-				for &next in targets.iter() {
-					next_states.push((
-						Configuration {
-							nfa_state: next,
-							register_for_tag: config.register_for_tag.clone(),
-							tag_path_in_closure: Vec::new(),
-						},
-						config.tag_path_in_closure.clone(),
-					));
-				}
-			}
-		}
-
-		Kernel::invariants(&next_states);
-		next_states
-	}
-
 	fn epsilon_closure(
 		nfa: &Tnfa,
-		configurations: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
+		configurations: &Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
 	) -> Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> {
 		let mut closure: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Vec::new();
 
@@ -735,7 +693,10 @@ impl Tdfa {
 			closure.push((config.clone(), inherited.clone()));
 
 			// Remark: Accepting states have no outgoing transitions.
-			for transition in nfa[config.nfa_state].spontaneous().iter().rev() {
+			let Transitions::Spontaneous(transitions): &Transitions = &nfa[config.nfa_state].transitions else {
+				continue;
+			};
+			for transition in transitions.iter().rev() {
 				if nfa_states_on_stack.contains(&transition.target) {
 					continue;
 				}
@@ -937,18 +898,33 @@ impl Kernel {
 		assert_eq!(states, unique_states);
 	}
 
-	fn nontrivial_transitions(&self, nfa: &Tnfa) -> Vec<Interval<u32>> {
-		let mut transitions: IntervalTree<u32, ()> = IntervalTree::new();
+	fn step_on_intervals(&self, nfa: &Tnfa) -> IntervalTree<u32, Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>> {
+		use crate::interval_tree::PolicyExtend;
+
+		let mut combined: IntervalTree<u32, Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>> = IntervalTree::new();
 
 		for config in self.0.iter() {
 			let nfa_state: &NfaState = &nfa[config.nfa_state];
 			// Remark: Accepting states have no outgoing transitions.
-			for (interval, _) in nfa_state.transitions().iter() {
-				transitions.insert(interval, (), PolicyNoop);
+			if let Transitions::Interval(transitions) = &nfa_state.transitions {
+				for (interval, &target) in transitions.iter() {
+					combined.insert(
+						interval,
+						vec![(
+							Configuration {
+								nfa_state: target,
+								register_for_tag: config.register_for_tag.clone(),
+								tag_path_in_closure: Vec::new(),
+							},
+							config.tag_path_in_closure.clone(),
+						)],
+						PolicyExtend,
+					);
+				}
 			}
 		}
 
-		transitions.iter().map(|(interval, _)| interval).collect::<Vec<_>>()
+		combined
 	}
 }
 
@@ -1011,30 +987,26 @@ impl std::ops::Index<NonZero<usize>> for PrefixTree {
 	}
 }
 
-/*
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::schema::Schema;
 
 	#[test]
-	fn complex_pattern() {
-		let mut schema: Schema = Schema::new();
-		schema
-			.add_rule("hello", "0((?<foobar>1(2[a-zA-Z])*)*|(?<baz>xyz))*world")
-			.unwrap();
-		let dfa: Tdfa = schema.build_dfa();
+	fn big_pattern() {
+		let dfa: Tdfa = for_pattern("0((?<foobar>1(2[a-zA-Z])*)*|(?<baz>xyz))*world");
 		let b: bool = dfa.execute("012a2b2c12z12zxyzxyzxyzworld");
 		assert!(b);
 	}
 
 	#[test]
 	fn group_with_overlapping_range() {
-		let mut schema: Schema = Schema::new();
-		schema.add_rule("hello", r"[aa]").unwrap();
-		let dfa: Tdfa = schema.build_dfa();
+		let dfa: Tdfa = for_pattern("[aa]");
 		let b: bool = dfa.execute("a");
 		assert!(b);
 	}
+
+	fn for_pattern(pattern: &str) -> Tdfa {
+		let regex: Regex = Regex::from_pattern(pattern).unwrap().inner;
+		Tdfa::for_single_rule(RuleIdx::NIL, "", &regex)
+	}
 }
-*/

@@ -1,4 +1,4 @@
-use crate::log_event::Capture;
+use crate::log_event::Match;
 use crate::schema::Schema;
 use std::num::NonZero;
 
@@ -39,7 +39,7 @@ impl LogType {
 		cached_representation: String::new(),
 	};
 
-	pub fn new<'a>(schema: &Schema, log_message: &str, captures: impl Iterator<Item = &'a Capture>) -> Self {
+	pub fn new<'a>(schema: &Schema, log_message: &str, captures: impl Iterator<Item = &'a Match>) -> Self {
 		let cached_representation: String = to_string(schema, log_message, captures);
 		Self { cached_representation }
 	}
@@ -49,7 +49,7 @@ impl LogType {
 	}
 }
 
-fn to_string<'a>(schema: &Schema, log_message: &str, captures: impl Iterator<Item = &'a Capture>) -> String {
+fn to_string<'a>(schema: &Schema, log_message: &str, captures: impl Iterator<Item = &'a Match>) -> String {
 	use std::fmt::Write;
 
 	let mut buf: String = String::new();
@@ -64,7 +64,7 @@ fn to_string<'a>(schema: &Schema, log_message: &str, captures: impl Iterator<Ite
 			&mut buf,
 			"%{}.{}:{}.{}%",
 			capture.rule_idx,
-			capture.capture_id.map_or(0, NonZero::get),
+			capture.sub_rule_id.map_or(0, NonZero::get),
 			variable_name,
 			capture_name,
 		)

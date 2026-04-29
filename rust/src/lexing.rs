@@ -1,17 +1,9 @@
+use std::str::Chars;
+
 use crate::dfa::MatchedRule;
 use crate::dfa::TdfaExecution;
 use crate::schema::RootRule;
 use crate::schema::Schema;
-use std::str::Chars;
-
-// #[derive(Debug, Clone)]
-// pub struct Lexer {
-// 	pub schema: Schema,
-// 	pub dfa: Tdfa,
-// 	pub dfa_per_rule: Vec<Tdfa>,
-// 	delimiter_ascii_cache: [bool; 0x80],
-// 	non_ascii_delimiters: String,
-// }
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Token<'schema, 'input> {
@@ -24,35 +16,6 @@ pub enum Token<'schema, 'input> {
 	StaticText(&'input str),
 	EndOfInput,
 }
-
-// impl Lexer {
-// 	pub fn new(schema: Schema) -> Self {
-// 		let dfa: Tdfa = schema.build_dfa();
-// 		let dfa_per_rule: Vec<Tdfa> = schema
-// 			.rules
-// 			.iter()
-// 			.map(|rule| Tdfa::for_single_rule(rule.idx, &rule.name, &rule.regex.inner))
-// 			.collect::<Vec<_>>();
-// 		let mut delimiter_ascii_cache: [bool; 0x80] = [false; 0x80];
-// 		let mut non_ascii_delimiters: String = String::new();
-// 		for ch in schema.delimiters.chars() {
-// 			if let Ok(i) = u8::try_from(ch)
-// 				&& let Some(entry) = delimiter_ascii_cache.get_mut(usize::from(i))
-// 			{
-// 				*entry = true;
-// 			} else {
-// 				non_ascii_delimiters.push(ch);
-// 			}
-// 		}
-// 		Self {
-// 			schema,
-// 			dfa,
-// 			dfa_per_rule,
-// 			delimiter_ascii_cache,
-// 			non_ascii_delimiters,
-// 		}
-// 	}
-// }
 
 impl Schema {
 	pub fn next_token<'schema, 'input>(
@@ -74,7 +37,7 @@ impl Schema {
 		{
 			let rule: &RootRule = &self[rule_idx];
 			// First entry is for the root rule.
-			let has_captures: bool = rule.capture_info.len() > 1;
+			let has_captures: bool = rule.rule_info.len() > 1;
 			data.clear();
 			if has_captures {
 				let matched: bool = rule.dfa.execute_with_captures(lexeme, data, rule.idx);

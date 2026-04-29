@@ -1,19 +1,19 @@
 mod pattern_parsing;
-
 pub use pattern_parsing::*;
+
+use std::num::NonZero;
 
 use crate::schema::RuleInfo;
 use crate::utils::Escaped;
-use std::num::NonZero;
 
 // TODO: relax need to escape `<>`?
 const SPECIAL_CHARACTERS: &str = r"\()[]{}*+?.|^$<>";
 
 const SPECIAL_CHARACTERS_IN_BRACKETED_EXPRESSIONS: &str = r"\[]";
 
-/// This is morally just `Into<TopLevelRegex>`,
-/// since we can't have `impl<'a> From<&'a str> for Result<TopLevelRegex, RegexError<'a>`
-/// because of Rust's forsake orphan rules.
+/// This is morally just `TryInto<AnchoredRegex>`
+/// since we can't have `impl<'a> From<&'a str> for Result<AnchoredRegex, RegexError<'a>>`,
+/// because of Rust's forsaken orphan rules.
 pub trait IntoRegex {
 	type Error;
 
@@ -31,7 +31,7 @@ pub struct AnchoredRegex {
 pub enum Regex {
 	AnyChar,
 	Literal(char),
-	Capture { info: SubRule, item: Box<Regex> },
+	Capture(SubRule),
 	Group { negated: bool, items: Vec<(char, char)> },
 	KleeneClosure(Box<Regex>),
 	KleenePlus(Box<Regex>),
@@ -51,9 +51,12 @@ pub struct SubRule {
 	pub name: String,
 	pub regex: Box<Regex>,
 
-	/// Capture ID, `None`/`0` for a root rule,
-	/// otherwise statically assigned left-to-right based on the regex pattern.
+	/// ID statically assigned left-to-right based on the regex pattern.
 	/// For example, the pattern `(?<start>[a-z]+(?<rest>\.[a-z]+)*)|(?<start>[0-9]+)` has three non-zero capture IDs.
+	/// When the pattern is actually matched,
+	/// there may be multiple instances of capture ID 2 (corresponding to `"rest"`).
+	/// The capture ID also differentiates between different capture groups given the same name,
+	/// e.g. the two instances of `"start"` in the pattern.
 	pub id: NonZero<u16>,
 	/// ID of the parent capture, if any.
 	pub parent_id: Option<NonZero<u16>>,
@@ -65,24 +68,6 @@ pub struct SubRule {
 	/// a top-level capture is ".a", a second-level capture is ".a.b".
 	pub qualified_name: String,
 }
-
-// impl Ord for SubRule {
-// 	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-// 		self.id.cmp(&other.id)
-// 	}
-// }
-
-// impl PartialOrd for SubRule {
-// 	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-// 		Some(self.cmp(other))
-// 	}
-// }
-
-// impl PartialEq for SubRule {
-// 	fn eq(&self, other: &Self) -> bool {
-// 		self.cmp(other).is_eq()
-// 	}
-// }
 
 impl IntoRegex for AnchoredRegex {
 	type Error = std::convert::Infallible;
@@ -117,7 +102,7 @@ impl Regex {
 						buffer.push('\\');
 						buffer.push(ch);
 					} else if ch == '-' {
-						// This is needed, for example, for `a\-z`, but not `a-`.
+						// This is needed, for example, for `[a\-z]` as 3 characters, but not `[a-]`.
 						// However, we always escape it for simplicity and clarity.
 						buffer.push_str("\\-");
 					} else {
@@ -136,8 +121,8 @@ impl Regex {
 				});
 				format!("[{negation}{items}]")
 			},
-			Self::Capture { info, item } => {
-				format!("(?<{}>{})", info.name, item.to_pattern())
+			Self::Capture(sub_rule) => {
+				format!("(?<{}>{})", sub_rule.name, sub_rule.regex.to_pattern())
 			},
 			Self::KleeneClosure(item) => {
 				format!("{}*", self.surround(item))
@@ -202,7 +187,7 @@ impl Regex {
 	pub fn count_captures(&self) -> usize {
 		match self {
 			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => 0,
-			Self::Capture { info, .. } => 1 + info.descendents,
+			Self::Capture(sub_rule) => 1 + sub_rule.descendents,
 			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
 				item.count_captures()
 			},
@@ -212,21 +197,21 @@ impl Regex {
 		}
 	}
 
-	pub fn populate_capture_info(&self, capture_info: &mut Vec<RuleInfo>) {
+	pub fn populate_sub_rule_info(&self, capture_info: &mut Vec<RuleInfo>) {
 		match self {
 			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
-			Self::Capture { info, item } => {
-				let i: usize = info.id_as_usize();
+			Self::Capture(sub_rule) => {
+				let i: usize = sub_rule.id_as_usize();
 				assert_eq!(capture_info.len(), i);
-				capture_info.push(RuleInfo::Sub(info.clone()));
-				item.populate_capture_info(capture_info);
+				capture_info.push(RuleInfo::Sub(sub_rule.clone()));
+				sub_rule.regex.populate_sub_rule_info(capture_info);
 			},
 			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
-				item.populate_capture_info(capture_info);
+				item.populate_sub_rule_info(capture_info);
 			},
 			Self::Sequence(items) | Self::Alternation(items) => {
 				for sub_item in items.iter() {
-					sub_item.populate_capture_info(capture_info);
+					sub_item.populate_sub_rule_info(capture_info);
 				}
 			},
 		}
@@ -241,17 +226,17 @@ impl Regex {
 		let mut bread: usize = 0;
 		match self {
 			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
-			Self::Capture { info, item } => {
+			Self::Capture(sub_rule) => {
 				let maybe_parent: Option<&(NonZero<u16>, String)> = stack.last();
-				info.parent_id = maybe_parent.map(|(id, _)| *id);
-				info.id = *id;
-				info.qualified_name = format!("{}.{}", maybe_parent.map_or("", |(_, name)| name), info.name);
-				stack.push((info.id, info.qualified_name.clone()));
+				sub_rule.parent_id = maybe_parent.map(|(id, _)| *id);
+				sub_rule.id = *id;
+				sub_rule.qualified_name = format!("{}.{}", maybe_parent.map_or("", |(_, name)| name), sub_rule.name);
+				stack.push((sub_rule.id, sub_rule.qualified_name.clone()));
 				// `id` is `u16`.
 				*id = id.checked_add(1)?;
-				info.descendents = item.number_captures(id, stack)?;
+				sub_rule.descendents = sub_rule.regex.number_captures(id, stack)?;
 				// `bread` is `usize`.
-				bread = 1 + info.descendents;
+				bread = 1 + sub_rule.descendents;
 				stack.pop();
 			},
 			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
@@ -275,7 +260,6 @@ impl Regex {
 
 impl SubRule {
 	pub fn id_as_usize(&self) -> usize {
-		// usize::from(self.id.map_or(0, NonZero::get))
 		usize::from(self.id.get())
 	}
 

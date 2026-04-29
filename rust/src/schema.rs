@@ -1,13 +1,14 @@
 mod schema_file;
 
+use std::collections::BTreeMap;
+use std::num::NonZero;
+
 use crate::dfa::Tdfa;
-use crate::log_event::Capture;
+use crate::log_event::Match;
 use crate::regex::AnchoredRegex;
 use crate::regex::IntoRegex;
 use crate::regex::Regex;
 use crate::regex::SubRule;
-use std::collections::BTreeMap;
-use std::num::NonZero;
 
 #[derive(Debug, Clone)]
 pub struct SchemaBuilder {
@@ -53,7 +54,7 @@ pub struct RootRule {
 	pub priority: i32,
 
 	pub regex: AnchoredRegex,
-	pub capture_info: Vec<RuleInfo>,
+	pub rule_info: Vec<RuleInfo>,
 
 	pub dfa: Tdfa,
 }
@@ -78,12 +79,6 @@ pub enum RuleInfo {
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct RuleIdx(NonZero<u16>);
-
-impl std::fmt::Display for RuleIdx {
-	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		self.0.fmt(fmt)
-	}
-}
 
 #[derive(Debug)]
 pub enum VariableOrCaptures<T> {
@@ -206,9 +201,9 @@ impl Schema {
 		Tdfa::for_rules(&self.rules, self.delimiters.clone())
 	}
 
-	pub fn names(&self, capture: &Capture) -> (&'_ str, &'_ str) {
+	pub fn names(&self, capture: &Match) -> (&'_ str, &'_ str) {
 		let rule: &RootRule = &self[capture.rule_idx];
-		(&rule.name, &rule.capture_info[capture.id_as_usize()].name())
+		(&rule.name, &rule.rule_info[capture.id_as_usize()].name())
 	}
 
 	pub fn regexes_for_name(&self, name: &str) -> Option<VariableOrCaptures<Regex>> {
@@ -244,12 +239,12 @@ impl Schema {
 	{
 		match regex {
 			Regex::AnyChar | Regex::Literal(..) | Regex::Group { .. } => (),
-			Regex::Capture { info, item } => {
-				if info.name == first {
+			Regex::Capture(sub_rule) => {
+				if sub_rule.name == first {
 					if let Some(first) = rest.first().copied() {
-						Self::find_capture(item, first, &rest[1..], func);
+						Self::find_capture(&sub_rule.regex, first, &rest[1..], func);
 					} else {
-						func(info, item);
+						func(sub_rule, &sub_rule.regex);
 					}
 				}
 			},
@@ -275,11 +270,11 @@ impl std::ops::Index<RuleIdx> for Schema {
 
 impl RootRule {
 	pub fn new(idx: RuleIdx, name: String, priority: i32, regex: AnchoredRegex) -> Self {
-		let mut capture_info: Vec<RuleInfo> = Vec::with_capacity(1 + regex.inner.count_captures());
-		capture_info.push(RuleInfo::Root);
-		regex.inner.populate_capture_info(&mut capture_info);
+		let mut rule_info: Vec<RuleInfo> = Vec::with_capacity(1 + regex.inner.count_captures());
+		rule_info.push(RuleInfo::Root);
+		regex.inner.populate_sub_rule_info(&mut rule_info);
 
-		for info in capture_info[1..].iter() {
+		for info in rule_info[1..].iter() {
 			assert_ne!(info, &RuleInfo::Root);
 		}
 
@@ -290,18 +285,21 @@ impl RootRule {
 			name,
 			priority,
 			regex,
-			capture_info,
+			rule_info,
 			dfa,
 		}
 	}
 
-	pub fn capture_info(&self, i: Option<NonZero<u16>>) -> &RuleInfo {
+	pub fn rule_info(&self, i: Option<NonZero<u16>>) -> &RuleInfo {
 		let i: usize = usize::from(i.map_or(0, NonZero::get));
-		&self.capture_info[i]
+		&self.rule_info[i]
 	}
 }
 
 impl RuleIdx {
+	/// cbindgen:ignore
+	pub const NIL: Self = Self(NonZero::<u16>::MAX);
+
 	pub fn get(&self) -> NonZero<u16> {
 		self.0
 	}
@@ -311,8 +309,21 @@ impl RuleIdx {
 	}
 }
 
+impl std::fmt::Display for RuleIdx {
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		self.0.fmt(fmt)
+	}
+}
+
 impl RuleInfo {
 	pub fn name(&self) -> &str {
+		match self {
+			Self::Root => "",
+			Self::Sub(rule) => &rule.name,
+		}
+	}
+
+	pub fn qualified_name(&self) -> &str {
 		match self {
 			Self::Root => "",
 			Self::Sub(rule) => &rule.qualified_name,

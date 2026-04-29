@@ -11,7 +11,7 @@
 #include "rust_compat.hpp"
 namespace log_surgeon {
 // https://github.com/mozilla/cbindgen/issues/43
-struct Capture;
+struct Match;
 }
 
 
@@ -20,7 +20,7 @@ namespace log_surgeon {
 struct Interpretation;
 
 /// A `LogEvent` has a template [`LogType`](crate::log_type::LogType).
-/// and a sequence of [`Capture`]s to interpolate.
+/// and a sequence of [`Match`]s to interpolate.
 struct LogEvent;
 
 struct Parser;
@@ -39,7 +39,7 @@ struct SchemaBuilder;
 
 struct SearchResult;
 
-struct SubQuery;
+struct InternalSubQuery;
 
 template<typename T = void>
 struct Vec;
@@ -66,24 +66,25 @@ struct UncheckedCArray {
     }
 };
 
-struct CaptureFfiPointers {
-    const Capture *parent;
+struct MatchFfiPointers {
+    const Match *parent;
     UncheckedCArray<char> lexeme;
-    UncheckedCArray<char> variable_name;
-    UncheckedCArray<char> capture_name;
+    UncheckedCArray<char> rule_name;
+    /// Not the fully-qualified name;
+    /// walk the parents to build the fully-qualified name.
+    UncheckedCArray<char> sub_rule_name;
 };
 
-struct Capture {
+struct Match {
     RuleIdx rule_idx;
-    /// Capture ID local to the current/containing rule/variable/regex pattern;
-    /// see [`RegexCapture`](crate::regex::RegexCapture).
-    /// When this variable/pattern is actually matched,
-    /// there may be multiple instances of capture ID 2 (corresponding to `"rest"`).
-    /// The capture ID also differentiates between different capture groups given the same name,
-    /// e.g. the two instances of `"start"` in the pattern.
-    uint16_t capture_id;
+    /// SubRule ID, local to the containing rule/variable/regex pattern;
+    /// `None`/`0` for a root rule,
+    /// See [`SubRule`](crate::regex::SubRule).
+    uint16_t sub_rule_id;
+    /// Parent SubRule ID, if any;
+    /// `None` for both a root rule and a top-level capture in a regex pattern.
     uint16_t parent_id;
-    /// Index of the parent in the full list of captures (including variables).
+    /// Index of the parent in the full list of matches (including variables/root rules).
     /// For a variable, the parent index equals its own index.
     size_t parent_index;
     /// Relative to the start of the log message.
@@ -91,7 +92,7 @@ struct Capture {
     bool is_leaf;
     /// DANGEROUS fields for FFI.
     /// But it's not dangerous if you don't look at it.
-    CaptureFfiPointers ffi_pointers;
+    MatchFfiPointers ffi_pointers;
 };
 
 
@@ -99,13 +100,13 @@ extern "C" {
 
 void log_surgeon_enable_tracing();
 
-const Capture *log_surgeon_log_event_all_captures(const LogEvent *log_event, size_t *len);
+const Match *log_surgeon_log_event_all_matches(const LogEvent *log_event, size_t *len);
 
 Box<LogEvent> log_surgeon_log_event_clone(const LogEvent *value);
 
 void log_surgeon_log_event_drop(Box<LogEvent> value);
 
-const size_t *log_surgeon_log_event_leaf_capture_indices(const LogEvent *log_event, size_t *len);
+const size_t *log_surgeon_log_event_leaf_match_indices(const LogEvent *log_event, size_t *len);
 
 CCharArray log_surgeon_log_event_log_type(const LogEvent *log_event);
 
@@ -141,7 +142,8 @@ Box<SearchResult> log_surgeon_search_by_named_type(const Schema *schema,
 const Interpretation *log_surgeon_search_get_interpretation(const Vec<Interpretation> *interpretations,
                                                             size_t i);
 
-const SubQuery *log_surgeon_search_get_sub_query(const Interpretation *interpretation, size_t i);
+const InternalSubQuery *log_surgeon_search_get_sub_query(const Interpretation *interpretation,
+                                                         size_t i);
 
 void log_surgeon_search_interpretations_drop(Box<Vec<Interpretation>> value);
 
@@ -151,14 +153,16 @@ Box<Vec<Interpretation>> log_surgeon_search_query_interpretations(const Parser *
 
 void log_surgeon_search_result_drop(Box<SearchResult> value);
 
-const Capture *log_surgeon_search_result_get_leaf_captures(const SearchResult *search_result,
-                                                           size_t *len);
+const Match *log_surgeon_search_result_get_leaf_matches(const SearchResult *search_result,
+                                                        size_t *len);
 
-CCharArray log_surgeon_search_sub_query_get_name(const SubQuery *sub_query);
+CCharArray log_surgeon_search_sub_query_get_qualified_name(const InternalSubQuery *sub_query);
 
-uint16_t log_surgeon_search_sub_query_get_rule(const SubQuery *sub_query);
+uint16_t log_surgeon_search_sub_query_get_rule(const InternalSubQuery *sub_query);
 
-bool log_surgeon_search_sub_query_match_input(const SubQuery *sub_query, CCharArray input);
+CCharArray log_surgeon_search_sub_query_get_rule_name(const InternalSubQuery *sub_query);
+
+CCharArray log_surgeon_search_sub_query_get_value(const InternalSubQuery *sub_query);
 
 }  // extern "C"
 

@@ -1,11 +1,13 @@
-use super::*;
+use std::str::Chars;
+
 use nom::Err as NomErr;
 use nom::IResult;
 use nom::Parser;
 use nom::error::ErrorKind as NomErrorKind;
 use nom::error::FromExternalError;
 use nom::error::ParseError;
-use std::str::Chars;
+
+use super::*;
 
 #[derive(Debug)]
 pub struct RegexError<'a> {
@@ -374,18 +376,15 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 
 	Ok((
 		input,
-		Regex::Capture {
-			info: SubRule {
-				name: name.to_owned(),
-				regex: Box::new(regex.clone()),
-				// This is a valid placeholder; see note for [`Regex::number_captures`].
-				id: NonZero::<u16>::MAX,
-				parent_id: None,
-				descendents: 0,
-				qualified_name: String::new(),
-			},
-			item: Box::new(regex),
-		},
+		Regex::Capture(SubRule {
+			name: name.to_owned(),
+			regex: Box::new(regex),
+			// This is a valid placeholder; see note for [`Regex::number_captures`].
+			id: NonZero::<u16>::MAX,
+			parent_id: None,
+			descendents: 0,
+			qualified_name: String::new(),
+		}),
 	))
 }
 

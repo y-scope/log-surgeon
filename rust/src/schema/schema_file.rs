@@ -1,11 +1,10 @@
-use super::Schema;
-use super::SchemaBuilder;
-use crate::utils::Escaped;
-
 use nom::Err as NomErr;
 use nom::IResult;
 use nom::Parser;
 use nom::error::Error as NomError;
+
+use super::*;
+use crate::utils::Escaped;
 
 #[derive(Debug)]
 pub struct SchemaFileError {

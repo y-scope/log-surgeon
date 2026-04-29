@@ -7,9 +7,9 @@ use crate::dfa::MatchedCapture;
 use crate::dfa::Tdfa;
 use crate::dfa::TdfaExecution;
 use crate::ffi::UncheckedCArray;
-use crate::log_event::Capture;
-use crate::log_event::CaptureFfiPointers;
 use crate::log_event::LogEvent;
+use crate::log_event::Match;
+use crate::log_event::MatchFfiPointers;
 use crate::parser::Parser;
 use crate::regex::Regex;
 use crate::regex::RegexError;
@@ -35,7 +35,7 @@ pub type CCharArray<'lifetime> = CArray<'lifetime, c_char>;
 
 #[derive(Debug)]
 pub struct SearchResult {
-	leaf_captures: Vec<Capture>,
+	leaf_captures: Vec<Match>,
 }
 
 impl<'lifetime, T> CArray<'lifetime, T> {
@@ -167,13 +167,13 @@ mod log_event {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_all_captures<'a>(log_event: &LogEvent<'a>, len: &mut usize) -> *const Capture {
-		*len = log_event.all_captures.len();
-		log_event.all_captures.as_ptr()
+	extern "C" fn log_surgeon_log_event_all_matches<'a>(log_event: &LogEvent<'a>, len: &mut usize) -> *const Match {
+		*len = log_event.all_matches.len();
+		log_event.all_matches.as_ptr()
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_leaf_capture_indices<'a>(
+	extern "C" fn log_surgeon_log_event_leaf_match_indices<'a>(
 		log_event: &LogEvent<'a>,
 		len: &mut usize,
 	) -> *const usize {
@@ -216,14 +216,22 @@ mod query {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_search_sub_query_get_name(sub_query: &SubQuery) -> CCharArray<'_> {
-		CCharArray::from_utf8(&sub_query.name)
+	extern "C" fn log_surgeon_search_sub_query_get_rule_name(sub_query: &SubQuery) -> CCharArray<'_> {
+		CCharArray::from_utf8(&sub_query.rule_name)
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_search_sub_query_match_input(sub_query: &SubQuery, input: CCharArray<'_>) -> bool {
-		let input: &str = input.as_utf8().unwrap();
-		sub_query.execute(input)
+	extern "C" fn log_surgeon_search_sub_query_get_qualified_name(sub_query: &SubQuery) -> CCharArray<'_> {
+		CCharArray::from_utf8(if !sub_query.qualified_name.is_empty() {
+			&sub_query.qualified_name[1..]
+		} else {
+			""
+		})
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_search_sub_query_get_value(sub_query: &SubQuery) -> CCharArray<'_> {
+		CCharArray::from_utf8(&sub_query.value)
 	}
 
 	#[unsafe(no_mangle)]
@@ -236,23 +244,23 @@ mod query {
 		let name: &str = name.as_utf8().unwrap();
 		let value: &str = value.as_utf8().unwrap();
 
-		let mut leaf_captures: Vec<Capture> = Vec::new();
-		let on_capture: fn(&mut Vec<Capture>, &RootRule, &MatchedCapture, &str) =
+		let mut leaf_captures: Vec<Match> = Vec::new();
+		let on_capture: fn(&mut Vec<Match>, &RootRule, &MatchedCapture, &str) =
 			|leaf_captures, rule, capture, value| {
 				if capture.is_leaf {
-					leaf_captures.push(Capture {
+					leaf_captures.push(Match {
 						rule_idx: rule.idx,
-						capture_id: Some(capture.capture_id),
+						sub_rule_id: Some(capture.capture_id),
 						parent_index: usize::MAX,
 						parent_id: capture.parent_id,
 						range: capture.range,
 						is_leaf: true,
-						ffi_pointers: CaptureFfiPointers {
+						ffi_pointers: MatchFfiPointers {
 							parent: std::ptr::null(),
 							lexeme: UncheckedCArray::from_str(&value[capture.range.start..capture.range.end]),
-							variable_name: UncheckedCArray::from_str(&rule.name),
-							capture_name: UncheckedCArray::from_str(
-								&rule.capture_info[capture.capture_id.get() as usize].name(),
+							rule_name: UncheckedCArray::from_str(&rule.name),
+							sub_rule_name: UncheckedCArray::from_str(
+								&rule.rule_info[capture.capture_id.get() as usize].name(),
 							),
 						},
 					});
@@ -274,9 +282,9 @@ mod query {
 							.iter()
 							.for_each(|capture| on_capture(&mut leaf_captures, rule, capture, value));
 						if leaf_captures.is_empty() {
-							leaf_captures.push(Capture {
+							leaf_captures.push(Match {
 								rule_idx: rule.idx,
-								capture_id: None,
+								sub_rule_id: None,
 								parent_index: usize::MAX,
 								parent_id: None,
 								range: Range {
@@ -284,11 +292,11 @@ mod query {
 									end: value.len(),
 								},
 								is_leaf: true,
-								ffi_pointers: CaptureFfiPointers {
+								ffi_pointers: MatchFfiPointers {
 									parent: std::ptr::null(),
 									lexeme: UncheckedCArray::from_str(value),
-									variable_name: UncheckedCArray::from_str(&rule.name),
-									capture_name: UncheckedCArray::from_str(""),
+									rule_name: UncheckedCArray::from_str(&rule.name),
+									sub_rule_name: UncheckedCArray::from_str(""),
 								},
 							});
 						}
@@ -326,10 +334,10 @@ mod query {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_search_result_get_leaf_captures<'a>(
+	extern "C" fn log_surgeon_search_result_get_leaf_matches<'a>(
 		search_result: &'a SearchResult,
 		len: &mut usize,
-	) -> *const Capture {
+	) -> *const Match {
 		*len = search_result.leaf_captures.len();
 		search_result.leaf_captures.as_ptr()
 	}

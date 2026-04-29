@@ -7,30 +7,29 @@ use crate::log_type::LogType;
 use crate::schema::RuleIdx;
 
 /// A `LogEvent` has a template [`LogType`](crate::log_type::LogType).
-/// and a sequence of [`Capture`]s to interpolate.
+/// and a sequence of [`Match`]s to interpolate.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LogEvent<'parser> {
 	pub log_type: LogType,
 	pub message: &'parser str,
-	pub all_captures: &'parser [Capture],
+	pub all_matches: &'parser [Match],
 	pub leaf_indices: &'parser [usize],
 	pub variable_indices: &'parser [usize],
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[repr(C)]
-pub struct Capture {
+pub struct Match {
 	pub rule_idx: RuleIdx,
-	/// Capture ID local to the current/containing rule/variable/regex pattern;
-	/// see [`RegexCapture`](crate::regex::RegexCapture).
-	/// When this variable/pattern is actually matched,
-	/// there may be multiple instances of capture ID 2 (corresponding to `"rest"`).
-	/// The capture ID also differentiates between different capture groups given the same name,
-	/// e.g. the two instances of `"start"` in the pattern.
-	pub capture_id: Option<NonZero<u16>>,
+	/// SubRule ID, local to the containing rule/variable/regex pattern;
+	/// `None`/`0` for a root rule,
+	/// See [`SubRule`](crate::regex::SubRule).
+	pub sub_rule_id: Option<NonZero<u16>>,
+	/// Parent SubRule ID, if any;
+	/// `None` for both a root rule and a top-level capture in a regex pattern.
 	pub parent_id: Option<NonZero<u16>>,
 
-	/// Index of the parent in the full list of captures (including variables).
+	/// Index of the parent in the full list of matches (including variables/root rules).
 	/// For a variable, the parent index equals its own index.
 	pub parent_index: usize,
 
@@ -41,77 +40,79 @@ pub struct Capture {
 
 	/// DANGEROUS fields for FFI.
 	/// But it's not dangerous if you don't look at it.
-	pub ffi_pointers: CaptureFfiPointers,
+	pub ffi_pointers: MatchFfiPointers,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[repr(C)]
-pub struct CaptureFfiPointers {
-	pub parent: *const Capture,
+pub struct MatchFfiPointers {
+	pub parent: *const Match,
 	pub lexeme: UncheckedCArray<c_char>,
-	pub variable_name: UncheckedCArray<c_char>,
-	pub capture_name: UncheckedCArray<c_char>,
+	pub rule_name: UncheckedCArray<c_char>,
+	/// Not the fully-qualified name;
+	/// walk the parents to build the fully-qualified name.
+	pub sub_rule_name: UncheckedCArray<c_char>,
 }
 
 /// Rust is annoying about Send/Sync for pointers, even when it technically **is** safe.
-unsafe impl Send for CaptureFfiPointers {}
-unsafe impl Sync for CaptureFfiPointers {}
+unsafe impl Send for MatchFfiPointers {}
+unsafe impl Sync for MatchFfiPointers {}
 
 impl<'parser> LogEvent<'parser> {
 	/// Blank `LogEvent`; default value required for C FFI.
 	pub const BLANK: Self = Self {
 		log_type: LogType::BLANK,
 		message: "",
-		all_captures: &[],
+		all_matches: &[],
 		leaf_indices: &[],
 		variable_indices: &[],
 	};
 
 	pub fn check_invariants(&self) {
-		assert!(self.all_captures.is_sorted_by(|lhs, rhs| {
+		assert!(self.all_matches.is_sorted_by(|lhs, rhs| {
 			lhs.range
 				.start
 				.cmp(&rhs.range.start)
 				.then(lhs.range.end.cmp(&rhs.range.end).reverse())
-				.then(lhs.capture_id.cmp(&rhs.capture_id))
+				.then(lhs.sub_rule_id.cmp(&rhs.sub_rule_id))
 				.is_lt()
 		}));
 	}
 }
 
-impl std::fmt::Display for Capture {
+impl std::fmt::Display for Match {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		fmt.write_fmt(format_args!(
-			"Capture(rule: {}, id: {}, parent: {}, range: {})",
+			"Match(rule: {}, id: {}, parent: {}, range: {})",
 			self.rule_idx,
-			self.capture_id.map_or(0, NonZero::get),
+			self.sub_rule_id.map_or(0, NonZero::get),
 			self.parent_id.map_or(0, NonZero::get),
 			self.range
 		))
 	}
 }
 
-impl Capture {
+impl Match {
 	pub unsafe fn show(&self) -> String {
 		format!(
-			"Capture(rule: {}, id: {}, parent: {}, {:?})",
+			"Match(rule: {}, id: {}, parent: {}, {:?})",
 			self.rule_idx,
-			self.capture_id.map_or(0, NonZero::get),
+			self.sub_rule_id.map_or(0, NonZero::get),
 			self.parent_id.map_or(0, NonZero::get),
 			unsafe { self.ffi_pointers.lexeme.as_str() },
 		)
 	}
 
 	pub fn id_as_usize(&self) -> usize {
-		usize::from(self.capture_id.map_or(0, NonZero::get))
+		usize::from(self.sub_rule_id.map_or(0, NonZero::get))
 	}
 }
 
-impl CaptureFfiPointers {
+impl MatchFfiPointers {
 	pub const NULL: Self = Self {
 		parent: std::ptr::null(),
 		lexeme: UncheckedCArray::NULL,
-		variable_name: UncheckedCArray::NULL,
-		capture_name: UncheckedCArray::NULL,
+		rule_name: UncheckedCArray::NULL,
+		sub_rule_name: UncheckedCArray::NULL,
 	};
 }

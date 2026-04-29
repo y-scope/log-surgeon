@@ -2,12 +2,16 @@
 //! - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
 //! - <https://arxiv.org/abs/2206.01398>
 //!
+mod graph_dot_output;
+mod search_decomposition;
+pub use search_decomposition::*;
+
 use std::borrow::Cow;
 use std::collections::BTreeSet;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
-use crate::interval_tree::Policy;
+use crate::interval_tree::PolicyUnique;
 use crate::regex::Regex;
 use crate::regex::SubRule;
 use crate::schema::RootRule;
@@ -17,33 +21,34 @@ use crate::schema::RuleIdx;
 pub struct Tnfa {
 	states: Vec<NfaState>,
 	tags: Vec<Tag>,
-	delimiters: String,
 }
 
 #[derive(Debug)]
 pub struct NfaState {
 	/// ID and also an index into an [`Nfa`]'s list of states.
-	#[allow(unused)]
-	idx: NfaIdx,
-	transitions: IntervalTree<u32, Vec<NfaIdx>>,
-	spontaneous: Vec<SpontaneousTransition>,
-	maybe_accepts_for_rule: Option<(RuleIdx, bool)>,
-	/// Just to be cute, and for debugging, in that order.
-	/// See [`Nfa::new_state`].
-	#[allow(unused)]
-	name: Cow<'static, str>,
+	pub idx: NfaIdx,
+	pub transitions: Transitions,
+	pub maybe_accepts_for_rule: Option<RuleIdx>,
+	pub name: Cow<'static, str>,
 }
 
-#[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+/// Newtype wrapper around a `usize` index.
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub struct NfaIdx(usize);
 
-impl std::fmt::Debug for NfaIdx {
+impl std::fmt::Display for NfaIdx {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		fmt.debug_tuple("NfaIdx").field(&(self.0 as isize)).finish()
+		fmt.write_fmt(format_args!("q{}", self.0))
 	}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub enum Transitions {
+	Interval(IntervalTree<u32, NfaIdx>),
+	Spontaneous(Vec<SpontaneousTransition>),
+}
+
+#[derive(Debug, Clone)]
 pub struct SpontaneousTransition {
 	pub kind: SpontaneousTransitionKind,
 	pub target: NfaIdx,
@@ -58,37 +63,35 @@ pub enum SpontaneousTransitionKind {
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Tag {
-	StartCapture(AutomataCapture),
-	StopCapture(AutomataCapture),
+	StartCapture(SubRule),
+	StopCapture(SubRule),
 }
-
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub struct AutomataCapture {
-	pub rule: RuleIdx,
-	pub capture_info: SubRule,
-}
-
-#[derive(Debug)]
-struct PolicyExtendUnique;
 
 impl Tnfa {
-	pub fn for_single_rule(rule: RuleIdx, name: &str, regex: &Regex) -> Self {
+	pub fn for_single_rule(rule: RuleIdx, _name: &str, regex: &Regex) -> Self {
 		let mut nfa: Self = Self {
-			states: vec![NfaState::BEGIN],
+			states: vec![NfaState {
+				idx: NfaIdx::BEGIN,
+				name: Cow::Borrowed("begin"),
+				transitions: Transitions::Spontaneous(Vec::new()),
+				maybe_accepts_for_rule: None,
+			}],
 			tags: Vec::new(),
-			delimiters: String::new(),
 		};
 
-		// let rule_start: NfaIdx = nfa.new_state(format!("rule '{name}' start"));
-		let rule_start: NfaIdx = NfaState::BEGIN.idx;
-		let rule_end: NfaIdx = nfa.new_state(format!("rule '{name}' end"));
+		let rule_start: NfaIdx = NfaIdx::BEGIN;
+		let rule_end: NfaIdx = nfa.new_state("end");
 
 		let tags: BTreeSet<Tag> = nfa.build::<true>(rule, &regex, rule_start, rule_end);
-		nfa[rule_end].maybe_accepts_for_rule = Some((rule, false));
+		nfa[rule_end].maybe_accepts_for_rule = Some(rule);
 
 		nfa.tags = tags.into_iter().collect::<Vec<_>>();
 
 		nfa
+	}
+
+	pub fn for_regex(regex: &Regex) -> Tnfa {
+		Self::for_single_rule(RuleIdx::NIL, "", regex)
 	}
 
 	pub fn for_rules<'a, Rules>(rules: Rules, delimiters: String) -> Self
@@ -96,54 +99,61 @@ impl Tnfa {
 		Rules: IntoIterator<Item = &'a RootRule>,
 	{
 		let mut nfa: Self = Self {
-			states: vec![NfaState::BEGIN],
+			states: vec![NfaState {
+				idx: NfaIdx::BEGIN,
+				name: Cow::Borrowed("begin"),
+				transitions: Transitions::Spontaneous(Vec::new()),
+				maybe_accepts_for_rule: None,
+			}],
 			tags: Vec::new(),
-			delimiters,
 		};
 
 		let mut tags: BTreeSet<Tag> = BTreeSet::new();
+
+		let mut spontaneous: Vec<SpontaneousTransition> = Vec::new();
 
 		for rule in rules.into_iter() {
 			let rule_start: NfaIdx = nfa.new_state(format!("rule '{}' start", rule.name));
 			let rule_inner_start: NfaIdx = nfa.new_state(format!("rule '{}' inner start", rule.name));
 			let rule_inner_end: NfaIdx = nfa.new_state(format!("rule '{}' inner end", rule.name));
 			let rule_end: NfaIdx = nfa.new_state(format!("rule '{}' end", rule.name));
-			nfa[NfaState::BEGIN.idx].spontaneous.push(SpontaneousTransition {
+			spontaneous.push(SpontaneousTransition {
 				kind: SpontaneousTransitionKind::Epsilon,
 				target: rule_start,
 			});
 			if rule.regex.anchor_before {
-				for ch in nfa.delimiters.clone().chars() {
-					nfa[rule_start].transitions.insert(
-						Interval::new(u32::from(ch), u32::from(ch)),
-						vec![rule_inner_start],
-						PolicyExtendUnique,
-					);
-				}
+				nfa[rule_start].transitions =
+					Transitions::Interval(IntervalTree::from_iter(delimiters.chars().map(|ch| {
+						(
+							Interval::new(u32::from(ch), u32::from(ch)),
+							rule_inner_start,
+							PolicyUnique,
+						)
+					})));
 			} else {
-				nfa[rule_start].transitions.insert(
+				nfa[rule_start].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once((
 					Interval::new(0, u32::from(char::MAX)),
-					vec![rule_inner_start],
-					PolicyExtendUnique,
-				);
+					rule_inner_start,
+					PolicyUnique,
+				))));
 			}
 			tags = &tags | &nfa.build::<false>(rule.idx, &rule.regex.inner, rule_inner_start, rule_inner_end);
 			if rule.regex.anchor_after {
-				for ch in nfa.delimiters.clone().chars() {
-					nfa[rule_inner_end].transitions.insert(
-						Interval::new(u32::from(ch), u32::from(ch)),
-						vec![rule_end],
-						PolicyExtendUnique,
-					);
-				}
+				nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(
+					delimiters
+						.chars()
+						.map(|ch| (Interval::new(u32::from(ch), u32::from(ch)), rule_end, PolicyUnique)),
+				));
 			} else {
-				nfa[rule_inner_end].spontaneous.push(SpontaneousTransition {
-					kind: SpontaneousTransitionKind::Epsilon,
-					target: rule_end,
-				});
+				nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once((
+					Interval::new(0, u32::from(char::MAX)),
+					rule_end,
+					PolicyUnique,
+				))));
 			}
-			nfa[rule_end].maybe_accepts_for_rule = Some((rule.idx, rule.regex.anchor_after));
+			nfa[rule_end].maybe_accepts_for_rule = Some(rule.idx);
 		}
+		nfa[NfaIdx::BEGIN].transitions = Transitions::Spontaneous(spontaneous);
 
 		nfa.tags = tags.into_iter().collect::<Vec<_>>();
 
@@ -158,8 +168,7 @@ impl Tnfa {
 		let state: NfaState = NfaState {
 			idx,
 			name: name.into(),
-			transitions: IntervalTree::new(),
-			spontaneous: Vec::new(),
+			transitions: Transitions::Spontaneous(Vec::new()),
 			maybe_accepts_for_rule: None,
 		};
 		self.states.push(state);
@@ -173,28 +182,29 @@ impl Tnfa {
 		mut current: NfaIdx,
 		target: NfaIdx,
 	) -> BTreeSet<Tag> {
+		assert_eq!(self[current].transitions.len(), 0);
 		match regex {
 			Regex::AnyChar => {
-				self[current].transitions.insert(
+				self[current].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once((
 					Interval::new(0, u32::from(char::MAX)),
-					vec![target],
-					PolicyExtendUnique,
-				);
+					target,
+					PolicyUnique,
+				))));
 				BTreeSet::new()
 			},
 			&Regex::Literal(ch) => {
-				self[current].transitions.insert(
+				self[current].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once((
 					Interval::new(u32::from(ch), u32::from(ch)),
-					vec![target],
-					PolicyExtendUnique,
-				);
+					target,
+					PolicyUnique,
+				))));
 				BTreeSet::new()
 			},
-			Regex::Capture { info, item } => {
+			Regex::Capture(sub_rule) => {
 				if CAPTURE {
-					self.capture(rule, info.clone(), item, current, target)
+					self.capture(rule, &sub_rule, current, target)
 				} else {
-					self.build::<false>(rule, item, current, target)
+					self.build::<false>(rule, &sub_rule.regex, current, target)
 				}
 			},
 			Regex::Group { negated, items } => {
@@ -206,22 +216,19 @@ impl Tnfa {
 
 						intervals.push(Interval::new(u32::from(start), u32::from(end)));
 					}
-					for interval in Interval::complement(&mut intervals).into_iter() {
-						self[current]
-							.transitions
-							.insert(interval, vec![target], PolicyExtendUnique);
-					}
+					self[current].transitions = Transitions::Interval(IntervalTree::from_iter(
+						Interval::complement(&mut intervals)
+							.into_iter()
+							.map(|interval| (interval, target, PolicyUnique)),
+					));
 				} else {
-					for &(start, end) in items.iter() {
-						// Should have been verified during regex pattern parsing.
-						assert!(start <= end);
+					self[current].transitions =
+						Transitions::Interval(IntervalTree::from_iter(items.iter().map(|&(start, end)| {
+							// Should have been verified during regex pattern parsing.
+							assert!(start <= end);
 
-						self[current].transitions.insert(
-							Interval::new(u32::from(start), u32::from(end)),
-							vec![target],
-							PolicyExtendUnique,
-						);
-					}
+							(Interval::new(u32::from(start), u32::from(end)), target, PolicyUnique)
+						})));
 				}
 				BTreeSet::new()
 			},
@@ -230,27 +237,35 @@ impl Tnfa {
 				let item_end: NfaIdx = self.new_state("kleene item end");
 				let item_skip: NfaIdx = self.new_state("kleene skip");
 
-				self[current].spontaneous.push(SpontaneousTransition {
-					kind: SpontaneousTransitionKind::Epsilon,
-					target: item_start,
-				});
-				self[current].spontaneous.push(SpontaneousTransition {
-					kind: SpontaneousTransitionKind::Epsilon,
-					target: item_skip,
-				});
+				self[current].transitions = Transitions::Spontaneous(vec![
+					SpontaneousTransition {
+						kind: SpontaneousTransitionKind::Epsilon,
+						target: item_start,
+					},
+					SpontaneousTransition {
+						kind: SpontaneousTransitionKind::Epsilon,
+						target: item_skip,
+					},
+				]);
 
 				let tags: BTreeSet<Tag> = self.build::<CAPTURE>(rule, item, item_start, item_end);
 
-				self[item_end].spontaneous.push(SpontaneousTransition {
-					kind: SpontaneousTransitionKind::Epsilon,
-					target: item_start,
-				});
-				self[item_end].spontaneous.push(SpontaneousTransition {
+				self[item_end].transitions = Transitions::Spontaneous(vec![
+					SpontaneousTransition {
+						kind: SpontaneousTransitionKind::Epsilon,
+						target: item_start,
+					},
+					SpontaneousTransition {
+						kind: SpontaneousTransitionKind::Epsilon,
+						target,
+					},
+				]);
+
+				let after_negative_tags: NfaIdx = self.negative_tags(tags.iter().cloned(), item_skip);
+				self[after_negative_tags].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
 					kind: SpontaneousTransitionKind::Epsilon,
 					target,
-				});
-
-				self.negative_tags(tags.iter().cloned(), item_skip, target);
+				}]);
 
 				tags
 			},
@@ -269,27 +284,44 @@ impl Tnfa {
 					current = sub_target;
 				}
 
-				self[current].spontaneous.push(SpontaneousTransition {
-					kind: SpontaneousTransitionKind::Epsilon,
-					target: middle,
-				});
-				self[current].spontaneous.push(SpontaneousTransition {
-					kind: SpontaneousTransitionKind::Epsilon,
-					target,
-				});
+				self[current].transitions = Transitions::Spontaneous(vec![
+					SpontaneousTransition {
+						kind: SpontaneousTransitionKind::Epsilon,
+						target: middle,
+					},
+					SpontaneousTransition {
+						kind: SpontaneousTransitionKind::Epsilon,
+						target,
+					},
+				]);
 
 				current = middle;
 				for i in *min..*max {
+					let sub_skip: NfaIdx = self.new_state("bounded sub skip");
+					let sub_have: NfaIdx = self.new_state("bounded sub have");
 					let sub_target: NfaIdx = if i + 1 < *max {
 						self.new_state("bounded sub 2/2 target")
 					} else {
 						target
 					};
-					self[current].spontaneous.push(SpontaneousTransition {
+
+					self[current].transitions = Transitions::Spontaneous(vec![
+						SpontaneousTransition {
+							kind: SpontaneousTransitionKind::Epsilon,
+							target: sub_skip,
+						},
+						SpontaneousTransition {
+							kind: SpontaneousTransitionKind::Epsilon,
+							target: sub_have,
+						},
+					]);
+
+					self[sub_skip].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
 						kind: SpontaneousTransitionKind::Epsilon,
 						target,
-					});
-					tags.append(&mut self.build::<CAPTURE>(rule, item, current, sub_target));
+					}]);
+
+					tags.append(&mut self.build::<CAPTURE>(rule, item, sub_have, sub_target));
 					current = sub_target;
 				}
 				tags
@@ -311,33 +343,24 @@ impl Tnfa {
 		}
 	}
 
-	fn capture(
-		&mut self,
-		rule: RuleIdx,
-		capture_info: SubRule,
-		item: &Regex,
-		current: NfaIdx,
-		target: NfaIdx,
-	) -> BTreeSet<Tag> {
-		let capture: AutomataCapture = AutomataCapture { rule, capture_info };
-
-		let start_capture: Tag = Tag::StartCapture(capture.clone());
-		let end_capture: Tag = Tag::StopCapture(capture);
+	fn capture(&mut self, rule: RuleIdx, sub_rule: &SubRule, current: NfaIdx, target: NfaIdx) -> BTreeSet<Tag> {
+		let start_capture: Tag = Tag::StartCapture(sub_rule.clone());
+		let end_capture: Tag = Tag::StopCapture(sub_rule.clone());
 
 		let sub_start: NfaIdx = self.new_state("capture started");
 		let sub_end: NfaIdx = self.new_state("capture before end");
 
-		self[current].spontaneous.push(SpontaneousTransition {
+		self[current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
 			kind: SpontaneousTransitionKind::Positive(start_capture.clone()),
 			target: sub_start,
-		});
+		}]);
 
-		let mut tags: BTreeSet<Tag> = self.build::<true>(rule, item, sub_start, sub_end);
+		let mut tags: BTreeSet<Tag> = self.build::<true>(rule, &sub_rule.regex, sub_start, sub_end);
 
-		self[sub_end].spontaneous.push(SpontaneousTransition {
+		self[sub_end].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
 			kind: SpontaneousTransitionKind::Positive(end_capture.clone()),
 			target,
-		});
+		}]);
 
 		tags.insert(start_capture);
 		tags.insert(end_capture);
@@ -355,35 +378,34 @@ impl Tnfa {
 		let mut tags: BTreeSet<Tag> = BTreeSet::new();
 		let mut intermediate_states: Vec<(NfaIdx, BTreeSet<Tag>)> = Vec::new();
 
+		let mut starts: Vec<SpontaneousTransition> = Vec::new();
 		for sub_item in items.iter() {
 			let sub_start: NfaIdx = self.new_state("alternate sub start");
 			let sub_target: NfaIdx = self.new_state("alternate sub target");
 
-			self[current].spontaneous.push(SpontaneousTransition {
+			starts.push(SpontaneousTransition {
 				kind: SpontaneousTransitionKind::Epsilon,
 				target: sub_start,
 			});
 
 			intermediate_states.push((sub_target, self.build::<CAPTURE>(rule, sub_item, sub_start, sub_target)));
 		}
+		self[current].transitions = Transitions::Spontaneous(starts);
 
 		for (i, (sub_state, sub_tags)) in intermediate_states.iter().enumerate() {
 			let mut sub_current: NfaIdx = *sub_state;
 			for (other, (_, other_tags)) in intermediate_states.iter().enumerate() {
-				let sub_target: NfaIdx = self.new_state("alternate negate tags");
-
 				if other == i {
 					continue;
 				}
 
-				self.negative_tags(other_tags.iter().cloned(), sub_current, sub_target);
-				sub_current = sub_target;
+				sub_current = self.negative_tags(other_tags.iter().cloned(), sub_current);
 			}
 
-			self[sub_current].spontaneous.push(SpontaneousTransition {
+			self[sub_current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
 				kind: SpontaneousTransitionKind::Epsilon,
 				target,
-			});
+			}]);
 
 			// `&BTreeSet<_>` implements `BitOr`, `BTreeSet<_>` does not.
 			// `sub_tags` from the loop is already a `&BTreeSet<_>`.
@@ -393,19 +415,16 @@ impl Tnfa {
 		tags
 	}
 
-	fn negative_tags(&mut self, tags: impl Iterator<Item = Tag>, mut current: NfaIdx, target: NfaIdx) {
+	fn negative_tags(&mut self, tags: impl Iterator<Item = Tag>, mut current: NfaIdx) -> NfaIdx {
 		for t in tags {
 			let next: NfaIdx = self.new_state("negative tags");
-			self[current].spontaneous.push(SpontaneousTransition {
+			self[current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
 				kind: SpontaneousTransitionKind::Negative(t),
 				target: next,
-			});
+			}]);
 			current = next;
 		}
-		self[current].spontaneous.push(SpontaneousTransition {
-			kind: SpontaneousTransitionKind::Epsilon,
-			target,
-		});
+		current
 	}
 }
 
@@ -415,7 +434,7 @@ impl Tnfa {
 	}
 
 	pub fn begin(&self) -> NfaIdx {
-		NfaState::BEGIN.idx
+		NfaIdx::BEGIN
 	}
 }
 
@@ -434,45 +453,40 @@ impl std::ops::IndexMut<NfaIdx> for Tnfa {
 }
 
 impl NfaState {
-	const BEGIN: Self = Self {
-		idx: NfaIdx(0),
-		name: Cow::Borrowed("begin"),
-		transitions: IntervalTree::new(),
-		spontaneous: Vec::new(),
-		maybe_accepts_for_rule: None,
-	};
-
-	pub fn transitions(&self) -> &IntervalTree<u32, Vec<NfaIdx>> {
-		&self.transitions
-	}
-
-	pub fn spontaneous(&self) -> &[SpontaneousTransition] {
-		&self.spontaneous
-	}
-
-	pub fn accepts_for_rule(&self) -> Option<(RuleIdx, bool)> {
-		self.maybe_accepts_for_rule
-	}
-
 	pub fn is_accepting(&self) -> bool {
 		self.maybe_accepts_for_rule.is_some()
 	}
 }
 
-impl Tag {
-	pub fn capture(&self) -> &AutomataCapture {
-		let (Self::StartCapture(capture) | Self::StopCapture(capture)) = self;
-		capture
+impl NfaIdx {
+	const BEGIN: NfaIdx = Self(0);
+}
+
+impl Transitions {
+	pub fn len(&self) -> usize {
+		match self {
+			Self::Interval(transitions) => transitions.len(),
+			Self::Spontaneous(transitions) => transitions.len(),
+		}
+	}
+
+	fn successors(&self) -> Vec<NfaIdx> {
+		match self {
+			Self::Interval(transitions) => transitions
+				.iter()
+				.map(|(_interval, target)| *target)
+				.collect::<Vec<_>>(),
+			Self::Spontaneous(transitions) => transitions
+				.iter()
+				.map(|transition| transition.target)
+				.collect::<Vec<_>>(),
+		}
 	}
 }
 
-impl<T> Policy<Vec<T>> for PolicyExtendUnique
-where
-	T: Ord + Clone,
-{
-	fn combine(&mut self, existing: &mut Vec<T>, mut new: Vec<T>) {
-		let mut seen: BTreeSet<T> = BTreeSet::from_iter(existing.iter().cloned());
-		new.retain(|x| seen.insert(x.clone()));
-		existing.extend(new);
+impl Tag {
+	pub fn capture(&self) -> &SubRule {
+		let (Self::StartCapture(sub_rule) | Self::StopCapture(sub_rule)) = self;
+		sub_rule
 	}
 }

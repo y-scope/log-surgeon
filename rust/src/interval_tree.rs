@@ -43,6 +43,9 @@ pub struct PolicyAdd;
 #[derive(Debug)]
 pub struct PolicyNoop;
 
+/// Panics if overlapping intervals are inserted.
+pub struct PolicyUnique;
+
 /// Use an arbitrary function to combine values.
 #[derive(Debug)]
 pub struct PolicyFunction<T>(T);
@@ -76,6 +79,40 @@ impl<T: Number, V: Clone> IntervalTree<T, V> {
 
 	pub fn len(&self) -> usize {
 		self.intervals.len()
+	}
+
+	pub fn is_empty(&self) -> bool {
+		self.intervals.is_empty()
+	}
+}
+
+impl<T: Number, V: Clone> IntervalTree<T, V>
+where
+	T: Copy,
+{
+	pub fn iter(&self) -> impl Iterator<Item = (Interval<T>, &V)> {
+		self.intervals.iter().map(|(interval, value)| (*interval, value))
+	}
+
+	pub fn iter_mut(&mut self) -> impl Iterator<Item = (Interval<T>, &mut V)> {
+		self.intervals.iter_mut().map(|(interval, value)| (*interval, value))
+	}
+}
+
+impl<T: Number, V: Clone, P> FromIterator<(Interval<T>, V, P)> for IntervalTree<T, V>
+where
+	T: Copy,
+	P: Policy<V>,
+{
+	fn from_iter<I>(iter: I) -> Self
+	where
+		I: IntoIterator<Item = (Interval<T>, V, P)>,
+	{
+		let mut this: Self = Self::new();
+		for (interval, value, policy) in iter.into_iter() {
+			this.insert(interval, value, policy);
+		}
+		this
 	}
 }
 
@@ -161,14 +198,6 @@ where
 			}
 		}
 		self.check_invariants();
-	}
-
-	pub fn iter(&self) -> impl Iterator<Item = (Interval<T>, &V)> {
-		self.intervals.iter().map(|(interval, value)| (*interval, value))
-	}
-
-	pub fn iter_mut(&mut self) -> impl Iterator<Item = (Interval<T>, &mut V)> {
-		self.intervals.iter_mut().map(|(interval, value)| (*interval, value))
 	}
 }
 
@@ -257,6 +286,18 @@ where
 		complement
 	}
 
+	pub fn overlap(&self, other: &Self) -> Option<Self> {
+		match self.intersection(&other) {
+			Intersection::Same => Some(*self),
+			Intersection::DisjointLeftLower | Intersection::DisjointRightLower => None,
+			Intersection::SameStartLeftExtendsRight { overlap, .. }
+			| Intersection::SameStartRightExtendsLeft { overlap, .. } => Some(overlap),
+			Intersection::LeftFirst { overlap_start, .. } | Intersection::RightFirst { overlap_start, .. } => {
+				Some(Interval::new(overlap_start, std::cmp::min(self.end, other.end)))
+			},
+		}
+	}
+
 	fn intersection(&self, other: &Self) -> Intersection<T> {
 		if self.end < other.start {
 			return Intersection::DisjointLeftLower;
@@ -330,6 +371,15 @@ where
 
 impl Policy<()> for PolicyNoop {
 	fn combine(&mut self, _existing: &mut (), _new: ()) {}
+}
+
+impl<T> Policy<T> for PolicyUnique
+where
+	T: Eq + std::fmt::Debug,
+{
+	fn combine(&mut self, existing: &mut T, new: T) {
+		assert_eq!(&new, existing);
+	}
 }
 
 /// Ideally, we could implement `Policy<T>` on `F: FnMut(&mut T, T)` directly,
