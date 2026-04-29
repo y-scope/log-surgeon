@@ -22,6 +22,12 @@ on:
   schedule:
     # Run every Tuesday at 00:15 UTC
     - cron: "15 0 * * 2"
+  workflow_dispatch:
+    inputs:
+      publish-to-pypi:
+        description: "Publish wheels to PyPI"
+        type: boolean
+        default: false
 
 concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}"
@@ -129,3 +135,25 @@ jobs:
           path: "/tmp/wheels"
           retention-days: 7
           if-no-files-found: "error"
+
+  publish:
+    needs: ["combine-wheels"]
+    name: "Publish to PyPI"
+    runs-on: "ubuntu-latest"
+    if: "inputs.publish-to-pypi == true"
+    environment:
+      name: "pypi"
+    permissions:
+      id-token: write
+    steps:
+      - uses: "actions/download-artifact@v4"
+        with:
+          name: "all-wheels"
+          path: "dist"
+
+      - name: "List wheels to publish"
+        run: "ls -la dist/"
+
+      - uses: "pypa/gh-action-pypi-publish@release/v1"
+        with:
+          packages-dir: "dist/"
