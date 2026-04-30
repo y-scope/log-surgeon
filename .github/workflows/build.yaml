@@ -4,13 +4,14 @@ on:
   pull_request:
     paths: &monitored_paths
       - ".github/workflows/build.yaml"
+      - ".gitmodules"
       - "CMakeLists.txt"
-      - "examples/**/*"
-      - "src/**/*"
+      - "examples/**"
+      - "src/**"
       - "taskfile.yaml"
-      - "taskfiles/**/*"
+      - "taskfiles/**"
+      - "tests/**"
       - "tools/yscope-dev-utils"
-      - "tests/**/*"
   push:
     paths: *monitored_paths
   workflow_call:
