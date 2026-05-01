@@ -299,7 +299,7 @@ tasks:
       OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
     sources:
       - "{{.ROOT_DIR}}/lint-requirements.txt"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     run: "once"
