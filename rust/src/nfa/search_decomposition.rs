@@ -9,7 +9,10 @@ pub struct Path(Vec<PathComponent>);
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum PathComponent {
 	Literal(String),
-	Capture { name: String, contents: Vec<Self> },
+	Capture {
+		qualified_name: String,
+		contents: Vec<Self>,
+	},
 	Unknown,
 }
 
@@ -127,8 +130,11 @@ impl std::fmt::Display for PathComponent {
 					ch.fmt(fmt)?;
 				}
 			},
-			Self::Capture { name, contents } => {
-				fmt.write_fmt(format_args!("(?<{name}>"))?;
+			Self::Capture {
+				qualified_name,
+				contents,
+			} => {
+				fmt.write_fmt(format_args!("(?<{qualified_name}>"))?;
 				for part in contents.iter() {
 					part.fmt(fmt)?;
 				}
@@ -426,7 +432,7 @@ impl Tnfa {
 											maybe_capture.clone().unwrap();
 										assert_eq!(&current_capture, sub_rule);
 										path.push(PathComponent::Capture {
-											name: sub_rule.qualified_name.clone(),
+											qualified_name: sub_rule.qualified_name.clone(),
 											contents: capture_path,
 										});
 										stack.push((&self[transition.target], None, path));
@@ -509,7 +515,7 @@ impl Tnfa {
 													maybe_capture.clone().unwrap();
 												assert_eq!(&current_capture, sub_rule);
 												path.push(PathComponent::Capture {
-													name: sub_rule.qualified_name.clone(),
+													qualified_name: sub_rule.qualified_name.clone(),
 													contents: capture_path,
 												});
 												stack.push((&self[transition.target], None, path, seen));

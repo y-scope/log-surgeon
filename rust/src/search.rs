@@ -378,12 +378,15 @@ impl<'a> SearchStringView<'a> {
 								symbolic_value: token.to_symbolic_chars(),
 							});
 						},
-						PathComponent::Capture { name, contents } => {
+						PathComponent::Capture {
+							qualified_name,
+							contents,
+						} => {
 							sub_queries.push(SubQuery {
 								group,
 								rule_idx: Some(rule.idx.get()),
 								rule_name: rule.name.clone(),
-								qualified_name: name.clone(),
+								qualified_name: rule.name.clone() + qualified_name,
 								value: token.to_query_string(),
 								symbolic_value: token.to_symbolic_chars(),
 							});

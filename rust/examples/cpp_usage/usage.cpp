@@ -89,7 +89,7 @@ static void try_interpretations() {
             if (sub_query.rule_idx == 0) {
                 std::cout << sub_query.value;
             } else {
-                std::cout << "(?<" << sub_query.rule_name << "." << sub_query.qualified_name << ">" << sub_query.value << ")";
+                std::cout << "(?<" << sub_query.qualified_name << ">" << sub_query.value << ")";
             }
         }
         std::cout << std::endl;

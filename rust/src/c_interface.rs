@@ -223,7 +223,7 @@ mod query {
 	#[unsafe(no_mangle)]
 	extern "C" fn log_surgeon_search_sub_query_get_qualified_name(sub_query: &SubQuery) -> CCharArray<'_> {
 		CCharArray::from_utf8(if !sub_query.qualified_name.is_empty() {
-			&sub_query.qualified_name[1..]
+			&sub_query.qualified_name
 		} else {
 			""
 		})
