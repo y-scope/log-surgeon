@@ -2,23 +2,18 @@ name: "build"
 
 on:
   pull_request:
-    paths:
+    paths: &monitored_paths
       - ".github/workflows/build.yaml"
+      - ".gitmodules"
       - "CMakeLists.txt"
-      - "examples/**/*"
-      - "src/**/*"
+      - "examples/**"
+      - "src/**"
       - "taskfile.yaml"
-      - "taskfiles/**/*"
-      - "tests/**/*"
+      - "taskfiles/**"
+      - "tests/**"
+      - "tools/yscope-dev-utils"
   push:
-    paths:
-      - ".github/workflows/build.yaml"
-      - "CMakeLists.txt"
-      - "examples/**/*"
-      - "src/**/*"
-      - "taskfile.yaml"
-      - "taskfiles/**/*"
-      - "tests/**/*"
+    paths: *monitored_paths
   workflow_call:
 
 concurrency:
@@ -39,31 +34,13 @@ jobs:
           - "release"
     runs-on: "${{matrix.os}}"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           submodules: "recursive"
 
-      - name: "Install task"
-        shell: "bash"
-        run: |-
-          curl \
-            --fail \
-            --location \
-            --silent \
-            --show-error \
-            https://taskfile.dev/install.sh \
-          | sh -s -- -d -b ~/.local/bin
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
 
-      - name: "Install uv"
-        shell: "bash"
-        run: |-
-          curl \
-            --fail \
-            --location \
-            --silent \
-            --show-error \
-            https://astral.sh/uv/0.8.4/install.sh \
-          | sh
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
 
       - name: "Build and run unit tests"
         run: "task test:run-${{matrix.build_type}}"
