@@ -10,10 +10,13 @@ pub struct Path(Vec<PathComponent>);
 pub enum PathComponent {
 	Literal(String),
 	Capture {
+		rule_idx: RuleIdx,
 		qualified_name: String,
 		contents: Vec<Self>,
 	},
-	Unknown,
+	QueryWildcard,
+	PatternWildcard,
+	// Unknown,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -105,7 +108,10 @@ impl Path {
 					parts[i - 1] = PathComponent::Literal(s);
 					parts.remove(i);
 				},
-				(PathComponent::Unknown, PathComponent::Unknown) => {
+				(
+					PathComponent::QueryWildcard | PathComponent::PatternWildcard,
+					PathComponent::QueryWildcard | PathComponent::PatternWildcard,
+				) => {
 					parts.remove(i);
 				},
 				_ => {
@@ -131,6 +137,7 @@ impl std::fmt::Display for PathComponent {
 				}
 			},
 			Self::Capture {
+				rule_idx: _,
 				qualified_name,
 				contents,
 			} => {
@@ -140,11 +147,22 @@ impl std::fmt::Display for PathComponent {
 				}
 				fmt.write_str(")")?;
 			},
-			Self::Unknown => {
+			Self::QueryWildcard | Self::PatternWildcard => {
 				fmt.write_str("*")?;
 			},
 		}
 		Ok(())
+	}
+}
+
+impl PathComponent {
+	fn is_wildcard(&self) -> bool {
+		match self {
+			Self::Literal(_) => false,
+			Self::QueryWildcard => true,
+			Self::PatternWildcard => false,
+			Self::Capture { contents, .. } => contents.iter().all(Self::is_wildcard),
+		}
 	}
 }
 
@@ -277,12 +295,23 @@ impl Tnfa {
 					let mut combined: IntervalTree<u32, NfaIdx> = IntervalTree::new();
 					for (interval1, &target1) in transitions1.iter() {
 						for (interval2, &target2) in transitions2.iter() {
-							let Some(overlap): Option<Interval<u32>> = interval1.overlap(&interval2) else {
-								continue;
-							};
-							let next: NfaIdx =
-								lookup_state(StatePair::new(self, other, target1, target2), &mut intersection);
-							combined.insert(overlap, next, PolicyUnique);
+							// if interval1.start() == interval1.end() {
+							if interval2.start() != interval2.end() {
+								// Wildcard search
+								assert_eq!(interval2.start(), 0);
+								assert_eq!(interval2.end(), u32::from(char::MAX));
+								let next: NfaIdx =
+									lookup_state(StatePair::new(self, other, target1, target2), &mut intersection);
+								combined.insert(Interval::new(0, u32::MAX), next, PolicyUnique);
+							} else {
+								let Some(overlap): Option<Interval<u32>> = interval1.overlap(&interval2) else {
+									continue;
+								};
+								let next: NfaIdx =
+									lookup_state(StatePair::new(self, other, target1, target2), &mut intersection);
+								// println!("inserting interval {overlap:?}");
+								combined.insert(overlap, next, PolicyUnique);
+							}
 						}
 					}
 					intersection[state].transitions = Transitions::Interval(combined);
@@ -381,10 +410,15 @@ impl Tnfa {
 		while let Some((entry, mut maybe_capture, mut path)) = stack.pop() {
 			let scc: &Vec<NfaIdx> = &sccs[data[entry.idx.0].scc];
 			assert!(!scc.is_empty());
-			if entry.is_accepting() {
+			if let Some(accepting_rule) = entry.maybe_accepts_for_rule {
 				assert_eq!(scc.len(), 1);
 				assert_eq!(entry.transitions.len(), 0);
 				assert_eq!(maybe_capture, None);
+				for part in path.iter_mut() {
+					if let PathComponent::Capture { rule_idx, .. } = part {
+						*rule_idx = accepting_rule;
+					}
+				}
 				finished.push(path);
 				continue;
 			}
@@ -397,8 +431,10 @@ impl Tnfa {
 							let ch: PathComponent = if interval.start() == interval.end() {
 								let ch: char = char::try_from(interval.start()).unwrap();
 								PathComponent::Literal(ch.to_string())
+							} else if (interval.start() == 0) && (interval.end() == u32::MAX) {
+								PathComponent::QueryWildcard
 							} else {
-								PathComponent::Unknown
+								PathComponent::PatternWildcard
 							};
 							let mut path: Vec<PathComponent> = path.clone();
 							if let Some((capture, mut capture_path)) = maybe_capture.clone() {
@@ -432,6 +468,7 @@ impl Tnfa {
 											maybe_capture.clone().unwrap();
 										assert_eq!(&current_capture, sub_rule);
 										path.push(PathComponent::Capture {
+											rule_idx: RuleIdx::NIL,
 											qualified_name: sub_rule.qualified_name.clone(),
 											contents: capture_path,
 										});
@@ -448,9 +485,9 @@ impl Tnfa {
 				}
 			} else {
 				if let Some((_capture, capture_path)) = &mut maybe_capture {
-					capture_path.push(PathComponent::Unknown);
+					capture_path.push(PathComponent::PatternWildcard);
 				} else {
-					path.push(PathComponent::Unknown);
+					path.push(PathComponent::PatternWildcard);
 				};
 				let mut finished: Vec<(NfaIdx, Option<(SubRule, Vec<PathComponent>)>, Vec<PathComponent>)> = Vec::new();
 				{
@@ -471,8 +508,10 @@ impl Tnfa {
 									let ch: PathComponent = if interval.start() == interval.end() {
 										let ch: char = char::try_from(interval.start()).unwrap();
 										PathComponent::Literal(ch.to_string())
+									} else if (interval.start() == 0) && (interval.end() == u32::MAX) {
+										PathComponent::QueryWildcard
 									} else {
-										PathComponent::Unknown
+										PathComponent::PatternWildcard
 									};
 									let mut path: Vec<PathComponent> = path.clone();
 									if let Some((capture, mut capture_path)) = maybe_capture.clone() {
@@ -515,6 +554,7 @@ impl Tnfa {
 													maybe_capture.clone().unwrap();
 												assert_eq!(&current_capture, sub_rule);
 												path.push(PathComponent::Capture {
+													rule_idx: RuleIdx::NIL,
 													qualified_name: sub_rule.qualified_name.clone(),
 													contents: capture_path,
 												});
@@ -534,13 +574,30 @@ impl Tnfa {
 
 				for (exit, maybe_capture, scc_path) in finished.into_iter() {
 					let mut path: Vec<PathComponent> = path.clone();
-					if let Some((capture, mut capture_path)) = maybe_capture.clone() {
-						path.extend(scc_path.into_iter());
-						capture_path.push(PathComponent::Unknown);
+					let all_wildcards: bool = scc_path.iter().all(PathComponent::is_wildcard);
+					// && maybe_capture
+					// 	.as_ref()
+					// 	.map_or(&[] as &[PathComponent], |(_, capture_path)| &capture_path[..])
+					// 	.iter()
+					// 	.all(PathComponent::is_wildcard);
+					if let Some((capture, mut capture_path)) = maybe_capture {
+						if all_wildcards {
+							if capture_path.iter().all(PathComponent::is_wildcard) {
+								capture_path.clear();
+								// capture_path.push(PathComponent::Unknown);
+							}
+							// path.push(PathComponent::PatternWildcard);
+						} else {
+							path.extend(scc_path.into_iter());
+						}
+						// path.extend(scc_path.into_iter());
+						capture_path.push(PathComponent::PatternWildcard);
 						stack.push((&self[exit], Some((capture, capture_path)), path));
 					} else {
-						path.extend(scc_path.into_iter());
-						path.push(PathComponent::Unknown);
+						if !all_wildcards {
+							path.extend(scc_path.into_iter());
+						}
+						path.push(PathComponent::PatternWildcard);
 						stack.push((&self[exit], None, path));
 					}
 				}
@@ -566,7 +623,7 @@ impl PathComponent {
 					buf.push(ch);
 				}
 			},
-			Self::Unknown => {
+			Self::QueryWildcard | Self::PatternWildcard => {
 				buf.push('*');
 			},
 			Self::Capture { contents, .. } => {
@@ -586,7 +643,7 @@ impl PathComponent {
 					buf.push(SymbolicChar::Literal(ch));
 				}
 			},
-			Self::Unknown => {
+			Self::QueryWildcard | Self::PatternWildcard => {
 				buf.push(SymbolicChar::WildcardStar);
 			},
 			Self::Capture { contents, .. } => {
@@ -604,7 +661,7 @@ mod test {
 	use super::*;
 
 	#[test]
-	fn hmmm() {
+	fn nfa_decomp() {
 		// let paths = nfa_for("abc(?<hello>(foo*|bar|ba*z)(qux|quux))def").to_wildcard_string();
 		// let paths = nfa_for("abc((?<var>foo*|bar|ba*z)0(qux|quux)*)def").to_wildcard_string();
 		let nfa = nfa_for(r"(?<user>\w+)@((?<parts>\w+)\.)+(?<tld>\w+)");

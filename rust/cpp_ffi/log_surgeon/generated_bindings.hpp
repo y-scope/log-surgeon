@@ -135,10 +135,6 @@ void log_surgeon_schema_builder_set_delimiters(SchemaBuilder *builder, CCharArra
 
 Option<Box<Schema>> log_surgeon_schema_from_definition(CCharArray definition);
 
-Box<SearchResult> log_surgeon_search_by_named_type(const Schema *schema,
-                                                   CCharArray name,
-                                                   CCharArray value);
-
 const Interpretation *log_surgeon_search_get_interpretation(const Vec<Interpretation> *interpretations,
                                                             size_t i);
 
@@ -157,10 +153,6 @@ const Match *log_surgeon_search_result_get_leaf_matches(const SearchResult *sear
                                                         size_t *len);
 
 CCharArray log_surgeon_search_sub_query_get_qualified_name(const InternalSubQuery *sub_query);
-
-uint16_t log_surgeon_search_sub_query_get_rule(const InternalSubQuery *sub_query);
-
-CCharArray log_surgeon_search_sub_query_get_rule_name(const InternalSubQuery *sub_query);
 
 CCharArray log_surgeon_search_sub_query_get_value(const InternalSubQuery *sub_query);
 

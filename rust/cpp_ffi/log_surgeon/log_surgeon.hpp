@@ -150,8 +150,6 @@ private:
 };
 
 struct SubQuery {
-    uint16_t rule_idx;
-    std::string rule_name;
     std::string qualified_name;
     std::string value;
 };
@@ -168,11 +166,17 @@ inline auto ParserHandle::query_interpretations(std::string_view name, std::stri
         -> std::vector<std::vector<SubQuery>> {
     std::vector<std::vector<SubQuery>> interpretations;
 
-    Box<Vec<Interpretation>> rust_interpretations{log_surgeon_search_query_interpretations(m_parser, CCharArray::from_string_view(query), CCharArray::from_string_view(name))};
+    Box<Vec<Interpretation>> rust_interpretations{log_surgeon_search_query_interpretations(
+            m_parser,
+            CCharArray::from_string_view(query),
+            CCharArray::from_string_view(name)
+    )};
 
     size_t i{0};
     while (true) {
-        Interpretation const* interpretation{log_surgeon_search_get_interpretation(rust_interpretations, i)};
+        Interpretation const* interpretation{
+                log_surgeon_search_get_interpretation(rust_interpretations, i)
+        };
         if (nullptr == interpretation) {
             break;
         }
@@ -185,16 +189,14 @@ inline auto ParserHandle::query_interpretations(std::string_view name, std::stri
                 break;
             }
 
-            uint16_t const rule_idx{log_surgeon_search_sub_query_get_rule(sub_query)};
-            std::string_view const rule_name{log_surgeon_search_sub_query_get_rule_name(sub_query)};
-            std::string_view const qualified_name{log_surgeon_search_sub_query_get_qualified_name(sub_query)};
+            std::string_view const qualified_name{
+                    log_surgeon_search_sub_query_get_qualified_name(sub_query)
+            };
             std::string_view const value{log_surgeon_search_sub_query_get_value(sub_query)};
 
             sub_queries.push_back({
-                .rule_idx=rule_idx,
-                .rule_name=std::string(rule_name),
-                .qualified_name=std::string(qualified_name),
-                .value=std::string(value),
+                    .qualified_name = std::string(qualified_name),
+                    .value = std::string(value),
             });
 
             j++;

@@ -17,13 +17,13 @@ use crate::regex::SubRule;
 use crate::schema::RootRule;
 use crate::schema::RuleIdx;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Tnfa {
 	states: Vec<NfaState>,
 	tags: Vec<Tag>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NfaState {
 	/// ID and also an index into an [`Nfa`]'s list of states.
 	pub idx: NfaIdx,
@@ -68,7 +68,7 @@ pub enum Tag {
 }
 
 impl Tnfa {
-	pub fn for_single_rule(rule: RuleIdx, _name: &str, regex: &Regex) -> Self {
+	pub fn for_single_rule(rule: RuleIdx, regex: &Regex) -> Self {
 		let mut nfa: Self = Self {
 			states: vec![NfaState {
 				idx: NfaIdx::BEGIN,
@@ -91,10 +91,10 @@ impl Tnfa {
 	}
 
 	pub fn for_regex(regex: &Regex) -> Tnfa {
-		Self::for_single_rule(RuleIdx::NIL, "", regex)
+		Self::for_single_rule(RuleIdx::NIL, regex)
 	}
 
-	pub fn for_rules<'a, Rules>(rules: Rules, delimiters: String) -> Self
+	pub fn for_rules<'a, const WITH_CAPTURES: bool, Rules>(rules: Rules, delimiters: String) -> Self
 	where
 		Rules: IntoIterator<Item = &'a RootRule>,
 	{
@@ -114,45 +114,56 @@ impl Tnfa {
 
 		for rule in rules.into_iter() {
 			let rule_start: NfaIdx = nfa.new_state(format!("rule '{}' start", rule.name));
-			let rule_inner_start: NfaIdx = nfa.new_state(format!("rule '{}' inner start", rule.name));
-			let rule_inner_end: NfaIdx = nfa.new_state(format!("rule '{}' inner end", rule.name));
 			let rule_end: NfaIdx = nfa.new_state(format!("rule '{}' end", rule.name));
+
 			spontaneous.push(SpontaneousTransition {
 				kind: SpontaneousTransitionKind::Epsilon,
 				target: rule_start,
 			});
-			if rule.regex.anchor_before {
-				nfa[rule_start].transitions =
-					Transitions::Interval(IntervalTree::from_iter(delimiters.chars().map(|ch| {
-						(
-							Interval::new(u32::from(ch), u32::from(ch)),
-							rule_inner_start,
-							PolicyUnique,
-						)
-					})));
-			} else {
-				nfa[rule_start].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once((
-					Interval::new(0, u32::from(char::MAX)),
-					rule_inner_start,
-					PolicyUnique,
-				))));
+
+			let (rule_inner_start, rule_inner_end): (NfaIdx, NfaIdx) =
+				if !WITH_CAPTURES {
+					let rule_inner_start: NfaIdx = nfa.new_state(format!("rule '{}' inner start", rule.name));
+					let rule_inner_end: NfaIdx = nfa.new_state(format!("rule '{}' inner end", rule.name));
+
+					if rule.regex.anchor_before {
+						nfa[rule_start].transitions =
+							Transitions::Interval(IntervalTree::from_iter(delimiters.chars().map(|ch| {
+								(
+									Interval::new(u32::from(ch), u32::from(ch)),
+									rule_inner_start,
+									PolicyUnique,
+								)
+							})));
+					} else {
+						nfa[rule_start].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once(
+							(Interval::new(0, u32::from(char::MAX)), rule_inner_start, PolicyUnique),
+						)));
+					}
+					(rule_inner_start, rule_inner_end)
+				} else {
+					(rule_start, rule_end)
+				};
+
+			tags = &tags | &nfa.build::<WITH_CAPTURES>(rule.idx, &rule.regex.inner, rule_inner_start, rule_inner_end);
+
+			if !WITH_CAPTURES {
+				if rule.regex.anchor_after {
+					nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(
+						delimiters
+							.chars()
+							.map(|ch| (Interval::new(u32::from(ch), u32::from(ch)), rule_end, PolicyUnique)),
+					));
+				} else {
+					nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once(
+						(Interval::new(0, u32::from(char::MAX)), rule_end, PolicyUnique),
+					)));
+				}
 			}
-			tags = &tags | &nfa.build::<false>(rule.idx, &rule.regex.inner, rule_inner_start, rule_inner_end);
-			if rule.regex.anchor_after {
-				nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(
-					delimiters
-						.chars()
-						.map(|ch| (Interval::new(u32::from(ch), u32::from(ch)), rule_end, PolicyUnique)),
-				));
-			} else {
-				nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once((
-					Interval::new(0, u32::from(char::MAX)),
-					rule_end,
-					PolicyUnique,
-				))));
-			}
+
 			nfa[rule_end].maybe_accepts_for_rule = Some(rule.idx);
 		}
+
 		nfa[NfaIdx::BEGIN].transitions = Transitions::Spontaneous(spontaneous);
 
 		nfa.tags = tags.into_iter().collect::<Vec<_>>();

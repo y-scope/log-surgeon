@@ -10,7 +10,6 @@
 
 using namespace log_surgeon;
 
-static void try_search();
 static void try_interpretations();
 
 int main() {
@@ -28,7 +27,6 @@ int main() {
     assert(pos == input.length);
 
     EventHandle event{*maybe_event};
-    // assert(event.log_type() == "%hello% foobarbaz");
     assert(event.log_type() == "d%1.1:hello.foo%f foobarbaz");
 
     std::optional<Match> maybe_match{event.get_leaf_match(0)};
@@ -41,36 +39,11 @@ int main() {
 
     assert(event.get_all_matches().size() == 2);
 
-    try_search();
-
     try_interpretations();
 
     printf("good!\n");
 
     return 0;
-}
-
-static void try_search() {
-    Box<SchemaBuilder> builder{log_surgeon_schema_builder_new()};
-
-    log_surgeon_schema_builder_add_rule_with_priority(builder, 0, "foo"_rust, ":::(?<bar>[a-z]+(\\.(?<baz>[0-9]+))*)"_rust);
-
-    Box<Schema> schema{log_surgeon_schema_builder_build(builder)};
-
-    Option<Box<SearchResult>> search{log_surgeon_search_by_named_type(schema, "foo.bar"_rust, "hello.123.456"_rust)};
-    assert(search != nullptr);
-
-    size_t len{0};
-    Match const* matches{log_surgeon_search_result_get_leaf_matches(search, &len)};
-    assert(len == 2);
-
-    assert(matches[0].rule_idx != 0);
-    assert(matches[0].ffi_pointers.sub_rule_name.as_cpp_view() == "baz");
-    assert(matches[0].ffi_pointers.lexeme.as_cpp_view() == "123");
-
-    assert(matches[1].rule_idx != 0);
-    assert(matches[1].ffi_pointers.sub_rule_name.as_cpp_view() == "baz");
-    assert(matches[1].ffi_pointers.lexeme.as_cpp_view() == "456");
 }
 
 static void try_interpretations() {
@@ -86,7 +59,7 @@ static void try_interpretations() {
     for (std::vector<SubQuery> const& sub_queries : interpretations) {
         std::cout << "- ";
         for (SubQuery const& sub_query : sub_queries) {
-            if (sub_query.rule_idx == 0) {
+            if (sub_query.qualified_name.empty()) {
                 std::cout << sub_query.value;
             } else {
                 std::cout << "(?<" << sub_query.qualified_name << ">" << sub_query.value << ")";

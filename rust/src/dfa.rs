@@ -397,18 +397,19 @@ impl Tdfa {
 	where
 		Rules: IntoIterator<Item = &'a RootRule>,
 	{
-		let nfa: Tnfa = Tnfa::for_rules(rules, delimiters.clone());
-		Self::determinization(&nfa, delimiters)
+		let nfa: Tnfa = Tnfa::for_rules::<false, _>(rules, delimiters.clone());
+		let anchor_char: char = delimiters.chars().next().unwrap();
+		Self::determinization(&nfa, anchor_char)
 	}
 
-	pub fn for_single_rule(rule: RuleIdx, name: &str, regex: &Regex) -> Self {
-		let nfa: Tnfa = Tnfa::for_single_rule(rule, name, regex);
-		Self::determinization(&nfa, "\n".to_owned())
+	pub fn for_single_rule(rule: RuleIdx, regex: &Regex) -> Self {
+		let nfa: Tnfa = Tnfa::for_single_rule(rule, regex);
+		Self::determinization(&nfa, '\n')
 	}
 
 	/// Algorithm 3 in the paper.
 	#[tracing::instrument(skip_all, level = "trace")]
-	fn determinization(nfa: &Tnfa, delimiters: String) -> Self {
+	pub fn determinization(nfa: &Tnfa, anchor_ch: char) -> Self {
 		assert_eq!(nfa.tags().len() % 2, 0);
 		let mut tag_pairs: Vec<usize> = Vec::with_capacity(nfa.tags().len() / 2);
 		for (i, tag) in nfa.tags().iter().enumerate() {
@@ -420,14 +421,12 @@ impl Tdfa {
 			tag_pairs.push(j);
 		}
 
-		let anchor_ch: char = delimiters.chars().next().unwrap();
 		let mut dfa: Self = Self {
 			states: Vec::new(),
 			kernels: BTreeMap::new(),
 			tags: nfa.tags().to_owned(),
 			tag_pairs,
 			number_of_registers: 2 * nfa.tags().len(),
-			// delimiters,
 			anchor_ch,
 		};
 
@@ -1007,6 +1006,6 @@ mod test {
 
 	fn for_pattern(pattern: &str) -> Tdfa {
 		let regex: Regex = Regex::from_pattern(pattern).unwrap().inner;
-		Tdfa::for_single_rule(RuleIdx::NIL, "", &regex)
+		Tdfa::for_single_rule(RuleIdx::NIL, &regex)
 	}
 }

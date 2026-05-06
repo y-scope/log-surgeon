@@ -5,6 +5,7 @@ use std::num::NonZero;
 
 use crate::dfa::Tdfa;
 use crate::log_event::Match;
+use crate::nfa::Tnfa;
 use crate::regex::AnchoredRegex;
 use crate::regex::IntoRegex;
 use crate::regex::Regex;
@@ -30,6 +31,7 @@ pub struct Schema {
 	pub delimiters: String,
 
 	pub main_dfa: Tdfa,
+	pub main_nfa: Tnfa,
 
 	/// Derived from `delimiters`;
 	/// used to insert "phantom characters" for start/end anchors.
@@ -169,6 +171,8 @@ impl SchemaBuilder {
 			}
 		}
 
+		let main_nfa: Tnfa = Tnfa::for_rules::<true, _>(rules.iter(), self.delimiters.clone());
+		// let main_dfa: Tdfa = Tdfa::determinization(&main_nfa);
 		let main_dfa: Tdfa = Tdfa::for_rules(rules.iter(), self.delimiters.clone());
 
 		let mut ascii_delimiters: [bool; 0x80] = [false; 0x80];
@@ -186,6 +190,7 @@ impl SchemaBuilder {
 		Schema {
 			rules,
 			delimiters: self.delimiters,
+			main_nfa,
 			main_dfa,
 			anchor_ch: self.anchor_ch,
 			ascii_delimiters,
@@ -278,7 +283,7 @@ impl RootRule {
 			assert_ne!(info, &RuleInfo::Root);
 		}
 
-		let dfa: Tdfa = Tdfa::for_single_rule(idx, &name, &regex.inner);
+		let dfa: Tdfa = Tdfa::for_single_rule(idx, &regex.inner);
 
 		Self {
 			idx,

@@ -1,26 +1,16 @@
 use std::ffi::c_char;
 use std::marker::PhantomData;
-use std::num::NonZero;
 use std::str::Utf8Error;
 
-use crate::dfa::MatchedCapture;
-use crate::dfa::Tdfa;
-use crate::dfa::TdfaExecution;
-use crate::ffi::UncheckedCArray;
 use crate::log_event::LogEvent;
 use crate::log_event::Match;
-use crate::log_event::MatchFfiPointers;
 use crate::parser::Parser;
-use crate::regex::Regex;
 use crate::regex::RegexError;
-use crate::schema::RootRule;
 use crate::schema::Schema;
 use crate::schema::SchemaBuilder;
-use crate::schema::VariableOrCaptures;
 use crate::search::Interpretation;
 use crate::search::SearchString;
 use crate::search::SubQuery;
-use crate::utils::Range;
 
 /// Represents a C `T const*` pointer + `size_t` length as a single ABI-stable value.
 #[repr(C)]
@@ -182,7 +172,7 @@ mod log_event {
 	}
 }
 
-mod query {
+mod search {
 	use super::*;
 
 	#[unsafe(no_mangle)]
@@ -211,16 +201,6 @@ mod query {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_search_sub_query_get_rule(sub_query: &SubQuery) -> Option<NonZero<u16>> {
-		sub_query.rule_idx
-	}
-
-	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_search_sub_query_get_rule_name(sub_query: &SubQuery) -> CCharArray<'_> {
-		CCharArray::from_utf8(&sub_query.rule_name)
-	}
-
-	#[unsafe(no_mangle)]
 	extern "C" fn log_surgeon_search_sub_query_get_qualified_name(sub_query: &SubQuery) -> CCharArray<'_> {
 		CCharArray::from_utf8(if !sub_query.qualified_name.is_empty() {
 			&sub_query.qualified_name
@@ -232,105 +212,6 @@ mod query {
 	#[unsafe(no_mangle)]
 	extern "C" fn log_surgeon_search_sub_query_get_value(sub_query: &SubQuery) -> CCharArray<'_> {
 		CCharArray::from_utf8(&sub_query.value)
-	}
-
-	#[unsafe(no_mangle)]
-	#[tracing::instrument(skip_all, level = "trace")]
-	extern "C" fn log_surgeon_search_by_named_type<'a>(
-		schema: &'a Schema,
-		name: CCharArray<'_>,
-		value: CCharArray<'a>,
-	) -> Box<SearchResult> {
-		let name: &str = name.as_utf8().unwrap();
-		let value: &str = value.as_utf8().unwrap();
-
-		let mut leaf_captures: Vec<Match> = Vec::new();
-		let on_capture: fn(&mut Vec<Match>, &RootRule, &MatchedCapture, &str) =
-			|leaf_captures, rule, capture, value| {
-				if capture.is_leaf {
-					leaf_captures.push(Match {
-						rule_idx: rule.idx,
-						sub_rule_id: Some(capture.capture_id),
-						parent_index: usize::MAX,
-						parent_id: capture.parent_id,
-						range: capture.range,
-						is_leaf: true,
-						ffi_pointers: MatchFfiPointers {
-							parent: std::ptr::null(),
-							lexeme: UncheckedCArray::from_str(&value[capture.range.start..capture.range.end]),
-							rule_name: UncheckedCArray::from_str(&rule.name),
-							sub_rule_name: UncheckedCArray::from_str(
-								&rule.rule_info[capture.capture_id.get() as usize].name(),
-							),
-						},
-					});
-				}
-			};
-
-		let Some(rows): Option<VariableOrCaptures<Regex>> = schema.regexes_for_name(name) else {
-			return Box::new(SearchResult { leaf_captures });
-		};
-
-		match rows {
-			VariableOrCaptures::Variable(rows) => {
-				for (rule_idx, _regex) in rows.into_iter() {
-					let rule: &RootRule = &schema[rule_idx];
-					let dfa: Tdfa = Tdfa::for_rules(std::iter::once(rule), schema.delimiters.clone());
-					let mut data: TdfaExecution = dfa.execution_data();
-					if dfa.execute_with_captures_for_search(value, &mut data, rule.idx) {
-						data.captures
-							.iter()
-							.for_each(|capture| on_capture(&mut leaf_captures, rule, capture, value));
-						if leaf_captures.is_empty() {
-							leaf_captures.push(Match {
-								rule_idx: rule.idx,
-								sub_rule_id: None,
-								parent_index: usize::MAX,
-								parent_id: None,
-								range: Range {
-									start: 0,
-									end: value.len(),
-								},
-								is_leaf: true,
-								ffi_pointers: MatchFfiPointers {
-									parent: std::ptr::null(),
-									lexeme: UncheckedCArray::from_str(value),
-									rule_name: UncheckedCArray::from_str(&rule.name),
-									sub_rule_name: UncheckedCArray::from_str(""),
-								},
-							});
-						}
-					}
-				}
-			},
-			VariableOrCaptures::Captures(rows) => {
-				for (rule_idx, _info, regex) in rows.into_iter() {
-					let rule: &RootRule = &schema[rule_idx];
-					// let regex: Regex = Regex::Sequence(vec![Regex::AnyChar, regex]);
-					// let dfa: Tdfa = Tdfa::for_rules(
-					// 	std::iter::once(&RootRule::new(
-					// 		rule.idx,
-					// 		rule.name.clone(),
-					// 		AnchoredRegex {
-					// 			anchor_before: false,
-					// 			anchor_after: false,
-					// 			inner: regex,
-					// 		},
-					// 	)),
-					// 	schema.delimiters.clone(),
-					// );
-					let dfa: Tdfa = Tdfa::for_single_rule(rule_idx, &rule.name, &regex);
-					let mut data: TdfaExecution = dfa.execution_data();
-					// dfa.execute_with_captures_for_search(value, u32::from(schema.anchor_ch), &mut data);
-					dfa.execute_with_captures(value, &mut data, rule_idx);
-					data.captures
-						.iter()
-						.for_each(|capture| on_capture(&mut leaf_captures, rule, capture, value));
-				}
-			},
-		}
-
-		Box::new(SearchResult { leaf_captures })
 	}
 
 	#[unsafe(no_mangle)]

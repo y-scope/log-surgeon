@@ -47,11 +47,13 @@ impl Tnfa {
 									char::from_u32(interval.start())
 										.as_ref()
 										.map(ToString::to_string)
-										.unwrap_or(format!("\\u{{{:x}}}", interval.start())),
+										.map(|s| if s == "\0" { "null".to_owned() } else { s })
+										.unwrap_or(format!("u{{{:x}}}", interval.start())),
 									char::from_u32(interval.end())
 										.as_ref()
 										.map(ToString::to_string)
-										.unwrap_or(format!("\\u{{{:x}}}", interval.end())),
+										.map(|s| if s == "\0" { "null".to_owned() } else { s })
+										.unwrap_or(format!("u{{{:x}}}", interval.end())),
 								)
 							}
 						))
