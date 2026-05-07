@@ -4,7 +4,6 @@ use std::collections::BTreeMap;
 use std::num::NonZero;
 
 use crate::dfa::Tdfa;
-use crate::log_event::Match;
 use crate::nfa::Tnfa;
 use crate::regex::AnchoredRegex;
 use crate::regex::IntoRegex;
@@ -51,8 +50,8 @@ impl PartialEq for Schema {
 #[derive(Debug, Clone)]
 pub struct RootRule {
 	pub idx: RuleIdx,
-	/// Priority level given by the user.
 	pub name: String,
+	/// Priority level given by the user.
 	pub priority: i32,
 
 	pub regex: AnchoredRegex,
@@ -72,9 +71,13 @@ impl PartialEq for RootRule {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum RuleInfo {
-	Root,
-	Sub(SubRule),
+pub struct RuleInfo {
+	pub root_idx: RuleIdx,
+	pub root_name: String,
+
+	pub maybe_sub_rule: Option<SubRule>,
+
+	pub fully_qualified_name: String,
 }
 
 /// Index in the schema, offset by 1.
@@ -206,11 +209,6 @@ impl Schema {
 		Tdfa::for_rules(&self.rules, self.delimiters.clone())
 	}
 
-	pub fn names(&self, capture: &Match) -> (&'_ str, &'_ str) {
-		let rule: &RootRule = &self[capture.rule_idx];
-		(&rule.name, &rule.rule_info[capture.id_as_usize()].name())
-	}
-
 	pub fn regexes_for_name(&self, name: &str) -> Option<VariableOrCaptures<Regex>> {
 		let parts: Vec<&str> = name.split('.').collect::<Vec<_>>();
 		let rule_name: &str = parts.first().copied()?;
@@ -276,11 +274,38 @@ impl std::ops::Index<RuleIdx> for Schema {
 impl RootRule {
 	pub fn new(idx: RuleIdx, name: String, priority: i32, regex: AnchoredRegex) -> Self {
 		let mut rule_info: Vec<RuleInfo> = Vec::with_capacity(1 + regex.inner.count_captures());
-		rule_info.push(RuleInfo::Root);
-		regex.inner.populate_sub_rule_info(&mut rule_info);
+		rule_info.push(RuleInfo {
+			root_idx: idx,
+			root_name: name.clone(),
+			maybe_sub_rule: None,
+			fully_qualified_name: name.clone(),
+		});
 
-		for info in rule_info[1..].iter() {
-			assert_ne!(info, &RuleInfo::Root);
+		let mut stack: Vec<&Regex> = vec![&regex.inner];
+		while let Some(regex) = stack.pop() {
+			match regex {
+				Regex::AnyChar | Regex::Literal(..) | Regex::Group { .. } => (),
+				Regex::Capture(sub_rule) => {
+					let i: usize = sub_rule.id_as_usize();
+					assert_eq!(rule_info.len(), i);
+					rule_info.push(RuleInfo {
+						root_idx: idx,
+						root_name: name.clone(),
+						maybe_sub_rule: Some(sub_rule.clone()),
+						fully_qualified_name: name.clone() + &sub_rule.qualified_name,
+					});
+					stack.push(&sub_rule.regex);
+				},
+				Regex::KleeneClosure(item) | Regex::KleenePlus(item) | Regex::BoundedRepetition { item, .. } => {
+					stack.push(item);
+				},
+				Regex::Sequence(items) | Regex::Alternation(items) => {
+					// Push on to stack in reverse to mirror DFS.
+					for sub_item in items.iter().rev() {
+						stack.push(sub_item);
+					}
+				},
+			}
 		}
 
 		let dfa: Tdfa = Tdfa::for_single_rule(idx, &regex.inner);
@@ -294,8 +319,12 @@ impl RootRule {
 			dfa,
 		}
 	}
+}
 
-	pub fn rule_info(&self, i: Option<NonZero<u16>>) -> &RuleInfo {
+impl std::ops::Index<Option<NonZero<u16>>> for RootRule {
+	type Output = RuleInfo;
+
+	fn index(&self, i: Option<NonZero<u16>>) -> &Self::Output {
 		let i: usize = usize::from(i.map_or(0, NonZero::get));
 		&self.rule_info[i]
 	}
@@ -321,17 +350,11 @@ impl std::fmt::Display for RuleIdx {
 }
 
 impl RuleInfo {
-	pub fn name(&self) -> &str {
-		match self {
-			Self::Root => "",
-			Self::Sub(rule) => &rule.name,
-		}
-	}
-
-	pub fn qualified_name(&self) -> &str {
-		match self {
-			Self::Root => "",
-			Self::Sub(rule) => &rule.qualified_name,
+	pub fn sub_rule_name(&self) -> &str {
+		if let Some(sub_rule) = &self.maybe_sub_rule {
+			&sub_rule.name
+		} else {
+			""
 		}
 	}
 }

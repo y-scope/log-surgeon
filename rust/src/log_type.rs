@@ -39,8 +39,8 @@ impl LogType {
 		cached_representation: String::new(),
 	};
 
-	pub fn new<'a>(schema: &Schema, log_message: &str, captures: impl Iterator<Item = &'a Match>) -> Self {
-		let cached_representation: String = to_string(schema, log_message, captures);
+	pub fn new<'a>(schema: &Schema, log_message: &str, matches: impl Iterator<Item = &'a Match>) -> Self {
+		let cached_representation: String = to_string(schema, log_message, matches);
 		Self { cached_representation }
 	}
 
@@ -49,27 +49,28 @@ impl LogType {
 	}
 }
 
-fn to_string<'a>(schema: &Schema, log_message: &str, captures: impl Iterator<Item = &'a Match>) -> String {
+fn to_string<'a>(schema: &Schema, log_message: &str, matches: impl Iterator<Item = &'a Match>) -> String {
 	use std::fmt::Write;
 
 	let mut buf: String = String::new();
 	let mut last_pos: usize = 0;
-	for capture in captures {
-		let pos: usize = capture.range.start;
+	for mat in matches {
+		let pos: usize = mat.range.start;
 		for s in escape::<'%'>(&log_message[last_pos..pos]) {
 			buf.push_str(s);
 		}
-		let (variable_name, capture_name): (&str, &str) = schema.names(capture);
+		let root_rule_name: &str = &schema[mat.rule_idx].name;
+		let sub_rule_name: &str = &schema[mat.rule_idx][mat.sub_rule_id].sub_rule_name();
 		write!(
 			&mut buf,
 			"%{}.{}:{}.{}%",
-			capture.rule_idx,
-			capture.sub_rule_id.map_or(0, NonZero::get),
-			variable_name,
-			capture_name,
+			mat.rule_idx,
+			mat.sub_rule_id.map_or(0, NonZero::get),
+			root_rule_name,
+			sub_rule_name,
 		)
 		.unwrap();
-		last_pos = capture.range.end;
+		last_pos = mat.range.end;
 	}
 	for s in escape::<'%'>(&log_message[last_pos..]) {
 		buf.push_str(s);

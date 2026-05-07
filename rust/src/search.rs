@@ -694,39 +694,13 @@ mod test {
 		let schema: Schema = builder.build();
 
 		{
-			// let interpretations: Vec<Interpretation> = search_by_name(&schema, "a*@*com", "email");
-			// println!("===");
-
-			// for i in interpretations.iter() {
-			// 	println!("- {i:?}");
-			// }
-
-			// assert!(interpretations.iter().any(execute(&["a", "@", "example", "com"])));
-			// assert!(interpretations.iter().any(execute(&["aa", "@", "example", "com"])));
-			// assert!(interpretations.iter().any(execute(&["aa", "@", "", "com"])));
-
-			// assert!(!interpretations.iter().any(execute(&["", "@", "example", "com"])));
-			// assert!(!interpretations.iter().any(execute(&["aa", "@@", "example", "com"])));
-			// assert!(!interpretations.iter().any(execute(&["a", "@", "example", "org"])));
-		}
-
-		{
-			let interpretations: Vec<Interpretation> = search_by_name(&schema, "a*@*mail*example*", "email");
+			let interpretations: Vec<Interpretation> = search_by_name(&schema, "*a*@*mail*example*", "email");
 			println!("===");
 
 			for i in interpretations.iter() {
 				println!("- {i:?}");
 			}
 		}
-
-		// {
-		// 	let interpretations: Vec<Interpretation> = search(&schema, "*a@foo.*", "email");
-		// 	println!("===");
-
-		// 	for i in interpretations.iter() {
-		// 		println!("- {i:?}");
-		// 	}
-		// }
 	}
 
 	#[test]

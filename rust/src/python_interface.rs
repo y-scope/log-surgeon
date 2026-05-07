@@ -166,7 +166,7 @@ impl PyParser {
 			for (i, cap) in event.all_matches.iter().enumerate() {
 				let rule: &RootRule = &schema[cap.rule_idx];
 				let root_rule_name: &str = &rule.name;
-				let sub_rule_name: &str = rule.rule_info(cap.sub_rule_id).name();
+				let sub_rule_name: &str = rule[cap.sub_rule_id].sub_rule_name();
 				let (name, parent): (&str, Option<Py<PyMatch>>) = if cap.parent_index < i {
 					(sub_rule_name, Some(all_matches[cap.parent_index].clone().unbind()))
 				} else {

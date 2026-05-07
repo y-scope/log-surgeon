@@ -69,10 +69,11 @@ struct UncheckedCArray {
 struct MatchFfiPointers {
     const Match *parent;
     UncheckedCArray<char> lexeme;
+    UncheckedCArray<char> root_rule_name;
+    /// Name of "this" (root or sub-) rule.
     UncheckedCArray<char> rule_name;
-    /// Not the fully-qualified name;
-    /// walk the parents to build the fully-qualified name.
-    UncheckedCArray<char> sub_rule_name;
+    /// Fully-qualified name, including the root rule and all nested regex capture expressions.
+    UncheckedCArray<char> fully_qualified_name;
 };
 
 struct Match {

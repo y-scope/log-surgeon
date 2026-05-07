@@ -33,7 +33,7 @@ int main() {
     assert(maybe_match.has_value());
 
     Match const& mat{*maybe_match};
-    assert(mat.ffi_pointers.rule_name.as_cpp_view() == "hello");
+    assert(mat.ffi_pointers.root_rule_name.as_cpp_view() == "hello");
 
     assert(!event.get_leaf_match(1).has_value());
 

@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <cstdint>
 #include <optional>
 #include <span>
 #include <string>

@@ -5,6 +5,7 @@ use crate::log_event::LogEvent;
 use crate::log_event::Match;
 use crate::log_event::MatchFfiPointers;
 use crate::log_type::LogType;
+use crate::schema::RuleInfo;
 use crate::schema::Schema;
 use crate::utils::Range;
 
@@ -179,9 +180,15 @@ impl Parser {
 			mat.ffi_pointers.parent = matches_base.wrapping_add(mat.parent_index);
 			mat.ffi_pointers.lexeme =
 				UncheckedCArray::from_str(&self.current_log.message[mat.range.start..mat.range.end]);
-			mat.ffi_pointers.rule_name = UncheckedCArray::from_str(&self.schema[mat.rule_idx].name);
-			mat.ffi_pointers.sub_rule_name =
-				UncheckedCArray::from_str(&self.schema[mat.rule_idx].rule_info(mat.sub_rule_id).name());
+
+			let rule_info: &RuleInfo = &self.schema[mat.rule_idx][mat.sub_rule_id];
+			mat.ffi_pointers.root_rule_name = UncheckedCArray::from_str(&rule_info.root_name);
+			mat.ffi_pointers.rule_name = UncheckedCArray::from_str(if let Some(sub_rule) = &rule_info.maybe_sub_rule {
+				&sub_rule.name
+			} else {
+				&rule_info.root_name
+			});
+			mat.ffi_pointers.fully_qualified_name = UncheckedCArray::from_str(&rule_info.fully_qualified_name);
 		}
 
 		Some(LogEvent {

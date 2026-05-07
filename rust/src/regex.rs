@@ -3,7 +3,6 @@ pub use pattern_parsing::*;
 
 use std::num::NonZero;
 
-use crate::schema::RuleInfo;
 use crate::utils::Escaped;
 
 // TODO: relax need to escape `<>`?
@@ -193,26 +192,6 @@ impl Regex {
 			},
 			Self::Sequence(items) | Self::Alternation(items) => {
 				items.iter().fold(0, |total, item| total + item.count_captures())
-			},
-		}
-	}
-
-	pub fn populate_sub_rule_info(&self, capture_info: &mut Vec<RuleInfo>) {
-		match self {
-			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
-			Self::Capture(sub_rule) => {
-				let i: usize = sub_rule.id_as_usize();
-				assert_eq!(capture_info.len(), i);
-				capture_info.push(RuleInfo::Sub(sub_rule.clone()));
-				sub_rule.regex.populate_sub_rule_info(capture_info);
-			},
-			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
-				item.populate_sub_rule_info(capture_info);
-			},
-			Self::Sequence(items) | Self::Alternation(items) => {
-				for sub_item in items.iter() {
-					sub_item.populate_sub_rule_info(capture_info);
-				}
 			},
 		}
 	}

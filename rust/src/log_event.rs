@@ -48,10 +48,11 @@ pub struct Match {
 pub struct MatchFfiPointers {
 	pub parent: *const Match,
 	pub lexeme: UncheckedCArray<c_char>,
+	pub root_rule_name: UncheckedCArray<c_char>,
+	/// Name of _this_ (root or sub-) rule.
 	pub rule_name: UncheckedCArray<c_char>,
-	/// Not the fully-qualified name;
-	/// walk the parents to build the fully-qualified name.
-	pub sub_rule_name: UncheckedCArray<c_char>,
+	/// Fully-qualified name, including the root rule and all nested regex capture expressions.
+	pub fully_qualified_name: UncheckedCArray<c_char>,
 }
 
 /// Rust is annoying about Send/Sync for pointers, even when it technically **is** safe.
@@ -112,7 +113,8 @@ impl MatchFfiPointers {
 	pub const NULL: Self = Self {
 		parent: std::ptr::null(),
 		lexeme: UncheckedCArray::NULL,
+		root_rule_name: UncheckedCArray::NULL,
 		rule_name: UncheckedCArray::NULL,
-		sub_rule_name: UncheckedCArray::NULL,
+		fully_qualified_name: UncheckedCArray::NULL,
 	};
 }
