@@ -70,7 +70,7 @@ struct MatchFfiPointers {
     const Match *parent;
     UncheckedCArray<char> lexeme;
     UncheckedCArray<char> root_rule_name;
-    /// Name of "this" (root or sub-) rule.
+    /// Name of _this_ (root or sub-) rule.
     UncheckedCArray<char> rule_name;
     /// Fully-qualified name, including the root rule and all nested regex capture expressions.
     UncheckedCArray<char> fully_qualified_name;

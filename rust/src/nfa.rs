@@ -307,14 +307,10 @@ impl Tnfa {
 				]);
 
 				current = middle;
-				for i in *min..*max {
+				for _ in *min..*max {
 					let sub_skip: NfaIdx = self.new_state("bounded sub skip");
 					let sub_have: NfaIdx = self.new_state("bounded sub have");
-					let sub_target: NfaIdx = if i + 1 < *max {
-						self.new_state("bounded sub 2/2 target")
-					} else {
-						target
-					};
+					let sub_target: NfaIdx = self.new_state("bounded sub 2/2 target");
 
 					self[current].transitions = Transitions::Spontaneous(vec![
 						SpontaneousTransition {
@@ -335,6 +331,11 @@ impl Tnfa {
 					tags.append(&mut self.build::<CAPTURE>(rule, item, sub_have, sub_target));
 					current = sub_target;
 				}
+
+				self[current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
+					kind: SpontaneousTransitionKind::Epsilon,
+					target,
+				}]);
 				tags
 			},
 			Regex::Sequence(items) => {
