@@ -103,10 +103,6 @@ impl Match {
 			unsafe { self.ffi_pointers.lexeme.as_str() },
 		)
 	}
-
-	pub fn id_as_usize(&self) -> usize {
-		usize::from(self.sub_rule_id.map_or(0, NonZero::get))
-	}
 }
 
 impl MatchFfiPointers {

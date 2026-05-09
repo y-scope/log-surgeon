@@ -340,6 +340,13 @@ impl Tnfa {
 			},
 			Regex::Sequence(items) => {
 				let mut tags: BTreeSet<Tag> = BTreeSet::new();
+				// TODO this is for search... handle it better?
+				if items.is_empty() {
+					self[current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
+						kind: SpontaneousTransitionKind::Epsilon,
+						target,
+					}]);
+				}
 				for (i, sub_item) in items.iter().enumerate() {
 					let sub_target: NfaIdx = if i + 1 < items.len() {
 						self.new_state("sequence sub target")

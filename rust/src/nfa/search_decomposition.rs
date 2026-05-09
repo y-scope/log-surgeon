@@ -188,6 +188,7 @@ impl Tnfa {
 				&& pair.state2().is_accepting()
 			{
 				intersection[state].maybe_accepts_for_rule = Some(rule);
+				assert_eq!(intersection[state].transitions.len(), 0);
 				continue;
 			}
 
@@ -273,24 +274,6 @@ impl Tnfa {
 							.collect::<Vec<_>>(),
 					);
 				},
-				// (Transitions::Spontaneous(spontaneous), _, _, other_state)
-				// | (_, Transitions::Spontaneous(spontaneous), other_state, _) => {
-				// 	intersection[state].transitions = Transitions::Spontaneous(
-				// 		spontaneous
-				// 			.iter()
-				// 			.map(|transition1| {
-				// 				let next: NfaIdx = lookup_state(
-				// 					StatePair::new(self, other, transition1.target, other_state),
-				// 					&mut intersection,
-				// 				);
-				// 				SpontaneousTransition {
-				// 					kind: transition1.kind.clone(),
-				// 					target: next,
-				// 				}
-				// 			})
-				// 			.collect::<Vec<_>>(),
-				// 	);
-				// },
 				(Transitions::Interval(transitions1), Transitions::Interval(transitions2)) => {
 					let mut combined: IntervalTree<u32, NfaIdx> = IntervalTree::new();
 					for (interval1, &target1) in transitions1.iter() {
@@ -320,6 +303,35 @@ impl Tnfa {
 		}
 
 		intersection
+	}
+
+	pub fn can_accept(&self) -> bool {
+		let reachable: Vec<bool> = self.compute_reachability();
+		reachable.iter().any(|&b| b)
+	}
+
+	fn compute_reachability(&self) -> Vec<bool> {
+		let mut reachable: Vec<bool> = vec![false; self.states.len()];
+
+		reachable[0] = true;
+		let mut changed: bool = true;
+		while changed {
+			changed = false;
+			for state in self.states.iter() {
+				if !reachable[state.idx.0] {
+					continue;
+				}
+				for idx in state.transitions.successors() {
+					let target: &NfaState = &self[idx];
+					let old_reachable: bool = std::mem::replace(&mut reachable[target.idx.0], true);
+					if !old_reachable {
+						changed = true;
+					}
+				}
+			}
+		}
+
+		reachable
 	}
 
 	pub fn tarjan_scc(&self) -> (Vec<Vec<NfaIdx>>, Vec<TarjanSccData>, Vec<NfaIdx>) {
@@ -484,6 +496,7 @@ impl Tnfa {
 					},
 				}
 			} else {
+				assert!(!entry.is_accepting());
 				if let Some((_capture, capture_path)) = &mut maybe_capture {
 					capture_path.push(PathComponent::PatternWildcard);
 				} else {

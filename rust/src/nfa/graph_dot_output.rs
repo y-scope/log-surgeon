@@ -21,8 +21,8 @@ impl Tnfa {
 				};
 				let colour: &str = if scc.len() > 1 { " [color=\"red\"]" } else { "" };
 				lines.push_str(&format!(
-					"\t{} [label=\"{:#}\"]{shape}{colour};\n",
-					state.idx, state.name
+					"\t{} [label=\"{}: {:#}\"]{shape}{colour};\n",
+					state.idx, state.idx, state.name
 				));
 			}
 		}

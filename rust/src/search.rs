@@ -1,24 +1,12 @@
-#![allow(unused)]
-
 use std::collections::BTreeMap;
-use std::collections::BTreeSet;
 use std::num::NonZero;
 
-use crate::dfa::Tdfa;
-use crate::dfa::TdfaExecution;
-use crate::ffi::UncheckedCArray;
-use crate::log_event::Match;
-use crate::log_event::MatchFfiPointers;
 use crate::nfa::PathComponent;
 use crate::nfa::Tnfa;
-use crate::regex::AnchoredRegex;
 use crate::regex::Regex;
-use crate::regex::SubRule;
 use crate::schema::RootRule;
-use crate::schema::RuleIdx;
 use crate::schema::Schema;
 use crate::schema::VariableOrCaptures;
-use crate::utils::Range;
 
 #[derive(Debug)]
 pub struct SearchString(Vec<SymbolicChar>);
@@ -77,8 +65,6 @@ pub struct SubQuery {
 	pub qualified_name: String,
 	pub value: String,
 	pub symbolic_value: Vec<SymbolicChar>,
-	// pub is_all_wildcards: bool,
-	// pub dfa: Tdfa,
 }
 
 impl Eq for SubQuery {}
@@ -119,6 +105,11 @@ impl std::fmt::Debug for SubQuery {
 	}
 }
 
+#[derive(Debug, Clone)]
+pub struct InterpretationPrefix {
+	successors: BTreeMap<SubQuery, Self>,
+}
+
 #[derive(Clone, Copy)]
 struct SearchStringView<'a> {
 	full_string: &'a SearchString,
@@ -145,8 +136,6 @@ impl std::fmt::Display for SearchStringView<'_> {
 
 impl Interpretation {
 	fn dedup(interpretations: &mut Vec<Self>) {
-		interpretations.iter_mut().for_each(Self::canonicalize);
-
 		interpretations.sort();
 		interpretations.dedup();
 
@@ -184,8 +173,9 @@ impl Interpretation {
 		}
 	}
 
+	/// Re-numbers groups consecutively starting from `0`.
 	fn canonicalize(&mut self) {
-		let mut groups: BTreeMap<usize, usize> = BTreeMap::new();
+		let mut groups: BTreeMap<usize, usize> = BTreeMap::from([(0, 0)]);
 		for sub_query in self.sub_queries.iter_mut() {
 			let n: usize = groups.len();
 			let new_group: usize = *groups.entry(sub_query.group).or_insert(n);
@@ -252,33 +242,76 @@ impl SearchString {
 				.interpretations_for_name_internal(schema, &rows, 0);
 		}
 
+		self.full_log_interpretations(schema)
+	}
+
+	fn full_log_interpretations(&self, schema: &Schema) -> Vec<Interpretation> {
 		if self.0.is_empty() {
 			return Vec::new();
 		}
 
-		let mut interpretations: Vec<Vec<Interpretation>> = vec![Vec::new(); self.0.len()];
+		let mut can_start_at_position: Vec<bool> = vec![false; self.0.len()];
+		can_start_at_position[0] = true;
+		let mut last_boundary: usize = 0;
+		for i in 1..self.0.len() {
+			if self.0[i - 1] == SymbolicChar::WildcardStar {
+				can_start_at_position[i - 1] = true;
+				can_start_at_position[i] = true;
+				last_boundary = i;
+				continue;
+			}
+			// TODO careful about newlines...
+			if let SymbolicChar::Literal(ch) = self.0[i - 1]
+				&& schema.delimiters.contains(ch)
+			{
+				if let SymbolicChar::Literal(ch) = self.0[i]
+					&& !schema.delimiters.contains(ch)
+				{
+					can_start_at_position[i] = true;
+					last_boundary = i;
+					continue;
+				}
+			}
+			let fragment: &[SymbolicChar] = &self.0[last_boundary..=i];
+			let regex: Regex = Regex::Sequence(
+				fragment
+					.iter()
+					.map(|&ch| match ch {
+						SymbolicChar::Literal(ch) => Regex::Literal(ch),
+						SymbolicChar::WildcardOne => Regex::BoundedRepetition {
+							min: 0,
+							max: 1,
+							item: Box::new(Regex::AnyChar),
+						},
+						SymbolicChar::WildcardStar => Regex::KleeneClosure(Box::new(Regex::AnyChar)),
+					})
+					.collect::<Vec<_>>(),
+			);
+			let search_nfa: Tnfa = Tnfa::for_regex(&regex);
+			let can_end_here: bool = schema.main_nfa.intersect(&search_nfa).can_accept();
+			can_start_at_position[i] = can_end_here;
+		}
+
+		let mut interpretations_up_to_position: Vec<Vec<Interpretation>> = vec![Vec::new(); self.0.len()];
 		let mut group: usize = 0;
 
 		for end in 1..=self.0.len() {
 			for start in 0..end {
+				if !can_start_at_position[start] {
+					continue;
+				}
+
 				let sub_view: SearchStringView<'_> = self.view(start, end);
-				// println!(
-				// 	"== {start}..{end}, {sub_view}, {}",
-				// 	sub_view.extend_with_greedy_wildcards()
-				// );
-				if (sub_view.as_str() != &[SymbolicChar::WildcardStar])
+
+				if (sub_view.as_str().len() > 1)
 					&& ((sub_view.as_str().first() == Some(&SymbolicChar::WildcardStar))
 						|| (sub_view.as_str().last() == Some(&SymbolicChar::WildcardStar)))
 				{
 					continue;
 				}
 
-				let mut single_token_interpretations: Vec<Interpretation> =
+				let single_token_interpretations: Vec<Interpretation> =
 					sub_view.single_token_interpretations(schema, group);
-
-				// for i in single_token_interpretations.iter() {
-				// 	println!("- {i:?}");
-				// }
 
 				if single_token_interpretations.is_empty() {
 					continue;
@@ -288,30 +321,94 @@ impl SearchString {
 
 				if start == 0 {
 					for suffix in single_token_interpretations.into_iter() {
-						interpretations[end - 1].push(suffix);
+						interpretations_up_to_position[end - 1].push(suffix);
 					}
 				} else {
 					// Remark: `interpretations[start - 1]` and `interpretations[end - 1]` cannot alias
 					// since `start < end`, but rustc doesn't know that.
-					for prefix in interpretations[start - 1].clone().iter() {
+					for prefix in interpretations_up_to_position[start - 1].clone().iter() {
 						for suffix in single_token_interpretations.iter() {
 							let mut combined: Interpretation = prefix.clone();
 							combined.append_sub_query(suffix.clone());
-							interpretations[end - 1].push(combined);
+							interpretations_up_to_position[end - 1].push(combined);
 						}
 					}
 				}
+				interpretations_up_to_position[end - 1]
+					.iter_mut()
+					.for_each(Interpretation::canonicalize);
+				Interpretation::dedup(&mut interpretations_up_to_position[end - 1]);
+				// for i in interpretations_up_to_position[end - 1].iter() {
+				// 	println!("- {i:?}");
+				// }
 			}
 
-			Interpretation::dedup(&mut interpretations[end - 1]);
-			// println!("interpretations up to {end} are {:?}", interpretations[end - 1]);
+			interpretations_up_to_position[end - 1]
+				.iter()
+				.for_each(Interpretation::invariants);
 		}
 
-		interpretations.pop().unwrap()
-	}
+		let mut interpretations: Vec<Interpretation> = interpretations_up_to_position.pop().unwrap();
+		// interpretations.iter_mut().for_each(Interpretation::canonicalize);
+		// Interpretation::dedup(&mut interpretations);
 
-	fn iter(&self) -> impl Iterator<Item = SymbolicChar> {
-		self.0.iter().copied()
+		let mut old_len: usize = 0;
+		while old_len != interpretations.len() {
+			let mut i: usize = 0;
+			while i < interpretations.len() {
+				debug!("== {i} / {}", interpretations.len());
+				let mut j: usize = i + 1;
+				while j < interpretations.len() {
+					let interpretation1: &Interpretation = &interpretations[i];
+					let interpretation2: &Interpretation = &interpretations[j];
+					let mut next: usize = j + 1;
+					for (query1, query2) in
+						std::iter::zip(interpretation1.sub_queries.iter(), interpretation2.sub_queries.iter())
+					{
+						if query1.is_static_text() && query2.is_static_text() {
+							if query1.symbolic_value == query2.symbolic_value {
+								continue;
+							} else {
+								break;
+							}
+						}
+						if query1.rule_idx != query2.rule_idx {
+							break;
+						}
+						if query1.group != query2.group {
+							break;
+						}
+						if query1.symbolic_value == query2.symbolic_value {
+							continue;
+						}
+						if query1.symbolic_value.starts_with(&query2.symbolic_value) {
+							assert!(query1.symbolic_value.len() > query2.symbolic_value.len());
+							debug!("removing j < i:");
+							debug!("- {interpretation1:?}");
+							debug!("- {interpretation2:?}");
+							interpretations.remove(j);
+							next = j;
+							break;
+						}
+						if query2.symbolic_value.starts_with(&query1.symbolic_value) {
+							assert!(query2.symbolic_value.len() > query1.symbolic_value.len());
+							debug!("removing i < j:");
+							debug!("- {interpretation1:?}");
+							debug!("- {interpretation2:?}");
+							interpretations.swap(i, j);
+							interpretations.remove(j);
+							next = i + 1;
+							break;
+						}
+					}
+					j = next;
+				}
+				i += 1;
+			}
+			old_len = interpretations.len();
+		}
+
+		interpretations
 	}
 
 	fn view(&self, start: usize, end: usize) -> SearchStringView<'_> {
@@ -342,7 +439,7 @@ impl<'a> SearchStringView<'a> {
 
 		if self.as_str() == &[SymbolicChar::WildcardStar] {
 			interpretations.push(Interpretation {
-				sub_queries: vec![SubQuery::new_static_text(&[SymbolicChar::WildcardStar], schema, group)],
+				sub_queries: vec![SubQuery::new_static_text(&[SymbolicChar::WildcardStar])],
 			});
 			return interpretations;
 		}
@@ -354,11 +451,19 @@ impl<'a> SearchStringView<'a> {
 
 		if has_wildcard || potential_interpretations.is_empty() {
 			interpretations.push(Interpretation {
-				sub_queries: vec![SubQuery::new_static_text(extended.as_str(), schema, group)],
+				sub_queries: vec![SubQuery::new_static_text(extended.as_str())],
 			});
 		}
 
-		interpretations.extend(potential_interpretations.into_iter());
+		for interpretation in potential_interpretations.into_iter() {
+			if interpretation.sub_queries.iter().any(|sub_query| {
+				sub_query.rule_idx.is_some() && (sub_query.symbolic_value != &[SymbolicChar::WildcardStar])
+			}) {
+				interpretations.push(interpretation);
+			}
+			// TODO more careful?
+		}
+		// interpretations.extend(potential_interpretations.into_iter());
 
 		interpretations
 	}
@@ -392,19 +497,12 @@ impl<'a> SearchStringView<'a> {
 		&self.full_string.0[self.start..self.end]
 	}
 
-	fn as_regex(&self) -> Regex {
+	// TODO refactor with full log search
+	fn to_regex(&self) -> Regex {
 		Regex::Sequence(
 			self.as_str()
 				.iter()
-				.map(|&ch| match ch {
-					SymbolicChar::Literal(ch) => Regex::Literal(ch),
-					SymbolicChar::WildcardStar => Regex::KleeneClosure(Box::new(Regex::AnyChar)),
-					SymbolicChar::WildcardOne => Regex::BoundedRepetition {
-						min: 0,
-						max: 1,
-						item: Box::new(Regex::AnyChar),
-					},
-				})
+				.map(SymbolicChar::to_regex)
 				.collect::<Vec<_>>(),
 		)
 	}
@@ -416,8 +514,6 @@ impl<'a> SearchStringView<'a> {
 		group: usize,
 	) -> Vec<Interpretation> {
 		let mut interpretations: Vec<Interpretation> = Vec::new();
-
-		let search_nfa: Tnfa = Tnfa::for_regex(&self.as_regex());
 
 		let rows = match rows {
 			VariableOrCaptures::Variable(rows) => rows
@@ -442,22 +538,18 @@ impl<'a> SearchStringView<'a> {
 	fn interpretations_for_nfa(&self, schema: &Schema, nfa: &Tnfa, group: usize) -> Vec<Interpretation> {
 		let mut interpretations: Vec<Interpretation> = Vec::new();
 
-		let search_nfa: Tnfa = Tnfa::for_regex(&self.as_regex());
+		let search_nfa: Tnfa = Tnfa::for_regex(&self.to_regex());
 
-		for path in nfa.intersect(&search_nfa).compute_paths() {
+		let intersection: Tnfa = nfa.intersect(&search_nfa);
+		for path in intersection.compute_paths() {
 			let mut sub_queries: Vec<SubQuery> = Vec::new();
 
-			// if self[0].is_wildcard() {
-			// 	sub_queries.push(SubQuery::new_static_text(&self[0..1], schema, group));
-			// }
-
-			let mut last_pos: usize = 0;
-
 			for token in path.iter() {
+				// TODO refactor new_static_text
 				match token {
 					PathComponent::Literal(_) => {
 						sub_queries.push(SubQuery {
-							group,
+							group: 0,
 							rule_idx: None,
 							rule_name: String::new(),
 							qualified_name: String::new(),
@@ -468,7 +560,7 @@ impl<'a> SearchStringView<'a> {
 					PathComponent::Capture {
 						rule_idx,
 						qualified_name,
-						contents,
+						..
 					} => {
 						let rule: &RootRule = &schema[*rule_idx];
 						sub_queries.push(SubQuery {
@@ -482,7 +574,7 @@ impl<'a> SearchStringView<'a> {
 					},
 					PathComponent::QueryWildcard | PathComponent::PatternWildcard => {
 						sub_queries.push(SubQuery {
-							group,
+							group: 0,
 							rule_idx: None,
 							rule_name: String::new(),
 							qualified_name: String::new(),
@@ -496,8 +588,8 @@ impl<'a> SearchStringView<'a> {
 		}
 
 		interpretations.iter_mut().for_each(Interpretation::condense);
-		Interpretation::dedup(&mut interpretations);
 
+		Interpretation::dedup(&mut interpretations);
 		interpretations
 	}
 }
@@ -532,6 +624,18 @@ impl SymbolicChar {
 		})
 		.to_owned()
 	}
+
+	fn to_regex(&self) -> Regex {
+		match *self {
+			SymbolicChar::Literal(ch) => Regex::Literal(ch),
+			SymbolicChar::WildcardStar => Regex::KleeneClosure(Box::new(Regex::AnyChar)),
+			SymbolicChar::WildcardOne => Regex::BoundedRepetition {
+				min: 0,
+				max: 1,
+				item: Box::new(Regex::AnyChar),
+			},
+		}
+	}
 }
 
 impl std::fmt::Display for SymbolicChar {
@@ -550,18 +654,6 @@ impl std::fmt::Display for SymbolicChar {
 }
 
 impl Interpretation {
-	pub fn execute(&self, input_parts: &[&str]) -> bool {
-		assert_eq!(self.sub_queries.len(), input_parts.len());
-
-		false
-		// std::iter::zip(self.sub_queries.iter(), input_parts.iter().copied())
-		// 	.all(|(sub_query, input)| sub_query.execute(input))
-	}
-
-	pub fn any<'a>(mut interpretations: impl Iterator<Item = &'a Self>, input_parts: &[&str]) -> bool {
-		interpretations.any(|interp| interp.execute(input_parts))
-	}
-
 	// TODO same as `Path::condense`
 	fn condense(&mut self) {
 		let mut i: usize = 1;
@@ -591,6 +683,12 @@ impl Interpretation {
 		};
 
 		if me_last.is_static_text() && suffix_first.is_static_text() {
+			if (*me_last.symbolic_value.last().unwrap() == SymbolicChar::WildcardStar)
+				&& (*suffix_first.symbolic_value.first().unwrap() == SymbolicChar::WildcardStar)
+			{
+				me_last.value.pop().unwrap();
+				me_last.symbolic_value.pop().unwrap();
+			}
 			me_last.value.extend(suffix_first.value.drain(..));
 			me_last.symbolic_value.extend(suffix_first.symbolic_value.drain(..));
 			self.sub_queries.extend(suffix.sub_queries.drain(1..));
@@ -601,7 +699,6 @@ impl Interpretation {
 
 	fn invariants(&self) {
 		let mut last_was_static_text: bool = false;
-		let mut i: usize = 0;
 		for sub_query in self.sub_queries.iter() {
 			if sub_query.is_static_text() {
 				assert!(!last_was_static_text);
@@ -609,16 +706,15 @@ impl Interpretation {
 			} else {
 				last_was_static_text = false;
 			}
-			i += 1;
 		}
 	}
 }
 
 impl SubQuery {
-	fn new_static_text(symbols: &[SymbolicChar], schema: &Schema, group: usize) -> Self {
-		let is_all_wildcards: bool = symbols.iter().all(|&ch| ch == SymbolicChar::WildcardStar);
+	fn new_static_text(symbols: &[SymbolicChar]) -> Self {
+		// let is_all_wildcards: bool = symbols.iter().all(|&ch| ch == SymbolicChar::WildcardStar);
 		Self {
-			group,
+			group: 0,
 			rule_idx: None,
 			rule_name: String::new(),
 			qualified_name: String::new(),
@@ -676,6 +772,56 @@ impl SubQuery {
 			}
 		}
 		i == other_parts.len()
+	}
+}
+
+impl InterpretationPrefix {
+	pub fn from_interpretations(interpretations: &[Interpretation]) -> Self {
+		let mut this: Self = Self::new();
+		for interpretation in interpretations.iter() {
+			this.add_interpretation(&interpretation.sub_queries);
+		}
+		this
+	}
+
+	pub fn len(&self) -> usize {
+		self.successors.len()
+	}
+
+	pub fn total_len(&self) -> usize {
+		if self.successors.is_empty() {
+			return 1;
+		}
+		self.successors
+			.values()
+			.fold(0, |accum, successor| accum + successor.total_len())
+	}
+
+	fn new() -> Self {
+		Self {
+			successors: BTreeMap::new(),
+		}
+	}
+
+	fn add_interpretation(&mut self, sub_queries: &[SubQuery]) {
+		let Some(first): Option<&SubQuery> = sub_queries.first() else {
+			return;
+		};
+		self.successors
+			.entry(first.clone())
+			.or_insert_with(Self::new)
+			.add_interpretation(&sub_queries[1..]);
+	}
+
+	fn print(&self, indent: String) {
+		for (sub_query, successors) in self.successors.iter() {
+			println!(
+				"{indent}- {sub_query:?} ({} -> {})",
+				successors.len(),
+				successors.total_len()
+			);
+			successors.print(indent.clone() + "\t");
+		}
 	}
 }
 
@@ -791,7 +937,6 @@ mod test {
 		let schema: Schema = builder.build();
 
 		{
-			let query: SearchString = SearchString::parse("a@com*").unwrap();
 			let interpretations: Vec<Interpretation> = search_single_token(&schema, "a@com*");
 
 			println!("=== Interpretations");
