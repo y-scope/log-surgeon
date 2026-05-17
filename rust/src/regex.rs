@@ -92,7 +92,7 @@ impl Regex {
 				if SPECIAL_CHARACTERS.contains(ch) {
 					format!("\\{ch}")
 				} else {
-					Escaped::escape(ch).to_string()
+					Escaped::escape(ch).escape_space(false).to_string()
 				}
 			},
 			Self::Group { negated, items } => {

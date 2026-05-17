@@ -37,14 +37,21 @@ impl Schema {
 			// Empty line, pretty.
 			.chain(std::iter::once(String::new()))
 			.chain(self.rules.iter().map(|rule| {
-				format!(
-					"{} ({}): {}{}{}",
-					rule.name,
-					rule.priority,
+				let mut pattern: String = format!(
+					"{}{}{}",
 					if rule.regex.anchor_before { "^" } else { "" },
 					rule.regex.inner.to_pattern(),
 					if rule.regex.anchor_after { "$" } else { "" },
-				)
+				);
+				if let Some(suffix) = pattern.strip_prefix(' ') {
+					pattern = format!("[ ]{suffix}");
+				}
+				if let Some(prefix) = pattern.strip_suffix(' ') {
+					pattern = format!("{prefix}[ ]");
+				}
+				assert!(!pattern.starts_with(|ch: char| ch.is_whitespace()));
+				assert!(!pattern.ends_with(|ch: char| ch.is_whitespace()));
+				format!("{} ({}): {pattern}", rule.name, rule.priority)
 			}))
 			.fold(String::new(), |mut accumulated, line| {
 				accumulated.push_str(&line);

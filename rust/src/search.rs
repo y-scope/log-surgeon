@@ -173,6 +173,71 @@ impl Interpretation {
 		}
 	}
 
+	fn dedup2(interpretations: &mut Vec<Self>) {
+		let mut old_len: usize = 0;
+		while old_len != interpretations.len() {
+			let mut i: usize = 0;
+			while i < interpretations.len() {
+				debug!("== {i} / {}", interpretations.len());
+				let mut j: usize = i + 1;
+				while j < interpretations.len() {
+					let interpretation1: &Interpretation = &interpretations[i];
+					let interpretation2: &Interpretation = &interpretations[j];
+					let mut next: usize = j + 1;
+					for (k, (query1, query2)) in
+						std::iter::zip(interpretation1.sub_queries.iter(), interpretation2.sub_queries.iter())
+							.enumerate()
+					{
+						if query1.is_static_text() && query2.is_static_text() {
+							if query1.symbolic_value == query2.symbolic_value {
+								continue;
+							} else {
+								break;
+							}
+						}
+						if query1.rule_idx != query2.rule_idx {
+							break;
+						}
+						if query1.group != query2.group {
+							break;
+						}
+						if query1.symbolic_value == query2.symbolic_value {
+							if k == interpretation1.sub_queries.len() {
+								debug!("- removing same interp");
+								interpretations.remove(j);
+								next = j;
+								break;
+							}
+							continue;
+						}
+						if query1.symbolic_value.starts_with(&query2.symbolic_value) {
+							assert!(query1.symbolic_value.len() > query2.symbolic_value.len());
+							debug!("removing j < i:");
+							debug!("- {interpretation1:?}");
+							debug!("- {interpretation2:?}");
+							interpretations.remove(j);
+							next = j;
+							break;
+						}
+						if query2.symbolic_value.starts_with(&query1.symbolic_value) {
+							assert!(query2.symbolic_value.len() > query1.symbolic_value.len());
+							debug!("removing i < j:");
+							debug!("- {interpretation1:?}");
+							debug!("- {interpretation2:?}");
+							interpretations.swap(i, j);
+							interpretations.remove(j);
+							next = i + 1;
+							break;
+						}
+					}
+					j = next;
+				}
+				i += 1;
+			}
+			old_len = interpretations.len();
+		}
+	}
+
 	/// Re-numbers groups consecutively starting from `0`.
 	fn canonicalize(&mut self) {
 		let mut groups: BTreeMap<usize, usize> = BTreeMap::from([(0, 0)]);
@@ -310,6 +375,14 @@ impl SearchString {
 					continue;
 				}
 
+				// println!(
+				// 	"== Interpretations ({start}..{end}): {sub_view}, {}, {}, {}, {:?}, {:?}",
+				// 	sub_view.as_str() != &[SymbolicChar::WildcardStar],
+				// 	sub_view.as_str().first() == Some(&SymbolicChar::WildcardStar),
+				// 	sub_view.as_str().last() == Some(&SymbolicChar::WildcardStar),
+				// 	sub_view.as_str().first(),
+				// 	sub_view.as_str().last(),
+				// );
 				let single_token_interpretations: Vec<Interpretation> =
 					sub_view.single_token_interpretations(schema, group);
 
@@ -337,10 +410,6 @@ impl SearchString {
 				interpretations_up_to_position[end - 1]
 					.iter_mut()
 					.for_each(Interpretation::canonicalize);
-				Interpretation::dedup(&mut interpretations_up_to_position[end - 1]);
-				// for i in interpretations_up_to_position[end - 1].iter() {
-				// 	println!("- {i:?}");
-				// }
 			}
 
 			interpretations_up_to_position[end - 1]
@@ -351,62 +420,9 @@ impl SearchString {
 		let mut interpretations: Vec<Interpretation> = interpretations_up_to_position.pop().unwrap();
 		// interpretations.iter_mut().for_each(Interpretation::canonicalize);
 		// Interpretation::dedup(&mut interpretations);
+		Interpretation::dedup2(&mut interpretations);
 
-		let mut old_len: usize = 0;
-		while old_len != interpretations.len() {
-			let mut i: usize = 0;
-			while i < interpretations.len() {
-				debug!("== {i} / {}", interpretations.len());
-				let mut j: usize = i + 1;
-				while j < interpretations.len() {
-					let interpretation1: &Interpretation = &interpretations[i];
-					let interpretation2: &Interpretation = &interpretations[j];
-					let mut next: usize = j + 1;
-					for (query1, query2) in
-						std::iter::zip(interpretation1.sub_queries.iter(), interpretation2.sub_queries.iter())
-					{
-						if query1.is_static_text() && query2.is_static_text() {
-							if query1.symbolic_value == query2.symbolic_value {
-								continue;
-							} else {
-								break;
-							}
-						}
-						if query1.rule_idx != query2.rule_idx {
-							break;
-						}
-						if query1.group != query2.group {
-							break;
-						}
-						if query1.symbolic_value == query2.symbolic_value {
-							continue;
-						}
-						if query1.symbolic_value.starts_with(&query2.symbolic_value) {
-							assert!(query1.symbolic_value.len() > query2.symbolic_value.len());
-							debug!("removing j < i:");
-							debug!("- {interpretation1:?}");
-							debug!("- {interpretation2:?}");
-							interpretations.remove(j);
-							next = j;
-							break;
-						}
-						if query2.symbolic_value.starts_with(&query1.symbolic_value) {
-							assert!(query2.symbolic_value.len() > query1.symbolic_value.len());
-							debug!("removing i < j:");
-							debug!("- {interpretation1:?}");
-							debug!("- {interpretation2:?}");
-							interpretations.swap(i, j);
-							interpretations.remove(j);
-							next = i + 1;
-							break;
-						}
-					}
-					j = next;
-				}
-				i += 1;
-			}
-			old_len = interpretations.len();
-		}
+		// println!("=== done {}", interpretations.len());
 
 		interpretations
 	}
@@ -433,7 +449,9 @@ impl<'a> SearchStringView<'a> {
 	fn single_token_interpretations(&self, schema: &Schema, group: usize) -> Vec<Interpretation> {
 		assert!(!self.is_empty());
 
-		let extended: Self = self.extend_with_greedy_wildcards();
+		let extended: Self = self.extend_to_greedy_wildcards();
+
+		// println!("- {self:?} extends to {extended:?}");
 
 		let mut interpretations: Vec<Interpretation> = Vec::new();
 
@@ -468,7 +486,7 @@ impl<'a> SearchStringView<'a> {
 		interpretations
 	}
 
-	fn extend_with_greedy_wildcards(&self) -> Self {
+	fn extend_to_greedy_wildcards(&self) -> Self {
 		let mut new_start: usize = self.start;
 		let mut new_end: usize = self.end;
 
@@ -503,6 +521,41 @@ impl<'a> SearchStringView<'a> {
 			self.as_str()
 				.iter()
 				.map(SymbolicChar::to_regex)
+				// .chain(std::iter::once(Regex::Capture(SubRule {
+				// 	name: String::new(),
+				// 	regex: Box::new(Regex::Sequence(Vec::new())),
+				// 	id: NonZero::<u16>::MAX,
+				// 	parent_id: None,
+				// 	descendents: 0,
+				// 	qualified_name: String::new(),
+				// })))
+				// .chain(self.full_string.0[self.end..extra].iter().map(SymbolicChar::to_regex))
+				// .chain(std::iter::once(Regex::Alternation(vec![
+				// 	Regex::Capture(SubRule {
+				// 		name: String::new(),
+				// 		regex: Box::new(Regex::Sequence(Vec::new())),
+				// 		id: NonZero::<u16>::MAX,
+				// 		parent_id: None,
+				// 		descendents: 0,
+				// 		qualified_name: String::new(),
+				// 	}),
+				// 	Regex::Sequence(
+				// 		self.full_string.0[self.end..extra]
+				// 			.iter()
+				// 			.map(SymbolicChar::to_regex)
+				// 			.collect::<Vec<_>>(),
+				// 	),
+				// ])))
+				// .chain(std::iter::once(Regex::BoundedRepetition {
+				// 	min: 0,
+				// 	max: 1,
+				// 	item: Box::new(Regex::Sequence(
+				// 		self.full_string.0[self.end..extra]
+				// 			.iter()
+				// 			.map(SymbolicChar::to_regex)
+				// 			.collect::<Vec<_>>(),
+				// 	)),
+				// }))
 				.collect::<Vec<_>>(),
 		)
 	}
@@ -540,6 +593,14 @@ impl<'a> SearchStringView<'a> {
 
 		let search_nfa: Tnfa = Tnfa::for_regex(&self.to_regex());
 
+		// println!(
+		// 	"== query ({}..{}..{}) {:?}, {:?}",
+		// 	self.start,
+		// 	self.end,
+		// 	extra,
+		// 	self,
+		// 	self.to_regex(extra)
+		// );
 		let intersection: Tnfa = nfa.intersect(&search_nfa);
 		for path in intersection.compute_paths() {
 			let mut sub_queries: Vec<SubQuery> = Vec::new();
@@ -813,14 +874,15 @@ impl InterpretationPrefix {
 			.add_interpretation(&sub_queries[1..]);
 	}
 
-	fn print(&self, indent: String) {
+	pub fn print(&self, indent: usize) {
 		for (sub_query, successors) in self.successors.iter() {
 			println!(
-				"{indent}- {sub_query:?} ({} -> {})",
+				"{:\t>indent$}- {sub_query:?} ({} -> {})",
+				"",
 				successors.len(),
 				successors.total_len()
 			);
-			successors.print(indent.clone() + "\t");
+			successors.print(indent + 1);
 		}
 	}
 }

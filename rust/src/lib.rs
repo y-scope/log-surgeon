@@ -2,6 +2,8 @@
 #[macro_use(debug)]
 extern crate tracing;
 
+#[macro_use]
+pub mod utils;
 pub mod dfa;
 pub mod ffi;
 pub mod interval_tree;
@@ -13,7 +15,6 @@ pub mod parser;
 pub mod regex;
 pub mod schema;
 pub mod search;
-pub mod utils;
 
 pub mod c_interface;
 #[cfg(feature = "python")]

@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <optional>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -27,6 +28,9 @@ public:
      * @param schema An owned`Schema*` (takes ownership).
      */
     ParserHandle(Schema* schema) : ParserHandle{} {
+        if (nullptr == schema) {
+            throw std::invalid_argument("schema must not be null");
+        }
         m_parser = log_surgeon_parser_new(schema);
         m_event = log_surgeon_log_event_new();
     }

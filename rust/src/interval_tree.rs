@@ -199,6 +199,13 @@ where
 		}
 		self.check_invariants();
 	}
+
+	pub fn retain<P>(&mut self, predicate: P)
+	where
+		P: FnMut(&(Interval<T>, V)) -> bool,
+	{
+		self.intervals.retain(predicate);
+	}
 }
 
 impl<T: Number, V: Clone> IntervalTree<T, V>

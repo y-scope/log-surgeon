@@ -99,6 +99,7 @@ impl std::fmt::Display for Escaped {
 			// we pass through quotes as is.
 			ch.fmt(fmt)
 		} else {
+			// `\t`, `\r`, `\n`, `\\`, non-printable ASCII, non-ASCII unicode characters.
 			ch.escape_default().fmt(fmt)
 		}
 	}
