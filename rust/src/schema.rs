@@ -2,6 +2,7 @@ mod schema_file;
 
 use std::collections::BTreeMap;
 use std::num::NonZero;
+use std::rc::Rc;
 
 use crate::dfa::Tdfa;
 use crate::nfa::Tnfa;
@@ -12,7 +13,7 @@ use crate::regex::SubRule;
 
 #[derive(Debug, Clone)]
 pub struct SchemaBuilder {
-	rules_by_priority: BTreeMap<i32, Vec<(String, AnchoredRegex)>>,
+	rules_by_priority: BTreeMap<i32, Vec<(Rc<str>, AnchoredRegex)>>,
 	delimiters: String,
 	anchor_ch: char,
 }
@@ -29,7 +30,9 @@ pub struct Schema {
 
 	pub delimiters: String,
 
+	/// TDFA used for lexing/parsing.
 	pub main_dfa: Tdfa,
+	/// TNFA used for search.
 	pub main_nfa: Tnfa,
 
 	/// Derived from `delimiters`;
@@ -50,7 +53,7 @@ impl PartialEq for Schema {
 #[derive(Debug, Clone)]
 pub struct RootRule {
 	pub idx: RuleIdx,
-	pub name: String,
+	pub name: Rc<str>,
 	/// Priority level given by the user.
 	pub priority: i32,
 
@@ -73,11 +76,12 @@ impl PartialEq for RootRule {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RuleInfo {
 	pub root_idx: RuleIdx,
-	pub root_name: String,
+	pub root_name: Rc<str>,
 
+	/// If this is not a root rule, additional sub-rule info.
 	pub maybe_sub_rule: Option<SubRule>,
 
-	pub fully_qualified_name: String,
+	pub fully_qualified_name: Rc<str>,
 }
 
 /// Index in the schema, offset by 1.
@@ -124,7 +128,7 @@ impl SchemaBuilder {
 		regex: RegexOrPattern,
 	) -> Result<&mut Self, RegexOrPattern::Error>
 	where
-		LikeString: Into<String>,
+		LikeString: Into<Rc<str>>,
 		RegexOrPattern: IntoRegex,
 	{
 		self.add_rule_with_priority(0, name, regex)
@@ -144,16 +148,16 @@ impl SchemaBuilder {
 		regex: RegexOrPattern,
 	) -> Result<&mut Self, RegexOrPattern::Error>
 	where
-		LikeString: Into<String>,
+		LikeString: Into<Rc<str>>,
 		RegexOrPattern: IntoRegex,
 	{
-		let name: String = name.into();
+		let name: Rc<str> = name.into();
 		assert!(!name.is_empty());
-		assert_ne!(name, "delimiters");
+		assert_ne!(&*name, "delimiters");
 
 		let regex: AnchoredRegex = regex.into()?;
 
-		let rules: &mut Vec<(String, AnchoredRegex)> = self.rules_by_priority.entry(priority).or_insert_with(Vec::new);
+		let rules: &mut Vec<(Rc<str>, AnchoredRegex)> = self.rules_by_priority.entry(priority).or_insert_with(Vec::new);
 
 		rules.push((name, regex));
 
@@ -217,7 +221,7 @@ impl Schema {
 		if let Some(first) = capture_names.first().copied() {
 			let mut possibilities: Vec<(RuleIdx, SubRule, Regex)> = Vec::new();
 			for rule in self.rules.iter() {
-				if rule.name != rule_name {
+				if &*rule.name != rule_name {
 					continue;
 				}
 				Self::find_capture(&rule.regex.inner, first, &capture_names[1..], &mut |info, regex| {
@@ -229,7 +233,7 @@ impl Schema {
 			Some(VariableOrCaptures::Variable(
 				self.rules
 					.iter()
-					.filter(|rule| rule.name == rule_name)
+					.filter(|rule| &*rule.name == rule_name)
 					.map(|rule| (rule.idx, rule.regex.inner.clone()))
 					.collect::<Vec<_>>(),
 			))
@@ -272,7 +276,7 @@ impl std::ops::Index<RuleIdx> for Schema {
 }
 
 impl RootRule {
-	pub fn new(idx: RuleIdx, name: String, priority: i32, regex: AnchoredRegex) -> Self {
+	pub fn new(idx: RuleIdx, name: Rc<str>, priority: i32, regex: AnchoredRegex) -> Self {
 		let mut rule_info: Vec<RuleInfo> = Vec::with_capacity(1 + regex.inner.count_captures());
 		rule_info.push(RuleInfo {
 			root_idx: idx,
@@ -292,7 +296,7 @@ impl RootRule {
 						root_idx: idx,
 						root_name: name.clone(),
 						maybe_sub_rule: Some(sub_rule.clone()),
-						fully_qualified_name: name.clone() + &sub_rule.qualified_name,
+						fully_qualified_name: Rc::from(format!("{}{}", name, sub_rule.qualified_name)),
 					});
 					stack.push(&sub_rule.regex);
 				},

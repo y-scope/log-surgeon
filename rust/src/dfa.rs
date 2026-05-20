@@ -227,7 +227,7 @@ impl Tdfa {
 		);
 
 		for (start, stop) in self.tag_pairs.iter().enumerate().rev() {
-			let sub_rule: &SubRule = self.tags[start].capture();
+			let sub_rule: &SubRule = self.tags[start].sub_rule();
 
 			let mut maybe_start: Option<NonZero<usize>> = registers[self.tags.len() + start];
 			let mut maybe_stop: Option<NonZero<usize>> = registers[self.tags.len() + stop];
@@ -417,7 +417,7 @@ impl Tdfa {
 				break;
 			}
 			let j: usize = i + nfa.tags().len() / 2;
-			assert_eq!(tag.capture(), nfa.tags()[j].capture());
+			assert_eq!(tag.sub_rule(), nfa.tags()[j].sub_rule());
 			tag_pairs.push(j);
 		}
 
@@ -432,7 +432,7 @@ impl Tdfa {
 
 		let initial: (Configuration, Vec<(Tag, SymbolicPosition)>) = (
 			Configuration {
-				nfa_state: nfa.begin(),
+				nfa_state: NfaIdx::BEGIN,
 				register_for_tag: (0..dfa.tags.len()).collect::<Vec<_>>(),
 				tag_path_in_closure: Vec::new(),
 			},

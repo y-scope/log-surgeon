@@ -23,6 +23,9 @@ struct Interpretation;
 /// and a sequence of [`Match`]s to interpolate.
 struct LogEvent;
 
+/// Newtype wrapper around a `usize` index.
+struct NfaIdx;
+
 struct Parser;
 
 struct RegexError;
@@ -95,6 +98,8 @@ struct Match {
     /// But it's not dangerous if you don't look at it.
     MatchFfiPointers ffi_pointers;
 };
+
+
 
 
 extern "C" {

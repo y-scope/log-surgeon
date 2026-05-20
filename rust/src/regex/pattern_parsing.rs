@@ -383,7 +383,7 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 			id: NonZero::<u16>::MAX,
 			parent_id: None,
 			descendents: 0,
-			qualified_name: String::new(),
+			qualified_name: Rc::from(""),
 		}),
 	))
 }

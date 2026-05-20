@@ -1,10 +1,13 @@
 use std::collections::BTreeMap;
-use std::num::NonZero;
+use std::rc::Rc;
 
+use crate::nfa::Path;
 use crate::nfa::PathComponent;
 use crate::nfa::Tnfa;
 use crate::regex::Regex;
 use crate::schema::RootRule;
+use crate::schema::RuleIdx;
+use crate::schema::RuleInfo;
 use crate::schema::Schema;
 use crate::schema::VariableOrCaptures;
 
@@ -60,23 +63,41 @@ impl std::fmt::Debug for Interpretation {
 #[derive(Clone)]
 pub struct SubQuery {
 	pub group: usize,
-	pub rule_idx: Option<NonZero<u16>>,
-	pub rule_name: String,
-	pub qualified_name: String,
-	pub value: String,
+	pub rule_idx: Option<RuleIdx>,
+	pub fully_qualified_name: Rc<str>,
 	pub symbolic_value: Vec<SymbolicChar>,
+	pub string_value: String,
+}
+
+impl std::fmt::Debug for SubQuery {
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		if let Some(rule_idx) = self.rule_idx {
+			fmt.write_fmt(format_args!(
+				"({}:?<{}:{}>{})",
+				self.group, rule_idx, self.fully_qualified_name, self.string_value,
+			))
+		} else {
+			fmt.write_str(&self.string_value)
+		}
+	}
 }
 
 impl Eq for SubQuery {}
 
 impl Ord for SubQuery {
 	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-		(&self.group, &self.rule_idx, &self.qualified_name, &self.value).cmp(&(
-			&other.group,
-			&other.rule_idx,
-			&other.qualified_name,
-			&other.value,
-		))
+		(
+			&self.group,
+			&self.rule_idx,
+			&self.fully_qualified_name,
+			&self.symbolic_value,
+		)
+			.cmp(&(
+				&other.group,
+				&other.rule_idx,
+				&other.fully_qualified_name,
+				&other.symbolic_value,
+			))
 	}
 }
 
@@ -89,19 +110,6 @@ impl PartialOrd for SubQuery {
 impl PartialEq for SubQuery {
 	fn eq(&self, other: &Self) -> bool {
 		self.cmp(other).is_eq()
-	}
-}
-
-impl std::fmt::Debug for SubQuery {
-	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		if let Some(rule_idx) = self.rule_idx {
-			fmt.write_fmt(format_args!(
-				"({}:?<{}:{}>{})",
-				self.group, rule_idx, self.qualified_name, self.value,
-			))
-		} else {
-			fmt.write_str(&self.value)
-		}
 	}
 }
 
@@ -135,7 +143,7 @@ impl std::fmt::Display for SearchStringView<'_> {
 }
 
 impl Interpretation {
-	fn dedup(interpretations: &mut Vec<Self>) {
+	fn dedup_covered_interpretations(interpretations: &mut Vec<Self>) {
 		interpretations.sort();
 		interpretations.dedup();
 
@@ -173,7 +181,7 @@ impl Interpretation {
 		}
 	}
 
-	fn dedup2(interpretations: &mut Vec<Self>) {
+	fn dedup_non_greedy_interpretations(interpretations: &mut Vec<Self>) {
 		let mut old_len: usize = 0;
 		while old_len != interpretations.len() {
 			let mut i: usize = 0;
@@ -296,15 +304,13 @@ impl SearchString {
 		&self.0
 	}
 
-	pub fn interpretations_for_name(&self, schema: &Schema, name: &str) -> Vec<Interpretation> {
+	pub fn get_interpretations(&self, schema: &Schema, name: &str) -> Vec<Interpretation> {
 		let Some(rows): Option<VariableOrCaptures<Regex>> = schema.regexes_for_name(name) else {
 			return Vec::new();
 		};
 
 		if !name.is_empty() {
-			return self
-				.view(0, self.0.len())
-				.interpretations_for_name_internal(schema, &rows, 0);
+			return self.view(0, self.0.len()).interpretations_for_name(schema, &rows, 0);
 		}
 
 		self.full_log_interpretations(schema)
@@ -358,7 +364,8 @@ impl SearchString {
 		}
 
 		let mut interpretations_up_to_position: Vec<Vec<Interpretation>> = vec![Vec::new(); self.0.len()];
-		let mut group: usize = 0;
+		// Group `0` for static text.
+		let mut group: usize = 1;
 
 		for end in 1..=self.0.len() {
 			for start in 0..end {
@@ -367,6 +374,7 @@ impl SearchString {
 				}
 
 				let sub_view: SearchStringView<'_> = self.view(start, end);
+				// println!("== {start}..{end} /{}: {sub_view:?}", self.0.len());
 
 				if (sub_view.as_str().len() > 1)
 					&& ((sub_view.as_str().first() == Some(&SymbolicChar::WildcardStar))
@@ -407,9 +415,6 @@ impl SearchString {
 						}
 					}
 				}
-				interpretations_up_to_position[end - 1]
-					.iter_mut()
-					.for_each(Interpretation::canonicalize);
 			}
 
 			interpretations_up_to_position[end - 1]
@@ -418,9 +423,9 @@ impl SearchString {
 		}
 
 		let mut interpretations: Vec<Interpretation> = interpretations_up_to_position.pop().unwrap();
-		// interpretations.iter_mut().for_each(Interpretation::canonicalize);
+		interpretations.iter_mut().for_each(Interpretation::canonicalize);
 		// Interpretation::dedup(&mut interpretations);
-		Interpretation::dedup2(&mut interpretations);
+		Interpretation::dedup_non_greedy_interpretations(&mut interpretations);
 
 		// println!("=== done {}", interpretations.len());
 
@@ -457,7 +462,7 @@ impl<'a> SearchStringView<'a> {
 
 		if self.as_str() == &[SymbolicChar::WildcardStar] {
 			interpretations.push(Interpretation {
-				sub_queries: vec![SubQuery::new_static_text(&[SymbolicChar::WildcardStar])],
+				sub_queries: vec![SubQuery::new_static_text(vec![SymbolicChar::WildcardStar])],
 			});
 			return interpretations;
 		}
@@ -469,7 +474,7 @@ impl<'a> SearchStringView<'a> {
 
 		if has_wildcard || potential_interpretations.is_empty() {
 			interpretations.push(Interpretation {
-				sub_queries: vec![SubQuery::new_static_text(extended.as_str())],
+				sub_queries: vec![SubQuery::new_static_text(extended.as_str().to_owned())],
 			});
 		}
 
@@ -515,52 +520,24 @@ impl<'a> SearchStringView<'a> {
 		&self.full_string.0[self.start..self.end]
 	}
 
-	// TODO refactor with full log search
-	fn to_regex(&self) -> Regex {
-		Regex::Sequence(
-			self.as_str()
-				.iter()
-				.map(SymbolicChar::to_regex)
-				// .chain(std::iter::once(Regex::Capture(SubRule {
-				// 	name: String::new(),
-				// 	regex: Box::new(Regex::Sequence(Vec::new())),
-				// 	id: NonZero::<u16>::MAX,
-				// 	parent_id: None,
-				// 	descendents: 0,
-				// 	qualified_name: String::new(),
-				// })))
-				// .chain(self.full_string.0[self.end..extra].iter().map(SymbolicChar::to_regex))
-				// .chain(std::iter::once(Regex::Alternation(vec![
-				// 	Regex::Capture(SubRule {
-				// 		name: String::new(),
-				// 		regex: Box::new(Regex::Sequence(Vec::new())),
-				// 		id: NonZero::<u16>::MAX,
-				// 		parent_id: None,
-				// 		descendents: 0,
-				// 		qualified_name: String::new(),
-				// 	}),
-				// 	Regex::Sequence(
-				// 		self.full_string.0[self.end..extra]
-				// 			.iter()
-				// 			.map(SymbolicChar::to_regex)
-				// 			.collect::<Vec<_>>(),
-				// 	),
-				// ])))
-				// .chain(std::iter::once(Regex::BoundedRepetition {
-				// 	min: 0,
-				// 	max: 1,
-				// 	item: Box::new(Regex::Sequence(
-				// 		self.full_string.0[self.end..extra]
-				// 			.iter()
-				// 			.map(SymbolicChar::to_regex)
-				// 			.collect::<Vec<_>>(),
-				// 	)),
-				// }))
-				.collect::<Vec<_>>(),
-		)
+	fn surround_with_wildcards(&self) -> Vec<SymbolicChar> {
+		let mut symbols: Vec<SymbolicChar> = Vec::with_capacity(self.len() + 2);
+		if !self.starts_with(&[SymbolicChar::WildcardStar]) {
+			symbols.push(SymbolicChar::WildcardStar);
+		}
+		symbols.extend(self.iter().copied());
+		if !self.ends_with(&[SymbolicChar::WildcardStar]) {
+			symbols.push(SymbolicChar::WildcardStar);
+		}
+		symbols
 	}
 
-	fn interpretations_for_name_internal(
+	// TODO refactor with full log search
+	fn to_regex(&self) -> Regex {
+		Regex::Sequence(self.as_str().iter().map(SymbolicChar::to_regex).collect::<Vec<_>>())
+	}
+
+	fn interpretations_for_name(
 		&self,
 		schema: &Schema,
 		rows: &VariableOrCaptures<Regex>,
@@ -584,11 +561,15 @@ impl<'a> SearchStringView<'a> {
 			interpretations.extend(self.interpretations_for_nfa(schema, &rule_nfa, group).into_iter());
 		}
 
+		interpretations.sort();
+		interpretations.dedup();
+
 		// Interpretation::dedup(&mut interpretations);
 		interpretations
 	}
 
 	fn interpretations_for_nfa(&self, schema: &Schema, nfa: &Tnfa, group: usize) -> Vec<Interpretation> {
+		assert!(self.as_str() != &[SymbolicChar::WildcardStar]);
 		let mut interpretations: Vec<Interpretation> = Vec::new();
 
 		let search_nfa: Tnfa = Tnfa::for_regex(&self.to_regex());
@@ -602,55 +583,39 @@ impl<'a> SearchStringView<'a> {
 		// 	self.to_regex(extra)
 		// );
 		let intersection: Tnfa = nfa.intersect(&search_nfa);
-		for path in intersection.compute_paths() {
+		let (paths, rules_potentially_without_captures): (Vec<Path>, Vec<RuleIdx>) = intersection.compute_paths();
+		for path in paths.iter() {
 			let mut sub_queries: Vec<SubQuery> = Vec::new();
 
 			for token in path.iter() {
-				// TODO refactor new_static_text
 				match token {
-					PathComponent::Literal(_) => {
-						sub_queries.push(SubQuery {
-							group: 0,
-							rule_idx: None,
-							rule_name: String::new(),
-							qualified_name: String::new(),
-							value: token.to_query_string(),
-							symbolic_value: token.to_symbolic_chars(),
-						});
+					PathComponent::Literal(contents) => {
+						sub_queries.push(SubQuery::new_static_text(contents.clone()));
 					},
 					PathComponent::Capture {
 						rule_idx,
-						qualified_name,
-						..
+						maybe_sub_rule_id,
+						contents,
 					} => {
 						let rule: &RootRule = &schema[*rule_idx];
-						sub_queries.push(SubQuery {
-							group,
-							rule_idx: Some(rule.idx.get()),
-							rule_name: rule.name.clone(),
-							qualified_name: rule.name.clone() + qualified_name,
-							value: token.to_query_string(),
-							symbolic_value: token.to_symbolic_chars(),
-						});
-					},
-					PathComponent::QueryWildcard | PathComponent::PatternWildcard => {
-						sub_queries.push(SubQuery {
-							group: 0,
-							rule_idx: None,
-							rule_name: String::new(),
-							qualified_name: String::new(),
-							value: "*".to_owned(),
-							symbolic_value: vec![SymbolicChar::WildcardStar],
-						});
+						let rule_info: &RuleInfo = &rule[*maybe_sub_rule_id];
+						sub_queries.push(SubQuery::new(group, rule_info, contents.clone()));
 					},
 				}
 			}
 			interpretations.push(Interpretation { sub_queries });
 		}
+		for &rule_idx in rules_potentially_without_captures.iter() {
+			let rule: &RootRule = &schema[rule_idx];
+			let rule_info: &RuleInfo = &rule[None];
+			interpretations.push(Interpretation {
+				sub_queries: vec![SubQuery::new(group, rule_info, self.surround_with_wildcards())],
+			});
+		}
 
 		interpretations.iter_mut().for_each(Interpretation::condense);
 
-		Interpretation::dedup(&mut interpretations);
+		Interpretation::dedup_covered_interpretations(&mut interpretations);
 		interpretations
 	}
 }
@@ -722,11 +687,11 @@ impl Interpretation {
 			let previous: &SubQuery = &self.sub_queries[i - 1];
 			let current: &SubQuery = &self.sub_queries[i];
 			if previous.is_static_text() && current.is_static_text() {
-				let value: String = previous.value.clone() + &current.value;
 				let mut symbolic_value: Vec<SymbolicChar> = previous.symbolic_value.clone();
 				symbolic_value.extend(current.symbolic_value.iter().copied());
-				self.sub_queries[i - 1].value = value;
+				let string_value: String = previous.string_value.clone() + &current.string_value;
 				self.sub_queries[i - 1].symbolic_value = symbolic_value;
+				self.sub_queries[i - 1].string_value = string_value;
 				self.sub_queries.remove(i);
 			} else {
 				i += 1;
@@ -747,11 +712,11 @@ impl Interpretation {
 			if (*me_last.symbolic_value.last().unwrap() == SymbolicChar::WildcardStar)
 				&& (*suffix_first.symbolic_value.first().unwrap() == SymbolicChar::WildcardStar)
 			{
-				me_last.value.pop().unwrap();
 				me_last.symbolic_value.pop().unwrap();
+				me_last.string_value.pop().unwrap();
 			}
-			me_last.value.extend(suffix_first.value.drain(..));
 			me_last.symbolic_value.extend(suffix_first.symbolic_value.drain(..));
+			me_last.string_value.extend(suffix_first.string_value.drain(..));
 			self.sub_queries.extend(suffix.sub_queries.drain(1..));
 		} else {
 			self.sub_queries.extend(suffix.sub_queries.into_iter());
@@ -772,18 +737,32 @@ impl Interpretation {
 }
 
 impl SubQuery {
-	fn new_static_text(symbols: &[SymbolicChar]) -> Self {
-		// let is_all_wildcards: bool = symbols.iter().all(|&ch| ch == SymbolicChar::WildcardStar);
+	fn new_static_text(symbolic_value: Vec<SymbolicChar>) -> Self {
+		let string_value: String = symbolic_value.iter().fold(String::new(), |mut accum, &ch| {
+			accum.push_str(&ch.to_string());
+			accum
+		});
 		Self {
 			group: 0,
 			rule_idx: None,
-			rule_name: String::new(),
-			qualified_name: String::new(),
-			value: symbols.iter().fold(String::new(), |mut accum, &ch| {
-				accum.push_str(&ch.to_string());
-				accum
-			}),
-			symbolic_value: symbols.to_owned(),
+			fully_qualified_name: Rc::from(""),
+			symbolic_value,
+			string_value,
+		}
+	}
+
+	fn new(group: usize, rule_info: &RuleInfo, symbolic_value: Vec<SymbolicChar>) -> Self {
+		// TODO duplicated above
+		let string_value: String = symbolic_value.iter().fold(String::new(), |mut accum, &ch| {
+			accum.push_str(&ch.to_string());
+			accum
+		});
+		Self {
+			group,
+			rule_idx: Some(rule_info.root_idx),
+			fully_qualified_name: rule_info.fully_qualified_name.clone(),
+			symbolic_value,
+			string_value,
 		}
 	}
 
@@ -792,7 +771,9 @@ impl SubQuery {
 	}
 
 	fn subsumes(&self, other: &Self) -> bool {
-		if (self.group, self.rule_idx, &self.qualified_name) != (other.group, other.rule_idx, &other.qualified_name) {
+		if (self.group, self.rule_idx, &self.fully_qualified_name)
+			!= (other.group, other.rule_idx, &other.fully_qualified_name)
+		{
 			return false;
 		}
 		// Remark: Always has 1 subslice.
@@ -916,42 +897,37 @@ mod test {
 		let a: SubQuery = SubQuery {
 			group: 0,
 			rule_idx: None,
-			rule_name: String::new(),
-			qualified_name: String::new(),
-			value: String::new(),
+			fully_qualified_name: Rc::from(""),
 			symbolic_value: vec![SymbolicChar::Literal('a'), SymbolicChar::WildcardStar],
+			string_value: String::new(),
 		};
 		let b: SubQuery = SubQuery {
 			group: 0,
 			rule_idx: None,
-			rule_name: String::new(),
-			qualified_name: String::new(),
-			value: String::new(),
+			fully_qualified_name: Rc::from(""),
 			symbolic_value: vec![SymbolicChar::Literal('a')],
+			string_value: String::new(),
 		};
 		let c: SubQuery = SubQuery {
 			group: 0,
 			rule_idx: None,
-			rule_name: String::new(),
-			qualified_name: String::new(),
-			value: String::new(),
+			fully_qualified_name: Rc::from(""),
 			symbolic_value: vec![SymbolicChar::WildcardStar, SymbolicChar::Literal('a')],
+			string_value: String::new(),
 		};
 		let d: SubQuery = SubQuery {
 			group: 0,
 			rule_idx: None,
-			rule_name: String::new(),
-			qualified_name: String::new(),
-			value: String::new(),
+			fully_qualified_name: Rc::from(""),
 			symbolic_value: vec![SymbolicChar::Literal('a')],
+			string_value: String::new(),
 		};
 		let e: SubQuery = SubQuery {
 			group: 0,
 			rule_idx: None,
-			rule_name: String::new(),
-			qualified_name: String::new(),
-			value: String::new(),
+			fully_qualified_name: Rc::from(""),
 			symbolic_value: vec![SymbolicChar::WildcardStar],
+			string_value: String::new(),
 		};
 
 		assert!(a.subsumes(&b));
@@ -981,7 +957,7 @@ mod test {
 
 		let search: SearchString = SearchString::parse("a@com*").unwrap();
 
-		let interpretations: Vec<Interpretation> = search.interpretations_for_name(&schema, "");
+		let interpretations: Vec<Interpretation> = search.get_interpretations(&schema, "");
 
 		println!("=== Interpretations");
 		for interpretation in interpretations.iter() {
@@ -1012,7 +988,7 @@ mod test {
 	fn search_by_name(schema: &Schema, query: &str, name: &str) -> Vec<Interpretation> {
 		let query: SearchString = SearchString::parse(query).unwrap();
 
-		let interpretations: Vec<Interpretation> = query.interpretations_for_name(&schema, name);
+		let interpretations: Vec<Interpretation> = query.get_interpretations(&schema, name);
 
 		interpretations
 	}

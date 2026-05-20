@@ -220,4 +220,21 @@ mod test {
 
 		assert_eq!(schema, schema2);
 	}
+
+	#[test]
+	fn pattern_begins_or_ends_with_whitespace() {
+		let mut builder: SchemaBuilder = SchemaBuilder::new();
+
+		builder.add_rule("foo", r"hello ").unwrap();
+		builder.add_rule("foo", r" world").unwrap();
+
+		let schema: Schema = builder.build();
+
+		let serialized: String = schema.to_schema_definition();
+
+		let schema2: Schema = Schema::from_schema_definition(&serialized).unwrap();
+		let serialized2: String = schema2.to_schema_definition();
+
+		assert_eq!(serialized, serialized2);
+	}
 }
