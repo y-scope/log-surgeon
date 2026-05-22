@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.22.1)
 
+# Ensure submodules are initialized before building
 project(
     log_surgeon
     VERSION 0.0.1
