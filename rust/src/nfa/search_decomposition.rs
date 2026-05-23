@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::num::NonZero;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use super::*;
 use crate::search::SymbolicChar;
@@ -32,7 +32,7 @@ enum PathEdge {
 	Capture {
 		sub_rule_id: NonZero<u16>,
 		/// Exists for debugging.
-		qualified_name: Rc<str>,
+		qualified_name: Arc<str>,
 		is_start: bool,
 	},
 	/// Search query allows for any character.
@@ -741,9 +741,9 @@ impl Tnfa {
 		sccs: &[Vec<NfaIdx>],
 		data: &[TarjanSccData],
 		cache: &'a mut [Option<Vec<(NfaIdx, PartialPath, RuleIdx)>>],
-		finished2: &mut Vec<(PartialPath, RuleIdx)>,
+		finished: &mut Vec<(PartialPath, RuleIdx)>,
 	) -> Vec<(NfaIdx, PartialPath, RuleIdx)> {
-		let mut finished: Vec<(NfaIdx, PartialPath, RuleIdx)> = Vec::new();
+		let mut scc_finished: Vec<(NfaIdx, PartialPath, RuleIdx)> = Vec::new();
 
 		let mut stack: Vec<(&NfaState, PartialPath, BTreeSet<NfaIdx>)> = vec![(
 			entry,
@@ -789,12 +789,12 @@ impl Tnfa {
 								sccs,
 								data,
 								cache,
-								finished2,
+								finished,
 							);
 							for (end, mut remaining, rule) in partials.into_iter() {
 								remaining.push(PathEdge::PatternWildcard);
 								remaining.extend(path.iter().rev().cloned());
-								finished.push((end, remaining, rule));
+								scc_finished.push((end, remaining, rule));
 							}
 							continue;
 						}
@@ -825,10 +825,10 @@ impl Tnfa {
 				},
 			}
 		}
-		finished.sort();
-		finished.dedup();
+		scc_finished.sort();
+		scc_finished.dedup();
 		assert!(cache[entry.idx.0].is_none());
-		cache[entry.idx.0].insert(finished).clone()
+		cache[entry.idx.0].insert(scc_finished).clone()
 	}
 }
 

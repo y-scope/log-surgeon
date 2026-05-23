@@ -97,3 +97,24 @@ class TestRegression(unittest.TestCase):
 			n += 1
 
 		self.assertEqual(n, 3)
+
+	def test_all_anchors(self):
+		p = Parser()
+
+		p.set_delimiters(" \t\r\n")
+		p.add_variable_pattern("num", r"^[0-9]+$")
+		p.add_variable_pattern("word", r"^[a-z]+$")
+
+		p.compile()
+
+		text = "abc 123 def"
+
+		p.set_input_stream(text)
+
+		e = p.next_log_event()
+		self.assertIsNotNone(e)
+
+		self.assertEqual(len(e.variables), 3)
+		self.assertEqual(e.variables[0].text, "abc")
+		self.assertEqual(e.variables[1].text, "123")
+		self.assertEqual(e.variables[2].text, "def")

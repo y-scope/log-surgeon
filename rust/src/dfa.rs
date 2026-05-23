@@ -291,9 +291,7 @@ impl Tdfa {
 		input: &'input str,
 		last_was_delimited: u32,
 	) -> Option<MatchedRule<'input>> {
-		let Some(anchor_transition): Option<&Transition> = self.lookup_transition(0, last_was_delimited) else {
-			panic!("invalid first transition");
-		};
+		let anchor_transition: &Transition = self.lookup_transition(0, last_was_delimited)?;
 		let mut current_state: usize = anchor_transition.target;
 
 		let mut maybe_backup: Option<BackupState> = None;

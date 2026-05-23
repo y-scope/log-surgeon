@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::nfa::Path;
 use crate::nfa::PathComponent;
@@ -64,7 +64,7 @@ impl std::fmt::Debug for Interpretation {
 pub struct SubQuery {
 	pub group: usize,
 	pub rule_idx: Option<RuleIdx>,
-	pub fully_qualified_name: Rc<str>,
+	pub fully_qualified_name: Arc<str>,
 	pub symbolic_value: Vec<SymbolicChar>,
 	pub string_value: String,
 }
@@ -473,9 +473,11 @@ impl<'a> SearchStringView<'a> {
 			extended.interpretations_for_nfa(schema, &schema.main_nfa, group);
 
 		if has_wildcard || potential_interpretations.is_empty() {
-			interpretations.push(Interpretation {
-				sub_queries: vec![SubQuery::new_static_text(extended.as_str().to_owned())],
-			});
+			if extended.ends_with_delimiter(schema) {
+				interpretations.push(Interpretation {
+					sub_queries: vec![SubQuery::new_static_text(extended.as_str().to_owned())],
+				});
+			}
 		}
 
 		for interpretation in potential_interpretations.into_iter() {
@@ -609,7 +611,7 @@ impl<'a> SearchStringView<'a> {
 			let rule: &RootRule = &schema[rule_idx];
 			let rule_info: &RuleInfo = &rule[None];
 			interpretations.push(Interpretation {
-				sub_queries: vec![SubQuery::new(group, rule_info, self.surround_with_wildcards())],
+				sub_queries: vec![SubQuery::new(group, rule_info, self.as_str().to_owned())],
 			});
 		}
 
@@ -617,6 +619,13 @@ impl<'a> SearchStringView<'a> {
 
 		Interpretation::dedup_covered_interpretations(&mut interpretations);
 		interpretations
+	}
+
+	fn ends_with_delimiter(&self, schema: &Schema) -> bool {
+		let SymbolicChar::Literal(ch): SymbolicChar = *self.as_str().last().unwrap() else {
+			return true;
+		};
+		schema.delimiters.contains(ch)
 	}
 }
 
@@ -745,7 +754,7 @@ impl SubQuery {
 		Self {
 			group: 0,
 			rule_idx: None,
-			fully_qualified_name: Rc::from(""),
+			fully_qualified_name: Arc::from(""),
 			symbolic_value,
 			string_value,
 		}
@@ -897,35 +906,35 @@ mod test {
 		let a: SubQuery = SubQuery {
 			group: 0,
 			rule_idx: None,
-			fully_qualified_name: Rc::from(""),
+			fully_qualified_name: Arc::from(""),
 			symbolic_value: vec![SymbolicChar::Literal('a'), SymbolicChar::WildcardStar],
 			string_value: String::new(),
 		};
 		let b: SubQuery = SubQuery {
 			group: 0,
 			rule_idx: None,
-			fully_qualified_name: Rc::from(""),
+			fully_qualified_name: Arc::from(""),
 			symbolic_value: vec![SymbolicChar::Literal('a')],
 			string_value: String::new(),
 		};
 		let c: SubQuery = SubQuery {
 			group: 0,
 			rule_idx: None,
-			fully_qualified_name: Rc::from(""),
+			fully_qualified_name: Arc::from(""),
 			symbolic_value: vec![SymbolicChar::WildcardStar, SymbolicChar::Literal('a')],
 			string_value: String::new(),
 		};
 		let d: SubQuery = SubQuery {
 			group: 0,
 			rule_idx: None,
-			fully_qualified_name: Rc::from(""),
+			fully_qualified_name: Arc::from(""),
 			symbolic_value: vec![SymbolicChar::Literal('a')],
 			string_value: String::new(),
 		};
 		let e: SubQuery = SubQuery {
 			group: 0,
 			rule_idx: None,
-			fully_qualified_name: Rc::from(""),
+			fully_qualified_name: Arc::from(""),
 			symbolic_value: vec![SymbolicChar::WildcardStar],
 			string_value: String::new(),
 		};

@@ -2,7 +2,7 @@ mod schema_file;
 
 use std::collections::BTreeMap;
 use std::num::NonZero;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::dfa::Tdfa;
 use crate::nfa::Tnfa;
@@ -13,7 +13,7 @@ use crate::regex::SubRule;
 
 #[derive(Debug, Clone)]
 pub struct SchemaBuilder {
-	rules_by_priority: BTreeMap<i32, Vec<(Rc<str>, AnchoredRegex)>>,
+	rules_by_priority: BTreeMap<i32, Vec<(Arc<str>, AnchoredRegex)>>,
 	delimiters: String,
 	anchor_ch: char,
 }
@@ -53,7 +53,7 @@ impl PartialEq for Schema {
 #[derive(Debug, Clone)]
 pub struct RootRule {
 	pub idx: RuleIdx,
-	pub name: Rc<str>,
+	pub name: Arc<str>,
 	/// Priority level given by the user.
 	pub priority: i32,
 
@@ -76,12 +76,12 @@ impl PartialEq for RootRule {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RuleInfo {
 	pub root_idx: RuleIdx,
-	pub root_name: Rc<str>,
+	pub root_name: Arc<str>,
 
 	/// If this is not a root rule, additional sub-rule info.
 	pub maybe_sub_rule: Option<SubRule>,
 
-	pub fully_qualified_name: Rc<str>,
+	pub fully_qualified_name: Arc<str>,
 }
 
 /// Index in the schema, offset by 1.
@@ -128,7 +128,7 @@ impl SchemaBuilder {
 		regex: RegexOrPattern,
 	) -> Result<&mut Self, RegexOrPattern::Error>
 	where
-		LikeString: Into<Rc<str>>,
+		LikeString: Into<Arc<str>>,
 		RegexOrPattern: IntoRegex,
 	{
 		self.add_rule_with_priority(0, name, regex)
@@ -148,16 +148,17 @@ impl SchemaBuilder {
 		regex: RegexOrPattern,
 	) -> Result<&mut Self, RegexOrPattern::Error>
 	where
-		LikeString: Into<Rc<str>>,
+		LikeString: Into<Arc<str>>,
 		RegexOrPattern: IntoRegex,
 	{
-		let name: Rc<str> = name.into();
+		let name: Arc<str> = name.into();
 		assert!(!name.is_empty());
 		assert_ne!(&*name, "delimiters");
 
 		let regex: AnchoredRegex = regex.into()?;
 
-		let rules: &mut Vec<(Rc<str>, AnchoredRegex)> = self.rules_by_priority.entry(priority).or_insert_with(Vec::new);
+		let rules: &mut Vec<(Arc<str>, AnchoredRegex)> =
+			self.rules_by_priority.entry(priority).or_insert_with(Vec::new);
 
 		rules.push((name, regex));
 
@@ -276,7 +277,7 @@ impl std::ops::Index<RuleIdx> for Schema {
 }
 
 impl RootRule {
-	pub fn new(idx: RuleIdx, name: Rc<str>, priority: i32, regex: AnchoredRegex) -> Self {
+	pub fn new(idx: RuleIdx, name: Arc<str>, priority: i32, regex: AnchoredRegex) -> Self {
 		let mut rule_info: Vec<RuleInfo> = Vec::with_capacity(1 + regex.inner.count_captures());
 		rule_info.push(RuleInfo {
 			root_idx: idx,
@@ -296,7 +297,7 @@ impl RootRule {
 						root_idx: idx,
 						root_name: name.clone(),
 						maybe_sub_rule: Some(sub_rule.clone()),
-						fully_qualified_name: Rc::from(format!("{}{}", name, sub_rule.qualified_name)),
+						fully_qualified_name: Arc::from(format!("{}{}", name, sub_rule.qualified_name)),
 					});
 					stack.push(&sub_rule.regex);
 				},

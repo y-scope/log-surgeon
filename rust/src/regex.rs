@@ -2,7 +2,7 @@ mod pattern_parsing;
 pub use pattern_parsing::*;
 
 use std::num::NonZero;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::utils::Escaped;
 
@@ -66,7 +66,7 @@ pub struct SubRule {
 
 	/// Qualified name w.r.t captures including the leading dot;
 	/// a top-level capture is ".a", a second-level capture is ".a.b".
-	pub qualified_name: Rc<str>,
+	pub qualified_name: Arc<str>,
 }
 
 impl IntoRegex for AnchoredRegex {
@@ -202,15 +202,15 @@ impl Regex {
 	/// so it naturally works as a placeholder/invalid value.
 	///
 	/// Invariant: `parent_id < id`.
-	fn number_captures(&mut self, id: &mut NonZero<u16>, stack: &mut Vec<(NonZero<u16>, Rc<str>)>) -> Option<usize> {
+	fn number_captures(&mut self, id: &mut NonZero<u16>, stack: &mut Vec<(NonZero<u16>, Arc<str>)>) -> Option<usize> {
 		let mut bread: usize = 0;
 		match self {
 			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
 			Self::Capture(sub_rule) => {
-				let maybe_parent: Option<&(NonZero<u16>, Rc<str>)> = stack.last();
+				let maybe_parent: Option<&(NonZero<u16>, Arc<str>)> = stack.last();
 				sub_rule.parent_id = maybe_parent.map(|(id, _)| *id);
 				sub_rule.id = *id;
-				sub_rule.qualified_name = Rc::from(format!(
+				sub_rule.qualified_name = Arc::from(format!(
 					"{}.{}",
 					maybe_parent.map_or("", |(_, name)| name),
 					sub_rule.name
