@@ -21,6 +21,8 @@ pub enum SchemaParsingErrorKind {
 	EmptyDelimiters,
 	InvalidDelimiters,
 	InvalidPattern,
+	DuplicatePlaceholder(String),
+	UndefinedPlaceholder(String),
 }
 
 /// Currently, this is (almost) trivial,
@@ -29,6 +31,7 @@ pub enum SchemaParsingErrorKind {
 enum SchemaFileLine<'a> {
 	Delimiters(String),
 	Rule(i32, &'a str, &'a str),
+	Placeholder(&'a str, &'a str),
 }
 
 impl Schema {
@@ -62,6 +65,7 @@ impl Schema {
 
 	pub fn from_schema_definition(contents: &str) -> Result<Self, SchemaFileError> {
 		let mut builder: SchemaBuilder = SchemaBuilder::new();
+		let mut placeholders: BTreeMap<String, Regex> = BTreeMap::new();
 		for (line_offset, line) in contents.lines().enumerate() {
 			let line: &str = line.trim();
 
@@ -85,13 +89,42 @@ impl Schema {
 					}
 					builder.set_delimiters(delimiters);
 				},
-				SchemaFileLine::Rule(priority, name, pattern) => {
-					builder
-						.add_rule_with_priority(priority, name, pattern)
+				SchemaFileLine::Placeholder(name, pattern) => {
+					let regex: Regex = Regex::from_pattern(pattern)
 						.map_err(|_| SchemaFileError {
 							line_offset,
 							kind: SchemaParsingErrorKind::InvalidPattern,
+						})?
+						.inner;
+					let old: Option<Regex> = placeholders.insert(name.to_owned(), regex);
+					if old.is_some() {
+						return Err(SchemaFileError {
+							line_offset,
+							kind: SchemaParsingErrorKind::DuplicatePlaceholder(name.to_owned()),
+						});
+					}
+				},
+				SchemaFileLine::Rule(priority, name, pattern) => {
+					let mut regex: AnchoredRegex = Regex::from_pattern(pattern).map_err(|_| SchemaFileError {
+						line_offset,
+						kind: SchemaParsingErrorKind::InvalidPattern,
+					})?;
+					regex
+						.inner
+						.replace_with_placeholders(&mut |name| placeholders.get(name).cloned())
+						.map_err(|_| SchemaFileError {
+							line_offset,
+							kind: SchemaParsingErrorKind::UndefinedPlaceholder(name.to_owned()),
 						})?;
+					// TODO code duplication with normal pattern parsing path
+					regex
+						.inner
+						.number_captures(&mut { NonZero::<u16>::MIN }, &mut Vec::new())
+						.ok_or(SchemaFileError {
+							line_offset,
+							kind: SchemaParsingErrorKind::InvalidPattern,
+						})?;
+					let Ok(_) = builder.add_rule_with_priority(priority, name, regex);
 				},
 			}
 		}
@@ -103,6 +136,12 @@ impl Schema {
 fn parse_line(input: &str) -> Result<SchemaFileLine<'_>, SchemaParsingErrorKind> {
 	use nom::character::complete::char as char_parser;
 	use nom::combinator::opt;
+
+	let (input, is_placeholder): (&str, bool) = if let Some(suffix) = input.strip_prefix('!') {
+		(suffix, true)
+	} else {
+		(input, false)
+	};
 
 	let (input, name): (&str, &str) = parse_name(input).map_err(|_| SchemaParsingErrorKind::InvalidName)?;
 
@@ -126,6 +165,8 @@ fn parse_line(input: &str) -> Result<SchemaFileLine<'_>, SchemaParsingErrorKind>
 	if name == "delimiters" {
 		let delimiters: String = parse_delimiters(input).map_err(|_| SchemaParsingErrorKind::InvalidDelimiters)?;
 		Ok(SchemaFileLine::Delimiters(delimiters))
+	} else if is_placeholder {
+		Ok(SchemaFileLine::Placeholder(name, input))
 	} else {
 		Ok(SchemaFileLine::Rule(priority, name, input))
 	}
@@ -236,5 +277,24 @@ mod test {
 		let serialized2: String = schema2.to_schema_definition();
 
 		assert_eq!(serialized, serialized2);
+	}
+
+	#[test]
+	fn test_placeholders() {
+		let definition1: &str = r#"
+		!p1: [a-z]
+		!p2: [0-9]
+
+		foo: (?<p1>)(?<p2>)
+		"#;
+
+		let definition2: &str = r#"
+		foo: (?<p1>[a-z])(?<p2>[0-9])
+		"#;
+
+		let schema1: Schema = Schema::from_schema_definition(definition1).unwrap();
+		let schema2: Schema = Schema::from_schema_definition(definition2).unwrap();
+
+		assert_eq!(schema1, schema2);
 	}
 }

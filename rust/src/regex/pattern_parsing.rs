@@ -372,7 +372,11 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 	let (input, name): (&str, &str) =
 		cut(combinator_surrounded_cut::<'<', '>', _, _>(parse_capture_name)).parse(input)?;
 
-	let (input, regex): (&str, Regex) = parse_alternation(input)?;
+	let (input, regex): (&str, Regex) = if input.starts_with(')') {
+		(input, Regex::Sequence(Vec::new()))
+	} else {
+		parse_alternation(input)?
+	};
 
 	Ok((
 		input,

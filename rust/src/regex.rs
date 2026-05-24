@@ -202,7 +202,11 @@ impl Regex {
 	/// so it naturally works as a placeholder/invalid value.
 	///
 	/// Invariant: `parent_id < id`.
-	fn number_captures(&mut self, id: &mut NonZero<u16>, stack: &mut Vec<(NonZero<u16>, Arc<str>)>) -> Option<usize> {
+	pub fn number_captures(
+		&mut self,
+		id: &mut NonZero<u16>,
+		stack: &mut Vec<(NonZero<u16>, Arc<str>)>,
+	) -> Option<usize> {
 		let mut bread: usize = 0;
 		match self {
 			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
@@ -233,6 +237,35 @@ impl Regex {
 			},
 		}
 		Some(bread)
+	}
+
+	pub fn replace_with_placeholders<F>(&mut self, get_placeholder: &mut F) -> Result<(), &str>
+	where
+		F: FnMut(&str) -> Option<Self>,
+	{
+		match self {
+			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => Ok(()),
+			Self::Capture(sub_rule) => {
+				if let Self::Sequence(items) = &*sub_rule.regex
+					&& items.is_empty()
+				{
+					let Some(placeholder): Option<Regex> = get_placeholder(&sub_rule.name) else {
+						return Err(&sub_rule.name);
+					};
+					sub_rule.regex = Box::new(placeholder);
+				}
+				Ok(())
+			},
+			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
+				item.replace_with_placeholders(get_placeholder)
+			},
+			Self::Sequence(items) | Self::Alternation(items) => {
+				for sub_item in items.iter_mut() {
+					sub_item.replace_with_placeholders(get_placeholder)?;
+				}
+				Ok(())
+			},
+		}
 	}
 }
 
