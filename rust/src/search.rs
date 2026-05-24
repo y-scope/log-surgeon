@@ -380,7 +380,9 @@ impl SearchString {
 			Interpretation::dedup_non_greedy_interpretations(&mut interpretations_up_to_position[end - 1]);
 		}
 
-		let interpretations: Vec<Interpretation> = interpretations_up_to_position.pop().unwrap();
+		let mut interpretations: Vec<Interpretation> = interpretations_up_to_position.pop().unwrap();
+		interpretations.sort();
+		interpretations.dedup();
 		// interpretations.iter_mut().for_each(Interpretation::canonicalize);
 		// Interpretation::dedup(&mut interpretations);
 
