@@ -90,12 +90,18 @@ impl Schema {
 					builder.set_delimiters(delimiters);
 				},
 				SchemaFileLine::Placeholder(name, pattern) => {
-					let regex: Regex = Regex::from_pattern(pattern)
+					let mut regex: Regex = Regex::from_pattern(pattern)
 						.map_err(|_| SchemaFileError {
 							line_offset,
 							kind: SchemaParsingErrorKind::InvalidPattern,
 						})?
 						.inner;
+					regex
+						.replace_with_placeholders(&mut |name| placeholders.get(name).cloned())
+						.map_err(|_| SchemaFileError {
+							line_offset,
+							kind: SchemaParsingErrorKind::UndefinedPlaceholder(name.to_owned()),
+						})?;
 					let old: Option<Regex> = placeholders.insert(name.to_owned(), regex);
 					if old.is_some() {
 						return Err(SchemaFileError {
@@ -290,6 +296,25 @@ mod test {
 
 		let definition2: &str = r#"
 		foo: (?<p1>[a-z])(?<p2>[0-9])
+		"#;
+
+		let schema1: Schema = Schema::from_schema_definition(definition1).unwrap();
+		let schema2: Schema = Schema::from_schema_definition(definition2).unwrap();
+
+		assert_eq!(schema1, schema2);
+	}
+
+	#[test]
+	fn test_nested_placeholders() {
+		let definition1: &str = r#"
+		!p1: [a-z]
+		!p2: hello(?<p1>)
+
+		foo: (?<p1>)(?<p2>)world
+		"#;
+
+		let definition2: &str = r#"
+		foo: (?<p1>[a-z])(?<p2>hello(?<p1>[a-z]))world
 		"#;
 
 		let schema1: Schema = Schema::from_schema_definition(definition1).unwrap();

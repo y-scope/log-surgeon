@@ -55,7 +55,7 @@ impl Tnfa {
 			});
 
 			let (rule_inner_start, rule_inner_end): (NfaIdx, NfaIdx) =
-				if !WITH_CAPTURES {
+				if !WITH_CAPTURES || true {
 					let rule_inner_start: NfaIdx = nfa.new_state(format!("rule '{}' inner start", rule.name));
 					let rule_inner_end: NfaIdx = nfa.new_state(format!("rule '{}' inner end", rule.name));
 
@@ -80,7 +80,7 @@ impl Tnfa {
 
 			tags = &tags | &nfa.build::<WITH_CAPTURES>(rule.idx, &rule.regex.inner, rule_inner_start, rule_inner_end);
 
-			if !WITH_CAPTURES {
+			if !WITH_CAPTURES || true {
 				if rule.regex.anchor_after {
 					nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(
 						delimiters

@@ -140,6 +140,18 @@ impl Path {
 		self.0.iter()
 	}
 
+	pub fn len(&self) -> usize {
+		self.0.len()
+	}
+
+	pub fn first(&self) -> Option<&PathComponent> {
+		self.0.first()
+	}
+
+	pub fn last(&self) -> Option<&PathComponent> {
+		self.0.last()
+	}
+
 	fn new(components: Vec<PathComponent>) -> Self {
 		Self(components)
 	}
