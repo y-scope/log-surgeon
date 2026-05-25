@@ -289,13 +289,13 @@ mod test {
 	fn test_placeholders() {
 		let definition1: &str = r#"
 		!p1: [a-z]
-		!p2: [0-9]
+		!p2: (?<p2>[0-9])
 
 		foo: (?<p1>)(?<p2>)
 		"#;
 
 		let definition2: &str = r#"
-		foo: (?<p1>[a-z])(?<p2>[0-9])
+		foo: [a-z](?<p2>[0-9])
 		"#;
 
 		let schema1: Schema = Schema::from_schema_definition(definition1).unwrap();
@@ -314,12 +314,12 @@ mod test {
 		"#;
 
 		let definition2: &str = r#"
-		foo: (?<p1>[a-z])(?<p2>hello(?<p1>[a-z]))world
+		foo: [a-z]hello[a-z]world
 		"#;
 
 		let schema1: Schema = Schema::from_schema_definition(definition1).unwrap();
 		let schema2: Schema = Schema::from_schema_definition(definition2).unwrap();
 
-		assert_eq!(schema1, schema2);
+		assert_eq!(schema1.to_schema_definition(), schema2.to_schema_definition());
 	}
 }

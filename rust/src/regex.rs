@@ -239,7 +239,7 @@ impl Regex {
 		Some(bread)
 	}
 
-	pub fn replace_with_placeholders<F>(&mut self, get_placeholder: &mut F) -> Result<(), &str>
+	pub fn replace_with_placeholders<F>(&mut self, get_placeholder: &mut F) -> Result<(), String>
 	where
 		F: FnMut(&str) -> Option<Self>,
 	{
@@ -250,9 +250,9 @@ impl Regex {
 					&& items.is_empty()
 				{
 					let Some(placeholder): Option<Regex> = get_placeholder(&sub_rule.name) else {
-						return Err(&sub_rule.name);
+						return Err(sub_rule.name.clone());
 					};
-					sub_rule.regex = Box::new(placeholder);
+					*self = placeholder;
 				}
 				Ok(())
 			},
