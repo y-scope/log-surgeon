@@ -272,7 +272,7 @@ impl std::ops::Index<RuleIdx> for Schema {
 	type Output = RootRule;
 
 	fn index(&self, idx: RuleIdx) -> &Self::Output {
-		&self.rules[idx.as_usize()]
+		&self.rules[usize::from(idx.0.get()) - 1]
 	}
 }
 

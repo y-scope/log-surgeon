@@ -54,44 +54,40 @@ impl Tnfa {
 				target: rule_start,
 			});
 
-			let (rule_inner_start, rule_inner_end): (NfaIdx, NfaIdx) =
-				if !WITH_CAPTURES || true {
-					let rule_inner_start: NfaIdx = nfa.new_state(format!("rule '{}' inner start", rule.name));
-					let rule_inner_end: NfaIdx = nfa.new_state(format!("rule '{}' inner end", rule.name));
+			let rule_inner_start: NfaIdx = nfa.new_state(format!("rule '{}' inner start", rule.name));
+			let rule_inner_end: NfaIdx = nfa.new_state(format!("rule '{}' inner end", rule.name));
 
-					if rule.regex.anchor_before {
-						nfa[rule_start].transitions =
-							Transitions::Interval(IntervalTree::from_iter(delimiters.chars().map(|ch| {
-								(
-									Interval::new(u32::from(ch), u32::from(ch)),
-									rule_inner_start,
-									PolicyUnique,
-								)
-							})));
-					} else {
-						nfa[rule_start].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once(
-							(Interval::new(0, u32::from(char::MAX)), rule_inner_start, PolicyUnique),
-						)));
-					}
-					(rule_inner_start, rule_inner_end)
-				} else {
-					(rule_start, rule_end)
-				};
+			if rule.regex.anchor_before {
+				nfa[rule_start].transitions =
+					Transitions::Interval(IntervalTree::from_iter(delimiters.chars().map(|ch| {
+						(
+							Interval::new(u32::from(ch), u32::from(ch)),
+							rule_inner_start,
+							PolicyUnique,
+						)
+					})));
+			} else {
+				nfa[rule_start].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once((
+					Interval::new(0, u32::from(char::MAX)),
+					rule_inner_start,
+					PolicyUnique,
+				))));
+			}
 
 			tags = &tags | &nfa.build::<WITH_CAPTURES>(rule.idx, &rule.regex.inner, rule_inner_start, rule_inner_end);
 
-			if !WITH_CAPTURES || true {
-				if rule.regex.anchor_after {
-					nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(
-						delimiters
-							.chars()
-							.map(|ch| (Interval::new(u32::from(ch), u32::from(ch)), rule_end, PolicyUnique)),
-					));
-				} else {
-					nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once(
-						(Interval::new(0, u32::from(char::MAX)), rule_end, PolicyUnique),
-					)));
-				}
+			if rule.regex.anchor_after {
+				nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(
+					delimiters
+						.chars()
+						.map(|ch| (Interval::new(u32::from(ch), u32::from(ch)), rule_end, PolicyUnique)),
+				));
+			} else {
+				nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once((
+					Interval::new(0, u32::from(char::MAX)),
+					rule_end,
+					PolicyUnique,
+				))));
 			}
 
 			nfa[rule_end].maybe_accepts_for_rule = Some(rule.idx);

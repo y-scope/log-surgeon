@@ -181,7 +181,7 @@ impl Interpretation {
 		}
 	}
 
-	fn dedup_non_greedy_interpretations(interpretations: &mut Vec<Self>) {
+	fn dedup_non_greedy(interpretations: &mut Vec<Self>) {
 		let mut old_len: usize = 0;
 		while old_len != interpretations.len() {
 			let mut i: usize = 0;
@@ -337,14 +337,6 @@ impl SearchString {
 					continue;
 				}
 
-				// println!(
-				// 	"== Interpretations ({start}..{end}): {sub_view}, {}, {}, {}, {:?}, {:?}",
-				// 	sub_view.as_str() != &[SymbolicChar::WildcardStar],
-				// 	sub_view.as_str().first() == Some(&SymbolicChar::WildcardStar),
-				// 	sub_view.as_str().last() == Some(&SymbolicChar::WildcardStar),
-				// 	sub_view.as_str().first(),
-				// 	sub_view.as_str().last(),
-				// );
 				let single_token_interpretations: Vec<Interpretation> =
 					sub_view.single_token_interpretations(schema, group);
 
@@ -371,22 +363,20 @@ impl SearchString {
 				}
 			}
 
-			interpretations_up_to_position[end - 1]
-				.iter()
-				.for_each(Interpretation::invariants);
-			interpretations_up_to_position[end - 1]
-				.iter_mut()
-				.for_each(Interpretation::canonicalize);
-			Interpretation::dedup_non_greedy_interpretations(&mut interpretations_up_to_position[end - 1]);
+			let interpretations: &mut Vec<Interpretation> = &mut interpretations_up_to_position[end - 1];
+
+			interpretations.iter().for_each(Interpretation::invariants);
+
+			interpretations.iter_mut().for_each(Interpretation::canonicalize);
+
+			Interpretation::dedup_non_greedy(interpretations);
 		}
 
 		let mut interpretations: Vec<Interpretation> = interpretations_up_to_position.pop().unwrap();
+
 		interpretations.sort();
 		interpretations.dedup();
-		// interpretations.iter_mut().for_each(Interpretation::canonicalize);
-		// Interpretation::dedup(&mut interpretations);
-
-		// println!("=== done {}", interpretations.len());
+		Interpretation::dedup_covered_interpretations(&mut interpretations);
 
 		interpretations
 	}
@@ -432,8 +422,7 @@ impl<'a> SearchStringView<'a> {
 			schema,
 			&schema.main_nfa,
 			group,
-			Some(extended.before(schema)),
-			Some(extended.after(schema)),
+			Some((extended.before(schema), extended.after(schema))),
 		);
 
 		if has_wildcard || potential_interpretations.is_empty() {
@@ -518,15 +507,21 @@ impl<'a> SearchStringView<'a> {
 		symbols
 	}
 
-	// TODO refactor with full log search
-	fn to_regex(&self, maybe_before: Option<char>, maybe_after: Option<char>) -> Regex {
+	fn to_regex(&self, maybe_delimiters: Option<(char, char)>) -> Regex {
 		Regex::Sequence(
-			maybe_before
+			maybe_delimiters
+				.map(|(before, _)| before)
 				.map(SymbolicChar::Literal)
 				.as_ref()
 				.into_iter()
 				.chain(self.as_str().iter())
-				.chain(maybe_after.map(SymbolicChar::Literal).as_ref().into_iter())
+				.chain(
+					maybe_delimiters
+						.map(|(_, after)| after)
+						.map(SymbolicChar::Literal)
+						.as_ref()
+						.into_iter(),
+				)
 				.map(SymbolicChar::to_regex)
 				.collect::<Vec<_>>(),
 		)
@@ -553,16 +548,12 @@ impl<'a> SearchStringView<'a> {
 
 		for (rule, regex) in rows.into_iter() {
 			let rule_nfa: Tnfa = Tnfa::for_single_rule(rule.idx, &regex);
-			interpretations.extend(
-				self.interpretations_for_nfa(schema, &rule_nfa, group, None, None)
-					.into_iter(),
-			);
+			interpretations.extend(self.interpretations_for_nfa(schema, &rule_nfa, group, None).into_iter());
 		}
 
 		interpretations.sort();
 		interpretations.dedup();
 
-		// Interpretation::dedup(&mut interpretations);
 		interpretations
 	}
 
@@ -571,13 +562,12 @@ impl<'a> SearchStringView<'a> {
 		schema: &Schema,
 		nfa: &Tnfa,
 		group: usize,
-		maybe_before: Option<char>,
-		maybe_after: Option<char>,
+		maybe_delimiters: Option<(char, char)>,
 	) -> Vec<Interpretation> {
 		assert!(self.as_str() != &[SymbolicChar::WildcardStar]);
 		let mut interpretations: Vec<Interpretation> = Vec::new();
 
-		let search_nfa: Tnfa = Tnfa::for_regex(&self.to_regex(maybe_before, maybe_after));
+		let search_nfa: Tnfa = Tnfa::for_regex(&self.to_regex(maybe_delimiters));
 
 		// println!(
 		// 	"== query ({}..{}..{}) {:?}, {:?}",
@@ -593,9 +583,8 @@ impl<'a> SearchStringView<'a> {
 			let mut sub_queries: Vec<SubQuery> = Vec::new();
 
 			let mut skip: usize = 0;
-			if maybe_before.is_some() {
+			if maybe_delimiters.is_some() {
 				assert_ne!(path.len(), 2);
-				assert!(maybe_after.is_some());
 				assert!(matches!(path.first().unwrap(), PathComponent::Literal(_)));
 				assert!(matches!(path.last().unwrap(), PathComponent::Literal(_)));
 				skip = 1;
@@ -632,7 +621,7 @@ impl<'a> SearchStringView<'a> {
 			});
 		}
 
-		interpretations.iter_mut().for_each(Interpretation::condense);
+		interpretations.iter().for_each(Interpretation::invariants);
 
 		Interpretation::dedup_covered_interpretations(&mut interpretations);
 		interpretations
@@ -706,25 +695,6 @@ impl std::fmt::Display for SymbolicChar {
 }
 
 impl Interpretation {
-	// TODO same as `Path::condense`
-	fn condense(&mut self) {
-		let mut i: usize = 1;
-		while i < self.sub_queries.len() {
-			let previous: &SubQuery = &self.sub_queries[i - 1];
-			let current: &SubQuery = &self.sub_queries[i];
-			if previous.is_static_text() && current.is_static_text() {
-				let mut symbolic_value: Vec<SymbolicChar> = previous.symbolic_value.clone();
-				symbolic_value.extend(current.symbolic_value.iter().copied());
-				let string_value: String = previous.string_value.clone() + &current.string_value;
-				self.sub_queries[i - 1].symbolic_value = symbolic_value;
-				self.sub_queries[i - 1].string_value = string_value;
-				self.sub_queries.remove(i);
-			} else {
-				i += 1;
-			}
-		}
-	}
-
 	fn append_sub_query(&mut self, mut suffix: Interpretation) {
 		let Some(me_last): Option<&mut SubQuery> = self.sub_queries.last_mut() else {
 			*self = suffix;
@@ -757,6 +727,25 @@ impl Interpretation {
 				last_was_static_text = true;
 			} else {
 				last_was_static_text = false;
+			}
+		}
+	}
+
+	fn condense(&mut self) {
+		let mut i: usize = 1;
+		while i < self.sub_queries.len() {
+			let previous: &SubQuery = &self.sub_queries[i - 1];
+			let current: &SubQuery = &self.sub_queries[i];
+			if previous.is_static_text() && current.is_static_text() {
+				let mut symbolic_value: Vec<SymbolicChar> = previous.symbolic_value.clone();
+				symbolic_value.extend(current.symbolic_value.iter().copied());
+				let string_value: String = previous.string_value.clone() + &current.string_value;
+				self.sub_queries[i - 1].symbolic_value = symbolic_value;
+				self.sub_queries[i - 1].string_value = string_value;
+				self.sub_queries.remove(i);
+				panic!();
+			} else {
+				i += 1;
 			}
 		}
 	}
@@ -796,11 +785,16 @@ impl SubQuery {
 		self.rule_idx.is_none()
 	}
 
+	/// Returns `true` iff `self` is a "refinement" of `other`,
+	/// or `self` is exactly a single wildcard (star).
 	fn subsumes(&self, other: &Self) -> bool {
 		if (self.group, self.rule_idx, &self.fully_qualified_name)
 			!= (other.group, other.rule_idx, &other.fully_qualified_name)
 		{
 			return false;
+		}
+		if &self.symbolic_value == &[SymbolicChar::WildcardStar] {
+			return true;
 		}
 		// Remark: Always has 1 subslice.
 		let mut other_parts: Vec<&[SymbolicChar]> = other
@@ -909,7 +903,7 @@ mod test {
 		let schema: Schema = builder.build();
 
 		{
-			let interpretations: Vec<Interpretation> = search_by_name(&schema, "*a*@*mail*example*", "email");
+			let interpretations: Vec<Interpretation> = do_search(&schema, "*a*@*mail*example*", "email");
 			println!("===");
 
 			for i in interpretations.iter() {
@@ -928,7 +922,7 @@ mod test {
 		let schema: Schema = builder.build();
 
 		{
-			let interpretations: Vec<Interpretation> = search_by_name(&schema, "*blk*_566*", "block_id");
+			let interpretations: Vec<Interpretation> = do_search(&schema, "*blk*_566*", "block_id");
 			println!("===");
 
 			for i in interpretations.iter() {
@@ -948,6 +942,15 @@ mod test {
 				&*interpretations[1].sub_queries[1].fully_qualified_name,
 				"block_id.genStamp"
 			);
+		}
+
+		{
+			let interpretations: Vec<Interpretation> = do_search(&schema, "*blk*_566*", "");
+			println!("===");
+
+			for i in interpretations.iter() {
+				println!("- {i:?}");
+			}
 		}
 	}
 
@@ -988,6 +991,17 @@ mod test {
 			symbolic_value: vec![SymbolicChar::WildcardStar],
 			string_value: String::new(),
 		};
+		let f: SubQuery = SubQuery {
+			group: 0,
+			rule_idx: None,
+			fully_qualified_name: Arc::from(""),
+			symbolic_value: vec![
+				SymbolicChar::WildcardStar,
+				SymbolicChar::Literal('a'),
+				SymbolicChar::WildcardStar,
+			],
+			string_value: String::new(),
+		};
 
 		assert!(a.subsumes(&b));
 		assert!(!b.subsumes(&a));
@@ -1003,6 +1017,12 @@ mod test {
 		assert!(c.subsumes(&c));
 		assert!(d.subsumes(&d));
 		assert!(e.subsumes(&e));
+
+		assert!(e.subsumes(&a));
+		assert!(e.subsumes(&b));
+		assert!(e.subsumes(&c));
+		assert!(e.subsumes(&d));
+		assert!(e.subsumes(&f));
 	}
 
 	#[test]
@@ -1014,9 +1034,7 @@ mod test {
 
 		let schema: Schema = builder.build();
 
-		let search: SearchString = SearchString::parse("a@com*").unwrap();
-
-		let interpretations: Vec<Interpretation> = search.get_interpretations(&schema, "");
+		let interpretations: Vec<Interpretation> = do_search(&schema, "a@com*", "");
 
 		println!("=== Interpretations");
 		for interpretation in interpretations.iter() {
@@ -1044,7 +1062,7 @@ mod test {
 		}
 	}
 
-	fn search_by_name(schema: &Schema, query: &str, name: &str) -> Vec<Interpretation> {
+	fn do_search(schema: &Schema, query: &str, name: &str) -> Vec<Interpretation> {
 		let query: SearchString = SearchString::parse(query).unwrap();
 
 		let interpretations: Vec<Interpretation> = query.get_interpretations(&schema, name);
