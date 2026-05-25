@@ -592,14 +592,16 @@ impl<'a> SearchStringView<'a> {
 		for path in paths.iter() {
 			let mut sub_queries: Vec<SubQuery> = Vec::new();
 
+			let mut skip: usize = 0;
 			if maybe_before.is_some() {
 				assert_ne!(path.len(), 2);
 				assert!(maybe_after.is_some());
 				assert!(matches!(path.first().unwrap(), PathComponent::Literal(_)));
 				assert!(matches!(path.last().unwrap(), PathComponent::Literal(_)));
+				skip = 1;
 			}
 
-			for token in path.iter().skip(1) {
+			for token in path.iter().skip(skip) {
 				match token {
 					PathComponent::Literal(contents) => {
 						sub_queries.push(SubQuery::new_static_text(contents.clone()));
@@ -615,8 +617,10 @@ impl<'a> SearchStringView<'a> {
 					},
 				}
 			}
-			if path.len() > 1 {
-				sub_queries.pop().unwrap();
+			if skip > 0 {
+				if path.len() > 1 {
+					sub_queries.pop().unwrap();
+				}
 			}
 			interpretations.push(Interpretation { sub_queries });
 		}
@@ -911,6 +915,39 @@ mod test {
 			for i in interpretations.iter() {
 				println!("- {i:?}");
 			}
+		}
+	}
+
+	#[test]
+	fn search_block_id() {
+		let mut builder: SchemaBuilder = SchemaBuilder::new();
+		builder
+			.add_rule("block_id", r"blk_(?<blockNum>[0-9]+)_(?<genStamp>[0-9]+)")
+			.unwrap();
+
+		let schema: Schema = builder.build();
+
+		{
+			let interpretations: Vec<Interpretation> = search_by_name(&schema, "*blk*_566*", "block_id");
+			println!("===");
+
+			for i in interpretations.iter() {
+				println!("- {i:?}");
+			}
+
+			assert_eq!(interpretations.len(), 2);
+			assert_eq!(interpretations[0].sub_queries[0].string_value, "blk_");
+			assert_eq!(interpretations[0].sub_queries[1].string_value, "566*");
+			assert_eq!(
+				&*interpretations[0].sub_queries[1].fully_qualified_name,
+				"block_id.blockNum"
+			);
+			assert_eq!(interpretations[1].sub_queries[0].string_value, "blk*_");
+			assert_eq!(interpretations[1].sub_queries[1].string_value, "566*");
+			assert_eq!(
+				&*interpretations[1].sub_queries[1].fully_qualified_name,
+				"block_id.genStamp"
+			);
 		}
 	}
 
