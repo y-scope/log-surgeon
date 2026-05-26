@@ -287,38 +287,38 @@ mod test {
 
 	#[test]
 	fn test_placeholders() {
-		let definition1: &str = r#"
-		!p1: [a-z]
-		!p2: (?<p2>[0-9])
+		let schema1: Schema = schema!(
+			r#"
+			!p1: [a-z]
+			!p2: (?<p2>[0-9])
 
-		foo: (?<p1>)(?<p2>)
-		"#;
-
-		let definition2: &str = r#"
-		foo: [a-z](?<p2>[0-9])
-		"#;
-
-		let schema1: Schema = Schema::from_schema_definition(definition1).unwrap();
-		let schema2: Schema = Schema::from_schema_definition(definition2).unwrap();
+			foo: (?<p1>)(?<p2>)
+			"#
+		);
+		let schema2: Schema = schema!(
+			r#"
+			foo: [a-z](?<p2>[0-9])
+			"#
+		);
 
 		assert_eq!(schema1, schema2);
 	}
 
 	#[test]
 	fn test_nested_placeholders() {
-		let definition1: &str = r#"
-		!p1: [a-z]
-		!p2: hello(?<p1>)
+		let schema1: Schema = schema!(
+			r#"
+			!p1: [a-z]
+			!p2: hello(?<p1>)
 
-		foo: (?<p1>)(?<p2>)world
-		"#;
-
-		let definition2: &str = r#"
-		foo: [a-z]hello[a-z]world
-		"#;
-
-		let schema1: Schema = Schema::from_schema_definition(definition1).unwrap();
-		let schema2: Schema = Schema::from_schema_definition(definition2).unwrap();
+			foo: (?<p1>)(?<p2>)world
+			"#
+		);
+		let schema2: Schema = schema!(
+			r#"
+			foo: [a-z]hello[a-z]world
+			"#
+		);
 
 		assert_eq!(schema1.to_schema_definition(), schema2.to_schema_definition());
 	}

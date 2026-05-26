@@ -89,12 +89,6 @@ pub struct RuleInfo {
 #[repr(transparent)]
 pub struct RuleIdx(NonZero<u16>);
 
-#[derive(Debug)]
-pub enum VariableOrCaptures<T> {
-	Variable(Vec<(RuleIdx, T)>),
-	Captures(Vec<(RuleIdx, SubRule, T)>),
-}
-
 impl SchemaBuilder {
 	pub fn new() -> Self {
 		Self {
@@ -180,7 +174,6 @@ impl SchemaBuilder {
 		}
 
 		let main_nfa: Tnfa = Tnfa::for_rules::<true, _>(rules.iter(), self.delimiters.clone());
-		// let main_dfa: Tdfa = Tdfa::determinization(&main_nfa);
 		let main_dfa: Tdfa = Tdfa::for_rules(rules.iter(), self.delimiters.clone());
 
 		let mut ascii_delimiters: [bool; 0x80] = [false; 0x80];
@@ -214,54 +207,61 @@ impl Schema {
 		Tdfa::for_rules(&self.rules, self.delimiters.clone())
 	}
 
-	pub fn regexes_for_name(&self, name: &str) -> Option<VariableOrCaptures<Regex>> {
+	pub fn rules_for_name(&self, name: &str) -> Option<Vec<(&RuleInfo, &Regex)>> {
 		let parts: Vec<&str> = name.split('.').collect::<Vec<_>>();
 		let rule_name: &str = parts.first().copied()?;
 		let capture_names: &[&str] = &parts[1..];
 
 		if let Some(first) = capture_names.first().copied() {
-			let mut possibilities: Vec<(RuleIdx, SubRule, Regex)> = Vec::new();
-			for rule in self.rules.iter() {
-				if &*rule.name != rule_name {
+			let mut possibilities: Vec<(&RuleInfo, &Regex)> = Vec::new();
+			for root_rule in self.rules.iter() {
+				if &*root_rule.name != rule_name {
 					continue;
 				}
-				Self::find_capture(&rule.regex.inner, first, &capture_names[1..], &mut |info, regex| {
-					possibilities.push((rule.idx, info.clone(), regex.clone()));
-				});
+				Self::find_capture(
+					root_rule,
+					&root_rule.regex.inner,
+					first,
+					&capture_names[1..],
+					&mut possibilities,
+				);
 			}
-			Some(VariableOrCaptures::Captures(possibilities))
+			Some(possibilities)
 		} else {
-			Some(VariableOrCaptures::Variable(
+			Some(
 				self.rules
 					.iter()
-					.filter(|rule| &*rule.name == rule_name)
-					.map(|rule| (rule.idx, rule.regex.inner.clone()))
+					.filter(|root_rule| &*root_rule.name == rule_name)
+					.map(|root_rule| (&root_rule[None], &root_rule.regex.inner))
 					.collect::<Vec<_>>(),
-			))
+			)
 		}
 	}
 
-	fn find_capture<F>(regex: &Regex, first: &str, rest: &[&str], func: &mut F)
-	where
-		F: FnMut(&SubRule, &Regex),
-	{
+	fn find_capture<'a>(
+		root_rule: &'a RootRule,
+		regex: &'a Regex,
+		first: &str,
+		rest: &[&str],
+		collect: &mut Vec<(&'a RuleInfo, &'a Regex)>,
+	) {
 		match regex {
 			Regex::AnyChar | Regex::Literal(..) | Regex::Group { .. } => (),
 			Regex::Capture(sub_rule) => {
 				if sub_rule.name == first {
 					if let Some(first) = rest.first().copied() {
-						Self::find_capture(&sub_rule.regex, first, &rest[1..], func);
+						Self::find_capture(root_rule, &sub_rule.regex, first, &rest[1..], collect);
 					} else {
-						func(sub_rule, &sub_rule.regex);
+						collect.push((&root_rule[Some(sub_rule.id)], regex));
 					}
 				}
 			},
 			Regex::KleeneClosure(item) | Regex::KleenePlus(item) | Regex::BoundedRepetition { item, .. } => {
-				Self::find_capture(item, first, rest, func);
+				Self::find_capture(root_rule, item, first, rest, collect);
 			},
 			Regex::Sequence(items) | Regex::Alternation(items) => {
 				for item in items.iter() {
-					Self::find_capture(item, first, rest, func);
+					Self::find_capture(root_rule, item, first, rest, collect);
 				}
 			},
 		}
@@ -272,7 +272,7 @@ impl std::ops::Index<RuleIdx> for Schema {
 	type Output = RootRule;
 
 	fn index(&self, idx: RuleIdx) -> &Self::Output {
-		&self.rules[usize::from(idx.0.get()) - 1]
+		&self.rules[usize::from(u16::from(idx)) - 1]
 	}
 }
 
@@ -338,13 +338,17 @@ impl std::ops::Index<Option<NonZero<u16>>> for RootRule {
 impl RuleIdx {
 	/// cbindgen:ignore
 	pub const NIL: Self = Self(NonZero::<u16>::MAX);
+}
 
-	pub fn get(&self) -> NonZero<u16> {
-		self.0
+impl From<RuleIdx> for NonZero<u16> {
+	fn from(rule_idx: RuleIdx) -> Self {
+		rule_idx.0
 	}
+}
 
-	pub fn as_usize(&self) -> usize {
-		usize::from(self.0.get() - 1)
+impl From<RuleIdx> for u16 {
+	fn from(rule_idx: RuleIdx) -> Self {
+		rule_idx.0.get()
 	}
 }
 
@@ -361,5 +365,9 @@ impl RuleInfo {
 		} else {
 			""
 		}
+	}
+
+	pub fn is_root(&self) -> bool {
+		self.maybe_sub_rule.is_none()
 	}
 }

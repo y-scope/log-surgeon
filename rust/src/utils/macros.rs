@@ -21,3 +21,22 @@ macro_rules! how_long {
 		var.elapsed()
 	}};
 }
+
+#[cfg(test)]
+#[macro_use]
+mod test {
+	macro_rules! schema {
+		($definition:expr) => {{
+			use $crate::schema::Schema;
+
+			let definition: &::std::primitive::str = $definition;
+
+			// Canonicalize schema by round-tripping.
+			let schema: Schema = Schema::from_schema_definition(definition).unwrap();
+			let roundtrip: String = schema.to_schema_definition();
+			let schema: Schema = Schema::from_schema_definition(&roundtrip).unwrap();
+
+			schema
+		}};
+	}
+}

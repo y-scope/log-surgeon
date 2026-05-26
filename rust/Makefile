@@ -1,4 +1,4 @@
-.PHONY: default FORCE examples cargo-test test
+.PHONY: default FORCE examples cargo-test test format lint
 
 default:
 
@@ -24,3 +24,9 @@ cxx/log_surgeon/generated_bindings.hpp: FORCE
 
 target/debug/liblog_surgeon.a: FORCE
 	cargo build --no-default-features
+
+format:
+	task lint:fix-cpp-format-log-surgeon
+
+lint:
+	task lint:check-cpp-static-log-surgeon

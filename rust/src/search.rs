@@ -9,7 +9,6 @@ use crate::schema::RootRule;
 use crate::schema::RuleIdx;
 use crate::schema::RuleInfo;
 use crate::schema::Schema;
-use crate::schema::VariableOrCaptures;
 
 #[derive(Debug)]
 pub struct SearchString(Vec<SymbolicChar>);
@@ -305,12 +304,12 @@ impl SearchString {
 	}
 
 	pub fn get_interpretations(&self, schema: &Schema, name: &str) -> Vec<Interpretation> {
-		let Some(rows): Option<VariableOrCaptures<Regex>> = schema.regexes_for_name(name) else {
+		let Some(rows): Option<Vec<(&RuleInfo, &Regex)>> = schema.rules_for_name(name) else {
 			return Vec::new();
 		};
 
 		if !name.is_empty() {
-			return self.view(0, self.0.len()).interpretations_for_name(schema, &rows, 0);
+			return self.view(0, self.0.len()).interpretations_for_name(schema, &rows);
 		}
 
 		self.full_log_interpretations(schema)
@@ -418,12 +417,21 @@ impl<'a> SearchStringView<'a> {
 
 		let has_wildcard: bool = extended.as_str().iter().any(SymbolicChar::is_wildcard);
 
-		let potential_interpretations: Vec<Interpretation> = extended.interpretations_for_nfa(
-			schema,
-			&schema.main_nfa,
-			group,
-			Some((extended.before(schema), extended.after(schema))),
-		);
+		let (mut potential_interpretations, rules_potentially_without_captures): (Vec<Interpretation>, Vec<RuleIdx>) =
+			extended.interpretations_for_nfa(
+				schema,
+				&schema.main_nfa,
+				group,
+				Some((extended.before(schema), extended.after(schema))),
+			);
+
+		for &rule_idx in rules_potentially_without_captures.iter() {
+			let rule: &RootRule = &schema[rule_idx];
+			let rule_info: &RuleInfo = &rule[None];
+			potential_interpretations.push(Interpretation {
+				sub_queries: vec![SubQuery::new(group, rule_info, extended.as_str().to_owned())],
+			});
+		}
 
 		if has_wildcard || potential_interpretations.is_empty() {
 			if extended.ends_with_delimiter(schema) {
@@ -527,28 +535,37 @@ impl<'a> SearchStringView<'a> {
 		)
 	}
 
-	fn interpretations_for_name(
-		&self,
-		schema: &Schema,
-		rows: &VariableOrCaptures<Regex>,
-		group: usize,
-	) -> Vec<Interpretation> {
+	fn interpretations_for_name(&self, schema: &Schema, rows: &[(&RuleInfo, &Regex)]) -> Vec<Interpretation> {
 		let mut interpretations: Vec<Interpretation> = Vec::new();
 
-		let rows = match rows {
-			VariableOrCaptures::Variable(rows) => rows
-				.iter()
-				.map(|(rule_idx, regex)| (&schema[*rule_idx], regex))
-				.collect::<Vec<_>>(),
-			VariableOrCaptures::Captures(rows) => rows
-				.into_iter()
-				.map(|(rule_idx, _info, regex)| (&schema[*rule_idx], regex))
-				.collect::<Vec<_>>(),
-		};
+		for &(rule_info, regex) in rows.iter() {
+			let rule_nfa: Tnfa = Tnfa::for_single_rule(rule_info.root_idx, regex);
 
-		for (rule, regex) in rows.into_iter() {
-			let rule_nfa: Tnfa = Tnfa::for_single_rule(rule.idx, &regex);
-			interpretations.extend(self.interpretations_for_nfa(schema, &rule_nfa, group, None).into_iter());
+			let (mut potential_interpretations, rules_potentially_without_captures): (
+				Vec<Interpretation>,
+				Vec<RuleIdx>,
+			) = self.interpretations_for_nfa(schema, &rule_nfa, 0, None);
+
+			if !rules_potentially_without_captures.is_empty() {
+				assert_eq!(rules_potentially_without_captures.len(), 1);
+
+				if rule_info.is_root() {
+					interpretations.push(Interpretation {
+						sub_queries: vec![SubQuery::new(0, rule_info, self.as_str().to_owned())],
+					});
+					potential_interpretations.retain(|interpretation| !interpretation.is_just_static_text());
+				} else {
+					interpretations.push(Interpretation {
+						sub_queries: vec![SubQuery::new(
+							0,
+							&schema[rule_info.root_idx][None],
+							self.surround_with_wildcards(),
+						)],
+					});
+				}
+			}
+
+			interpretations.extend(potential_interpretations.into_iter());
 		}
 
 		interpretations.sort();
@@ -563,20 +580,12 @@ impl<'a> SearchStringView<'a> {
 		nfa: &Tnfa,
 		group: usize,
 		maybe_delimiters: Option<(char, char)>,
-	) -> Vec<Interpretation> {
+	) -> (Vec<Interpretation>, Vec<RuleIdx>) {
 		assert!(self.as_str() != &[SymbolicChar::WildcardStar]);
 		let mut interpretations: Vec<Interpretation> = Vec::new();
 
 		let search_nfa: Tnfa = Tnfa::for_regex(&self.to_regex(maybe_delimiters));
 
-		// println!(
-		// 	"== query ({}..{}..{}) {:?}, {:?}",
-		// 	self.start,
-		// 	self.end,
-		// 	extra,
-		// 	self,
-		// 	self.to_regex(extra)
-		// );
 		let intersection: Tnfa = nfa.intersect(&search_nfa);
 		let (paths, rules_potentially_without_captures): (Vec<Path>, Vec<RuleIdx>) = intersection.compute_paths();
 		for path in paths.iter() {
@@ -613,18 +622,12 @@ impl<'a> SearchStringView<'a> {
 			}
 			interpretations.push(Interpretation { sub_queries });
 		}
-		for &rule_idx in rules_potentially_without_captures.iter() {
-			let rule: &RootRule = &schema[rule_idx];
-			let rule_info: &RuleInfo = &rule[None];
-			interpretations.push(Interpretation {
-				sub_queries: vec![SubQuery::new(group, rule_info, self.as_str().to_owned())],
-			});
-		}
 
 		interpretations.iter().for_each(Interpretation::invariants);
 
 		Interpretation::dedup_covered_interpretations(&mut interpretations);
-		interpretations
+
+		(interpretations, rules_potentially_without_captures)
 	}
 
 	fn ends_with_delimiter(&self, schema: &Schema) -> bool {
@@ -695,6 +698,10 @@ impl std::fmt::Display for SymbolicChar {
 }
 
 impl Interpretation {
+	fn is_just_static_text(&self) -> bool {
+		self.sub_queries.iter().all(SubQuery::is_static_text)
+	}
+
 	fn append_sub_query(&mut self, mut suffix: Interpretation) {
 		let Some(me_last): Option<&mut SubQuery> = self.sub_queries.last_mut() else {
 			*self = suffix;
@@ -727,25 +734,6 @@ impl Interpretation {
 				last_was_static_text = true;
 			} else {
 				last_was_static_text = false;
-			}
-		}
-	}
-
-	fn condense(&mut self) {
-		let mut i: usize = 1;
-		while i < self.sub_queries.len() {
-			let previous: &SubQuery = &self.sub_queries[i - 1];
-			let current: &SubQuery = &self.sub_queries[i];
-			if previous.is_static_text() && current.is_static_text() {
-				let mut symbolic_value: Vec<SymbolicChar> = previous.symbolic_value.clone();
-				symbolic_value.extend(current.symbolic_value.iter().copied());
-				let string_value: String = previous.string_value.clone() + &current.string_value;
-				self.sub_queries[i - 1].symbolic_value = symbolic_value;
-				self.sub_queries[i - 1].string_value = string_value;
-				self.sub_queries.remove(i);
-				panic!();
-			} else {
-				i += 1;
 			}
 		}
 	}
@@ -951,6 +939,56 @@ mod test {
 			for i in interpretations.iter() {
 				println!("- {i:?}");
 			}
+		}
+	}
+
+	#[test]
+	fn search_nested_name_without_leaf_capture() {
+		let schema: Schema = schema!(
+			r"
+			foo: _(?<bar>[a-z]+|(?<baz>[0-9]+))_
+			"
+		);
+
+		{
+			let interpretations: Vec<Interpretation> = do_search(&schema, "_a*b_", "foo");
+			println!("===");
+
+			for i in interpretations.iter() {
+				println!("- {i:?}");
+			}
+
+			assert_eq!(interpretations.len(), 1);
+			assert_eq!(interpretations[0].sub_queries[0].string_value, "_a*b_");
+			assert_eq!(&*interpretations[0].sub_queries[0].fully_qualified_name, "foo");
+		}
+
+		{
+			let interpretations: Vec<Interpretation> = do_search(&schema, "a*b", "foo.bar");
+			println!("===");
+
+			for i in interpretations.iter() {
+				println!("- {i:?}");
+			}
+
+			assert_eq!(interpretations.len(), 2);
+			assert_eq!(interpretations[0].sub_queries[0].string_value, "a*b");
+			assert_eq!(&*interpretations[0].sub_queries[0].fully_qualified_name, "");
+			assert_eq!(interpretations[1].sub_queries[0].string_value, "*a*b*");
+			assert_eq!(&*interpretations[1].sub_queries[0].fully_qualified_name, "foo");
+		}
+
+		{
+			let interpretations: Vec<Interpretation> = do_search(&schema, "0*1", "foo.bar.baz");
+			println!("===");
+
+			for i in interpretations.iter() {
+				println!("- {i:?}");
+			}
+
+			assert_eq!(interpretations.len(), 1);
+			assert_eq!(interpretations[0].sub_queries[0].string_value, "0*1");
+			assert_eq!(&*interpretations[0].sub_queries[0].fully_qualified_name, "foo.bar.baz");
 		}
 	}
 

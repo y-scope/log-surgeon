@@ -176,7 +176,7 @@ impl PyParser {
 				// 	format!("{}{}", root_rule_name, rule.rule_info(cap.sub_rule_id).qualified_name());
 				let name: Py<PyString> = PyString::new(py, name).unbind();
 				let py_cap: Bound<'_, PyMatch> = PyMatch {
-					rule_id: PyInt::new(py, cap.rule_idx.get()).unbind(),
+					rule_id: PyInt::new(py, u16::from(cap.rule_idx)).unbind(),
 					sub_rule_id: PyInt::new(py, cap.sub_rule_id.map_or(0, NonZero::get)).unbind(),
 					parent,
 					offsets: PySlice::new(py, cap.range.start as isize, cap.range.end as isize, 1).unbind(),
