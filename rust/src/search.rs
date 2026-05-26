@@ -562,6 +562,11 @@ impl<'a> SearchStringView<'a> {
 							self.surround_with_wildcards(),
 						)],
 					});
+					potential_interpretations.iter_mut().for_each(|interpretation| {
+						if interpretation.is_just_static_text() {
+							interpretation.sub_queries[0].surround_with_wildcards();
+						}
+					});
 				}
 			}
 
@@ -823,6 +828,17 @@ impl SubQuery {
 		}
 		i == other_parts.len()
 	}
+
+	fn surround_with_wildcards(&mut self) {
+		if *self.symbolic_value.first().unwrap() != SymbolicChar::WildcardStar {
+			self.symbolic_value.insert(0, SymbolicChar::WildcardStar);
+			self.string_value.insert(0, '*');
+		}
+		if *self.symbolic_value.last().unwrap() != SymbolicChar::WildcardStar {
+			self.symbolic_value.push(SymbolicChar::WildcardStar);
+			self.string_value.push('*');
+		}
+	}
 }
 
 impl InterpretationPrefix {
@@ -972,7 +988,7 @@ mod test {
 			}
 
 			assert_eq!(interpretations.len(), 2);
-			assert_eq!(interpretations[0].sub_queries[0].string_value, "a*b");
+			assert_eq!(interpretations[0].sub_queries[0].string_value, "*a*b*");
 			assert_eq!(&*interpretations[0].sub_queries[0].fully_qualified_name, "");
 			assert_eq!(interpretations[1].sub_queries[0].string_value, "*a*b*");
 			assert_eq!(&*interpretations[1].sub_queries[0].fully_qualified_name, "foo");
