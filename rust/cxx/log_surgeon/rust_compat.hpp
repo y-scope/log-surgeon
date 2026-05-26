@@ -83,7 +83,7 @@ static_assert(std::is_standard_layout_v<CCharArray>);
 static_assert(std::is_trivial_v<CArray<size_t>>);
 static_assert(std::is_standard_layout_v<CArray<size_t>>);
 
-static auto operator""_rust(char const* c_str, size_t len) -> CCharArray {
+inline auto operator""_rust(char const* c_str, size_t len) -> CCharArray {
     return CCharArray::from_ptr_len(c_str, len);
 }
 }  // namespace log_surgeon
