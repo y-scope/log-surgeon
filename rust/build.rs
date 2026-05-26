@@ -16,11 +16,6 @@ fn generate_c_bindings(root_dir: &Path) -> Result<(), Box<dyn Error>> {
 		.with_config(cbindgen::Config::from_file("cbindgen.toml")?)
 		.with_crate(&root_dir)
 		.generate()?
-		.write_to_file(
-			root_dir
-				.join("cpp_ffi")
-				.join("log_surgeon")
-				.join("generated_bindings.hpp"),
-		);
+		.write_to_file(root_dir.join("cxx").join("log_surgeon").join("generated_bindings.hpp"));
 	Ok(())
 }

@@ -27,6 +27,7 @@ vars:
   G_LOG_SURGEON_ROOT_PATHS:
     - "{{.ROOT_DIR}}/src"
     - "{{.ROOT_DIR}}/tests"
+    - "{{.ROOT_DIR}}/rust/cxx"
   G_EXAMPLES_ROOT_PATHS:
     - "{{.ROOT_DIR}}/examples"
 
@@ -167,6 +168,7 @@ tasks:
             - "test-reader-parser.cpp"
             - "test-regex-ast.cpp"
             - "test-schema.cpp"
+            - "log_surgeon/generated_bindings.hpp"
           FLAGS:
             - "--config-file '{{.G_UTILS_CONFIGS_DIR}}/.clang-tidy'"
             - "-p '{{.BUILD_DIR}}'"
@@ -262,6 +264,8 @@ tasks:
     cmds:
       - task: "utils:cpp-lint:clang-format"
         vars:
+          EXCLUDE_PATTERNS:
+            - "log_surgeon/generated_bindings.hpp"
           FLAGS:
             ref: ".FLAGS"
           INCLUDE_FILENAME_PATTERNS:

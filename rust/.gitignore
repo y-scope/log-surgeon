@@ -1,13 +1,18 @@
+# Rust
 /target
 Cargo.lock
 
+# Python
 __pycache__/
 *.pyc
 
+# Miscellaneous
+*.vim
+.gdbhistory
+
+# Examples
 /examples/**/*.o
 
-*.vim
-
-# maturin build artifacts
+# Maturin
 /dist/
 /python/log_surgeon/*.so

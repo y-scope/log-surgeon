@@ -1,19 +1,17 @@
-# log-surgeon-ffi
-
-Python bindings for [log-surgeon](https://github.com/y-scope/log-surgeon), a
-high-performance library for parsing unstructured logs into structured data.
+log-surgeon-ffi
+===============
+Python bindings for [log-surgeon](https://github.com/y-scope/log-surgeon),
+a high-performance library for parsing unstructured logs into structured data.
 
 This package ships with type stubs, so IDEs like PyCharm and VS Code provide
 autocompletion, parameter hints, and inline documentation out of the box.
 
 ## Installation
-
 ```bash
 pip install log-surgeon-ffi
 ```
 
 ## Quick start
-
 ```python
 from log_surgeon import Parser
 
@@ -52,7 +50,8 @@ message:  10:30:00 INFO starting up
     level: ['INFO']
 ```
 
-## Development
-
-To develop the FFI bindings, refer to the
-[log-surgeon contributing guide](https://github.com/y-scope/log-surgeon/blob/main/rust/CONTRIBUTING.md).
+## Build a wheel locally
+```bash
+maturin build --release --out dist
+pip install dist/*.whl
+```

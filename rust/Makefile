@@ -19,7 +19,7 @@ example-tests: examples
 
 test: cargo-tests python-tests example-tests
 
-cpp_ffi/log_surgeon/generated_bindings.hpp: FORCE
+cxx/log_surgeon/generated_bindings.hpp: FORCE
 	cbindgen --config cbindgen.toml --crate log-surgeon > $@
 
 target/debug/liblog_surgeon.a: FORCE
