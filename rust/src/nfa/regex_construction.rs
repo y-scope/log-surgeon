@@ -15,7 +15,7 @@ impl Tnfa {
 		let rule_start: NfaIdx = NfaIdx::BEGIN;
 		let rule_end: NfaIdx = nfa.new_state("end");
 
-		let tags: BTreeSet<Tag> = nfa.build::<true>(rule, &regex, rule_start, rule_end);
+		let tags: BTreeSet<Tag> = nfa.build::<true>(rule, regex, rule_start, rule_end);
 		nfa[rule_end].maybe_accepts_for_rule = Some(rule);
 
 		nfa.tags = tags.into_iter().collect::<Vec<_>>();
@@ -127,7 +127,7 @@ impl Tnfa {
 			},
 			Regex::Capture(sub_rule) => {
 				if CAPTURE {
-					self.capture(rule, &sub_rule, current, target)
+					self.capture(rule, sub_rule, current, target)
 				} else {
 					self.build::<false>(rule, &sub_rule.regex, current, target)
 				}

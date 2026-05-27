@@ -294,7 +294,7 @@ where
 	}
 
 	pub fn overlap(&self, other: &Self) -> Option<Self> {
-		match self.intersection(&other) {
+		match self.intersection(other) {
 			Intersection::Same => Some(*self),
 			Intersection::DisjointLeftLower | Intersection::DisjointRightLower => None,
 			Intersection::SameStartLeftExtendsRight { overlap, .. }

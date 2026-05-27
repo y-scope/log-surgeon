@@ -1,4 +1,3 @@
-#[allow(unused)]
 #[macro_use(debug)]
 extern crate tracing;
 

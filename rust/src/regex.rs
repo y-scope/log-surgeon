@@ -1,8 +1,8 @@
 mod pattern_parsing;
-pub use pattern_parsing::*;
-
 use std::num::NonZero;
 use std::sync::Arc;
+
+pub use pattern_parsing::*;
 
 use crate::utils::Escaped;
 

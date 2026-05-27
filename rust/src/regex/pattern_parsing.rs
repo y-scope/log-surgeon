@@ -475,14 +475,10 @@ fn parse_bracketed_item(original_input: &str) -> ParsingResult<'_, Vec<(char, ch
 						}
 						Ok((input, vec![(start, end)]))
 					},
-					Literal::Group { .. } => {
-						return Err(RegexErrorKind::EscapeClassInGroupRange.fail(input_after_dash));
-					},
+					Literal::Group { .. } => Err(RegexErrorKind::EscapeClassInGroupRange.fail(input_after_dash)),
 				}
 			},
-			Literal::Group { .. } => {
-				return Err(RegexErrorKind::EscapeClassInGroupRange.fail(original_input));
-			},
+			Literal::Group { .. } => Err(RegexErrorKind::EscapeClassInGroupRange.fail(original_input)),
 		}
 	} else {
 		match start {

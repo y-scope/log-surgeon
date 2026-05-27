@@ -1,10 +1,10 @@
-use crate::utils::Range;
 use std::ffi::c_char;
 use std::num::NonZero;
 
 use crate::ffi::UncheckedCArray;
 use crate::log_type::LogType;
 use crate::schema::RuleIdx;
+use crate::utils::Range;
 
 /// A `LogEvent` has a template [`LogType`](crate::log_type::LogType).
 /// and a sequence of [`Match`]s to interpolate.

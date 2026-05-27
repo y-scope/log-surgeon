@@ -1,6 +1,7 @@
+use std::num::NonZero;
+
 use crate::log_event::Match;
 use crate::schema::Schema;
-use std::num::NonZero;
 
 /// A `LogType` is a "template string" for a [`LogEvent`](crate::log_event::LogEvent).
 /// The string representation of a `LogType` (e.g. given by [`LogType::as_str`])
@@ -60,7 +61,7 @@ fn to_string<'a>(schema: &Schema, log_message: &str, matches: impl Iterator<Item
 			buf.push_str(s);
 		}
 		let root_rule_name: &str = &schema[mat.rule_idx].name;
-		let sub_rule_name: &str = &schema[mat.rule_idx][mat.sub_rule_id].sub_rule_name();
+		let sub_rule_name: &str = schema[mat.rule_idx][mat.sub_rule_id].sub_rule_name();
 		write!(
 			&mut buf,
 			"%{}.{}:{}.{}%",

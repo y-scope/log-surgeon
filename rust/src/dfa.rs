@@ -34,7 +34,6 @@ pub struct Tdfa {
 	/// The first `tags.len()` are initial registers for the corresponding tags.
 	/// The second `tags.len()` (i.e. `tags.len()..(2 * tags.len())`) are the corresponding final registers.
 	pub number_of_registers: usize,
-	// delimiters: String,
 	anchor_ch: char,
 }
 

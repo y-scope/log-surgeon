@@ -356,8 +356,6 @@ fn python_unicode_or_bytes_as_str<'a>(input: &'a Bound<'_, PyAny>) -> PyResult<O
 
 #[pymodule]
 mod log_surgeon_ffi {
-	use super::*;
-
 	#[pymodule_export]
 	use super::PyLogEvent;
 	#[pymodule_export]
@@ -366,6 +364,7 @@ mod log_surgeon_ffi {
 	use super::PyMatch;
 	#[pymodule_export]
 	use super::PyParser;
+	use super::*;
 
 	#[pyfunction]
 	fn enable_tracing() {

@@ -45,4 +45,17 @@ version = "0.27"
 default-features = false
 optional = true
 
+[lints.rust]
+
+[lints.clippy]
+single_match = "allow"
+
+new_without_default = "allow"
+mem_replace_with_default = "allow"
+unwrap_or_default = "allow"
+
+type_complexity = "allow"
+too_many_arguments = "allow"
+
+# https://github.com/rust-lang/cargo/issues/5418#issuecomment-384999528
 [workspace]

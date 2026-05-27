@@ -40,7 +40,7 @@ impl Escaped {
 			'u' => {
 				const MAX_BITS_PER_CODE_POINT: u32 = (char::MAX as u32).ilog2() + 1;
 				assert_eq!(MAX_BITS_PER_CODE_POINT, 21);
-				const MAX_BYTES_PER_CODE_POINT: u32 = (MAX_BITS_PER_CODE_POINT + u8::BITS - 1) / u8::BITS;
+				const MAX_BYTES_PER_CODE_POINT: u32 = MAX_BITS_PER_CODE_POINT.div_ceil(u8::BITS);
 				assert_eq!(MAX_BYTES_PER_CODE_POINT, 3);
 
 				let Some(ch): Option<char> = chars.next() else {
@@ -106,14 +106,14 @@ impl std::fmt::Display for Escaped {
 }
 
 fn parse_hex_digit_pair(chars: &mut Chars<'_>) -> Option<u32> {
-	if let Some(upper) = chars.next() {
-		if let Some(lower) = chars.next() {
-			match (upper.to_digit(16), lower.to_digit(16)) {
-				(Some(upper), Some(lower)) => {
-					return Some((upper << 4) + lower);
-				},
-				_ => (),
-			}
+	if let Some(upper) = chars.next()
+		&& let Some(lower) = chars.next()
+	{
+		match (upper.to_digit(16), lower.to_digit(16)) {
+			(Some(upper), Some(lower)) => {
+				return Some((upper << 4) + lower);
+			},
+			_ => (),
 		}
 	}
 

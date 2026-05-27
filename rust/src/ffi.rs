@@ -1,3 +1,6 @@
+// Necessary for FFI.
+#![allow(clippy::box_collection)]
+
 use std::ffi::c_char;
 use std::marker::PhantomData;
 
@@ -61,7 +64,7 @@ impl<T> UncheckedCArray<T> {
 }
 
 impl UncheckedCArray<c_char> {
-	pub fn from_str(s: &str) -> Self {
+	pub fn new(s: &str) -> Self {
 		Self {
 			pointer: s.as_bytes().as_ptr().cast::<c_char>(),
 			length: s.as_bytes().len(),

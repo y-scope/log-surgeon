@@ -8,7 +8,7 @@ __pycache__/
 
 # Miscellaneous
 *.vim
-.gdbhistory
+.gdb_history
 
 # Examples
 /examples/**/*.o
@@ -16,3 +16,8 @@ __pycache__/
 # Maturin
 /dist/
 /python/log_surgeon/*.so
+
+# Local tests
+/tests/local_*.rs
+# Rust doesn't support discovering tests in nested folders...
+#/tests/local/

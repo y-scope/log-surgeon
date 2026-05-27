@@ -178,17 +178,16 @@ impl Parser {
 			// The "more optimizable" pointer primitive `add` is technically ok here,
 			// but is/would need to be marked `unsafe`.
 			mat.ffi_pointers.parent = matches_base.wrapping_add(mat.parent_index);
-			mat.ffi_pointers.lexeme =
-				UncheckedCArray::from_str(&self.current_log.message[mat.range.start..mat.range.end]);
+			mat.ffi_pointers.lexeme = UncheckedCArray::new(&self.current_log.message[mat.range.start..mat.range.end]);
 
 			let rule_info: &RuleInfo = &self.schema[mat.rule_idx][mat.sub_rule_id];
-			mat.ffi_pointers.root_rule_name = UncheckedCArray::from_str(&rule_info.root_name);
-			mat.ffi_pointers.rule_name = UncheckedCArray::from_str(if let Some(sub_rule) = &rule_info.maybe_sub_rule {
+			mat.ffi_pointers.root_rule_name = UncheckedCArray::new(&rule_info.root_name);
+			mat.ffi_pointers.rule_name = UncheckedCArray::new(if let Some(sub_rule) = &rule_info.maybe_sub_rule {
 				&sub_rule.name
 			} else {
 				&rule_info.root_name
 			});
-			mat.ffi_pointers.fully_qualified_name = UncheckedCArray::from_str(&rule_info.fully_qualified_name);
+			mat.ffi_pointers.fully_qualified_name = UncheckedCArray::new(&rule_info.fully_qualified_name);
 		}
 
 		Some(LogEvent {
