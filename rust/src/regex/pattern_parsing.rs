@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::str::Chars;
 
 use nom::Err as NomErr;
@@ -8,6 +9,31 @@ use nom::error::FromExternalError;
 use nom::error::ParseError;
 
 use super::*;
+
+pub trait RegexLookupPlaceholder {
+	fn lookup(&mut self, name: &str) -> Option<Regex>;
+}
+
+impl RegexLookupPlaceholder for BTreeMap<String, Regex> {
+	fn lookup(&mut self, name: &str) -> Option<Regex> {
+		self.get(name).cloned()
+	}
+}
+
+impl<T> RegexLookupPlaceholder for T
+where
+	T: FnMut(&str) -> Option<Regex>,
+{
+	fn lookup(&mut self, name: &str) -> Option<Regex> {
+		self(name)
+	}
+}
+
+impl RegexLookupPlaceholder for () {
+	fn lookup(&mut self, _name: &str) -> Option<Regex> {
+		None
+	}
+}
 
 #[derive(Debug)]
 pub struct RegexError<'a> {
@@ -21,7 +47,7 @@ pub struct RegexError<'a> {
 
 type ParsingResult<'a, T> = IResult<&'a str, T, RegexParsingError<'a>>;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum RegexErrorKind {
 	/// Expected a certain character, e.g. '<' after '?' in a capture group.
 	ExpectedChar(char),
@@ -64,6 +90,8 @@ enum RegexErrorKind {
 	/// it'll either get consumed by/turned into `InvalidLiteral` or `InvalidTerm`,
 	/// but exists because 1. it models "what's happening", and 2. it's useful for debugging.
 	ExpectedOneOf { characters: &'static str, negate: bool },
+	/// No definition for placeholder.
+	UndefinedPlaceholder(String),
 	/// An error from nom; shouldn't happen, but in implementation of [`nom::error::ParseError`]
 	/// (useful for debugging/failing gracefully in a non-critical scenario).
 	Nom(NomErrorKind),
@@ -108,9 +136,31 @@ impl<'a> RegexParsingError<'a> {
 
 impl Regex {
 	pub fn from_pattern(pattern: &str) -> Result<AnchoredRegex, RegexError<'_>> {
+		Self::from_pattern_with_placeholders(pattern, None::<&mut ()>)
+	}
+
+	pub fn from_pattern_with_placeholders<'a, T>(
+		pattern: &'a str,
+		maybe_lookup: Option<&mut T>,
+	) -> Result<AnchoredRegex, RegexError<'a>>
+	where
+		T: RegexLookupPlaceholder,
+	{
 		match parse_to_end(pattern) {
 			Ok((remaining, mut regex)) => {
 				assert_eq!(remaining, "");
+
+				if let Some(lookup) = maybe_lookup {
+					regex
+						.inner
+						.replace_with_placeholders(lookup)
+						.map_err(|kind| RegexError {
+							consumed: pattern,
+							remaining,
+							kind,
+						})?;
+				}
+
 				regex
 					.inner
 					.number_captures(&mut { NonZero::<u16>::MIN }, &mut Vec::new())
@@ -125,13 +175,41 @@ impl Regex {
 				panic!("We shouldn't be using anything that can return this!");
 			},
 			Err(NomErr::Error(err) | NomErr::Failure(err)) => {
-				// TODO unwrap
 				let consumed: &str = pattern.strip_suffix(err.input).unwrap();
 				Err(RegexError {
 					consumed,
 					remaining: err.input,
 					kind: err.kind,
 				})
+			},
+		}
+	}
+
+	fn replace_with_placeholders<F>(&mut self, get_placeholder: &mut F) -> Result<(), RegexErrorKind>
+	where
+		F: RegexLookupPlaceholder,
+	{
+		match self {
+			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => Ok(()),
+			Self::Capture(sub_rule) => {
+				if let Self::Sequence(items) = &*sub_rule.regex
+					&& items.is_empty()
+				{
+					let Some(placeholder): Option<Regex> = get_placeholder.lookup(&sub_rule.name) else {
+						return Err(RegexErrorKind::UndefinedPlaceholder(sub_rule.name.clone()));
+					};
+					*self = placeholder;
+				}
+				Ok(())
+			},
+			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
+				item.replace_with_placeholders(get_placeholder)
+			},
+			Self::Sequence(items) | Self::Alternation(items) => {
+				for sub_item in items.iter_mut() {
+					sub_item.replace_with_placeholders(get_placeholder)?;
+				}
+				Ok(())
 			},
 		}
 	}
@@ -147,7 +225,7 @@ impl RegexErrorKind {
 	}
 
 	fn diagnostic<'a, T>(self) -> impl Fn(&'a str) -> ParsingResult<'a, T> {
-		move |input| Err(self.error(input))
+		move |input| Err(self.clone().error(input))
 	}
 }
 

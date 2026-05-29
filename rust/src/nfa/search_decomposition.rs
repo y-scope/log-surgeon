@@ -517,10 +517,6 @@ impl Tnfa {
 		for (_, edges, rule_idx) in paths.iter() {
 			let edges: &[PathEdge] = &edges.edges;
 
-			let mut path: Vec<PathComponent> = Vec::new();
-			let mut maybe_capture: Option<NonZero<u16>> = None;
-			let mut symbols: Vec<SymbolicChar> = Vec::new();
-
 			let skip: usize = if HAS_ANCHORS {
 				assert!(!edges.is_empty());
 				assert_ne!(edges.len(), 2);
@@ -530,7 +526,11 @@ impl Tnfa {
 				0
 			};
 
-			for edge in edges[skip..].iter().rev().skip(1) {
+			let mut path: Vec<PathComponent> = Vec::new();
+			let mut maybe_capture: Option<NonZero<u16>> = None;
+			let mut symbols: Vec<SymbolicChar> = Vec::new();
+
+			for edge in edges[skip..].iter().rev().skip(skip) {
 				match edge {
 					&PathEdge::Literal(ch) => {
 						symbols.push(SymbolicChar::Literal(ch));

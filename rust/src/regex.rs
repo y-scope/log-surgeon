@@ -238,35 +238,6 @@ impl Regex {
 		}
 		Some(bread)
 	}
-
-	pub fn replace_with_placeholders<F>(&mut self, get_placeholder: &mut F) -> Result<(), String>
-	where
-		F: FnMut(&str) -> Option<Self>,
-	{
-		match self {
-			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => Ok(()),
-			Self::Capture(sub_rule) => {
-				if let Self::Sequence(items) = &*sub_rule.regex
-					&& items.is_empty()
-				{
-					let Some(placeholder): Option<Regex> = get_placeholder(&sub_rule.name) else {
-						return Err(sub_rule.name.clone());
-					};
-					*self = placeholder;
-				}
-				Ok(())
-			},
-			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
-				item.replace_with_placeholders(get_placeholder)
-			},
-			Self::Sequence(items) | Self::Alternation(items) => {
-				for sub_item in items.iter_mut() {
-					sub_item.replace_with_placeholders(get_placeholder)?;
-				}
-				Ok(())
-			},
-		}
-	}
 }
 
 impl Regex {

@@ -90,18 +90,12 @@ impl Schema {
 					builder.set_delimiters(delimiters);
 				},
 				SchemaFileLine::Placeholder(name, pattern) => {
-					let mut regex: Regex = Regex::from_pattern(pattern)
+					let regex: Regex = Regex::from_pattern_with_placeholders(pattern, Some(&mut placeholders))
 						.map_err(|_| SchemaFileError {
 							line_offset,
 							kind: SchemaParsingErrorKind::InvalidPattern,
 						})?
 						.inner;
-					regex
-						.replace_with_placeholders(&mut |name| placeholders.get(name).cloned())
-						.map_err(|_| SchemaFileError {
-							line_offset,
-							kind: SchemaParsingErrorKind::UndefinedPlaceholder(name.to_owned()),
-						})?;
 					let old: Option<Regex> = placeholders.insert(name.to_owned(), regex);
 					if old.is_some() {
 						return Err(SchemaFileError {
@@ -111,22 +105,8 @@ impl Schema {
 					}
 				},
 				SchemaFileLine::Rule(priority, name, pattern) => {
-					let mut regex: AnchoredRegex = Regex::from_pattern(pattern).map_err(|_| SchemaFileError {
-						line_offset,
-						kind: SchemaParsingErrorKind::InvalidPattern,
-					})?;
-					regex
-						.inner
-						.replace_with_placeholders(&mut |name| placeholders.get(name).cloned())
+					let regex: AnchoredRegex = Regex::from_pattern_with_placeholders(pattern, Some(&mut placeholders))
 						.map_err(|_| SchemaFileError {
-							line_offset,
-							kind: SchemaParsingErrorKind::UndefinedPlaceholder(name.to_owned()),
-						})?;
-					// TODO code duplication with normal pattern parsing path
-					regex
-						.inner
-						.number_captures(&mut { NonZero::<u16>::MIN }, &mut Vec::new())
-						.ok_or(SchemaFileError {
 							line_offset,
 							kind: SchemaParsingErrorKind::InvalidPattern,
 						})?;

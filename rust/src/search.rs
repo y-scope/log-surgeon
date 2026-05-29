@@ -447,15 +447,16 @@ impl<'a> SearchStringView<'a> {
 		}
 
 		for interpretation in potential_interpretations.into_iter() {
-			if interpretation.is_just_static_text() {}
-			if interpretation.sub_queries.iter().any(|sub_query| {
-				sub_query.rule_idx.is_some() && (true || sub_query.symbolic_value != [SymbolicChar::GlobStar])
-			}) {
+			// TODO more careful?
+			// Ignore interpretations that have "useless" captures.
+			if interpretation
+				.sub_queries
+				.iter()
+				.any(|sub_query| sub_query.rule_idx.is_some() && (sub_query.symbolic_value != [SymbolicChar::GlobStar]))
+			{
 				interpretations.push(interpretation);
 			}
-			// TODO more careful?
 		}
-		// interpretations.extend(potential_interpretations.into_iter());
 
 		interpretations
 	}
@@ -536,7 +537,7 @@ impl<'a> SearchStringView<'a> {
 			let rule_nfa: Tnfa = Tnfa::for_single_rule(rule_info.root_idx, regex);
 
 			let potential_interpretations: Vec<Interpretation> =
-				self.interpretations_for_nfa(schema, &rule_nfa, 0, None, None);
+				self.interpretations_for_nfa(schema, &rule_nfa, 0, Some(rule_info), None);
 
 			interpretations.extend(potential_interpretations.into_iter());
 		}
@@ -671,10 +672,6 @@ impl SymbolicChar {
 }
 
 impl Interpretation {
-	fn is_just_static_text(&self) -> bool {
-		self.sub_queries.iter().all(SubQuery::is_static_text)
-	}
-
 	fn append_sub_query(&mut self, mut suffix: Interpretation) {
 		let Some(me_last): Option<&mut SubQuery> = self.sub_queries.last_mut() else {
 			*self = suffix;
@@ -908,10 +905,16 @@ mod test {
 				&*interpretations[0].sub_queries[1].fully_qualified_name,
 				"block_id.blockNum"
 			);
-			assert_eq!(interpretations[1].sub_queries[0].string_value, "blk*_");
-			assert_eq!(interpretations[1].sub_queries[1].string_value, "566*");
+			assert_eq!(interpretations[1].sub_queries[0].string_value, "blk*");
+			assert_eq!(interpretations[1].sub_queries[1].string_value, "*");
 			assert_eq!(
 				&*interpretations[1].sub_queries[1].fully_qualified_name,
+				"block_id.blockNum"
+			);
+			assert_eq!(interpretations[1].sub_queries[2].string_value, "_");
+			assert_eq!(interpretations[1].sub_queries[3].string_value, "566*");
+			assert_eq!(
+				&*interpretations[1].sub_queries[3].fully_qualified_name,
 				"block_id.genStamp"
 			);
 		}
