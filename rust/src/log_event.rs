@@ -23,7 +23,7 @@ pub struct Match {
 	pub rule_idx: RuleIdx,
 	/// SubRule ID, local to the containing rule/variable/regex pattern;
 	/// `None`/`0` for a root rule,
-	/// See [`SubRule`](crate::regex::SubRule).
+	/// See [`SubRule`](crate::schema::SubRule).
 	pub sub_rule_id: Option<NonZero<u16>>,
 	/// Parent SubRule ID, if any;
 	/// `None` for both a root rule and a top-level capture in a regex pattern.

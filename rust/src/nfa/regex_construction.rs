@@ -273,6 +273,7 @@ impl Tnfa {
 				tags
 			},
 			Regex::Alternation(items) => self.alternate::<CAPTURE>(rule, items, current, target),
+			Regex::Placeholder { item, .. } => self.build::<CAPTURE>(rule, item, current, target),
 		}
 	}
 

@@ -9,11 +9,13 @@ use crate::nfa::Tnfa;
 use crate::regex::AnchoredRegex;
 use crate::regex::IntoRegex;
 use crate::regex::Regex;
-use crate::regex::SubRule;
+use crate::regex::RegexLookupPlaceholder;
 
 #[derive(Debug, Clone)]
 pub struct SchemaBuilder {
 	rules_by_priority: BTreeMap<i32, Vec<(Arc<str>, AnchoredRegex)>>,
+	placeholders: BTreeMap<String, Regex>,
+
 	delimiters: String,
 	anchor_ch: char,
 }
@@ -27,6 +29,7 @@ pub struct SchemaBuilder {
 #[derive(Debug, Clone)]
 pub struct Schema {
 	pub rules: Vec<RootRule>,
+	pub placeholders: BTreeMap<String, Regex>,
 
 	pub delimiters: String,
 
@@ -89,10 +92,35 @@ pub struct RuleInfo {
 #[repr(transparent)]
 pub struct RuleIdx(NonZero<u16>);
 
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub struct SubRule {
+	pub name: String,
+	// TODO move box to regex side
+	pub regex: Box<Regex>,
+
+	/// ID statically assigned left-to-right based on the regex pattern.
+	/// For example, the pattern `(?<start>[a-z]+(?<rest>\.[a-z]+)*)|(?<start>[0-9]+)` has three non-zero capture IDs.
+	/// When the pattern is actually matched,
+	/// there may be multiple instances of capture ID 2 (corresponding to `"rest"`).
+	/// The capture ID also differentiates between different capture groups given the same name,
+	/// e.g. the two instances of `"start"` in the pattern.
+	pub id: NonZero<u16>,
+	/// ID of the parent capture, if any.
+	pub parent_id: Option<NonZero<u16>>,
+	/// Total number of nested captures (recursively/arbitrarily deep);
+	/// `0` iff this is a "leaf" capture.
+	pub descendents: usize,
+
+	/// Qualified name w.r.t captures including the leading dot;
+	/// a top-level capture is ".a", a second-level capture is ".a.b".
+	pub qualified_name: Arc<str>,
+}
+
 impl SchemaBuilder {
 	pub fn new() -> Self {
 		Self {
 			rules_by_priority: BTreeMap::new(),
+			placeholders: BTreeMap::new(),
 			delimiters: Schema::DEFAULT_DELIMITERS.to_owned(),
 			anchor_ch: '\n',
 		}
@@ -159,6 +187,18 @@ impl SchemaBuilder {
 		Ok(self)
 	}
 
+	pub fn add_placeholder(&mut self, name: String, regex: Regex) -> Result<&mut Self, Regex> {
+		assert!(!name.is_empty());
+		assert_ne!(name, "delimiters");
+
+		let maybe_old: Option<Regex> = self.placeholders.insert(name, regex);
+		if let Some(old) = maybe_old {
+			return Err(old);
+		}
+
+		Ok(self)
+	}
+
 	pub fn build(self) -> Schema {
 		let mut rules: Vec<RootRule> = Vec::new();
 		let mut index: NonZero<u16> = NonZero::<u16>::MIN;
@@ -190,6 +230,7 @@ impl SchemaBuilder {
 
 		Schema {
 			rules,
+			placeholders: self.placeholders,
 			delimiters: self.delimiters,
 			main_nfa,
 			main_dfa,
@@ -197,6 +238,12 @@ impl SchemaBuilder {
 			ascii_delimiters,
 			non_ascii_delimiters,
 		}
+	}
+}
+
+impl RegexLookupPlaceholder for SchemaBuilder {
+	fn lookup(&mut self, name: &str) -> Option<Regex> {
+		self.placeholders.get(name).cloned()
 	}
 }
 
@@ -256,7 +303,10 @@ impl Schema {
 					}
 				}
 			},
-			Regex::KleeneClosure(item) | Regex::KleenePlus(item) | Regex::BoundedRepetition { item, .. } => {
+			Regex::KleeneClosure(item)
+			| Regex::KleenePlus(item)
+			| Regex::BoundedRepetition { item, .. }
+			| Regex::Placeholder { item, .. } => {
 				Self::find_capture(root_rule, item, first, rest, collect);
 			},
 			Regex::Sequence(items) | Regex::Alternation(items) => {
@@ -301,7 +351,10 @@ impl RootRule {
 					});
 					stack.push(&sub_rule.regex);
 				},
-				Regex::KleeneClosure(item) | Regex::KleenePlus(item) | Regex::BoundedRepetition { item, .. } => {
+				Regex::KleeneClosure(item)
+				| Regex::KleenePlus(item)
+				| Regex::BoundedRepetition { item, .. }
+				| Regex::Placeholder { item, .. } => {
 					stack.push(item);
 				},
 				Regex::Sequence(items) | Regex::Alternation(items) => {

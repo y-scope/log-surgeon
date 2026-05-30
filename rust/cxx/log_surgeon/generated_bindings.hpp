@@ -83,7 +83,7 @@ struct Match {
     RuleIdx rule_idx;
     /// SubRule ID, local to the containing rule/variable/regex pattern;
     /// `None`/`0` for a root rule,
-    /// See [`SubRule`](crate::regex::SubRule).
+    /// See [`SubRule`](crate::schema::SubRule).
     uint16_t sub_rule_id;
     /// Parent SubRule ID, if any;
     /// `None` for both a root rule and a top-level capture in a regex pattern.

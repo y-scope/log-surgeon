@@ -191,15 +191,12 @@ impl Regex {
 	{
 		match self {
 			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => Ok(()),
-			Self::Capture(sub_rule) => {
-				if let Self::Sequence(items) = &*sub_rule.regex
-					&& items.is_empty()
-				{
-					let Some(placeholder): Option<Regex> = get_placeholder.lookup(&sub_rule.name) else {
-						return Err(RegexErrorKind::UndefinedPlaceholder(sub_rule.name.clone()));
-					};
-					*self = placeholder;
-				}
+			Self::Capture(sub_rule) => sub_rule.regex.replace_with_placeholders(get_placeholder),
+			Self::Placeholder { name, item } => {
+				let Some(placeholder): Option<Regex> = get_placeholder.lookup(name) else {
+					return Err(RegexErrorKind::UndefinedPlaceholder(name.clone()));
+				};
+				**item = placeholder;
 				Ok(())
 			},
 			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
@@ -450,24 +447,30 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 	let (input, name): (&str, &str) =
 		cut(combinator_surrounded_cut::<'<', '>', _, _>(parse_capture_name)).parse(input)?;
 
-	let (input, regex): (&str, Regex) = if input.starts_with(')') {
-		(input, Regex::Sequence(Vec::new()))
+	if input.starts_with(')') {
+		Ok((
+			input,
+			Regex::Placeholder {
+				name: name.to_owned(),
+				item: Box::new(Regex::AnyChar),
+			},
+		))
 	} else {
-		parse_alternation(input)?
-	};
+		let (input, regex): (&str, Regex) = parse_alternation(input)?;
 
-	Ok((
-		input,
-		Regex::Capture(SubRule {
-			name: name.to_owned(),
-			regex: Box::new(regex),
-			// This is a valid placeholder; see note for [`Regex::number_captures`].
-			id: NonZero::<u16>::MAX,
-			parent_id: None,
-			descendents: 0,
-			qualified_name: Arc::from(""),
-		}),
-	))
+		Ok((
+			input,
+			Regex::Capture(SubRule {
+				name: name.to_owned(),
+				regex: Box::new(regex),
+				// This is a valid placeholder; see note for [`Regex::number_captures`].
+				id: NonZero::<u16>::MAX,
+				parent_id: None,
+				descendents: 0,
+				qualified_name: Arc::from(""),
+			}),
+		))
+	}
 }
 
 // ========================================

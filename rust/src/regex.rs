@@ -1,9 +1,10 @@
-mod pattern_parsing;
 use std::num::NonZero;
 use std::sync::Arc;
 
+mod pattern_parsing;
 pub use pattern_parsing::*;
 
+use crate::schema::SubRule;
 use crate::utils::Escaped;
 
 // TODO: relax need to escape `<>`?
@@ -38,35 +39,13 @@ pub enum Regex {
 	BoundedRepetition { min: u32, max: u32, item: Box<Regex> },
 	Sequence(Vec<Regex>),
 	Alternation(Vec<Regex>),
+	Placeholder { name: String, item: Box<Regex> },
 }
 
 impl std::fmt::Debug for Regex {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		fmt.write_str(&self.to_pattern())
 	}
-}
-
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub struct SubRule {
-	pub name: String,
-	pub regex: Box<Regex>,
-
-	/// ID statically assigned left-to-right based on the regex pattern.
-	/// For example, the pattern `(?<start>[a-z]+(?<rest>\.[a-z]+)*)|(?<start>[0-9]+)` has three non-zero capture IDs.
-	/// When the pattern is actually matched,
-	/// there may be multiple instances of capture ID 2 (corresponding to `"rest"`).
-	/// The capture ID also differentiates between different capture groups given the same name,
-	/// e.g. the two instances of `"start"` in the pattern.
-	pub id: NonZero<u16>,
-	/// ID of the parent capture, if any.
-	pub parent_id: Option<NonZero<u16>>,
-	/// Total number of nested captures (recursively/arbitrarily deep);
-	/// `0` iff this is a "leaf" capture.
-	pub descendents: usize,
-
-	/// Qualified name w.r.t captures including the leading dot;
-	/// a top-level capture is ".a", a second-level capture is ".a.b".
-	pub qualified_name: Arc<str>,
 }
 
 impl IntoRegex for AnchoredRegex {
@@ -124,6 +103,9 @@ impl Regex {
 			Self::Capture(sub_rule) => {
 				format!("(?<{}>{})", sub_rule.name, sub_rule.regex.to_pattern())
 			},
+			Self::Placeholder { name, .. } => {
+				format!("(?<{}>)", name)
+			},
 			Self::KleeneClosure(item) => {
 				format!("{}*", self.surround(item))
 			},
@@ -175,7 +157,8 @@ impl Regex {
 	/// except for a capture, which is "already" parenthesized.
 	fn precedence(&self) -> isize {
 		match self {
-			Self::AnyChar | Self::Literal(_) | Self::Group { .. } | Self::Capture { .. } => 0,
+			Self::AnyChar | Self::Literal(_) | Self::Group { .. } => 0,
+			Self::Capture { .. } | Self::Placeholder { .. } => 0,
 			Self::KleeneClosure(_) | Self::KleenePlus(_) | Self::BoundedRepetition { .. } => -1,
 			Self::Sequence(_) => -2,
 			Self::Alternation(_) => -3,
@@ -188,9 +171,10 @@ impl Regex {
 		match self {
 			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => 0,
 			Self::Capture(sub_rule) => 1 + sub_rule.descendents,
-			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
-				item.count_captures()
-			},
+			Self::KleeneClosure(item)
+			| Self::KleenePlus(item)
+			| Self::BoundedRepetition { item, .. }
+			| Self::Placeholder { item, .. } => item.count_captures(),
 			Self::Sequence(items) | Self::Alternation(items) => {
 				items.iter().fold(0, |total, item| total + item.count_captures())
 			},
@@ -227,7 +211,10 @@ impl Regex {
 				bread = 1 + sub_rule.descendents;
 				stack.pop();
 			},
-			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
+			Self::KleeneClosure(item)
+			| Self::KleenePlus(item)
+			| Self::BoundedRepetition { item, .. }
+			| Self::Placeholder { item, .. } => {
 				bread += item.number_captures(id, stack)?;
 			},
 			Self::Sequence(items) | Self::Alternation(items) => {

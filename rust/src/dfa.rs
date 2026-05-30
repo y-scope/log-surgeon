@@ -16,9 +16,9 @@ use crate::nfa::Tag;
 use crate::nfa::Tnfa;
 use crate::nfa::Transitions;
 use crate::regex::Regex;
-use crate::regex::SubRule;
 use crate::schema::RootRule;
 use crate::schema::RuleIdx;
+use crate::schema::SubRule;
 use crate::utils::Range;
 
 #[derive(Debug, Clone)]

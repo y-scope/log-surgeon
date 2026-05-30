@@ -14,9 +14,9 @@ use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
 use crate::interval_tree::PolicyUnique;
 use crate::regex::Regex;
-use crate::regex::SubRule;
 use crate::schema::RootRule;
 use crate::schema::RuleIdx;
+use crate::schema::SubRule;
 
 #[derive(Debug, Clone)]
 pub struct Tnfa {
