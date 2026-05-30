@@ -208,45 +208,53 @@ impl Interpretation {
 				{
 					if query1.is_static_text() && query2.is_static_text() {
 						if query1.symbolic_value == query2.symbolic_value {
-							continue;
+							if k == interpretation1.sub_queries.len() {
+								assert_eq!(interpretation1, interpretation2);
+
+								panic!();
+							}
+							continue 'inner;
 						} else {
+							// Different interpretations.
 							break 'inner;
 						}
 					}
 					if query1.rule_idx != query2.rule_idx {
+						// Different interpretations.
 						break 'inner;
 					}
 					if query1.group != query2.group {
+						// Different interpretations.
 						break 'inner;
 					}
 					if query1.symbolic_value == query2.symbolic_value {
 						if k == interpretation1.sub_queries.len() {
 							assert_eq!(interpretation1, interpretation2);
 
-							debug!("- removing same interp");
-							interpretations.remove(j);
-							continue 'outer;
+							panic!();
 						}
-						continue;
+						continue 'inner;
 					}
 					if query1.symbolic_value.starts_with(&query2.symbolic_value) {
 						assert!(query1.symbolic_value.len() > query2.symbolic_value.len());
-						debug!("removing j < i:");
-						debug!("- {interpretation1:?}");
-						debug!("- {interpretation2:?}");
+						debug!("\t- removing j < i:");
+						debug!("\t\t- {interpretation1:?}");
+						debug!("\t\t- GONE {interpretation2:?}");
 						interpretations.remove(j);
 						continue 'outer;
 					}
 					if query2.symbolic_value.starts_with(&query1.symbolic_value) {
 						assert!(query2.symbolic_value.len() > query1.symbolic_value.len());
-						debug!("removing i < j:");
-						debug!("- {interpretation1:?}");
-						debug!("- {interpretation2:?}");
+						debug!("\t- removing i < j:");
+						debug!("\t\t- GONE {interpretation1:?}");
+						debug!("\t\t- {interpretation2:?}");
 						interpretations.swap(i, j);
 						interpretations.remove(j);
 						j = i + 1;
 						continue 'outer;
 					}
+					// Different interpretations.
+					break 'inner;
 				}
 				j += 1;
 			}

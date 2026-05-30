@@ -22,9 +22,9 @@ macro_rules! how_long {
 	}};
 }
 
-#[cfg(test)]
 #[macro_use]
 mod test {
+	#[macro_export]
 	macro_rules! schema {
 		($definition:expr) => {{
 			use $crate::schema::Schema;
