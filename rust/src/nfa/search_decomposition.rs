@@ -232,7 +232,7 @@ impl PathEdge {
 }
 
 impl Tnfa {
-	pub fn intersect(&self, other: &Self) -> Self {
+	pub fn intersect<const FOR_SEARCH: bool>(&self, other: &Self) -> Self {
 		let begin: NfaIdx = NfaIdx::BEGIN;
 
 		let mut stack: Vec<(StatePair<'_>, NfaIdx)> = vec![(StatePair::new(self, other, begin, begin), begin)];
@@ -342,18 +342,27 @@ impl Tnfa {
 					let mut combined: IntervalTree<u32, NfaIdx> = IntervalTree::new();
 					for (interval1, &target1) in transitions1.iter() {
 						for (interval2, &target2) in transitions2.iter() {
+							let Some(overlap): Option<Interval<u32>> = interval1.overlap(&interval2) else {
+								continue;
+							};
 							if interval2.start() != interval2.end() {
 								// Query wildcard.
-								assert_eq!((interval2.start(), interval2.end()), (0, u32::from(char::MAX)));
+								// TODO not true for arbitrary intersections - e.g. encodings
+								// assert_eq!((interval2.start(), interval2.end()), (0, u32::from(char::MAX)));
 								let next: NfaIdx =
 									lookup_state(StatePair::new(self, other, target1, target2), &mut intersection);
-								combined.insert(Interval::new(0, u32::MAX), next, PolicyUnique);
+								combined.insert(
+									if FOR_SEARCH {
+										Interval::new(0, u32::MAX)
+									} else {
+										overlap
+									},
+									next,
+									PolicyUnique,
+								);
 							} else {
 								// Query literal character.
 								assert_eq!(interval2.start(), interval2.end());
-								let Some(overlap): Option<Interval<u32>> = interval1.overlap(&interval2) else {
-									continue;
-								};
 								assert_eq!(overlap, interval2);
 								let next: NfaIdx =
 									lookup_state(StatePair::new(self, other, target1, target2), &mut intersection);
@@ -867,7 +876,7 @@ mod test {
 		// let search = nfa_for("(ab)*");
 		// println!("{}", nfa.intersect(&search).to_dot_output());
 		// return;
-		let paths = nfa.intersect(&search).compute_paths::<false>();
+		let paths = nfa.intersect::<true>(&search).compute_paths::<false>();
 		let mut paths = paths.iter().map(ToString::to_string).collect::<Vec<_>>();
 		paths.sort();
 		paths.dedup();

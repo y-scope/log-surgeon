@@ -38,6 +38,8 @@ pub struct Match {
 
 	pub is_leaf: bool,
 
+	pub encoding_idx: Option<NonZero<u16>>,
+
 	/// DANGEROUS fields for FFI.
 	/// But it's not dangerous if you don't look at it.
 	pub ffi_pointers: MatchFfiPointers,

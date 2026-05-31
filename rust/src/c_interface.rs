@@ -5,6 +5,7 @@ use std::str::Utf8Error;
 use crate::log_event::LogEvent;
 use crate::log_event::Match;
 use crate::parser::Parser;
+use crate::regex::Regex;
 use crate::regex::RegexError;
 use crate::schema::Schema;
 use crate::schema::SchemaBuilder;
@@ -102,6 +103,25 @@ mod schema {
 	}
 
 	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_schema_add_encoding<'pattern>(
+		builder: &mut SchemaBuilder,
+		name: CCharArray<'_>,
+		pattern: CCharArray<'pattern>,
+	) -> Option<Box<RegexError<'pattern>>> {
+		let name: &str = name.as_utf8().unwrap();
+		let pattern: &str = pattern.as_utf8().unwrap();
+		let regex: Regex = match Regex::from_pattern(pattern) {
+			Ok(anchored_regex) => anchored_regex.inner,
+			Err(err) => {
+				return Some(Box::new(err));
+			},
+		};
+		// TODO unwrap
+		builder.add_encoding(name, regex).unwrap();
+		None
+	}
+
+	#[unsafe(no_mangle)]
 	unsafe extern "C" fn log_surgeon_schema_builder_build(builder: Box<SchemaBuilder>) -> Box<Schema> {
 		Box::new(builder.build())
 	}
@@ -114,6 +134,17 @@ mod schema {
 		} else {
 			None
 		}
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_schema_get_encoding(parser: &Parser, encoding_idx: usize, i: usize) -> CCharArray<'_> {
+		let Some(possible_encodings): Option<&Vec<String>> = parser.schema.encodings.get(encoding_idx) else {
+			return CCharArray::null();
+		};
+		let Some(encoding_name): Option<&String> = possible_encodings.get(i) else {
+			return CCharArray::null();
+		};
+		CCharArray::from_utf8(encoding_name)
 	}
 }
 

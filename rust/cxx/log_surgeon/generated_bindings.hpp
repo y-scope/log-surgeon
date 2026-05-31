@@ -94,6 +94,7 @@ struct Match {
     /// Relative to the start of the log message.
     Range<size_t> range;
     bool is_leaf;
+    uint16_t encoding_idx;
     /// DANGEROUS fields for FFI.
     /// But it's not dangerous if you don't look at it.
     MatchFfiPointers ffi_pointers;
@@ -128,6 +129,10 @@ bool log_surgeon_parser_next(Parser *parser, CCharArray input, size_t *pos, LogE
 
 void log_surgeon_regex_error_drop(Box<RegexError> value);
 
+Option<Box<RegexError>> log_surgeon_schema_add_encoding(SchemaBuilder *builder,
+                                                        CCharArray name,
+                                                        CCharArray pattern);
+
 Option<Box<RegexError>> log_surgeon_schema_builder_add_rule_with_priority(SchemaBuilder *builder,
                                                                           int32_t priority,
                                                                           CCharArray name,
@@ -140,6 +145,8 @@ Box<SchemaBuilder> log_surgeon_schema_builder_new();
 void log_surgeon_schema_builder_set_delimiters(SchemaBuilder *builder, CCharArray delimiters);
 
 Option<Box<Schema>> log_surgeon_schema_from_definition(CCharArray definition);
+
+CCharArray log_surgeon_schema_get_encoding(const Parser *parser, size_t encoding_idx, size_t i);
 
 const Interpretation *log_surgeon_search_get_interpretation(const Vec<Interpretation> *interpretations,
                                                             size_t i);

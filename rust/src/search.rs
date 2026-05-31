@@ -570,7 +570,7 @@ impl<'a> SearchStringView<'a> {
 
 		let search_nfa: Tnfa = Tnfa::for_regex(&self.to_regex(maybe_delimiters));
 
-		let intersection: Tnfa = nfa.intersect(&search_nfa);
+		let intersection: Tnfa = nfa.intersect::<true>(&search_nfa);
 
 		let paths: Vec<Path> = if maybe_delimiters.is_some() {
 			intersection.compute_paths::<true>()

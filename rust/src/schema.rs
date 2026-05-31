@@ -1,6 +1,7 @@
 mod schema_file;
 
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::num::NonZero;
 use std::sync::Arc;
 
@@ -15,6 +16,7 @@ use crate::regex::RegexLookupPlaceholder;
 pub struct SchemaBuilder {
 	rules_by_priority: BTreeMap<i32, Vec<(Arc<str>, AnchoredRegex)>>,
 	placeholders: BTreeMap<String, Regex>,
+	encodings: BTreeMap<String, Regex>,
 
 	delimiters: String,
 	anchor_ch: char,
@@ -37,6 +39,8 @@ pub struct Schema {
 	pub main_dfa: Tdfa,
 	/// TNFA used for search.
 	pub main_nfa: Tnfa,
+
+	pub encodings: Vec<Vec<String>>,
 
 	/// Derived from `delimiters`;
 	/// used to insert "phantom characters" for start/end anchors.
@@ -62,6 +66,8 @@ pub struct RootRule {
 
 	pub regex: AnchoredRegex,
 	pub rule_info: Vec<RuleInfo>,
+
+	pub maybe_encoding: Option<NonZero<u16>>,
 
 	pub dfa: Tdfa,
 }
@@ -121,6 +127,7 @@ impl SchemaBuilder {
 		Self {
 			rules_by_priority: BTreeMap::new(),
 			placeholders: BTreeMap::new(),
+			encodings: BTreeMap::new(),
 			delimiters: Schema::DEFAULT_DELIMITERS.to_owned(),
 			anchor_ch: '\n',
 		}
@@ -199,12 +206,64 @@ impl SchemaBuilder {
 		Ok(self)
 	}
 
+	pub fn add_encoding<LikeString>(&mut self, name: LikeString, regex: Regex) -> Result<&mut Self, Regex>
+	where
+		LikeString: Into<String>,
+	{
+		let name: String = name.into();
+		assert!(!name.is_empty());
+
+		let maybe_old: Option<Regex> = self.encodings.insert(name, regex);
+		if let Some(old) = maybe_old {
+			return Err(old);
+		}
+
+		Ok(self)
+	}
+
 	pub fn build(self) -> Schema {
 		let mut rules: Vec<RootRule> = Vec::new();
+
+		let mut encodings: Vec<Vec<String>> = vec![Vec::new()];
+		let mut encodings_lookup: BTreeMap<BTreeSet<String>, usize> = BTreeMap::from([(BTreeSet::new(), 0)]);
+
 		let mut index: NonZero<u16> = NonZero::<u16>::MIN;
 		for (priority, rules_at_priority) in self.rules_by_priority.into_iter().rev() {
 			for (name, regex) in rules_at_priority.into_iter() {
-				rules.push(RootRule::new(RuleIdx(index), name, priority, regex));
+				let rule_idx: RuleIdx = RuleIdx(index);
+				let rule_nfa: Tnfa = Tnfa::for_single_rule(rule_idx, &regex.inner);
+
+				let mut possible_encodings: BTreeSet<String> = BTreeSet::new();
+				for (encoding_name, encoding_regex) in self.encodings.iter() {
+					let encoding_nfa: Tnfa = Tnfa::for_single_rule(RuleIdx::NIL, encoding_regex);
+					let intersection: Tnfa = rule_nfa.intersect::<false>(&encoding_nfa);
+					if intersection.can_accept() {
+						println!("rule {name} can accept with {encoding_name}");
+						possible_encodings.insert(encoding_name.clone());
+					}
+				}
+				let encoding_idx: usize =
+					*encodings_lookup
+						.entry(possible_encodings)
+						.or_insert_with_key(|possible_encodings| {
+							let n: usize = encodings.len();
+							encodings.push(possible_encodings.iter().cloned().collect::<Vec<_>>());
+							n
+						});
+
+				let Some(encoding_idx): Option<u16> = u16::try_from(encoding_idx).ok() else {
+					panic!("more than u16::MAX encodings (not supported)");
+				};
+				let encoding_idx: Option<NonZero<u16>> = NonZero::new(encoding_idx);
+
+				rules.push(RootRule::new(
+					RuleIdx(index),
+					name,
+					priority,
+					regex,
+					&rule_nfa,
+					encoding_idx,
+				));
 
 				let Some(next): Option<NonZero<u16>> = index.checked_add(1) else {
 					panic!("more than u16::MAX rules (not supported)");
@@ -234,6 +293,7 @@ impl SchemaBuilder {
 			delimiters: self.delimiters,
 			main_nfa,
 			main_dfa,
+			encodings,
 			anchor_ch: self.anchor_ch,
 			ascii_delimiters,
 			non_ascii_delimiters,
@@ -327,7 +387,14 @@ impl std::ops::Index<RuleIdx> for Schema {
 }
 
 impl RootRule {
-	pub fn new(idx: RuleIdx, name: Arc<str>, priority: i32, regex: AnchoredRegex) -> Self {
+	pub fn new(
+		idx: RuleIdx,
+		name: Arc<str>,
+		priority: i32,
+		regex: AnchoredRegex,
+		nfa: &Tnfa,
+		maybe_encoding: Option<NonZero<u16>>,
+	) -> Self {
 		let mut rule_info: Vec<RuleInfo> = Vec::with_capacity(1 + regex.inner.count_captures());
 		rule_info.push(RuleInfo {
 			root_idx: idx,
@@ -366,7 +433,8 @@ impl RootRule {
 			}
 		}
 
-		let dfa: Tdfa = Tdfa::for_single_rule(idx, &regex.inner);
+		// TODO careful about anchor char
+		let dfa: Tdfa = Tdfa::determinization(nfa, '\n');
 
 		Self {
 			idx,
@@ -374,6 +442,7 @@ impl RootRule {
 			priority,
 			regex,
 			rule_info,
+			maybe_encoding,
 			dfa,
 		}
 	}
@@ -422,5 +491,27 @@ impl RuleInfo {
 
 	pub fn is_root(&self) -> bool {
 		self.maybe_sub_rule.is_none()
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+
+	#[test]
+	fn number_encoding() {
+		let mut builder: SchemaBuilder = SchemaBuilder::new();
+		builder
+			.add_rule("has_number", r"\w*\d\w*")
+			.unwrap()
+			.add_rule("ip_address", r"\d(\.\d){3}")
+			.unwrap()
+			.add_encoding("int", Regex::from_pattern(r"\d+").unwrap().inner)
+			.unwrap();
+
+		let schema: Schema = builder.build();
+
+		assert_eq!(schema.rules[0].maybe_encoding, Some(NonZero::<u16>::MIN));
+		assert_eq!(schema.rules[1].maybe_encoding, None);
 	}
 }

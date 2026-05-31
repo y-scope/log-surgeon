@@ -25,7 +25,6 @@ use crate::utils::Range;
 pub struct Tdfa {
 	states: Vec<DfaState>,
 	kernels: BTreeMap<Kernel, usize>,
-	/// Bijection between `tags` and `{ 0..tags.len() }`.
 	pub tags: Vec<Tag>,
 	/// Bijection between corresponding starting and ending tags.
 	tag_pairs: Vec<usize>,

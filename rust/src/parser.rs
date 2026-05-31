@@ -93,6 +93,7 @@ impl Parser {
 							end: token_start + lexeme.len(),
 						},
 						is_leaf: variable_is_implicit_capture,
+						encoding_idx: rule.maybe_encoding,
 						ffi_pointers: MatchFfiPointers::NULL,
 					};
 
@@ -115,6 +116,7 @@ impl Parser {
 								end: token_start + regex_capture.range.end,
 							},
 							is_leaf: regex_capture.is_leaf,
+							encoding_idx: rule.maybe_encoding,
 							ffi_pointers: MatchFfiPointers::NULL,
 						});
 						if regex_capture.is_leaf {
