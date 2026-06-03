@@ -225,16 +225,19 @@ impl PyParser {
 	#[staticmethod]
 	#[pyo3(signature = (definition, *, debug = false))]
 	fn from_schema_definition(definition: &str, debug: bool) -> PyResult<Self> {
-		match Schema::from_schema_definition(definition) {
-			Ok(schema) => Ok(Self {
-				input: Python::attach(|py| py.None()),
-				schema_builder: SchemaBuilder::new(),
-				maybe_schema: Some(schema.clone()),
-				maybe_parser: Some(Parser::new(schema)),
-				buffer: String::new(),
-				pos: 0,
-				debug,
-			}),
+		match SchemaBuilder::from_schema_definition(definition) {
+			Ok(builder) => {
+				let schema: Schema = builder.build();
+				Ok(Self {
+					input: Python::attach(|py| py.None()),
+					schema_builder: SchemaBuilder::new(),
+					maybe_schema: Some(schema.clone()),
+					maybe_parser: Some(Parser::new(schema)),
+					buffer: String::new(),
+					pos: 0,
+					debug,
+				})
+			},
 			Err(err) => Err(LogSurgeonException::new_err(format!(
 				"invalid schema definition on line {}",
 				err.line_offset + 1

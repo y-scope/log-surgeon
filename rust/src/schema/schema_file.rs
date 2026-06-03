@@ -80,9 +80,11 @@ impl Schema {
 				accumulated
 			})
 	}
+}
 
+impl SchemaBuilder {
 	pub fn from_schema_definition(contents: &str) -> Result<Self, SchemaFileError<'_>> {
-		let mut builder: SchemaBuilder = SchemaBuilder::new();
+		let mut builder: Self = Self::new();
 		for (line_offset, line) in contents.lines().enumerate() {
 			// TODO: line offset 0/1 based (currently 0).
 			let line: &str = line.trim();
@@ -132,7 +134,7 @@ impl Schema {
 			}
 		}
 
-		Ok(builder.build())
+		Ok(builder)
 	}
 }
 
@@ -273,7 +275,7 @@ mod test {
 
 		let serialized: String = schema.to_schema_definition();
 
-		let schema2: Schema = Schema::from_schema_definition(&serialized).unwrap();
+		let schema2: Schema = SchemaBuilder::from_schema_definition(&serialized).unwrap().build();
 
 		assert_eq!(schema, schema2);
 	}
@@ -289,7 +291,7 @@ mod test {
 
 		let serialized: String = schema.to_schema_definition();
 
-		let schema2: Schema = Schema::from_schema_definition(&serialized).unwrap();
+		let schema2: Schema = SchemaBuilder::from_schema_definition(&serialized).unwrap().build();
 		let serialized2: String = schema2.to_schema_definition();
 
 		assert_eq!(serialized, serialized2);

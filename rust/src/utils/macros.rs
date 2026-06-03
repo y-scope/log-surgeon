@@ -28,13 +28,14 @@ mod test {
 	macro_rules! schema {
 		($definition:expr) => {{
 			use $crate::schema::Schema;
+			use $crate::schema::SchemaBuilder;
 
 			let definition: &::std::primitive::str = $definition;
 
 			// Canonicalize schema by round-tripping.
-			let schema: Schema = Schema::from_schema_definition(definition).unwrap();
+			let schema: Schema = SchemaBuilder::from_schema_definition(definition).unwrap().build();
 			let roundtrip: String = schema.to_schema_definition();
-			let schema: Schema = Schema::from_schema_definition(&roundtrip).unwrap();
+			let schema: Schema = SchemaBuilder::from_schema_definition(&roundtrip).unwrap().build();
 
 			schema
 		}};

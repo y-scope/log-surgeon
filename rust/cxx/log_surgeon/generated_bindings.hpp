@@ -140,6 +140,8 @@ Option<Box<RegexError>> log_surgeon_schema_builder_add_rule_with_priority(Schema
 
 Box<Schema> log_surgeon_schema_builder_build(Box<SchemaBuilder> builder);
 
+Option<Box<SchemaBuilder>> log_surgeon_schema_builder_from_definition(CCharArray definition);
+
 Box<SchemaBuilder> log_surgeon_schema_builder_new();
 
 void log_surgeon_schema_builder_set_delimiters(SchemaBuilder *builder, CCharArray delimiters);

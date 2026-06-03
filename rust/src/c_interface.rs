@@ -129,8 +129,18 @@ mod schema {
 	#[unsafe(no_mangle)]
 	extern "C" fn log_surgeon_schema_from_definition(definition: CCharArray<'_>) -> Option<Box<Schema>> {
 		let definition: &str = definition.as_utf8().unwrap();
-		if let Ok(schema) = Schema::from_schema_definition(definition) {
-			Some(Box::new(schema))
+		if let Ok(builder) = SchemaBuilder::from_schema_definition(definition) {
+			Some(Box::new(builder.build()))
+		} else {
+			None
+		}
+	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_schema_builder_from_definition(definition: CCharArray<'_>) -> Option<Box<SchemaBuilder>> {
+		let definition: &str = definition.as_utf8().unwrap();
+		if let Ok(builder) = SchemaBuilder::from_schema_definition(definition) {
+			Some(Box::new(builder))
 		} else {
 			None
 		}
