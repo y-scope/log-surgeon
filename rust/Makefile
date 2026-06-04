@@ -26,6 +26,7 @@ target/debug/liblog_surgeon.a: FORCE
 	cargo build --no-default-features
 
 format:
+	cargo +nightly fmt
 	task lint:fix-cpp-format-log-surgeon
 
 lint:

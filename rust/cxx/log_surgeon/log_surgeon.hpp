@@ -228,8 +228,8 @@ inline auto ParserHandle::query_interpretations(std::string_view name, std::stri
             std::string_view const value{log_surgeon_search_sub_query_get_value(sub_query)};
 
             sub_queries.push_back({
-                    .qualified_name = std::string(qualified_name),
-                    .value = std::string(value),
+                    .qualified_name = std::string{qualified_name},
+                    .value = std::string{value},
             });
 
             j++;

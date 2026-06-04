@@ -124,6 +124,7 @@ impl Parser {
 						}
 					}
 
+					last_was_delimited = 0;
 					if name == "header" && previous_was_newline {
 						if have_header {
 							let pending_header: &mut WorkingLogEvent =
@@ -149,8 +150,6 @@ impl Parser {
 						} else if token_start == 0 {
 							have_header = true;
 						}
-					} else {
-						last_was_delimited = 0;
 					}
 				},
 				Token::Newline => {
