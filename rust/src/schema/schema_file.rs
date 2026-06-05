@@ -42,36 +42,14 @@ impl Schema {
 			.chain(std::iter::once(String::new()))
 			// Placeholders.
 			.chain(self.placeholders.iter().map(|(name, regex)| {
-				let mut pattern: String = regex.to_pattern();
-				// TODO refactor with below
-				if let Some(suffix) = pattern.strip_prefix(' ') {
-					pattern = format!("[ ]{suffix}");
-				}
-				if let Some(prefix) = pattern.strip_suffix(' ') {
-					pattern = format!("{prefix}[ ]");
-				}
-				assert!(!pattern.starts_with(|ch: char| ch.is_whitespace()));
-				assert!(!pattern.ends_with(|ch: char| ch.is_whitespace()));
+				let pattern: String = AnchoredRegex::unanchored(regex.clone()).to_pattern();
 				format!("!{name}: {pattern}")
 			}))
 			// Empty line, pretty.
 			.chain(std::iter::once(String::new()))
 			// Rules.
 			.chain(self.rules.iter().map(|rule| {
-				let mut pattern: String = format!(
-					"{}{}{}",
-					if rule.regex.anchor_before { "^" } else { "" },
-					rule.regex.inner.to_pattern(),
-					if rule.regex.anchor_after { "$" } else { "" },
-				);
-				if let Some(suffix) = pattern.strip_prefix(' ') {
-					pattern = format!("[ ]{suffix}");
-				}
-				if let Some(prefix) = pattern.strip_suffix(' ') {
-					pattern = format!("{prefix}[ ]");
-				}
-				assert!(!pattern.starts_with(|ch: char| ch.is_whitespace()));
-				assert!(!pattern.ends_with(|ch: char| ch.is_whitespace()));
+				let pattern: String = rule.regex.to_pattern();
 				format!("{} ({}): {pattern}", rule.name, rule.priority)
 			}))
 			.fold(String::new(), |mut accumulated, line| {
@@ -110,7 +88,7 @@ impl SchemaBuilder {
 					builder.set_delimiters(delimiters);
 				},
 				SchemaFileLine::Placeholder(name, pattern) => {
-					let regex: Regex = Regex::from_pattern_with_placeholders(pattern, Some(&mut builder))
+					let regex: Regex = Regex::from_pattern_with_placeholders(pattern, &mut builder)
 						.map_err(SchemaFileError::with_line(
 							line_offset,
 							SchemaParsingErrorKind::InvalidPattern,
@@ -125,10 +103,9 @@ impl SchemaBuilder {
 						})?;
 				},
 				SchemaFileLine::Rule(priority, name, pattern) => {
-					let regex: AnchoredRegex =
-						Regex::from_pattern_with_placeholders(pattern, Some(&mut builder)).map_err(
-							SchemaFileError::with_line(line_offset, SchemaParsingErrorKind::InvalidPattern),
-						)?;
+					let regex: AnchoredRegex = Regex::from_pattern_with_placeholders(pattern, &mut builder).map_err(
+						SchemaFileError::with_line(line_offset, SchemaParsingErrorKind::InvalidPattern),
+					)?;
 					let Ok(_) = builder.add_rule_with_priority(priority, name, regex);
 				},
 			}

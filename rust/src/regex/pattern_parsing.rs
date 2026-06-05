@@ -136,12 +136,12 @@ impl<'a> RegexParsingError<'a> {
 
 impl Regex {
 	pub fn from_pattern(pattern: &str) -> Result<AnchoredRegex, RegexError<'_>> {
-		Self::from_pattern_with_placeholders(pattern, None::<&mut ()>)
+		Self::from_pattern_with_placeholders(pattern, &mut ())
 	}
 
 	pub fn from_pattern_with_placeholders<'a, T>(
 		pattern: &'a str,
-		maybe_lookup: Option<&mut T>,
+		lookup: &mut T,
 	) -> Result<AnchoredRegex, RegexError<'a>>
 	where
 		T: RegexLookupPlaceholder,
@@ -150,16 +150,14 @@ impl Regex {
 			Ok((remaining, mut regex)) => {
 				assert_eq!(remaining, "");
 
-				if let Some(lookup) = maybe_lookup {
-					regex
-						.inner
-						.replace_with_placeholders(lookup)
-						.map_err(|kind| RegexError {
-							consumed: pattern,
-							remaining,
-							kind,
-						})?;
-				}
+				regex
+					.inner
+					.replace_with_placeholders(lookup)
+					.map_err(|kind| RegexError {
+						consumed: pattern,
+						remaining,
+						kind,
+					})?;
 
 				regex
 					.inner
@@ -209,6 +207,47 @@ impl Regex {
 				Ok(())
 			},
 		}
+	}
+
+	/// [`RegexCapture::id`] defaults to [`NonZero::<u16>::MAX`];
+	/// if we actually reach this, `next_id` will overflow,
+	/// so it naturally works as a placeholder/invalid value.
+	///
+	/// Invariant: `parent_id < id`.
+	fn number_captures(&mut self, id: &mut NonZero<u16>, stack: &mut Vec<(NonZero<u16>, Arc<str>)>) -> Option<usize> {
+		let mut bread: usize = 0;
+		match self {
+			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
+			Self::Capture(sub_rule) => {
+				let maybe_parent: Option<&(NonZero<u16>, Arc<str>)> = stack.last();
+				sub_rule.parent_id = maybe_parent.map(|(id, _)| *id);
+				sub_rule.id = *id;
+				sub_rule.qualified_name = Arc::from(format!(
+					"{}.{}",
+					maybe_parent.map_or("", |(_, name)| name),
+					sub_rule.name
+				));
+				stack.push((sub_rule.id, sub_rule.qualified_name.clone()));
+				// `id` is `u16`.
+				*id = id.checked_add(1)?;
+				sub_rule.descendents = sub_rule.regex.number_captures(id, stack)?;
+				// `bread` is `usize`.
+				bread = 1 + sub_rule.descendents;
+				stack.pop();
+			},
+			Self::KleeneClosure(item)
+			| Self::KleenePlus(item)
+			| Self::BoundedRepetition { item, .. }
+			| Self::Placeholder { item, .. } => {
+				bread += item.number_captures(id, stack)?;
+			},
+			Self::Sequence(items) | Self::Alternation(items) => {
+				for sub_item in items.iter_mut() {
+					bread += sub_item.number_captures(id, stack)?;
+				}
+			},
+		}
+		Some(bread)
 	}
 }
 
@@ -460,15 +499,15 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 
 		Ok((
 			input,
-			Regex::Capture(SubRule {
+			Regex::Capture(Box::new(SubRule {
 				name: name.to_owned(),
-				regex: Box::new(regex),
+				regex,
 				// This is a valid placeholder; see note for [`Regex::number_captures`].
 				id: NonZero::<u16>::MAX,
 				parent_id: None,
 				descendents: 0,
 				qualified_name: Arc::from(""),
-			}),
+			})),
 		))
 	}
 }

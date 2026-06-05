@@ -36,8 +36,7 @@ impl Schema {
 			.execute_without_captures(&input[start..], last_was_delimited)
 		{
 			let rule: &RootRule = &self[rule_idx];
-			// First entry is for the root rule.
-			let has_captures: bool = rule.rule_info.len() > 1;
+			let has_captures: bool = rule.has_captures();
 			data.clear();
 			if has_captures {
 				let matched: bool = rule.dfa.execute_with_captures(lexeme, data, rule.idx);

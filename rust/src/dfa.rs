@@ -176,20 +176,42 @@ impl Tdfa {
 		self.execute_with_captures(input, &mut self.execution_data(), RuleIdx::NIL)
 	}
 
+	/// Used for determining which rule matched.
+	/// Assumes the DFA was constructed with anchor transitions.
 	pub fn execute_without_captures<'input>(
 		&self,
 		input: &'input str,
 		last_was_delimited: u32,
 	) -> Option<MatchedRule<'input>> {
-		self.execute_internal::<false>(input, last_was_delimited)
+		let anchor_transition: &Transition = self.lookup_transition(0, last_was_delimited)?;
+		let mut current_state: usize = anchor_transition.target;
+
+		let mut maybe_backup: Option<BackupState> = None;
+
+		for (pos, ch) in input
+			.char_indices()
+			.chain(std::iter::once((input.len(), self.anchor_ch)))
+		{
+			if let Some(transition) = self.lookup_transition(current_state, u32::from(ch)) {
+				current_state = transition.target;
+				if let Some(rule) = self.states[current_state].accepting_rule {
+					maybe_backup = Some(BackupState { rule, consumed: pos });
+				}
+			} else {
+				break;
+			}
+		}
+
+		let backup: BackupState = maybe_backup?;
+
+		Some(MatchedRule {
+			rule_idx: backup.rule,
+			lexeme: &input[..backup.consumed],
+		})
 	}
 
-	pub fn execute_with_captures<'input>(
-		&self,
-		input: &'input str,
-		execution_data: &mut TdfaExecution,
-		rule_idx: RuleIdx,
-	) -> bool {
+	/// Assumes the DFA was constructed **without** anchor transitions.
+	pub fn execute_with_captures(&self, input: &str, execution_data: &mut TdfaExecution, rule_idx: RuleIdx) -> bool {
 		let mut current_state: usize = 0;
 
 		execution_data.clear();
@@ -198,7 +220,7 @@ impl Tdfa {
 		let registers: &mut [Option<NonZero<usize>>] = &mut execution_data.registers;
 		let prefix_tree: &mut PrefixTree = &mut execution_data.prefix_tree;
 		let captures: &mut Vec<MatchedCapture> = &mut execution_data.captures;
-		assert!(captures.is_empty());
+		assert_eq!(captures, &[]);
 
 		for (pos, ch) in input.char_indices() {
 			if let Some(transition) = self.lookup_transition(current_state, u32::from(ch)) {
@@ -274,67 +296,6 @@ impl Tdfa {
 		true
 	}
 
-	#[tracing::instrument(skip_all, level = "trace")]
-	pub fn execute_with_captures_for_search<'input>(
-		&self,
-		input: &'input str,
-		data: &mut TdfaExecution,
-		rule: RuleIdx,
-	) -> bool {
-		self.execute_with_captures(input, data, rule)
-	}
-
-	fn execute_internal<'input, const CAPTURE: bool>(
-		&self,
-		input: &'input str,
-		last_was_delimited: u32,
-	) -> Option<MatchedRule<'input>> {
-		let anchor_transition: &Transition = self.lookup_transition(0, last_was_delimited)?;
-		let mut current_state: usize = anchor_transition.target;
-
-		let mut maybe_backup: Option<BackupState> = None;
-
-		for (pos, ch) in input
-			.char_indices()
-			.chain(std::iter::once((input.len(), self.anchor_ch)))
-		{
-			if let Some(transition) = self.lookup_transition(current_state, u32::from(ch)) {
-				current_state = transition.target;
-				if let Some(rule) = self.states[current_state].accepting_rule {
-					maybe_backup = Some(BackupState { rule, consumed: pos });
-					// if (pos < input.len()) || backtrack {
-					// 	// The current character is a "real input" (not the chained EOF pseudo-symbol),
-					// 	// or the accepting state is after a lookahead and will backtrack...
-
-					// 	let consumed: usize = pos + if backtrack { 0 } else { ch.len_utf8() };
-
-					// 	if let Some(backup) = maybe_backup
-					// 		&& backup.consumed >= consumed
-					// 	{
-					// 		// If the previously matched rule's lexeme was at least as long
-					// 		// (technically, it can only be exactly as long, since it can't be longer),
-					// 		// then keep the previous rule, since it has higher priority.
-					// 		// Equivalently, "if we matched via an anchor, don't overwrite the previous rule
-					// 		// if it also matched the full text".
-					// 		continue;
-					// 	}
-
-					// 	maybe_backup = Some(BackupState { rule, consumed });
-					// }
-				}
-			} else {
-				break;
-			}
-		}
-
-		let backup: BackupState = maybe_backup?;
-
-		Some(MatchedRule {
-			rule_idx: backup.rule,
-			lexeme: &input[..backup.consumed],
-		})
-	}
-
 	fn lookup_transition(&self, current_state: usize, ch: u32) -> Option<&Transition> {
 		let cache_index: usize = {
 			const _: () = const {
@@ -398,14 +359,14 @@ impl Tdfa {
 		Self::determinization(&nfa, anchor_char)
 	}
 
-	pub fn for_single_rule(rule: RuleIdx, regex: &Regex) -> Self {
-		let nfa: Tnfa = Tnfa::for_single_rule(rule, regex);
+	pub fn for_single_rule(rule_idx: RuleIdx, regex: &Regex) -> Self {
+		let nfa: Tnfa = Tnfa::for_single_rule(rule_idx, regex);
 		Self::determinization(&nfa, '\n')
 	}
 
 	/// Algorithm 3 in the paper.
 	#[tracing::instrument(skip_all, level = "trace")]
-	pub fn determinization(nfa: &Tnfa, anchor_ch: char) -> Self {
+	fn determinization(nfa: &Tnfa, anchor_ch: char) -> Self {
 		assert_eq!(nfa.tags().len() % 2, 0);
 		let mut tag_pairs: Vec<usize> = Vec::with_capacity(nfa.tags().len() / 2);
 		for (i, tag) in nfa.tags().iter().enumerate() {
@@ -873,10 +834,9 @@ impl TdfaExecution {
 	pub fn clear(&mut self) {
 		self.captures.clear();
 		self.prefix_tree.clear();
-		// TODO explain why don't need to clear rest of the registers
-		for register in self.registers[0..self.num_tags].iter_mut() {
-			*register = None;
-		}
+		// We only need to reset the initial registers;
+		// see also: `[Tdfa::final_operations]`.
+		self.registers[0..self.num_tags].fill(None);
 	}
 }
 

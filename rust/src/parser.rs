@@ -81,7 +81,7 @@ impl Parser {
 				} => {
 					let name: &str = &rule.name;
 
-					let variable_is_implicit_capture: bool = !has_captures || self.dfa_execution.captures.is_empty();
+					let variable_is_implicit_capture: bool = !has_captures;
 
 					let variable_capture: Match = Match {
 						rule_idx: rule.idx,

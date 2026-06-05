@@ -5,10 +5,13 @@
 mod graph_dot_output;
 mod regex_construction;
 mod search_decomposition;
+
 use std::borrow::Cow;
 use std::collections::BTreeSet;
 
-pub use search_decomposition::*;
+pub use search_decomposition::Path;
+pub use search_decomposition::PathComponent;
+pub use search_decomposition::TarjanSccData;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;

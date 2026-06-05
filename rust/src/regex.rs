@@ -1,8 +1,10 @@
+mod pattern_parsing;
+
 use std::num::NonZero;
 use std::sync::Arc;
 
-mod pattern_parsing;
-pub use pattern_parsing::*;
+pub use pattern_parsing::RegexError;
+pub use pattern_parsing::RegexLookupPlaceholder;
 
 use crate::schema::SubRule;
 use crate::utils::Escaped;
@@ -32,7 +34,7 @@ pub struct AnchoredRegex {
 pub enum Regex {
 	AnyChar,
 	Literal(char),
-	Capture(SubRule),
+	Capture(Box<SubRule>),
 	Group { negated: bool, items: Vec<(char, char)> },
 	KleeneClosure(Box<Regex>),
 	KleenePlus(Box<Regex>),
@@ -61,6 +63,38 @@ impl<'a> IntoRegex for &'a str {
 
 	fn into(self) -> Result<AnchoredRegex, Self::Error> {
 		Regex::from_pattern(self)
+	}
+}
+
+impl AnchoredRegex {
+	pub fn unanchored(inner: Regex) -> Self {
+		Self {
+			anchor_before: false,
+			anchor_after: false,
+			inner,
+		}
+	}
+
+	pub fn to_pattern(&self) -> String {
+		let mut pattern: String = self.inner.to_pattern();
+
+		// We do this replacement before the anchors for consistency.
+		if let Some(suffix) = pattern.strip_prefix(' ') {
+			pattern = format!("[ ]{suffix}");
+		}
+		if let Some(prefix) = pattern.strip_suffix(' ') {
+			pattern = format!("{prefix}[ ]");
+		}
+
+		let anchor_before: &str = if self.anchor_before { "^" } else { "" };
+		let anchor_after: &str = if self.anchor_after { "$" } else { "" };
+
+		let pattern: String = format!("{anchor_before}{pattern}{anchor_after}");
+
+		assert!(!pattern.starts_with(|ch: char| ch.is_whitespace()));
+		assert!(!pattern.ends_with(|ch: char| ch.is_whitespace()));
+
+		pattern
 	}
 }
 
@@ -180,54 +214,10 @@ impl Regex {
 			},
 		}
 	}
-
-	/// [`RegexCapture::id`] defaults to [`NonZero::<u16>::MAX`];
-	/// if we actually reach this, `next_id` will overflow,
-	/// so it naturally works as a placeholder/invalid value.
-	///
-	/// Invariant: `parent_id < id`.
-	pub fn number_captures(
-		&mut self,
-		id: &mut NonZero<u16>,
-		stack: &mut Vec<(NonZero<u16>, Arc<str>)>,
-	) -> Option<usize> {
-		let mut bread: usize = 0;
-		match self {
-			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
-			Self::Capture(sub_rule) => {
-				let maybe_parent: Option<&(NonZero<u16>, Arc<str>)> = stack.last();
-				sub_rule.parent_id = maybe_parent.map(|(id, _)| *id);
-				sub_rule.id = *id;
-				sub_rule.qualified_name = Arc::from(format!(
-					"{}.{}",
-					maybe_parent.map_or("", |(_, name)| name),
-					sub_rule.name
-				));
-				stack.push((sub_rule.id, sub_rule.qualified_name.clone()));
-				// `id` is `u16`.
-				*id = id.checked_add(1)?;
-				sub_rule.descendents = sub_rule.regex.number_captures(id, stack)?;
-				// `bread` is `usize`.
-				bread = 1 + sub_rule.descendents;
-				stack.pop();
-			},
-			Self::KleeneClosure(item)
-			| Self::KleenePlus(item)
-			| Self::BoundedRepetition { item, .. }
-			| Self::Placeholder { item, .. } => {
-				bread += item.number_captures(id, stack)?;
-			},
-			Self::Sequence(items) | Self::Alternation(items) => {
-				for sub_item in items.iter_mut() {
-					bread += sub_item.number_captures(id, stack)?;
-				}
-			},
-		}
-		Some(bread)
-	}
 }
 
 impl Regex {
+	/// "Desugars" a pattern `(self)+` as `(self)(self)*`.
 	pub fn into_kleene_plus(&self) -> Self {
 		Self::Sequence(vec![self.clone(), Regex::KleeneClosure(Box::new(self.clone()))])
 	}

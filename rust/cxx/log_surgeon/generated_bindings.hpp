@@ -47,7 +47,7 @@ struct InternalSubQuery;
 template<typename T = void>
 struct Vec;
 
-/// Index in the schema, offset by 1.
+/// Index in the schema, offset by/starting at 1.
 using RuleIdx = uint16_t;
 
 /// Rust's `std::ops::Range` is not `Copy` for... reasons.
