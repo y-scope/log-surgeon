@@ -27,7 +27,7 @@ impl Tnfa {
 		Self::for_single_rule(RuleIdx::NIL, regex)
 	}
 
-	pub fn for_rules<'a, const WITH_CAPTURES: bool, Rules>(rules: Rules, delimiters: String) -> Self
+	pub fn for_rules<'a, const WITH_CAPTURES: bool, Rules>(rules: Rules, delimiters: &str) -> Self
 	where
 		Rules: IntoIterator<Item = &'a RootRule>,
 	{

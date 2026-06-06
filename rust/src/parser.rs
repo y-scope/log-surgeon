@@ -1,3 +1,5 @@
+use crate::dfa::Jit;
+use crate::dfa::JittedDfa;
 use crate::dfa::TdfaExecution;
 use crate::ffi::UncheckedCArray;
 use crate::lexing::Token;
@@ -8,6 +10,7 @@ use crate::log_type::LogType;
 use crate::schema::RuleInfo;
 use crate::schema::Schema;
 use crate::utils::Range;
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct Parser {
@@ -15,7 +18,12 @@ pub struct Parser {
 	current_log: WorkingLogEvent,
 	maybe_pending_header: Option<WorkingLogEvent>,
 	dfa_execution: TdfaExecution,
+	jit: Arc<Jit>,
+	jitted_dfa: JittedDfa,
 }
+
+unsafe impl Send for Parser {}
+unsafe impl Sync for Parser {}
 
 #[derive(Debug, Clone)]
 struct WorkingLogEvent {
@@ -34,16 +42,20 @@ impl Parser {
 			tags = tags.max(rule.dfa.tags.len());
 		}
 		let dfa_execution: TdfaExecution = TdfaExecution::new(registers, tags);
+		let mut jit: Jit = Jit::new();
+		let jitted_dfa: JittedDfa = jit.jit(&schema.main_dfa).unwrap();
 		Self {
 			schema,
 			current_log: WorkingLogEvent::new(),
 			maybe_pending_header: None,
 			dfa_execution,
+			jit: Arc::new(jit),
+			jitted_dfa,
 		}
 	}
 
 	pub fn next_event(&mut self, input: &str, pos: &mut usize) -> Option<LogEvent<'_>> {
-		if *pos == input.len() {
+		if *pos + 1 == input.len() {
 			return None;
 		}
 
@@ -72,7 +84,7 @@ impl Parser {
 			let token_starting_leaf_indices: usize = self.current_log.leaf_indices.len();
 			match self
 				.schema
-				.next_token(input, pos, last_was_delimited, &mut self.dfa_execution)
+				.next_token(input, pos, last_was_delimited, &mut self.dfa_execution, self.jitted_dfa)
 			{
 				Token::Variable {
 					rule,
@@ -165,7 +177,7 @@ impl Parser {
 					last_was_delimited = u32::from(self.schema.anchor_ch);
 				},
 				Token::EndOfInput => {
-					assert_eq!(*pos, input.len());
+					assert_eq!(*pos + 1, input.len());
 					break *pos;
 				},
 			}

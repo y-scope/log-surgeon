@@ -19,12 +19,12 @@ int main() {
 
     ParserHandle parser{log_surgeon_schema_builder_build(builder)};
 
-    CArray<char> const input{"def foobarbaz"_rust};
+    CArray<char> const input{"def foobarbaz\n"_rust};
     size_t pos{0};
 
     std::optional<EventHandle> maybe_event{parser.next_event(input, &pos)};
     assert(maybe_event.has_value());
-    assert(pos == input.length);
+    assert(pos + 1 == input.length);
 
     EventHandle event{*maybe_event};
     assert(event.log_type() == "d%1.1:hello.foo%f foobarbaz");

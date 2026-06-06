@@ -78,8 +78,11 @@ impl SchemaBuilder {
 	where
 		LikeString: Into<String>,
 	{
-		let delimiters: String = delimiters.into();
+		let mut delimiters: String = delimiters.into();
 		assert!(!delimiters.is_empty());
+		if !delimiters.contains('\n') {
+			delimiters.push('\n');
+		}
 		self.anchor_ch = delimiters.chars().next().unwrap();
 		self.delimiters = delimiters;
 		self
@@ -208,7 +211,7 @@ impl SchemaBuilder {
 			}
 		}
 
-		let main_nfa: Tnfa = Tnfa::for_rules::<true, _>(rules.iter(), self.delimiters.clone());
+		let main_nfa: Tnfa = Tnfa::for_rules::<true, _>(rules.iter(), &self.delimiters);
 		let main_dfa: Tdfa = Tdfa::for_rules(rules.iter(), self.delimiters.clone());
 
 		let mut ascii_delimiters: [bool; 0x80] = [false; 0x80];

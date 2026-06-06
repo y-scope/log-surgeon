@@ -2,6 +2,9 @@
 //! - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
 //! - <https://arxiv.org/abs/2206.01398>
 //!
+mod jit;
+// mod utf8;
+
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::btree_map::Entry;
@@ -20,6 +23,9 @@ use crate::schema::RootRule;
 use crate::schema::RuleIdx;
 use crate::schema::SubRule;
 use crate::utils::Range;
+
+pub use jit::Jit;
+pub use jit::JittedDfa;
 
 #[derive(Debug, Clone)]
 pub struct Tdfa {
@@ -354,7 +360,7 @@ impl Tdfa {
 	where
 		Rules: IntoIterator<Item = &'a RootRule>,
 	{
-		let nfa: Tnfa = Tnfa::for_rules::<false, _>(rules, delimiters.clone());
+		let nfa: Tnfa = Tnfa::for_rules::<false, _>(rules, &delimiters);
 		let anchor_char: char = delimiters.chars().next().unwrap();
 		Self::determinization(&nfa, anchor_char)
 	}
