@@ -1,6 +1,7 @@
 use cranelift::codegen::Context;
 use cranelift::codegen::ir::AbiParam;
 use cranelift::codegen::ir::Block;
+use cranelift::codegen::ir::BlockArg;
 use cranelift::codegen::ir::InstBuilder;
 use cranelift::codegen::ir::MemFlags;
 use cranelift::codegen::ir::Signature;
@@ -54,7 +55,7 @@ impl Jit {
 
 		flag_builder.set("use_colocated_libcalls", "false").unwrap();
 		flag_builder.set("is_pic", "false").unwrap();
-		flag_builder.set("opt_level", "speed").unwrap();
+		flag_builder.set("opt_level", "none").unwrap();
 
 		let isa_builder: IsaBuilder = cranelift_native::builder().unwrap_or_else(|msg| {
 			panic!("host machine is not supported: {msg}");
@@ -68,6 +69,16 @@ impl Jit {
 	}
 
 	pub fn jit(&mut self, dfa: &Tdfa) -> Result<JittedDfa, ()> {
+		now!(u1);
+		let old_dfa: &Tdfa = dfa;
+		let dfa: Tdfa = old_dfa.minimize();
+		now!(t0);
+		println!(
+			"minimizing {} to {} took: {:?}",
+			old_dfa.states.len(),
+			dfa.states.len(),
+			t0.duration_since(u1)
+		);
 		let module: &mut JITModule = &mut self.module;
 
 		let mut ctx: Context = module.make_context();
@@ -122,7 +133,7 @@ impl Jit {
 		let current_ch_var: Variable = func_builder.declare_var(types::I8);
 		func_builder.def_var(current_ch_var, anchor);
 
-		func_builder.ins().jump(states[0], &[]);
+		func_builder.ins().jump(states[0], &[BlockArg::Value(input_ptr)]);
 
 		let exit: Block = func_builder.create_block();
 		{
@@ -140,38 +151,66 @@ impl Jit {
 		}
 
 		for (i, state) in dfa.states.iter().enumerate() {
-			func_builder.switch_to_block(states[i]);
-			if i > 0 {
+			let block: Block = states[i];
+
+			func_builder.append_block_param(block, ptr_ty); // input_ptr
+
+			func_builder.switch_to_block(block);
+			let input_ptr: Value = func_builder.block_params(block)[0];
+			let (input_ch, input_ptr): (Value, Value) = if i > 0 {
 				if let Some(rule_idx) = state.accepting_rule {
 					let rule: Value = func_builder.ins().iconst(types::I16, i64::from(u16::from(rule_idx)));
 					func_builder.def_var(backup_rule_var, rule);
-					let input_ptr: Value = func_builder.use_var(input_ptr_var);
 					func_builder.def_var(backup_input_ptr_var, input_ptr);
 				}
 
-				load_char(&mut func_builder, current_ch_var, input_ptr_var, input_ptr_end, exit);
-			}
+				load_char(&mut func_builder, input_ptr, 0, input_ptr_end, exit)
+			} else {
+				(anchor, input_ptr)
+			};
+
 			transition(
 				&mut func_builder,
 				&dfa.states[i],
 				states,
-				current_ch_var,
-				input_ptr_var,
+				input_ch,
+				input_ptr,
 				input_ptr_end,
 				exit,
 			);
 		}
 
+		func_builder.set_cold_block(exit);
+
+		now!(t1);
 		func_builder.seal_all_blocks();
+		now!(t2);
 		func_builder.finalize();
+		now!(t3);
 
 		module.define_function(func, &mut ctx).unwrap();
+		now!(t4);
+		// println!("func: {}", ctx.func.display());
 		module.clear_context(&mut ctx);
 
 		module.finalize_definitions().unwrap();
+		now!(t5);
 
 		let code: *const u8 = module.get_finalized_function(func);
 		assert!(!code.is_null());
+		now!(t6);
+
+		println!(
+			"jitted: {:?}",
+			[
+				t6.duration_since(t5),
+				t5.duration_since(t4),
+				t4.duration_since(t3),
+				t3.duration_since(t2),
+				t2.duration_since(t1),
+				t1.duration_since(t0),
+			]
+		);
 
 		let func: JittedDfa = unsafe { std::mem::transmute::<*const u8, JittedDfa>(code) };
 
@@ -199,47 +238,42 @@ fn enter_state(
 
 fn load_char(
 	func_builder: &mut FunctionBuilder<'_>,
-	input_ch_var: Variable,
-	input_ptr_var: Variable,
+	current_input_ptr: Value,
+	offset: i64,
 	input_ptr_end: Value,
 	fallback: Block,
-) -> Value {
+) -> (Value, Value) {
+	let current: Block = func_builder.current_block().unwrap();
 	let block: Block = func_builder.create_block();
 
-	let current_input_ch: Value = func_builder.use_var(input_ch_var);
-	let current_input_ptr: Value = func_builder.use_var(input_ptr_var);
-
-	let diff: Value = func_builder.ins().isub(input_ptr_end, current_input_ptr);
+	let input_ptr: Value = func_builder.ins().iadd_imm(current_input_ptr, offset);
+	let diff: Value = func_builder.ins().isub(input_ptr_end, input_ptr);
 
 	let not_eof: Value = func_builder.ins().icmp_imm(IntCC::UnsignedGreaterThan, diff, 0);
 
 	func_builder.ins().brif(not_eof, block, &[], fallback, &[]);
+	func_builder.seal_block(block);
 	func_builder.switch_to_block(block);
 
-	let next_input_ch: Value = func_builder
-		.ins()
-		.load(types::I8, MemFlags::new(), current_input_ptr, 0);
+	let next_input_ch: Value = func_builder.ins().load(types::I8, MemFlags::new(), input_ptr, 0);
+	let next_input_ptr: Value = func_builder.ins().iadd_imm(input_ptr, 1);
 
-	let next_input_ptr: Value = func_builder.ins().iadd_imm(current_input_ptr, 1);
-
-	func_builder.def_var(input_ch_var, next_input_ch);
-	func_builder.def_var(input_ptr_var, next_input_ptr);
-
-	next_input_ch
+	(next_input_ch, next_input_ptr)
 }
 
 fn transition(
 	func_builder: &mut FunctionBuilder<'_>,
 	current: &DfaState,
 	states: &[Block],
-	input_ch_var: Variable,
-	input_ptr_var: Variable,
+	input_ch: Value,
+	input_ptr: Value,
 	input_ptr_end: Value,
 	fallback: Block,
 ) {
-	let mut block1: Block = func_builder.create_block();
+	let block1: Block = func_builder.create_block();
 
 	func_builder.ins().jump(block1, &[]);
+	func_builder.seal_block(block1);
 
 	let mut switch: Switch = Switch::new();
 
@@ -248,19 +282,23 @@ fn transition(
 			ch
 		} else if interval.start() == u32::from(char::MAX) + 1 {
 			continue;
+		} else if (0xD800..=0xDFFF).contains(&interval.start()) {
+			'\u{E000}'
 		} else {
-			panic!("interval is {interval:?}, max is {:?}", char::MAX);
+			panic!("unexpected interval {interval:?}");
 		};
 		let end: char = char::try_from(interval.end()).ok().unwrap_or_else(|| {
 			if interval.end() > u32::from(char::MAX) {
 				char::MAX
 			} else if (0xD800..=0xDFFF).contains(&interval.end()) {
-				todo!();
+				'\u{D799}'
 			} else {
-				panic!();
+				panic!("unexpected interval {interval:?}");
 			}
 		});
-		let mut target: Block = states[transition.target];
+		if start > end {
+			continue;
+		}
 		for seq in Utf8Sequences::new(start, end) {
 			let (first, rest): (&Utf8Range, &[Utf8Range]) = match &seq {
 				Utf8Sequence::One(first) => (first, &[]),
@@ -268,42 +306,80 @@ fn transition(
 				Utf8Sequence::Three([first, rest @ ..]) => (first, rest),
 				Utf8Sequence::Four([first, rest @ ..]) => (first, rest),
 			};
-			for range in rest.iter().rev() {
-				let block2: Block = func_builder.create_block();
+			let full_range: bool = rest
+				.iter()
+				.all(|range| (range.start == 0) && (range.end == 0b1011_1111));
 
+			let mut target: Block = states[transition.target];
+			let block3: Block = func_builder.create_block();
+			func_builder.switch_to_block(block3);
+			let last_input_ptr: Value = func_builder
+				.ins()
+				.iadd_imm(input_ptr, i64::try_from(rest.len()).unwrap());
+			func_builder.ins().jump(target, &[BlockArg::Value(last_input_ptr)]);
+			target = block3;
+
+			if full_range && false {
+				let block2: Block = func_builder.create_block();
 				func_builder.switch_to_block(block2);
 
-				let next_input_ch: Value =
-					load_char(func_builder, input_ch_var, input_ptr_var, input_ptr_end, fallback);
+				let last_input_ptr: Value = func_builder
+					.ins()
+					.iadd_imm(input_ptr, i64::try_from(rest.len()).unwrap());
 
-				/*
-				let shifted_ch: Value = func_builder.ins().iadd_imm(next_input_ch, -i64::from(range.end));
+				let diff: Value = func_builder.ins().isub(input_ptr_end, last_input_ptr);
 
-				let in_range: Value = func_builder.ins().icmp_imm(
-					IntCC::UnsignedGreaterThanOrEqual,
-					shifted_ch,
-					i64::from(range.end - range.start),
-				);
+				let not_eof: Value = func_builder.ins().icmp_imm(IntCC::UnsignedGreaterThan, diff, 0);
 
-				func_builder.ins().brif(in_range, target, &[], fallback, &[]);
-				*/
-				let mut switch2: Switch = Switch::new();
-				for b in range.start..=range.end {
-					switch2.set_entry(u128::from(b), target);
-				}
-				switch2.emit(func_builder, next_input_ch, fallback);
+				func_builder.ins().brif(not_eof, target, &[], fallback, &[]);
+
+				func_builder.seal_block(target);
 
 				target = block2;
+			} else {
+				for (i, range) in rest.iter().enumerate().rev() {
+					let block2: Block = func_builder.create_block();
+
+					func_builder.switch_to_block(block2);
+
+					let (next_input_ch, next_input_ptr): (Value, Value) = load_char(
+						func_builder,
+						input_ptr,
+						i64::try_from(i).unwrap(),
+						input_ptr_end,
+						fallback,
+					);
+
+					/*
+					let shifted_ch: Value = func_builder.ins().iadd_imm(next_input_ch, -i64::from(range.end));
+
+					let in_range: Value = func_builder.ins().icmp_imm(
+						IntCC::UnsignedGreaterThanOrEqual,
+						shifted_ch,
+						i64::from(range.end - range.start),
+					);
+
+					func_builder.ins().brif(in_range, target, &[], fallback, &[]);
+					*/
+					let mut switch2: Switch = Switch::new();
+					for b in range.start..=range.end {
+						switch2.set_entry(u128::from(b), target);
+					}
+					switch2.emit(func_builder, next_input_ch, fallback);
+					func_builder.seal_block(target);
+
+					target = block2;
+				}
 			}
 			for b in first.start..=first.end {
 				assert_eq!(switch.entries().get(&u128::from(b)), None);
 				switch.set_entry(u128::from(b), target);
 			}
+			func_builder.seal_block(target);
 		}
 	}
 
 	func_builder.switch_to_block(block1);
-	let input_ch: Value = func_builder.use_var(input_ch_var);
 	switch.emit(func_builder, input_ch, fallback);
 }
 
@@ -330,8 +406,6 @@ mod test {
 		};
 
 		assert_eq!(schema.delimiters, " .\n");
-
-		println!("- rule {:?}", schema.rules[0].regex);
 
 		let f = jit.jit(&schema.main_dfa).unwrap();
 

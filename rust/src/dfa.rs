@@ -10,6 +10,9 @@ use std::collections::BTreeSet;
 use std::collections::btree_map::Entry;
 use std::num::NonZero;
 
+pub use jit::Jit;
+pub use jit::JittedDfa;
+
 use crate::interval_tree::IntervalTree;
 use crate::interval_tree::PolicyFunction;
 use crate::nfa::NfaIdx;
@@ -23,9 +26,6 @@ use crate::schema::RootRule;
 use crate::schema::RuleIdx;
 use crate::schema::SubRule;
 use crate::utils::Range;
-
-pub use jit::Jit;
-pub use jit::JittedDfa;
 
 #[derive(Debug, Clone)]
 pub struct Tdfa {
@@ -120,7 +120,7 @@ struct Configuration {
 	tag_path_in_closure: Vec<(Tag, SymbolicPosition)>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct Transition {
 	/// `usize::MAX` is used as an "invalid/empty" marker value.
 	/// See [`NfaIdx`] for a note on why this is "safe".
@@ -824,6 +824,133 @@ impl Tdfa {
 			}
 		}
 		clobbered
+	}
+}
+
+impl Tdfa {
+	pub fn minimize(&self) -> Tdfa {
+		let mut partitions: Vec<BTreeSet<usize>> = self.partition_states();
+		let z: usize = partitions.iter().position(|x| x.contains(&0)).unwrap();
+		partitions.swap(0, z);
+
+		let mut map: Vec<usize> = vec![usize::MAX; self.states.len()];
+
+		let mut new_states: Vec<DfaState> = Vec::with_capacity(partitions.len());
+
+		for (i, x) in partitions.iter().enumerate() {
+			let mut kernel: Kernel = Kernel(Vec::new());
+			let mut maybe_transitions: Option<IntervalTree<u32, Transition>> = None;
+			for &s in x.iter() {
+				map[s] = i;
+				kernel.0.extend_from_slice(&self.states[s].kernel.0);
+				if let Some(transitions) = &maybe_transitions {
+					assert_eq!(self.states[s].transitions, *transitions);
+				}
+			}
+			let first: &DfaState = &self.states[*x.first().unwrap()];
+			new_states.push(DfaState {
+				kernel,
+				transitions: first.transitions.clone(),
+				accepting_rule: first.accepting_rule,
+				final_operations: Vec::new(),
+				tag_for_register: BTreeMap::new(),
+				registers_clobbered: BTreeSet::new(),
+				ascii_cache: first.ascii_cache.clone(),
+			});
+		}
+
+		for state in new_states.iter_mut() {
+			for (_, transition) in state.transitions.iter_mut() {
+				transition.target = map[transition.target];
+			}
+			for transition in state.ascii_cache.iter_mut() {
+				if transition.is_valid() {
+					transition.target = map[transition.target];
+				}
+			}
+		}
+
+		let kernels: BTreeMap<Kernel, usize> = BTreeMap::from_iter(
+			new_states
+				.iter()
+				.enumerate()
+				.map(|(i, state)| (state.kernel.clone(), i)),
+		);
+
+		Self {
+			states: new_states,
+			kernels,
+			tags: Vec::new(),
+			tag_pairs: Vec::new(),
+			number_of_registers: 0,
+			anchor_ch: self.anchor_ch,
+		}
+	}
+
+	/// Hopcroft's DFA minimization algorithm.
+	fn partition_states(&self) -> Vec<BTreeSet<usize>> {
+		use crate::interval_tree::PolicyNoop;
+
+		let mut by_accepting: BTreeMap<Option<RuleIdx>, BTreeSet<usize>> = BTreeMap::new();
+		let mut all_intervals: IntervalTree<u32, ()> = IntervalTree::new();
+
+		for (i, state) in self.states.iter().enumerate() {
+			by_accepting
+				.entry(state.accepting_rule)
+				.or_insert_with(BTreeSet::new)
+				.insert(i);
+			for (interval, _) in state.transitions.iter() {
+				all_intervals.insert(interval, (), PolicyNoop);
+			}
+		}
+
+		let all_intervals: Vec<u32> = all_intervals
+			.iter()
+			.map(|(interval, _)| interval.start())
+			.collect::<Vec<_>>();
+
+		let mut p: Vec<BTreeSet<usize>> = by_accepting.into_values().collect::<Vec<_>>();
+
+		let mut w: Vec<BTreeSet<usize>> = p.clone();
+
+		while let Some(a) = w.pop() {
+			for &c in all_intervals.iter() {
+				let mut x: BTreeSet<usize> = BTreeSet::new();
+				for (i, state) in self.states.iter().enumerate() {
+					if let Some(transition) = state.transitions.lookup(c) {
+						if a.contains(&transition.target) {
+							x.insert(i);
+						}
+					}
+				}
+
+				for i in 0..p.len() {
+					let y: &BTreeSet<usize> = &p[i];
+					let intersection: BTreeSet<usize> = y & &x;
+					let difference: BTreeSet<usize> = y - &x;
+
+					if intersection.is_empty() || difference.is_empty() {
+						continue;
+					}
+
+					if let Some(j) = w.iter().position(|state| state == y) {
+						w[j] = intersection.clone();
+						w.push(difference.clone());
+					} else {
+						if intersection.len() <= difference.len() {
+							w.push(intersection.clone());
+						} else {
+							w.push(difference.clone());
+						}
+					}
+
+					p[i] = intersection;
+					p.push(difference);
+				}
+			}
+		}
+
+		p
 	}
 }
 

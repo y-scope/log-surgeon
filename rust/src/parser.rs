@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::dfa::Jit;
 use crate::dfa::JittedDfa;
 use crate::dfa::TdfaExecution;
@@ -10,7 +12,6 @@ use crate::log_type::LogType;
 use crate::schema::RuleInfo;
 use crate::schema::Schema;
 use crate::utils::Range;
-use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct Parser {
