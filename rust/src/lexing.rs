@@ -44,7 +44,7 @@ impl Schema {
 		let maybe_rule_idx: Option<RuleIdx> = jitted_dfa(
 			input2.start,
 			input2.end,
-			if last_was_delimited != 0 { b'\n' } else { b'\0' },
+			if last_was_delimited != 0 { '\n' } else { '\0' },
 			&mut end,
 		);
 

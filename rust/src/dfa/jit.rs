@@ -33,7 +33,7 @@ use regex_syntax::utf8::Utf8Sequences;
 
 use super::*;
 
-pub type JittedDfa = extern "C" fn(*const u8, *const u8, u8, *const *const u8) -> Option<RuleIdx>;
+pub type JittedDfa = extern "C" fn(*const u8, *const u8, char, *const *const u8) -> Option<RuleIdx>;
 
 pub struct Jit {
 	module: JITModule,
@@ -89,7 +89,7 @@ impl Jit {
 
 		sig.params.push(AbiParam::new(ptr_ty)); // input_ptr
 		sig.params.push(AbiParam::new(ptr_ty)); // input_ptr_end
-		sig.params.push(AbiParam::new(types::I8)); // anchor
+		sig.params.push(AbiParam::new(types::I32)); // anchor
 		sig.params.push(AbiParam::new(ptr_ty)); // new input ptr
 		sig.returns.push(AbiParam::new(types::I16)); // rule
 
@@ -130,7 +130,7 @@ impl Jit {
 		let input_ptr_var: Variable = func_builder.declare_var(ptr_ty);
 		func_builder.def_var(input_ptr_var, input_ptr);
 
-		let current_ch_var: Variable = func_builder.declare_var(types::I8);
+		let current_ch_var: Variable = func_builder.declare_var(types::I32);
 		func_builder.def_var(current_ch_var, anchor);
 
 		func_builder.ins().jump(states[0], &[BlockArg::Value(input_ptr)]);
@@ -164,20 +164,21 @@ impl Jit {
 					func_builder.def_var(backup_input_ptr_var, input_ptr);
 				}
 
-				load_char(&mut func_builder, input_ptr, 0, input_ptr_end, exit)
+				decode_utf8_char(&mut func_builder, input_ptr, input_ptr_end, exit, ptr_ty)
 			} else {
 				(anchor, input_ptr)
 			};
 
-			transition(
-				&mut func_builder,
-				&dfa.states[i],
-				states,
-				input_ch,
-				input_ptr,
-				input_ptr_end,
-				exit,
-			);
+			transition2(&mut func_builder, &dfa.states[i], states, input_ptr, input_ch, exit);
+			// transition(
+			// 	&mut func_builder,
+			// 	&dfa.states[i],
+			// 	states,
+			// 	input_ch,
+			// 	input_ptr,
+			// 	input_ptr_end,
+			// 	exit,
+			// );
 		}
 
 		func_builder.set_cold_block(exit);
@@ -218,24 +219,6 @@ impl Jit {
 	}
 }
 
-fn enter_state(
-	func_builder: &mut FunctionBuilder<'_>,
-	current: &DfaState,
-	states: &[Block],
-	input_ptr_var: Variable,
-	input_ptr_end: Value,
-	fallback: Block,
-	backup_input_ptr_var: Variable,
-	backup_rule_var: Variable,
-) {
-	if let Some(rule_idx) = current.accepting_rule {
-		let rule: Value = func_builder.ins().iconst(types::I32, i64::from(u16::from(rule_idx)));
-		func_builder.def_var(backup_rule_var, rule);
-		let input_ptr: Value = func_builder.use_var(input_ptr_var);
-		func_builder.def_var(backup_input_ptr_var, input_ptr);
-	}
-}
-
 fn load_char(
 	func_builder: &mut FunctionBuilder<'_>,
 	current_input_ptr: Value,
@@ -243,7 +226,6 @@ fn load_char(
 	input_ptr_end: Value,
 	fallback: Block,
 ) -> (Value, Value) {
-	let current: Block = func_builder.current_block().unwrap();
 	let block: Block = func_builder.create_block();
 
 	let input_ptr: Value = func_builder.ins().iadd_imm(current_input_ptr, offset);
@@ -259,6 +241,206 @@ fn load_char(
 	let next_input_ptr: Value = func_builder.ins().iadd_imm(input_ptr, 1);
 
 	(next_input_ch, next_input_ptr)
+}
+
+fn decode_utf8_char(
+	func_builder: &mut FunctionBuilder<'_>,
+	input_ptr: Value,
+	input_ptr_end: Value,
+	fallback: Block,
+	ptr_ty: Type,
+) -> (Value, Value) {
+	let inaf_b: Block = func_builder.create_block();
+	let otherwise_b: Block = func_builder.create_block();
+
+	let end_b: Block = func_builder.create_block();
+	func_builder.append_block_param(end_b, ptr_ty);
+	func_builder.append_block_param(end_b, types::I32);
+
+	let diff: Value = func_builder.ins().isub(input_ptr_end, input_ptr);
+
+	let inaf_v: Value = func_builder.ins().icmp_imm(IntCC::UnsignedGreaterThan, diff, 3);
+	func_builder.ins().brif(inaf_v, inaf_b, &[], otherwise_b, &[]);
+	func_builder.seal_block(inaf_b);
+	func_builder.seal_block(otherwise_b);
+
+	{
+		func_builder.switch_to_block(inaf_b);
+		load_char32::<false>(func_builder, input_ptr, input_ptr_end, fallback, end_b);
+	}
+	{
+		func_builder.switch_to_block(otherwise_b);
+		load_char32::<true>(func_builder, input_ptr, input_ptr_end, fallback, end_b);
+	}
+	func_builder.seal_block(end_b);
+
+	func_builder.switch_to_block(end_b);
+	let params: &[Value] = func_builder.block_params(end_b);
+	(params[1], params[0])
+}
+
+fn load_b<const WITH_BOUNDS_CHECK: bool>(
+	func_builder: &mut FunctionBuilder<'_>,
+	input_ptr: Value,
+	input_ptr_end: Value,
+	fallback: Block,
+) -> (Value, Value) {
+	if WITH_BOUNDS_CHECK {
+		let not_eof_b: Block = func_builder.create_block();
+
+		let diff: Value = func_builder.ins().isub(input_ptr_end, input_ptr);
+
+		let not_eof_v: Value = func_builder.ins().icmp_imm(IntCC::UnsignedGreaterThan, diff, 0);
+		func_builder.ins().brif(not_eof_v, not_eof_b, &[], fallback, &[]);
+		func_builder.seal_block(not_eof_b);
+		func_builder.switch_to_block(not_eof_b);
+	}
+
+	let input_ch: Value = func_builder.ins().load(types::I8, MemFlags::new(), input_ptr, 0);
+	let input_ch: Value = func_builder.ins().uextend(types::I32, input_ch);
+	let input_ptr: Value = func_builder.ins().iadd_imm(input_ptr, 1);
+
+	(input_ptr, input_ch)
+}
+
+fn load_char32<const WITH_BOUNDS_CHECK: bool>(
+	func_builder: &mut FunctionBuilder<'_>,
+	input_ptr: Value,
+	input_ptr_end: Value,
+	fallback: Block,
+	end_b: Block,
+) {
+	let multi_byte_b: Block = func_builder.create_block();
+	let multi_byte_3_b: Block = func_builder.create_block();
+	let multi_byte_4_b: Block = func_builder.create_block();
+
+	let (input_ptr, ch_a): (Value, Value) =
+		load_b::<WITH_BOUNDS_CHECK>(func_builder, input_ptr, input_ptr_end, fallback);
+
+	let is_ascii_v: Value = func_builder.ins().icmp_imm(IntCC::UnsignedLessThan, ch_a, 0x80);
+
+	func_builder.ins().brif(
+		is_ascii_v,
+		end_b,
+		&[BlockArg::Value(input_ptr), BlockArg::Value(ch_a)],
+		multi_byte_b,
+		&[],
+	);
+	func_builder.seal_block(multi_byte_b);
+
+	{
+		func_builder.switch_to_block(multi_byte_b);
+
+		let (input_ptr, ch_b): (Value, Value) =
+			load_b::<WITH_BOUNDS_CHECK>(func_builder, input_ptr, input_ptr_end, fallback);
+
+		let ch_b: Value = func_builder.ins().band_imm(ch_b, 0b0011_1111);
+
+		let ch_a: Value = func_builder.ins().band_imm(ch_a, 0b0001_1111);
+		let ch_a: Value = func_builder.ins().ishl_imm(ch_a, 6);
+
+		let ch: Value = func_builder.ins().bor(ch_a, ch_b);
+
+		let n: Value = func_builder.ins().ushr_imm(ch_a, 4);
+		let n: Value = func_builder.ins().band_imm(n, 0b0000_0011);
+
+		let t: Value = func_builder.ins().icmp_imm(IntCC::UnsignedLessThan, n, 2);
+
+		func_builder.ins().brif(
+			t,
+			end_b,
+			&[BlockArg::Value(input_ptr), BlockArg::Value(ch)],
+			multi_byte_3_b,
+			&[],
+		);
+		func_builder.seal_block(multi_byte_3_b);
+
+		{
+			func_builder.switch_to_block(multi_byte_3_b);
+
+			let (input_ptr, ch_c): (Value, Value) =
+				load_b::<WITH_BOUNDS_CHECK>(func_builder, input_ptr, input_ptr_end, fallback);
+
+			let ch_c: Value = func_builder.ins().band_imm(ch_c, 0b0011_1111);
+
+			let ch_b: Value = func_builder.ins().ishl_imm(ch_b, 6);
+
+			let ch_a: Value = func_builder.ins().band_imm(ch_a, 0b0000_1111);
+			let ch_a: Value = func_builder.ins().ishl_imm(ch_a, 12);
+
+			let ch: Value = func_builder.ins().bor(ch_a, ch_b);
+			let ch: Value = func_builder.ins().bor(ch, ch_c);
+
+			let t: Value = func_builder.ins().icmp_imm(IntCC::UnsignedLessThan, n, 3);
+
+			func_builder.ins().brif(
+				t,
+				end_b,
+				&[BlockArg::Value(input_ptr), BlockArg::Value(ch)],
+				multi_byte_4_b,
+				&[],
+			);
+			func_builder.seal_block(multi_byte_4_b);
+
+			{
+				func_builder.switch_to_block(multi_byte_4_b);
+
+				let (input_ptr, ch_d): (Value, Value) =
+					load_b::<WITH_BOUNDS_CHECK>(func_builder, input_ptr, input_ptr_end, fallback);
+
+				let ch_d: Value = func_builder.ins().band_imm(ch_d, 0b0011_1111);
+
+				let ch_c: Value = func_builder.ins().ishl_imm(ch_c, 6);
+				let ch_b: Value = func_builder.ins().ishl_imm(ch_b, 12);
+
+				let ch_a: Value = func_builder.ins().band_imm(ch_a, 0b0000_0111);
+				let ch_a: Value = func_builder.ins().ishl_imm(ch_a, 18);
+
+				let ch: Value = func_builder.ins().bor(ch_a, ch_b);
+				let ch: Value = func_builder.ins().bor(ch, ch_c);
+				let ch: Value = func_builder.ins().bor(ch, ch_d);
+
+				func_builder
+					.ins()
+					.jump(end_b, &[BlockArg::Value(input_ptr), BlockArg::Value(ch)]);
+				// func_builder.seal_block(end_b);
+			}
+		}
+	}
+
+	// func_builder.switch_to_block(end_b);
+	// let params: &[Value] = func_builder.block_params(end_b);
+	// (params[0], params[1])
+}
+
+fn transition2(
+	func_builder: &mut FunctionBuilder<'_>,
+	current: &DfaState,
+	states: &[Block],
+	input_ptr: Value,
+	input_ch: Value,
+	fallback: Block,
+) {
+	let mut next: Block = func_builder.create_block();
+	for (interval, transition) in current.transitions.iter() {
+		let target: Block = states[transition.target];
+
+		let start: Value = func_builder.ins().iconst(types::I32, i64::from(interval.start()));
+		let end_offset: Value = func_builder
+			.ins()
+			.iconst(types::I32, i64::from(interval.end() - interval.start()));
+
+		let x: Value = func_builder.ins().iadd_imm(input_ch, -i64::from(interval.start()));
+		let t: Value = func_builder.ins().icmp(IntCC::UnsignedLessThanOrEqual, x, end_offset);
+
+		func_builder
+			.ins()
+			.brif(t, target, &[BlockArg::Value(input_ptr)], next, &[]);
+		func_builder.seal_block(next);
+		func_builder.switch_to_block(next);
+		next = func_builder.create_block();
+	}
+	func_builder.ins().jump(fallback, &[]);
 }
 
 fn transition(
@@ -413,18 +595,18 @@ mod test {
 
 		let mut end: *const u8 = std::ptr::null();
 
-		let x: u16 = f(input.as_ptr_range().start, input.as_ptr_range().end, 0, &mut end).map_or(0, u16::from);
+		let x: u16 = f(input.as_ptr_range().start, input.as_ptr_range().end, '\0', &mut end).map_or(0, u16::from);
 		assert_eq!(x, 2);
 		assert_eq!(end, input[.."abc".len()].as_ptr_range().end);
 
-		let x: u16 = f(end, input.as_ptr_range().end, 0, &mut end).map_or(0, u16::from);
+		let x: u16 = f(end, input.as_ptr_range().end, '\0', &mut end).map_or(0, u16::from);
 		assert_eq!(x, 0);
 		assert_eq!(end, input[.."abc".len()].as_ptr_range().end);
 
 		let x: u16 = f(
 			input["abc ".len()..].as_ptr_range().start,
 			input.as_ptr_range().end,
-			0,
+			'\0',
 			&mut end,
 		)
 		.map_or(0, u16::from);
@@ -434,7 +616,7 @@ mod test {
 		let x: u16 = f(
 			input["abc 123 ".len()..].as_ptr_range().start,
 			input.as_ptr_range().end,
-			0,
+			'\0',
 			&mut end,
 		)
 		.map_or(0, u16::from);
@@ -444,7 +626,7 @@ mod test {
 		let x: u16 = f(
 			input["abc 123 def ".len()..].as_ptr_range().start,
 			input.as_ptr_range().end,
-			0,
+			'\0',
 			&mut end,
 		)
 		.map_or(0, u16::from);
