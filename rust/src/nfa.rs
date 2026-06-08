@@ -2,6 +2,7 @@
 //! - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
 //! - <https://arxiv.org/abs/2206.01398>
 //!
+
 mod graph_dot_output;
 mod regex_construction;
 mod search_decomposition;

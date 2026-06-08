@@ -27,10 +27,10 @@ use cranelift_module::FuncId;
 // use cranelift_module::Linkage;
 use cranelift_module::Module;
 use cranelift_module::default_libcall_names;
+
 // use regex_syntax::utf8::Utf8Range;
 // use regex_syntax::utf8::Utf8Sequence;
 // use regex_syntax::utf8::Utf8Sequences;
-
 use super::*;
 
 pub type JittedDfa = extern "C" fn(*const u8, *const u8, u32, *const *const u8) -> Option<RuleIdx>;
@@ -249,7 +249,6 @@ fn decode_utf8_char(
 	let inaf_b: Block = func_builder.create_block();
 	let otherwise_b: Block = func_builder.create_block();
 	let anchor_b: Block = func_builder.create_block();
-	let anchor2_b: Block = func_builder.create_block();
 
 	let end_b: Block = func_builder.create_block();
 	func_builder.append_block_param(end_b, ptr_ty);
@@ -271,11 +270,12 @@ fn decode_utf8_char(
 		let at_end_v: Value = func_builder.ins().icmp_imm(IntCC::Equal, diff, 0);
 
 		let input_ptr: Value = func_builder.ins().iadd_imm(input_ptr, 1);
+		let eof_anchor: Value = func_builder.ins().iconst(types::I32, i64::from(b'\n'));
 
 		func_builder.ins().brif(
 			at_end_v,
 			end_b,
-			&[BlockArg::Value(input_ptr), BlockArg::Value(anchor_ch)],
+			&[BlockArg::Value(input_ptr), BlockArg::Value(eof_anchor)],
 			otherwise_b,
 			&[],
 		);

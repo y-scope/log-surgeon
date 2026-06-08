@@ -1,7 +1,16 @@
-use std::ffi::c_char;
-use std::marker::PhantomData;
-use std::str::Utf8Error;
+//! FFI is inherently unsafe in that the Rust compiler cannot verify the validity of foreign calls;
+//! however, it's counterproductive to code auditing to simply mark every FFI function as unsafe.
+//!
+//! We assume that calls to these functions are "as if" they came from other Rust code;
+//! i.e. the values are valid and lifetimes don't violate the rules of the Rust Abstract Machine.
+//! This includes custom types such as [`CCharArray`],
+//! for which in Rust source (outside its own module),
+//! it is (should be) impossible to materialize an invalid pointer/lifetime/slice value.
+//! Therefore, even though it's possible for a foreign caller to pass an invalid [`CCharArray`]
+//! to a function below, those functions would not be (are not) marked `unsafe`.
+//!
 
+use crate::ffi::CCharArray;
 use crate::log_event::LogEvent;
 use crate::log_event::Match;
 use crate::parser::Parser;
@@ -13,57 +22,9 @@ use crate::search::Interpretation;
 use crate::search::SearchString;
 use crate::search::SubQuery;
 
-/// Represents a C `T const*` pointer + `size_t` length as a single ABI-stable value.
-#[repr(C)]
-#[derive(Debug, Clone, Copy)]
-pub struct CArray<'lifetime, T> {
-	pointer: *const T,
-	length: usize,
-	_lifetime: PhantomData<&'lifetime [T]>,
-}
-
-pub type CCharArray<'lifetime> = CArray<'lifetime, c_char>;
-
 #[derive(Debug)]
 pub struct SearchResult {
 	leaf_captures: Vec<Match>,
-}
-
-impl<'lifetime, T> CArray<'lifetime, T> {
-	pub fn null() -> Self {
-		Self {
-			pointer: std::ptr::null(),
-			length: 0,
-			_lifetime: PhantomData,
-		}
-	}
-
-	pub fn from_slice(slice: &'lifetime [T]) -> Self {
-		Self {
-			pointer: slice.as_ptr(),
-			length: slice.len(),
-			_lifetime: PhantomData,
-		}
-	}
-
-	pub fn as_slice(&self) -> &'lifetime [T] {
-		unsafe { std::slice::from_raw_parts(self.pointer, self.length) }
-	}
-}
-
-impl<'lifetime> CCharArray<'lifetime> {
-	pub fn from_utf8(utf8: &'lifetime str) -> Self {
-		Self {
-			pointer: utf8.as_bytes().as_ptr().cast::<c_char>(),
-			length: utf8.as_bytes().len(),
-			_lifetime: PhantomData,
-		}
-	}
-
-	pub fn as_utf8(&self) -> Result<&'lifetime str, Utf8Error> {
-		let bytes: &[u8] = unsafe { std::slice::from_raw_parts(self.pointer.cast::<u8>(), self.length) };
-		str::from_utf8(bytes)
-	}
 }
 
 #[unsafe(no_mangle)]
@@ -80,15 +41,13 @@ mod schema {
 	}
 
 	#[unsafe(no_mangle)]
-	unsafe extern "C" fn log_surgeon_schema_builder_set_delimiters(
-		builder: &mut SchemaBuilder,
-		delimiters: CCharArray<'_>,
-	) {
-		builder.set_delimiters(delimiters.as_utf8().unwrap());
+	extern "C" fn log_surgeon_schema_builder_set_delimiters(builder: &mut SchemaBuilder, delimiters: CCharArray<'_>) {
+		let delimiters: &str = delimiters.as_utf8().unwrap();
+		builder.set_delimiters(delimiters);
 	}
 
 	#[unsafe(no_mangle)]
-	unsafe extern "C" fn log_surgeon_schema_builder_add_rule_with_priority<'pattern>(
+	extern "C" fn log_surgeon_schema_builder_add_rule_with_priority<'pattern>(
 		builder: &mut SchemaBuilder,
 		priority: i32,
 		name: CCharArray<'_>,
@@ -122,7 +81,7 @@ mod schema {
 	}
 
 	#[unsafe(no_mangle)]
-	unsafe extern "C" fn log_surgeon_schema_builder_build(builder: Box<SchemaBuilder>) -> Box<Schema> {
+	extern "C" fn log_surgeon_schema_builder_build(builder: Box<SchemaBuilder>) -> Box<Schema> {
 		Box::new(builder.build())
 	}
 
@@ -162,7 +121,7 @@ mod parser {
 	use super::*;
 
 	#[unsafe(no_mangle)]
-	unsafe extern "C" fn log_surgeon_parser_new(schema: Box<Schema>) -> Box<Parser> {
+	extern "C" fn log_surgeon_parser_new(schema: Box<Schema>) -> Box<Parser> {
 		let parser: Parser = Parser::new(*schema);
 		Box::new(parser)
 	}
@@ -212,7 +171,7 @@ mod search {
 	use super::*;
 
 	#[unsafe(no_mangle)]
-	unsafe extern "C" fn log_surgeon_search_query_interpretations(
+	extern "C" fn log_surgeon_search_query_interpretations(
 		parser: &Parser,
 		input: CCharArray<'_>,
 		name: CCharArray<'_>,
@@ -260,7 +219,8 @@ mod search {
 	}
 }
 
-/// `-Zunpretty=expanded` only in nightly...
+/// Ideally, these would be defined by a macro,
+/// but then `cbindgen` can't process them without `-Zunpretty=expanded`, which is only in nightly...
 mod clone_impls {
 	use super::*;
 
@@ -275,7 +235,8 @@ mod clone_impls {
 	}
 }
 
-/// `-Zunpretty=expanded` only in nightly...
+/// Ideally, these would be defined by a macro,
+/// but then `cbindgen` can't process them without `-Zunpretty=expanded`, which is only in nightly...
 mod destructor_impls {
 	use super::*;
 
@@ -304,29 +265,3 @@ mod destructor_impls {
 		std::mem::drop(value);
 	}
 }
-
-/*
-#[cfg(test)]
-mod test {
-	use super::*;
-
-	#[test]
-	fn basic() {
-		let mut schema: Schema = Schema::new();
-		schema.set_delimiters(" ");
-		schema.add_rule("hello", "hello world").unwrap();
-		schema.add_rule("bye", "goodbye").unwrap();
-
-		let mut parser: Parser = Parser::new(schema);
-		let input: CCharArray<'_> = CCharArray::from_utf8("hello world goodbye hello world  goodbye  ");
-		let mut pos: usize = 0;
-
-		let mut event: LogEvent<'_> = LogEvent::BLANK;
-
-		assert!(log_surgeon_parser_next(&mut parser, input, &mut pos, &mut event));
-		// Rust doesn't allow this since it doesn't know that this function simply overwrites event,
-		// and that the destructor (when overwriting the old event) doesn't touch the borrow on the parser.
-		//assert!(log_surgeon_parser_next(&mut parser, input, &mut pos, &mut event));
-	}
-}
-*/

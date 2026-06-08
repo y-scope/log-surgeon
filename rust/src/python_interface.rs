@@ -39,6 +39,8 @@ struct PyParser {
 #[derive(Debug)]
 struct PyLogEvent {
 	#[pyo3(get)]
+	log_type: Py<PyString>,
+	#[pyo3(get)]
 	message: Py<PyString>,
 	#[pyo3(get, name = "leaf_captures")]
 	leaf_matches: Py<PyList>,
@@ -192,8 +194,10 @@ impl PyParser {
 				all_matches.push(py_cap);
 			}
 			let all_matches: Bound<'_, PyList> = PyList::new(py, all_matches)?;
+			let log_type: String = log_type::stringify(schema, &event.message, event.all_matches);
 
 			Ok(Some(PyLogEvent {
+				log_type: PyString::new(py, &log_type).unbind(),
 				message: PyString::new(py, event.message).unbind(),
 				leaf_matches: leaf_matches.unbind(),
 				non_leaf_matches: non_leaf_matches.unbind(),
@@ -339,6 +343,76 @@ fn python_unicode_or_bytes_as_str<'a>(input: &'a Bound<'_, PyAny>) -> PyResult<O
 		}
 	} else {
 		Ok(None)
+	}
+}
+
+// Legacy/testing.
+mod log_type {
+	use crate::log_event::Match;
+	use crate::schema::Schema;
+	use std::num::NonZero;
+
+	/// A `LogType` is a "template string" for a [`LogEvent`](crate::log_event::LogEvent).
+	/// The string representation of a `LogType` (e.g. given by [`LogType::as_str`])
+	/// consists of:
+	///
+	/// - `'%'` characters escaped by doubling them,
+	/// - capture placeholders surrounded by a single `'%'` on each side;
+	///   a capture `bar` with capture id `2` in a variable `foo` with rule id `1`
+	///   shows up at `%1.2:foo.bar%` in the string representation.
+	pub fn stringify<'a>(schema: &Schema, log_message: &str, matches: impl IntoIterator<Item = &'a Match>) -> String {
+		use std::fmt::Write;
+
+		let mut buf: String = String::new();
+		let mut last_pos: usize = 0;
+		for mat in matches {
+			if !mat.is_leaf {
+				continue;
+			}
+			let pos: usize = mat.range.start;
+			for s in escape::<'%'>(&log_message[last_pos..pos]) {
+				buf.push_str(s);
+			}
+			let root_rule_name: &str = &schema[mat.rule_idx].name;
+			let sub_rule_name: &str = schema[mat.rule_idx][mat.sub_rule_id].sub_rule_name();
+			write!(
+				&mut buf,
+				"%{}.{}:{}.{}%",
+				mat.rule_idx,
+				mat.sub_rule_id.map_or(0, NonZero::get),
+				root_rule_name,
+				sub_rule_name,
+			)
+			.unwrap();
+			last_pos = mat.range.end;
+		}
+		for s in escape::<'%'>(&log_message[last_pos..]) {
+			buf.push_str(s);
+		}
+		buf
+	}
+
+	/// Escapes static text by duplicating each occurence of `CHAR`;
+	/// returns an iterator over escaped substrings;
+	/// concatenate the substrings for the final result.
+	fn escape<'a, const CHAR: char>(mut remaining: &'a str) -> impl Iterator<Item = &'a str> {
+		std::iter::from_fn(move || {
+			if remaining.is_empty() {
+				return None;
+			}
+			Some(match remaining.find(CHAR) {
+				Some(0) => {
+					remaining = &remaining[CHAR.len_utf8()..];
+					"%%"
+				},
+				Some(i) => {
+					let (before, after): (&str, &str) = remaining.split_at(i);
+					remaining = after;
+					before
+				},
+				None => std::mem::replace(&mut remaining, ""),
+			})
+		})
 	}
 }
 
