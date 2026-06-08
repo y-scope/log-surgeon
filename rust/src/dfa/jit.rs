@@ -20,7 +20,6 @@ use cranelift::codegen::settings::Flags;
 use cranelift::frontend::FunctionBuilder;
 use cranelift::frontend::FunctionBuilderContext;
 // use cranelift::frontend::Switch;
-use cranelift::frontend::Variable;
 use cranelift_jit::JITBuilder;
 use cranelift_jit::JITModule;
 use cranelift_module::FuncId;
@@ -80,7 +79,7 @@ impl Jit {
 	pub fn jit(&mut self, dfa: &Tdfa) -> Result<JittedDfa, ()> {
 		// now!(u1);
 		// let old_dfa: &Tdfa = dfa;
-		// let dfa: Tdfa = old_dfa.minimize();
+		// let dfa: &Tdfa = &dfa.minimize();
 		now!(t0);
 		// let mut ts: BTreeMap<usize, usize> = BTreeMap::new();
 		// for s in dfa.states.iter() {
@@ -161,64 +160,69 @@ impl Compilation<'_> {
 		let anchor: Value = self.asm.block_params(entry)[2];
 		let output: Value = self.asm.block_params(entry)[3];
 
-		let current_state: Variable = self.asm.declare_var(types::I32);
-		self.asm.def_var(current_state, zero32);
+		let last_matched_rule: Value = zero16;
+		let last_matched_input_ptr: Value = self.asm.ins().iadd_imm(input_ptr, 1);
 
-		let backup_rule_var: Variable = self.asm.declare_var(types::I16);
-		self.asm.def_var(backup_rule_var, zero16);
-
-		let backup_input_ptr_var: Variable = self.asm.declare_var(self.ptr_ty);
-		let step_forward_input_ptr: Value = self.asm.ins().iadd_imm(input_ptr, 1);
-		self.asm.def_var(backup_input_ptr_var, step_forward_input_ptr);
-
-		let input_ptr_var: Variable = self.asm.declare_var(self.ptr_ty);
-		self.asm.def_var(input_ptr_var, input_ptr);
-
-		let current_ch_var: Variable = self.asm.declare_var(types::I32);
-		self.asm.def_var(current_ch_var, anchor);
-
-		self.asm.ins().jump(states[0], &[BlockArg::Value(input_ptr)]);
+		self.asm.ins().jump(
+			states[0],
+			&[
+				BlockArg::Value(input_ptr),
+				BlockArg::Value(last_matched_input_ptr),
+				BlockArg::Value(last_matched_rule),
+			],
+		);
 
 		let mut count1: usize = 0;
 		let mut count2: usize = 0;
 
 		let exit_b: Block = self.asm.create_block();
+		self.asm.append_block_param(exit_b, self.ptr_ty); // last_matched_input_ptr
+		self.asm.append_block_param(exit_b, types::I16); // last_matched_rule
 		{
 			self.asm.switch_to_block(exit_b);
 
-			let backup_rule: Value = self.asm.use_var(backup_rule_var);
-			let backup_input_ptr: Value = self.asm.use_var(backup_input_ptr_var);
-			let step_back_input_ptr: Value = self.asm.ins().iadd_imm(backup_input_ptr, -1);
+			let params: &[Value] = self.asm.block_params(exit_b);
 
-			self.asm.ins().store(MemFlags::new(), step_back_input_ptr, output, 0);
+			let last_matched_input_ptr: Value = params[0];
+			let last_matched_rule: Value = params[1];
 
-			self.asm.ins().return_(&[backup_rule]);
+			let last_matched_input_ptr: Value = self.asm.ins().iadd_imm(last_matched_input_ptr, -1);
+
+			self.asm.ins().store(MemFlags::new(), last_matched_input_ptr, output, 0);
+
+			self.asm.ins().return_(&[last_matched_rule]);
 		}
 
 		for (i, state) in dfa.states.iter().enumerate() {
 			let block: Block = states[i];
 
 			self.asm.append_block_param(block, self.ptr_ty); // input_ptr
+			self.asm.append_block_param(block, self.ptr_ty); // last_matched_input_ptr
+			self.asm.append_block_param(block, types::I16); // last_matched_rule
 
 			self.asm.switch_to_block(block);
-			let current_input_ptr: Value = self.asm.block_params(block)[0];
+
+			let params: &[Value] = self.asm.block_params(block);
+			let current_input_ptr: Value = params[0];
+
+			let mut last_matched: [BlockArg; 2] = [BlockArg::Value(params[1]), BlockArg::Value(params[2])];
 
 			let (next_input_ptr, input_ch): (Value, Value) = if i > 0 {
 				if let Some(rule_idx) = state.accepting_rule {
 					let rule: Value = self.asm.ins().iconst(types::I16, i64::from(u16::from(rule_idx)));
-					self.asm.def_var(backup_rule_var, rule);
-					self.asm.def_var(backup_input_ptr_var, current_input_ptr);
+					last_matched[0] = BlockArg::Value(current_input_ptr);
+					last_matched[1] = BlockArg::Value(rule);
 				} else {
 					assert_ne!(state.transitions.len(), 0);
 				}
 
-				self.next_char(current_input_ptr, input_ptr_end, exit_b)
+				self.next_char(current_input_ptr, input_ptr_end, exit_b, &last_matched)
 			} else {
 				(current_input_ptr, anchor)
 			};
 
 			self.do_transitions(
-				&dfa.states[i], states, next_input_ptr, input_ch, exit_b, &mut count1, &mut count2,
+				&dfa.states[i], states, next_input_ptr, input_ch, exit_b, &last_matched, &mut count1, &mut count2,
 			);
 		}
 		// println!("count1 {count1} count2 {count2}");
@@ -237,7 +241,13 @@ impl Compilation<'_> {
 		);
 	}
 
-	fn next_char(&mut self, input_ptr: Value, input_ptr_end: Value, exit_b: Block) -> (Value, Value) {
+	fn next_char(
+		&mut self,
+		input_ptr: Value,
+		input_ptr_end: Value,
+		exit_b: Block,
+		last_match: &[BlockArg],
+	) -> (Value, Value) {
 		// At least 4 valid bytes; don't need additional bounds checks when decoding multi-byte utf8 char.
 		let bounds_fast_path_b: Block = self.asm.create_block();
 		// If `input_ptr == input_ptr_end`, produce an "eof anchor".
@@ -264,7 +274,7 @@ impl Compilation<'_> {
 
 		{
 			self.asm.switch_to_block(bounds_fast_path_b);
-			self.decode_utf8_char::<false>(input_ptr, n_bytes_remaining, exit_b, success_b);
+			self.decode_utf8_char::<false>(input_ptr, n_bytes_remaining, exit_b, last_match, success_b);
 		}
 		{
 			self.asm.switch_to_block(bounds_near_eof_b);
@@ -284,7 +294,7 @@ impl Compilation<'_> {
 		}
 		{
 			self.asm.switch_to_block(bounds_slow_path_b);
-			self.decode_utf8_char::<true>(input_ptr, n_bytes_remaining, exit_b, success_b);
+			self.decode_utf8_char::<true>(input_ptr, n_bytes_remaining, exit_b, last_match, success_b);
 		}
 		self.asm.seal_block(success_b);
 
@@ -309,6 +319,7 @@ impl Compilation<'_> {
 		input_ptr: Value,
 		n_bytes_remaining: Value,
 		exit_b: Block,
+		last_match: &[BlockArg],
 		success_b: Block,
 	) {
 		let multi_byte_2_b: Block = self.asm.create_block();
@@ -316,7 +327,7 @@ impl Compilation<'_> {
 		let multi_byte_4_b: Block = self.asm.create_block();
 
 		let (next_input_ptr_1, ch_a): (Value, Value) =
-			self.read_byte::<WITH_BOUNDS_CHECK, 0>(input_ptr, n_bytes_remaining, exit_b);
+			self.read_byte::<WITH_BOUNDS_CHECK, 0>(input_ptr, n_bytes_remaining, exit_b, last_match);
 
 		let is_ascii: Value = self.asm.ins().icmp_imm(IntCC::UnsignedLessThan, ch_a, 0x80);
 
@@ -333,7 +344,7 @@ impl Compilation<'_> {
 			self.asm.switch_to_block(multi_byte_2_b);
 
 			let (next_input_ptr_2, ch_b): (Value, Value) =
-				self.read_byte::<WITH_BOUNDS_CHECK, 1>(input_ptr, n_bytes_remaining, exit_b);
+				self.read_byte::<WITH_BOUNDS_CHECK, 1>(input_ptr, n_bytes_remaining, exit_b, last_match);
 
 			let ch_b: Value = self.asm.ins().band_imm(ch_b, 0b0011_1111);
 
@@ -362,7 +373,7 @@ impl Compilation<'_> {
 				self.asm.switch_to_block(multi_byte_3_b);
 
 				let (next_input_ptr_3, ch_c): (Value, Value) =
-					self.read_byte::<WITH_BOUNDS_CHECK, 2>(input_ptr, n_bytes_remaining, exit_b);
+					self.read_byte::<WITH_BOUNDS_CHECK, 2>(input_ptr, n_bytes_remaining, exit_b, last_match);
 
 				let ch_c: Value = self.asm.ins().band_imm(ch_c, 0b0011_1111);
 
@@ -389,7 +400,7 @@ impl Compilation<'_> {
 					self.asm.switch_to_block(multi_byte_4_b);
 
 					let (next_input_ptr_4, ch_d): (Value, Value) =
-						self.read_byte::<WITH_BOUNDS_CHECK, 3>(input_ptr, n_bytes_remaining, exit_b);
+						self.read_byte::<WITH_BOUNDS_CHECK, 3>(input_ptr, n_bytes_remaining, exit_b, last_match);
 
 					let ch_d: Value = self.asm.ins().band_imm(ch_d, 0b0011_1111);
 
@@ -421,6 +432,7 @@ impl Compilation<'_> {
 		input_ptr: Value,
 		n_bytes_remaining: Value,
 		exit_b: Block,
+		last_match: &[BlockArg],
 	) -> (Value, Value) {
 		if WITH_BOUNDS_CHECK {
 			let valid_read_b: Block = self.asm.create_block();
@@ -429,7 +441,7 @@ impl Compilation<'_> {
 				self.asm
 					.ins()
 					.icmp_imm(IntCC::SignedGreaterThan, n_bytes_remaining, i64::from(OFFSET));
-			self.asm.ins().brif(in_bounds, valid_read_b, &[], exit_b, &[]);
+			self.asm.ins().brif(in_bounds, valid_read_b, &[], exit_b, last_match);
 			self.asm.seal_block(valid_read_b);
 			self.asm.switch_to_block(valid_read_b);
 		}
@@ -448,6 +460,7 @@ impl Compilation<'_> {
 		next_input_ptr: Value,
 		input_ch: Value,
 		exit_b: Block,
+		last_match: &[BlockArg],
 		count1: &mut usize,
 		count2: &mut usize,
 	) {
@@ -516,7 +529,7 @@ impl Compilation<'_> {
 		} else {
 			*count1 += 1;
 		}
-		self.binary_switch(next_input_ptr, input_ch, &transitions2, exit_b);
+		self.binary_switch(next_input_ptr, input_ch, &transitions2, exit_b, last_match);
 
 		/*
 		let mut next: Block = self.asm.create_block();
@@ -548,9 +561,10 @@ impl Compilation<'_> {
 		input_ch: Value,
 		intervals: &[(u32, u32, Block)],
 		exit_b: Block,
+		last_match: &[BlockArg],
 	) {
 		if intervals.is_empty() {
-			self.asm.ins().jump(exit_b, &[]);
+			self.asm.ins().jump(exit_b, last_match);
 			return;
 		}
 
@@ -565,9 +579,13 @@ impl Compilation<'_> {
 					.ins()
 					.icmp_imm(IntCC::UnsignedLessThanOrEqual, offset_input_ch, i64::from(hi - lo));
 
-			self.asm
-				.ins()
-				.brif(in_range, target_b, &[BlockArg::Value(next_input_ptr)], exit_b, &[]);
+			self.asm.ins().brif(
+				in_range,
+				target_b,
+				&[BlockArg::Value(next_input_ptr), last_match[0], last_match[1]],
+				exit_b,
+				last_match,
+			);
 		} else {
 			let go_left_b: Block = self.asm.create_block();
 			let go_right_b: Block = self.asm.create_block();
@@ -582,10 +600,10 @@ impl Compilation<'_> {
 			self.asm.seal_block(go_right_b);
 
 			self.asm.switch_to_block(go_left_b);
-			self.binary_switch(next_input_ptr, input_ch, left, exit_b);
+			self.binary_switch(next_input_ptr, input_ch, left, exit_b, last_match);
 
 			self.asm.switch_to_block(go_right_b);
-			self.binary_switch(next_input_ptr, input_ch, right, exit_b);
+			self.binary_switch(next_input_ptr, input_ch, right, exit_b, last_match);
 		}
 	}
 }

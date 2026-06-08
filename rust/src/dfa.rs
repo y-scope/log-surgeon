@@ -6,7 +6,6 @@
 //!
 
 mod jit;
-// mod utf8;
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -830,30 +829,48 @@ impl Tdfa {
 
 impl Tdfa {
 	pub fn minimize(&self) -> Tdfa {
-		let mut partitions: Vec<BTreeSet<usize>> = self.partition_states();
-		let z: usize = partitions.iter().position(|x| x.contains(&0)).unwrap();
-		partitions.swap(0, z);
+		let partitions: Vec<BTreeSet<usize>> = self.partition_states();
 
 		let mut map: Vec<usize> = vec![usize::MAX; self.states.len()];
+		for (i, x) in partitions.iter().enumerate() {
+			for &s in x.iter() {
+				map[s] = i;
+			}
+		}
 
 		let mut new_states: Vec<DfaState> = Vec::with_capacity(partitions.len());
 
-		for (i, x) in partitions.iter().enumerate() {
+		for x in partitions.iter() {
 			let mut kernel: Kernel = Kernel(Vec::new());
 			let mut maybe_transitions: Option<IntervalTree<u32, Transition>> = None;
 			for &s in x.iter() {
-				map[s] = i;
-				kernel.0.extend_from_slice(&self.states[s].kernel.0);
+				let state: &DfaState = &self.states[s];
+				kernel.0.extend_from_slice(&state.kernel.0);
 				if let Some(transitions) = &maybe_transitions {
-					assert_eq!(self.states[s].transitions, *transitions);
+					for (interval, transition) in transitions.iter() {
+						assert_eq!(
+							transition.target,
+							map[state.transitions.lookup(interval.start()).unwrap().target]
+						);
+					}
+					for (interval, transition) in state.transitions.iter() {
+						assert_eq!(
+							map[transition.target],
+							transitions.lookup(interval.start()).unwrap().target
+						);
+					}
 				} else {
-					maybe_transitions = Some(self.states[s].transitions.clone());
+					let mut transitions: IntervalTree<u32, Transition> = state.transitions.clone();
+					for (_, transition) in transitions.iter_mut() {
+						transition.target = map[transition.target];
+					}
+					maybe_transitions = Some(transitions);
 				}
 			}
 			let first: &DfaState = &self.states[*x.first().unwrap()];
 			new_states.push(DfaState {
 				kernel,
-				transitions: first.transitions.clone(),
+				transitions: maybe_transitions.unwrap(),
 				accepting_rule: first.accepting_rule,
 				final_operations: Vec::new(),
 				tag_for_register: BTreeMap::new(),
@@ -863,9 +880,9 @@ impl Tdfa {
 		}
 
 		for state in new_states.iter_mut() {
-			for (_, transition) in state.transitions.iter_mut() {
-				transition.target = map[transition.target];
-			}
+			// for (_, transition) in state.transitions.iter_mut() {
+			// 	transition.target = map[transition.target];
+			// }
 			for transition in state.ascii_cache.iter_mut() {
 				if transition.is_valid() {
 					transition.target = map[transition.target];
@@ -952,6 +969,9 @@ impl Tdfa {
 				}
 			}
 		}
+
+		let z: usize = p.iter().position(|x| x.contains(&0)).unwrap();
+		p.swap(0, z);
 
 		p
 	}
