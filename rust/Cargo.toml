@@ -41,8 +41,6 @@ nom = "8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-regex-syntax = "0.8"
-
 cranelift = "0.132"
 cranelift-module = "0.132"
 cranelift-native = "0.132"

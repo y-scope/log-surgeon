@@ -40,8 +40,11 @@ python3 -m unittest discover tests/python
 
 ### Enable Tracing
 ```
+# Rust
+log_surgeon::enable_tracing();
+
 # C/C++
-log_surgeon_enable_tracing()
+log_surgeon_enable_tracing();
 
 # Python
 import log_surgeon
