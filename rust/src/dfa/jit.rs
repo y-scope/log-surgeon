@@ -181,9 +181,10 @@ impl Compilation<'_> {
 
 		let mut count1: usize = 0;
 		let mut count2: usize = 0;
-		let exit: Block = self.asm.create_block();
+
+		let exit_b: Block = self.asm.create_block();
 		{
-			self.asm.switch_to_block(exit);
+			self.asm.switch_to_block(exit_b);
 
 			let backup_rule: Value = self.asm.use_var(backup_rule_var);
 			let backup_input_ptr: Value = self.asm.use_var(backup_input_ptr_var);
@@ -200,28 +201,29 @@ impl Compilation<'_> {
 			self.asm.append_block_param(block, self.ptr_ty); // input_ptr
 
 			self.asm.switch_to_block(block);
-			let input_ptr: Value = self.asm.block_params(block)[0];
-			let (input_ch, input_ptr): (Value, Value) = if i > 0 {
+			let current_input_ptr: Value = self.asm.block_params(block)[0];
+
+			let (next_input_ptr, input_ch): (Value, Value) = if i > 0 {
 				if let Some(rule_idx) = state.accepting_rule {
 					let rule: Value = self.asm.ins().iconst(types::I16, i64::from(u16::from(rule_idx)));
 					self.asm.def_var(backup_rule_var, rule);
-					self.asm.def_var(backup_input_ptr_var, input_ptr);
+					self.asm.def_var(backup_input_ptr_var, current_input_ptr);
 				} else {
 					assert_ne!(state.transitions.len(), 0);
 				}
 
-				self.next_char(input_ptr, input_ptr_end, exit, anchor)
+				self.next_char(current_input_ptr, input_ptr_end, exit_b)
 			} else {
-				(anchor, input_ptr)
+				(current_input_ptr, anchor)
 			};
 
 			self.do_transitions(
-				&dfa.states[i], states, input_ptr, input_ch, exit, &mut count1, &mut count2,
+				&dfa.states[i], states, next_input_ptr, input_ch, exit_b, &mut count1, &mut count2,
 			);
 		}
 		// println!("count1 {count1} count2 {count2}");
 
-		self.asm.set_cold_block(exit);
+		self.asm.set_cold_block(exit_b);
 
 		now!(t1);
 		self.asm.seal_all_blocks();
@@ -235,88 +237,103 @@ impl Compilation<'_> {
 		);
 	}
 
-	fn next_char(
-		&mut self,
-		input_ptr: Value,
-		input_ptr_end: Value,
-		fallback: Block,
-		anchor_ch: Value,
-	) -> (Value, Value) {
-		let inaf_b: Block = self.asm.create_block();
-		let otherwise_b: Block = self.asm.create_block();
-		let anchor_b: Block = self.asm.create_block();
+	fn next_char(&mut self, input_ptr: Value, input_ptr_end: Value, exit_b: Block) -> (Value, Value) {
+		// At least 4 valid bytes; don't need additional bounds checks when decoding multi-byte utf8 char.
+		let bounds_fast_path_b: Block = self.asm.create_block();
+		// If `input_ptr == input_ptr_end`, produce an "eof anchor".
+		let bounds_near_eof_b: Block = self.asm.create_block();
+		// Otherwise, decode byte-by-byte with bounds checks.
+		let bounds_slow_path_b: Block = self.asm.create_block();
+		// Got a character (possibly the "eof anchor").
+		let success_b: Block = self.asm.create_block();
+		self.asm.append_block_param(success_b, self.ptr_ty); // input_ptr
+		self.asm.append_block_param(success_b, types::I32); // input_ch
 
-		let end_b: Block = self.asm.create_block();
-		self.asm.append_block_param(end_b, self.ptr_ty);
-		self.asm.append_block_param(end_b, types::I32);
+		let n_bytes_remaining: Value = self.asm.ins().isub(input_ptr_end, input_ptr);
+		let at_least_4_bytes: Value = self
+			.asm
+			.ins()
+			.icmp_imm(IntCC::SignedGreaterThanOrEqual, n_bytes_remaining, 4);
 
-		let diff: Value = self.asm.ins().isub(input_ptr_end, input_ptr);
+		self.asm
+			.ins()
+			.brif(at_least_4_bytes, bounds_fast_path_b, &[], bounds_near_eof_b, &[]);
 
-		let inaf_v: Value = self.asm.ins().icmp_imm(IntCC::UnsignedGreaterThan, diff, 3);
-		self.asm.ins().brif(inaf_v, inaf_b, &[], anchor_b, &[]);
-		self.asm.seal_block(inaf_b);
-		self.asm.seal_block(anchor_b);
+		self.asm.seal_block(bounds_fast_path_b);
+		self.asm.seal_block(bounds_near_eof_b);
 
 		{
-			self.asm.switch_to_block(inaf_b);
-			self.decode_utf8_char::<false>(input_ptr, input_ptr_end, fallback, end_b);
+			self.asm.switch_to_block(bounds_fast_path_b);
+			self.decode_utf8_char::<false>(input_ptr, n_bytes_remaining, exit_b, success_b);
 		}
 		{
-			self.asm.switch_to_block(anchor_b);
-			let at_end_v: Value = self.asm.ins().icmp_imm(IntCC::Equal, diff, 0);
+			self.asm.switch_to_block(bounds_near_eof_b);
+			let at_end_v: Value = self.asm.ins().icmp_imm(IntCC::Equal, n_bytes_remaining, 0);
 
-			let input_ptr: Value = self.asm.ins().iadd_imm(input_ptr, 1);
+			let one_past_end_input_ptr: Value = self.asm.ins().iadd_imm(input_ptr_end, 1);
 			let eof_anchor: Value = self.asm.ins().iconst(types::I32, i64::from(b'\n'));
 
 			self.asm.ins().brif(
 				at_end_v,
-				end_b,
-				&[BlockArg::Value(input_ptr), BlockArg::Value(eof_anchor)],
-				otherwise_b,
+				success_b,
+				&[BlockArg::Value(one_past_end_input_ptr), BlockArg::Value(eof_anchor)],
+				bounds_slow_path_b,
 				&[],
 			);
-			self.asm.seal_block(otherwise_b);
+			self.asm.seal_block(bounds_slow_path_b);
 		}
 		{
-			self.asm.switch_to_block(otherwise_b);
-			self.decode_utf8_char::<true>(input_ptr, input_ptr_end, fallback, end_b);
+			self.asm.switch_to_block(bounds_slow_path_b);
+			self.decode_utf8_char::<true>(input_ptr, n_bytes_remaining, exit_b, success_b);
 		}
-		self.asm.seal_block(end_b);
+		self.asm.seal_block(success_b);
 
-		self.asm.switch_to_block(end_b);
-		let params: &[Value] = self.asm.block_params(end_b);
-		(params[1], params[0])
+		self.asm.switch_to_block(success_b);
+		let params: &[Value] = self.asm.block_params(success_b);
+		(params[0], params[1])
 	}
 
+	/// From: <https://en.wikipedia.org/wiki/UTF-8#Description>.
+	///
+	/// |      | Byte 1    | Byte 2    | Byte 3    | Byte 4    |
+	/// |------|-----------|-----------|-----------|-----------|
+	/// |      | 0yyy_zzzz |           |           |           |
+	/// |      | 110x_xyyy | 10yy_zzzz |           |           |
+	/// |      | 1110_wwww | 10xx_xxyy | 10yy_zzzz |           |
+	/// |      | 1111_0uvv | 10vv_wwww | 10xx_xxyy | 10yy_zzzz |
+	/// | Bit: | 8765_4321 |           |           |           |
+	///
+	/// This procedure assumes that the input is (has been verified to be) valid UTF-8.
 	fn decode_utf8_char<const WITH_BOUNDS_CHECK: bool>(
 		&mut self,
 		input_ptr: Value,
-		input_ptr_end: Value,
-		fallback: Block,
-		end_b: Block,
+		n_bytes_remaining: Value,
+		exit_b: Block,
+		success_b: Block,
 	) {
-		let multi_byte_b: Block = self.asm.create_block();
+		let multi_byte_2_b: Block = self.asm.create_block();
 		let multi_byte_3_b: Block = self.asm.create_block();
 		let multi_byte_4_b: Block = self.asm.create_block();
 
-		let (input_ptr, ch_a): (Value, Value) = self.read_byte::<WITH_BOUNDS_CHECK>(input_ptr, input_ptr_end, fallback);
+		let (next_input_ptr_1, ch_a): (Value, Value) =
+			self.read_byte::<WITH_BOUNDS_CHECK, 0>(input_ptr, n_bytes_remaining, exit_b);
 
-		let is_ascii_v: Value = self.asm.ins().icmp_imm(IntCC::UnsignedLessThan, ch_a, 0x80);
+		let is_ascii: Value = self.asm.ins().icmp_imm(IntCC::UnsignedLessThan, ch_a, 0x80);
 
 		self.asm.ins().brif(
-			is_ascii_v,
-			end_b,
-			&[BlockArg::Value(input_ptr), BlockArg::Value(ch_a)],
-			multi_byte_b,
+			is_ascii,
+			success_b,
+			&[BlockArg::Value(next_input_ptr_1), BlockArg::Value(ch_a)],
+			multi_byte_2_b,
 			&[],
 		);
-		self.asm.seal_block(multi_byte_b);
+		self.asm.seal_block(multi_byte_2_b);
 
 		{
-			self.asm.switch_to_block(multi_byte_b);
+			self.asm.switch_to_block(multi_byte_2_b);
 
-			let (input_ptr, ch_b): (Value, Value) =
-				self.read_byte::<WITH_BOUNDS_CHECK>(input_ptr, input_ptr_end, fallback);
+			let (next_input_ptr_2, ch_b): (Value, Value) =
+				self.read_byte::<WITH_BOUNDS_CHECK, 1>(input_ptr, n_bytes_remaining, exit_b);
 
 			let ch_b: Value = self.asm.ins().band_imm(ch_b, 0b0011_1111);
 
@@ -325,15 +342,17 @@ impl Compilation<'_> {
 
 			let ch: Value = self.asm.ins().bor(ch_a, ch_b);
 
-			let n: Value = self.asm.ins().ushr_imm(ch_a, 4);
-			let n: Value = self.asm.ins().band_imm(n, 0b0000_0011);
+			// As per the table above, for a non-ascii code point,
+			// the 5th and 6th bits identify whether it is a 2/3/4-byte encoded value.
+			let bits_6_5: Value = self.asm.ins().ushr_imm(ch_a, 4);
+			let bits_6_5: Value = self.asm.ins().band_imm(bits_6_5, 0b0000_0011);
 
-			let t: Value = self.asm.ins().icmp_imm(IntCC::UnsignedLessThan, n, 2);
+			let is_2_bytes: Value = self.asm.ins().icmp_imm(IntCC::UnsignedLessThan, bits_6_5, 2);
 
 			self.asm.ins().brif(
-				t,
-				end_b,
-				&[BlockArg::Value(input_ptr), BlockArg::Value(ch)],
+				is_2_bytes,
+				success_b,
+				&[BlockArg::Value(next_input_ptr_2), BlockArg::Value(ch)],
 				multi_byte_3_b,
 				&[],
 			);
@@ -342,8 +361,8 @@ impl Compilation<'_> {
 			{
 				self.asm.switch_to_block(multi_byte_3_b);
 
-				let (input_ptr, ch_c): (Value, Value) =
-					self.read_byte::<WITH_BOUNDS_CHECK>(input_ptr, input_ptr_end, fallback);
+				let (next_input_ptr_3, ch_c): (Value, Value) =
+					self.read_byte::<WITH_BOUNDS_CHECK, 2>(input_ptr, n_bytes_remaining, exit_b);
 
 				let ch_c: Value = self.asm.ins().band_imm(ch_c, 0b0011_1111);
 
@@ -355,12 +374,12 @@ impl Compilation<'_> {
 				let ch: Value = self.asm.ins().bor(ch_a, ch_b);
 				let ch: Value = self.asm.ins().bor(ch, ch_c);
 
-				let t: Value = self.asm.ins().icmp_imm(IntCC::UnsignedLessThan, n, 3);
+				let is_3_bytes: Value = self.asm.ins().icmp_imm(IntCC::UnsignedLessThan, bits_6_5, 3);
 
 				self.asm.ins().brif(
-					t,
-					end_b,
-					&[BlockArg::Value(input_ptr), BlockArg::Value(ch)],
+					is_3_bytes,
+					success_b,
+					&[BlockArg::Value(next_input_ptr_3), BlockArg::Value(ch)],
 					multi_byte_4_b,
 					&[],
 				);
@@ -369,8 +388,8 @@ impl Compilation<'_> {
 				{
 					self.asm.switch_to_block(multi_byte_4_b);
 
-					let (input_ptr, ch_d): (Value, Value) =
-						self.read_byte::<WITH_BOUNDS_CHECK>(input_ptr, input_ptr_end, fallback);
+					let (next_input_ptr_4, ch_d): (Value, Value) =
+						self.read_byte::<WITH_BOUNDS_CHECK, 3>(input_ptr, n_bytes_remaining, exit_b);
 
 					let ch_d: Value = self.asm.ins().band_imm(ch_d, 0b0011_1111);
 
@@ -386,48 +405,49 @@ impl Compilation<'_> {
 
 					self.asm
 						.ins()
-						.jump(end_b, &[BlockArg::Value(input_ptr), BlockArg::Value(ch)]);
-					// self.asm.seal_block(end_b);
+						.jump(success_b, &[BlockArg::Value(next_input_ptr_4), BlockArg::Value(ch)]);
 				}
 			}
 		}
-
-		// self.asm.switch_to_block(end_b);
-		// let params: &[Value] = self.asm.block_params(end_b);
-		// (params[0], params[1])
 	}
 
-	fn read_byte<const WITH_BOUNDS_CHECK: bool>(
+	/// If `WITH_BOUNDS_CHECK == true`, `n_bytes_remaining` should be either
+	/// `-1` (after the eof anchor), `1`, `2`, or `3`;
+	/// `n_bytes_remaining >= 4` and `n_bytes_remaining == 0` should have been handled before.
+	///
+	/// Returns (next) input pointer, zero-extended to 32 bits input characer.
+	fn read_byte<const WITH_BOUNDS_CHECK: bool, const OFFSET: i32>(
 		&mut self,
 		input_ptr: Value,
-		input_ptr_end: Value,
-		fallback: Block,
+		n_bytes_remaining: Value,
+		exit_b: Block,
 	) -> (Value, Value) {
 		if WITH_BOUNDS_CHECK {
-			let not_eof_b: Block = self.asm.create_block();
+			let valid_read_b: Block = self.asm.create_block();
 
-			let diff: Value = self.asm.ins().isub(input_ptr_end, input_ptr);
-
-			let not_eof_v: Value = self.asm.ins().icmp_imm(IntCC::SignedGreaterThan, diff, 0);
-			self.asm.ins().brif(not_eof_v, not_eof_b, &[], fallback, &[]);
-			self.asm.seal_block(not_eof_b);
-			self.asm.switch_to_block(not_eof_b);
+			let in_bounds: Value =
+				self.asm
+					.ins()
+					.icmp_imm(IntCC::SignedGreaterThan, n_bytes_remaining, i64::from(OFFSET));
+			self.asm.ins().brif(in_bounds, valid_read_b, &[], exit_b, &[]);
+			self.asm.seal_block(valid_read_b);
+			self.asm.switch_to_block(valid_read_b);
 		}
 
-		let input_ch: Value = self.asm.ins().load(types::I8, MemFlags::new(), input_ptr, 0);
+		let input_ch: Value = self.asm.ins().load(types::I8, MemFlags::new(), input_ptr, OFFSET);
 		let input_ch: Value = self.asm.ins().uextend(types::I32, input_ch);
-		let input_ptr: Value = self.asm.ins().iadd_imm(input_ptr, 1);
+		let next_input_ptr: Value = self.asm.ins().iadd_imm(input_ptr, i64::from(OFFSET) + 1);
 
-		(input_ptr, input_ch)
+		(next_input_ptr, input_ch)
 	}
 
 	fn do_transitions(
 		&mut self,
 		current: &DfaState,
 		states: &[Block],
-		input_ptr: Value,
+		next_input_ptr: Value,
 		input_ch: Value,
-		fallback: Block,
+		exit_b: Block,
 		count1: &mut usize,
 		count2: &mut usize,
 	) {
@@ -496,7 +516,7 @@ impl Compilation<'_> {
 		} else {
 			*count1 += 1;
 		}
-		self.binary_switch(input_ch, input_ptr, &transitions2, fallback);
+		self.binary_switch(next_input_ptr, input_ch, &transitions2, exit_b);
 
 		/*
 		let mut next: Block = self.asm.create_block();
@@ -522,45 +542,50 @@ impl Compilation<'_> {
 		// self.asm.ins().jump(fallback, &[]);
 	}
 
-	fn binary_switch(&mut self, input_ch: Value, input_ptr: Value, intervals: &[(u32, u32, Block)], fallback: Block) {
+	fn binary_switch(
+		&mut self,
+		next_input_ptr: Value,
+		input_ch: Value,
+		intervals: &[(u32, u32, Block)],
+		exit_b: Block,
+	) {
 		if intervals.is_empty() {
-			self.asm.ins().jump(fallback, &[]);
+			self.asm.ins().jump(exit_b, &[]);
 			return;
 		}
 
 		let mid: usize = intervals.len() / 2;
-		assert!(mid < intervals.len());
 		let (left, right): (&[(u32, u32, Block)], &[(u32, u32, Block)]) = intervals.split_at(mid);
-		let (lo, hi, target): (u32, u32, Block) = intervals[mid];
+		let (lo, hi, target_b): (u32, u32, Block) = intervals[mid];
 
 		if left.is_empty() {
-			assert_eq!(right.len(), 1);
-			let t: Value = self.asm.ins().iadd_imm(input_ch, -i64::from(lo));
-			let t: Value = self
-				.asm
-				.ins()
-				.icmp_imm(IntCC::UnsignedLessThanOrEqual, t, i64::from(hi - lo));
+			let offset_input_ch: Value = self.asm.ins().iadd_imm(input_ch, -i64::from(lo));
+			let in_range: Value =
+				self.asm
+					.ins()
+					.icmp_imm(IntCC::UnsignedLessThanOrEqual, offset_input_ch, i64::from(hi - lo));
 
 			self.asm
 				.ins()
-				.brif(t, target, &[BlockArg::Value(input_ptr)], fallback, &[]);
+				.brif(in_range, target_b, &[BlockArg::Value(next_input_ptr)], exit_b, &[]);
 		} else {
-			let block1: Block = self.asm.create_block();
-			let block2: Block = self.asm.create_block();
+			let go_left_b: Block = self.asm.create_block();
+			let go_right_b: Block = self.asm.create_block();
 
-			let t: Value = self
+			let less_than_mid: Value = self
 				.asm
 				.ins()
 				.icmp_imm(IntCC::UnsignedLessThan, input_ch, i64::from(lo));
 
-			self.asm.ins().brif(t, block1, &[], block2, &[]);
-			self.asm.seal_block(block1);
-			self.asm.seal_block(block2);
+			self.asm.ins().brif(less_than_mid, go_left_b, &[], go_right_b, &[]);
+			self.asm.seal_block(go_left_b);
+			self.asm.seal_block(go_right_b);
 
-			self.asm.switch_to_block(block1);
-			self.binary_switch(input_ch, input_ptr, left, fallback);
-			self.asm.switch_to_block(block2);
-			self.binary_switch(input_ch, input_ptr, right, fallback);
+			self.asm.switch_to_block(go_left_b);
+			self.binary_switch(next_input_ptr, input_ch, left, exit_b);
+
+			self.asm.switch_to_block(go_right_b);
+			self.binary_switch(next_input_ptr, input_ch, right, exit_b);
 		}
 	}
 }
@@ -630,7 +655,17 @@ mod test {
 			&mut end,
 		)
 		.map_or(0, u16::from);
+		assert_eq!(x, 1);
+		assert_eq!(end, input[..].as_ptr_range().end);
+
+		let x: u16 = f(
+			input[..].as_ptr_range().end,
+			input.as_ptr_range().end,
+			u32::from('\0'),
+			&mut end,
+		)
+		.map_or(0, u16::from);
 		assert_eq!(x, 0);
-		assert_eq!(end, input[.."abc 123 def ".len()].as_ptr_range().end);
+		assert_eq!(end, input[..].as_ptr_range().end);
 	}
 }
