@@ -56,7 +56,7 @@ impl Parser {
 	}
 
 	pub fn next_event(&mut self, input: &str, pos: &mut usize) -> Option<LogEvent<'_>> {
-		if *pos + 1 == input.len() {
+		if *pos == input.len() {
 			return None;
 		}
 
@@ -178,7 +178,7 @@ impl Parser {
 					last_was_delimited = u32::from(self.schema.anchor_ch);
 				},
 				Token::EndOfInput => {
-					assert_eq!(*pos + 1, input.len());
+					assert_eq!(*pos, input.len());
 					break *pos;
 				},
 			}

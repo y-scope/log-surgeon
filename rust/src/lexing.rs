@@ -34,10 +34,12 @@ impl Schema {
 			return Token::EndOfInput;
 		}
 
+		/*
 		assert!(start < input.len());
 		if start + 1 == input.len() {
 			return Token::EndOfInput;
 		}
+		*/
 
 		let input2: std::ops::Range<*const u8> = input[start..].as_bytes().as_ptr_range();
 		let mut end: *const u8 = std::ptr::null();

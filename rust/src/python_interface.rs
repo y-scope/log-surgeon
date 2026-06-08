@@ -128,7 +128,7 @@ impl PyParser {
 		self.pos = 0;
 		self.buffer.clear();
 		read_from_input(input, &mut self.buffer)?;
-		self.buffer.push('\n');
+		// self.buffer.push('\n');
 		Ok(())
 	}
 

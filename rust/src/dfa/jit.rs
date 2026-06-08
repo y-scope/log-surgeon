@@ -51,8 +51,8 @@ impl Jit {
 
 		flag_builder.set("use_colocated_libcalls", "false").unwrap();
 		flag_builder.set("is_pic", "false").unwrap();
+		flag_builder.set("opt_level", "speed").unwrap();
 		// flag_builder.set("opt_level", "none").unwrap();
-		flag_builder.set("opt_level", "none").unwrap();
 
 		let isa_builder: IsaBuilder = cranelift_native::builder().unwrap_or_else(|msg| {
 			panic!("host machine is not supported: {msg}");
@@ -173,7 +173,7 @@ impl Jit {
 					assert_ne!(state.transitions.len(), 0);
 				}
 
-				decode_utf8_char(&mut func_builder, input_ptr, input_ptr_end, exit, ptr_ty)
+				decode_utf8_char(&mut func_builder, input_ptr, input_ptr_end, exit, ptr_ty, anchor)
 			} else {
 				(anchor, input_ptr)
 			};
@@ -244,9 +244,12 @@ fn decode_utf8_char(
 	input_ptr_end: Value,
 	fallback: Block,
 	ptr_ty: Type,
+	anchor_ch: Value,
 ) -> (Value, Value) {
 	let inaf_b: Block = func_builder.create_block();
 	let otherwise_b: Block = func_builder.create_block();
+	let anchor_b: Block = func_builder.create_block();
+	let anchor2_b: Block = func_builder.create_block();
 
 	let end_b: Block = func_builder.create_block();
 	func_builder.append_block_param(end_b, ptr_ty);
@@ -255,13 +258,28 @@ fn decode_utf8_char(
 	let diff: Value = func_builder.ins().isub(input_ptr_end, input_ptr);
 
 	let inaf_v: Value = func_builder.ins().icmp_imm(IntCC::UnsignedGreaterThan, diff, 3);
-	func_builder.ins().brif(inaf_v, inaf_b, &[], otherwise_b, &[]);
+	func_builder.ins().brif(inaf_v, inaf_b, &[], anchor_b, &[]);
 	func_builder.seal_block(inaf_b);
-	func_builder.seal_block(otherwise_b);
+	func_builder.seal_block(anchor_b);
 
 	{
 		func_builder.switch_to_block(inaf_b);
 		load_char32::<false>(func_builder, input_ptr, input_ptr_end, fallback, end_b);
+	}
+	{
+		func_builder.switch_to_block(anchor_b);
+		let at_end_v: Value = func_builder.ins().icmp_imm(IntCC::Equal, diff, 0);
+
+		let input_ptr: Value = func_builder.ins().iadd_imm(input_ptr, 1);
+
+		func_builder.ins().brif(
+			at_end_v,
+			end_b,
+			&[BlockArg::Value(input_ptr), BlockArg::Value(anchor_ch)],
+			otherwise_b,
+			&[],
+		);
+		func_builder.seal_block(otherwise_b);
 	}
 	{
 		func_builder.switch_to_block(otherwise_b);
@@ -285,7 +303,7 @@ fn load_b<const WITH_BOUNDS_CHECK: bool>(
 
 		let diff: Value = func_builder.ins().isub(input_ptr_end, input_ptr);
 
-		let not_eof_v: Value = func_builder.ins().icmp_imm(IntCC::UnsignedGreaterThan, diff, 0);
+		let not_eof_v: Value = func_builder.ins().icmp_imm(IntCC::SignedGreaterThan, diff, 0);
 		func_builder.ins().brif(not_eof_v, not_eof_b, &[], fallback, &[]);
 		func_builder.seal_block(not_eof_b);
 		func_builder.switch_to_block(not_eof_b);

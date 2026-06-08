@@ -24,7 +24,7 @@ int main() {
 
     std::optional<EventHandle> maybe_event{parser.next_event(input, &pos)};
     assert(maybe_event.has_value());
-    assert(pos + 1 == input.length);
+    assert(pos + 0 == input.length);
 
     EventHandle event{*maybe_event};
     // assert(event.log_type() == "d%1.1:hello.foo%f foobarbaz");
