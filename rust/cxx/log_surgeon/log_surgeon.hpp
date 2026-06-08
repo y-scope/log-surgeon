@@ -161,10 +161,6 @@ public:
      */
     EventHandle(LogEvent const* event);
 
-    [[nodiscard]] auto log_type() const -> std::string_view {
-        return log_surgeon_log_event_log_type(m_event);
-    }
-
     [[nodiscard]] auto get_all_matches() const -> std::span<Match const> { return m_matches; }
 
     /**

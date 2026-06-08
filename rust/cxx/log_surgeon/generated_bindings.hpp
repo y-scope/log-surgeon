@@ -19,8 +19,6 @@ namespace log_surgeon {
 
 struct Interpretation;
 
-/// A `LogEvent` has a template [`LogType`](crate::log_type::LogType).
-/// and a sequence of [`Match`]s to interpolate.
 struct LogEvent;
 
 /// Newtype wrapper around a `usize` index.
@@ -114,8 +112,6 @@ Box<LogEvent> log_surgeon_log_event_clone(const LogEvent *value);
 void log_surgeon_log_event_drop(Box<LogEvent> value);
 
 const size_t *log_surgeon_log_event_leaf_match_indices(const LogEvent *log_event, size_t *len);
-
-CCharArray log_surgeon_log_event_log_type(const LogEvent *log_event);
 
 Box<LogEvent> log_surgeon_log_event_new();
 

@@ -6,7 +6,7 @@ use cranelift::codegen::ir::InstBuilder;
 use cranelift::codegen::ir::MemFlags;
 use cranelift::codegen::ir::Signature;
 use cranelift::codegen::ir::Type;
-use cranelift::codegen::ir::UserFuncName;
+// use cranelift::codegen::ir::UserFuncName;
 use cranelift::codegen::ir::Value;
 use cranelift::codegen::ir::condcodes::IntCC;
 use cranelift::codegen::ir::types;
@@ -16,24 +16,24 @@ use cranelift::codegen::settings;
 use cranelift::codegen::settings::Builder as SettingsBuilder;
 use cranelift::codegen::settings::Configurable;
 use cranelift::codegen::settings::Flags;
-use cranelift::frontend::FuncInstBuilder;
+// use cranelift::frontend::FuncInstBuilder;
 use cranelift::frontend::FunctionBuilder;
 use cranelift::frontend::FunctionBuilderContext;
-use cranelift::frontend::Switch;
+// use cranelift::frontend::Switch;
 use cranelift::frontend::Variable;
 use cranelift_jit::JITBuilder;
 use cranelift_jit::JITModule;
 use cranelift_module::FuncId;
-use cranelift_module::Linkage;
+// use cranelift_module::Linkage;
 use cranelift_module::Module;
 use cranelift_module::default_libcall_names;
-use regex_syntax::utf8::Utf8Range;
-use regex_syntax::utf8::Utf8Sequence;
-use regex_syntax::utf8::Utf8Sequences;
+// use regex_syntax::utf8::Utf8Range;
+// use regex_syntax::utf8::Utf8Sequence;
+// use regex_syntax::utf8::Utf8Sequences;
 
 use super::*;
 
-pub type JittedDfa = extern "C" fn(*const u8, *const u8, char, *const *const u8) -> Option<RuleIdx>;
+pub type JittedDfa = extern "C" fn(*const u8, *const u8, u32, *const *const u8) -> Option<RuleIdx>;
 
 pub struct Jit {
 	module: JITModule,
@@ -45,16 +45,13 @@ impl std::fmt::Debug for Jit {
 	}
 }
 
-struct JitContext<'a> {
-	func_builder: FunctionBuilder<'a>,
-}
-
 impl Jit {
 	pub fn new() -> Self {
 		let mut flag_builder: SettingsBuilder = settings::builder();
 
 		flag_builder.set("use_colocated_libcalls", "false").unwrap();
 		flag_builder.set("is_pic", "false").unwrap();
+		// flag_builder.set("opt_level", "none").unwrap();
 		flag_builder.set("opt_level", "none").unwrap();
 
 		let isa_builder: IsaBuilder = cranelift_native::builder().unwrap_or_else(|msg| {
@@ -69,24 +66,24 @@ impl Jit {
 	}
 
 	pub fn jit(&mut self, dfa: &Tdfa) -> Result<JittedDfa, ()> {
-		now!(u1);
-		let old_dfa: &Tdfa = dfa;
+		// now!(u1);
+		// let old_dfa: &Tdfa = dfa;
 		// let dfa: Tdfa = old_dfa.minimize();
 		now!(t0);
-		let mut ts: BTreeMap<usize, usize> = BTreeMap::new();
-		for s in dfa.states.iter() {
-			if s.accepting_rule.is_some() {
-				continue;
-			}
-			*ts.entry(s.transitions.len()).or_insert(0) += 1;
-		}
-		println!("dist: {ts:#?}");
-		println!(
-			"minimizing {} to {} took: {:?}",
-			old_dfa.states.len(),
-			dfa.states.len(),
-			t0.duration_since(u1)
-		);
+		// let mut ts: BTreeMap<usize, usize> = BTreeMap::new();
+		// for s in dfa.states.iter() {
+		// 	if s.accepting_rule.is_some() {
+		// 		continue;
+		// 	}
+		// 	*ts.entry(s.transitions.len()).or_insert(0) += 1;
+		// }
+		// println!("dist: {ts:#?}");
+		// println!(
+		// 	"minimizing {} to {} took: {:?}",
+		// 	old_dfa.states.len(),
+		// 	dfa.states.len(),
+		// 	t0.duration_since(u1)
+		// );
 		let module: &mut JITModule = &mut self.module;
 
 		let mut ctx: Context = module.make_context();
@@ -116,7 +113,7 @@ impl Jit {
 		func_builder.switch_to_block(entry);
 		func_builder.append_block_params_for_function_params(entry);
 
-		let zero8: Value = func_builder.ins().iconst(types::I8, 0);
+		// let zero8: Value = func_builder.ins().iconst(types::I8, 0);
 		let zero16: Value = func_builder.ins().iconst(types::I16, 0);
 		let zero32: Value = func_builder.ins().iconst(types::I32, 0);
 
@@ -201,7 +198,7 @@ impl Jit {
 			// 	exit,
 			// );
 		}
-		println!("count1 {count1} count2 {count2}");
+		// println!("count1 {count1} count2 {count2}");
 
 		func_builder.set_cold_block(exit);
 
@@ -223,46 +220,22 @@ impl Jit {
 		assert!(!code.is_null());
 		now!(t6);
 
-		println!(
-			"jitted: {:?}",
-			[
-				t6.duration_since(t5),
-				t5.duration_since(t4),
-				t4.duration_since(t3),
-				t3.duration_since(t2),
-				t2.duration_since(t1),
-				t1.duration_since(t0),
-			]
-		);
+		// println!(
+		// 	"jitted: {:?}",
+		// 	[
+		// 		t6.duration_since(t5),
+		// 		t5.duration_since(t4),
+		// 		t4.duration_since(t3),
+		// 		t3.duration_since(t2),
+		// 		t2.duration_since(t1),
+		// 		t1.duration_since(t0),
+		// 	]
+		// );
 
 		let func: JittedDfa = unsafe { std::mem::transmute::<*const u8, JittedDfa>(code) };
 
 		Ok(func)
 	}
-}
-
-fn load_char(
-	func_builder: &mut FunctionBuilder<'_>,
-	current_input_ptr: Value,
-	offset: i64,
-	input_ptr_end: Value,
-	fallback: Block,
-) -> (Value, Value) {
-	let block: Block = func_builder.create_block();
-
-	let input_ptr: Value = func_builder.ins().iadd_imm(current_input_ptr, offset);
-	let diff: Value = func_builder.ins().isub(input_ptr_end, input_ptr);
-
-	let not_eof: Value = func_builder.ins().icmp_imm(IntCC::UnsignedGreaterThan, diff, 0);
-
-	func_builder.ins().brif(not_eof, block, &[], fallback, &[]);
-	func_builder.seal_block(block);
-	func_builder.switch_to_block(block);
-
-	let next_input_ch: Value = func_builder.ins().load(types::I8, MemFlags::new(), input_ptr, 0);
-	let next_input_ptr: Value = func_builder.ins().iadd_imm(input_ptr, 1);
-
-	(next_input_ch, next_input_ptr)
 }
 
 fn decode_utf8_char(
@@ -445,14 +418,14 @@ fn transition2(
 	count1: &mut usize,
 	count2: &mut usize,
 ) {
-	let mut transitions1: Vec<(u32, u32, Block)> = Vec::new();
+	// let mut transitions1: Vec<(u32, u32, Block)> = Vec::new();
 	let mut transitions2: Vec<(u32, u32, Block)> = Vec::new();
-	let mut map: BTreeMap<usize, Block> = BTreeMap::new();
+	// let mut map: BTreeMap<usize, Block> = BTreeMap::new();
 
 	// let original: Block = func_builder.current_block().unwrap();
 
 	for (interval, transition) in current.transitions.iter() {
-		let mut target: Block = states[transition.target];
+		let target: Block = states[transition.target];
 		// Intervals of length 4 or less are converted to a switch;
 		// emprically, diminishing returns (fewer of them) of length greater than 4.
 		// (if interval.end() - interval.start() < 4 {
@@ -582,6 +555,7 @@ fn binary_switch(
 	}
 }
 
+/*
 fn transition(
 	func_builder: &mut FunctionBuilder<'_>,
 	current: &DfaState,
@@ -704,11 +678,30 @@ fn transition(
 	switch.emit(func_builder, input_ch, fallback);
 }
 
-impl<'a> JitContext<'a> {
-	fn ins<'short>(&'short mut self) -> FuncInstBuilder<'short, 'a> {
-		self.func_builder.ins()
-	}
+fn load_char(
+	func_builder: &mut FunctionBuilder<'_>,
+	current_input_ptr: Value,
+	offset: i64,
+	input_ptr_end: Value,
+	fallback: Block,
+) -> (Value, Value) {
+	let block: Block = func_builder.create_block();
+
+	let input_ptr: Value = func_builder.ins().iadd_imm(current_input_ptr, offset);
+	let diff: Value = func_builder.ins().isub(input_ptr_end, input_ptr);
+
+	let not_eof: Value = func_builder.ins().icmp_imm(IntCC::UnsignedGreaterThan, diff, 0);
+
+	func_builder.ins().brif(not_eof, block, &[], fallback, &[]);
+	func_builder.seal_block(block);
+	func_builder.switch_to_block(block);
+
+	let next_input_ch: Value = func_builder.ins().load(types::I8, MemFlags::new(), input_ptr, 0);
+	let next_input_ptr: Value = func_builder.ins().iadd_imm(input_ptr, 1);
+
+	(next_input_ch, next_input_ptr)
 }
+*/
 
 #[cfg(test)]
 mod test {
@@ -734,18 +727,24 @@ mod test {
 
 		let mut end: *const u8 = std::ptr::null();
 
-		let x: u16 = f(input.as_ptr_range().start, input.as_ptr_range().end, '\0', &mut end).map_or(0, u16::from);
+		let x: u16 = f(
+			input.as_ptr_range().start,
+			input.as_ptr_range().end,
+			u32::from('\0'),
+			&mut end,
+		)
+		.map_or(0, u16::from);
 		assert_eq!(x, 2);
 		assert_eq!(end, input[.."abc".len()].as_ptr_range().end);
 
-		let x: u16 = f(end, input.as_ptr_range().end, '\0', &mut end).map_or(0, u16::from);
+		let x: u16 = f(end, input.as_ptr_range().end, u32::from('\0'), &mut end).map_or(0, u16::from);
 		assert_eq!(x, 0);
 		assert_eq!(end, input[.."abc".len()].as_ptr_range().end);
 
 		let x: u16 = f(
 			input["abc ".len()..].as_ptr_range().start,
 			input.as_ptr_range().end,
-			'\0',
+			u32::from('\0'),
 			&mut end,
 		)
 		.map_or(0, u16::from);
@@ -755,7 +754,7 @@ mod test {
 		let x: u16 = f(
 			input["abc 123 ".len()..].as_ptr_range().start,
 			input.as_ptr_range().end,
-			'\0',
+			u32::from('\0'),
 			&mut end,
 		)
 		.map_or(0, u16::from);
@@ -765,7 +764,7 @@ mod test {
 		let x: u16 = f(
 			input["abc 123 def ".len()..].as_ptr_range().start,
 			input.as_ptr_range().end,
-			'\0',
+			u32::from('\0'),
 			&mut end,
 		)
 		.map_or(0, u16::from);

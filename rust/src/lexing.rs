@@ -1,7 +1,7 @@
 use std::str::Chars;
 
 use crate::dfa::JittedDfa;
-use crate::dfa::MatchedRule;
+// use crate::dfa::MatchedRule;
 use crate::dfa::TdfaExecution;
 use crate::schema::RootRule;
 use crate::schema::RuleIdx;
@@ -41,12 +41,7 @@ impl Schema {
 
 		let input2: std::ops::Range<*const u8> = input[start..].as_bytes().as_ptr_range();
 		let mut end: *const u8 = std::ptr::null();
-		let maybe_rule_idx: Option<RuleIdx> = jitted_dfa(
-			input2.start,
-			input2.end,
-			if last_was_delimited != 0 { '\n' } else { '\0' },
-			&mut end,
-		);
+		let maybe_rule_idx: Option<RuleIdx> = jitted_dfa(input2.start, input2.end, last_was_delimited, &mut end);
 
 		if let Some(rule_idx) = maybe_rule_idx
 		// if let Some(MatchedRule { rule_idx, lexeme }) = self

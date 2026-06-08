@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 //! Based on Angelo Borsotti and Ulya Trafimovich. 2022. A closer look at TDFA.
 //! - <https://re2c.org/2022_borsotti_trofimovich_a_closer_look_at_tdfa.pdf>
 //! - <https://arxiv.org/abs/2206.01398>
@@ -443,8 +445,6 @@ impl Tdfa {
 			i += 1;
 		}
 
-		dfa.fallback_regops();
-
 		for state in dfa.states.iter_mut() {
 			for (i, cached_transition) in state.ascii_cache.iter_mut().enumerate() {
 				// It doesn't matter whether this is a (lossless) upcast (`usize::BITS <= u32::BITS`)
@@ -767,7 +767,6 @@ impl Tdfa {
 impl Tdfa {
 	/// Algorithm 4 in the paper.
 	fn fallback_regops(&mut self) {
-		return;
 		for i in 0..self.states.len() {
 			self.states[i].registers_clobbered = self.compute_registers_clobbered(i);
 		}
@@ -846,6 +845,8 @@ impl Tdfa {
 				kernel.0.extend_from_slice(&self.states[s].kernel.0);
 				if let Some(transitions) = &maybe_transitions {
 					assert_eq!(self.states[s].transitions, *transitions);
+				} else {
+					maybe_transitions = Some(self.states[s].transitions.clone());
 				}
 			}
 			let first: &DfaState = &self.states[*x.first().unwrap()];

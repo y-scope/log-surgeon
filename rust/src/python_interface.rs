@@ -14,7 +14,6 @@ use pyo3::types::PySlice;
 use pyo3::types::PyString;
 
 use crate::log_event::LogEvent;
-use crate::log_type::LogType;
 use crate::parser::Parser;
 use crate::schema::RootRule;
 use crate::schema::Schema;
@@ -40,8 +39,6 @@ struct PyParser {
 #[derive(Debug)]
 struct PyLogEvent {
 	#[pyo3(get)]
-	log_type: Py<PyLogType>,
-	#[pyo3(get)]
 	message: Py<PyString>,
 	#[pyo3(get, name = "leaf_captures")]
 	leaf_matches: Py<PyList>,
@@ -52,10 +49,6 @@ struct PyLogEvent {
 	#[pyo3(get, name = "all_captures")]
 	all_matches: Py<PyList>,
 }
-
-#[pyclass(name = "LogType", eq)]
-#[derive(Debug, Eq, PartialEq)]
-struct PyLogType(LogType);
 
 #[pyclass(name = "Capture")]
 #[derive(Debug)]
@@ -201,7 +194,6 @@ impl PyParser {
 			let all_matches: Bound<'_, PyList> = PyList::new(py, all_matches)?;
 
 			Ok(Some(PyLogEvent {
-				log_type: Py::new(py, PyLogType(event.log_type.clone()))?,
 				message: PyString::new(py, event.message).unbind(),
 				leaf_matches: leaf_matches.unbind(),
 				non_leaf_matches: non_leaf_matches.unbind(),
@@ -270,14 +262,6 @@ impl PyLogEvent {
 	#[pyo3(name = "__str__")]
 	fn to_string<'py>(this: PyRef<'py, Self>) -> Py<PyString> {
 		this.message.clone_ref(this.py())
-	}
-}
-
-#[pymethods]
-impl PyLogType {
-	#[pyo3(name = "__str__")]
-	fn as_str(&self) -> &str {
-		self.0.as_str()
 	}
 }
 
@@ -362,8 +346,6 @@ fn python_unicode_or_bytes_as_str<'a>(input: &'a Bound<'_, PyAny>) -> PyResult<O
 mod log_surgeon_ffi {
 	#[pymodule_export]
 	use super::PyLogEvent;
-	#[pymodule_export]
-	use super::PyLogType;
 	#[pymodule_export]
 	use super::PyMatch;
 	#[pymodule_export]

@@ -193,11 +193,6 @@ mod log_event {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_log_event_log_type<'a>(log_event: &'a LogEvent<'_>) -> CCharArray<'a> {
-		CCharArray::from_utf8(log_event.log_type.as_str())
-	}
-
-	#[unsafe(no_mangle)]
 	extern "C" fn log_surgeon_log_event_all_matches<'a>(log_event: &LogEvent<'a>, len: &mut usize) -> *const Match {
 		*len = log_event.all_matches.len();
 		log_event.all_matches.as_ptr()

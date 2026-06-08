@@ -8,7 +8,7 @@ pub mod ffi;
 pub mod interval_tree;
 pub mod lexing;
 pub mod log_event;
-pub mod log_type;
+// pub mod log_type;
 pub mod nfa;
 pub mod parser;
 pub mod regex;

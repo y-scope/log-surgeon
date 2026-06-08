@@ -8,7 +8,6 @@ use crate::lexing::Token;
 use crate::log_event::LogEvent;
 use crate::log_event::Match;
 use crate::log_event::MatchFfiPointers;
-use crate::log_type::LogType;
 use crate::schema::RuleInfo;
 use crate::schema::Schema;
 use crate::utils::Range;
@@ -19,6 +18,7 @@ pub struct Parser {
 	current_log: WorkingLogEvent,
 	maybe_pending_header: Option<WorkingLogEvent>,
 	dfa_execution: TdfaExecution,
+	#[allow(unused)]
 	jit: Arc<Jit>,
 	jitted_dfa: JittedDfa,
 }
@@ -205,14 +205,6 @@ impl Parser {
 		}
 
 		Some(LogEvent {
-			log_type: LogType::new(
-				&self.schema,
-				&self.current_log.message,
-				self.current_log
-					.leaf_indices
-					.iter()
-					.map(|&i| &self.current_log.all_matches[i]),
-			),
 			message: &self.current_log.message,
 			all_matches: &self.current_log.all_matches,
 			leaf_indices: &self.current_log.leaf_indices,

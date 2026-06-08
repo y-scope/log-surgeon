@@ -2,15 +2,11 @@ use std::ffi::c_char;
 use std::num::NonZero;
 
 use crate::ffi::UncheckedCArray;
-use crate::log_type::LogType;
 use crate::schema::RuleIdx;
 use crate::utils::Range;
 
-/// A `LogEvent` has a template [`LogType`](crate::log_type::LogType).
-/// and a sequence of [`Match`]s to interpolate.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LogEvent<'parser> {
-	pub log_type: LogType,
 	pub message: &'parser str,
 	pub all_matches: &'parser [Match],
 	pub leaf_indices: &'parser [usize],
@@ -64,7 +60,6 @@ unsafe impl Sync for MatchFfiPointers {}
 impl<'parser> LogEvent<'parser> {
 	/// Blank `LogEvent`; default value required for C FFI.
 	pub const BLANK: Self = Self {
-		log_type: LogType::BLANK,
 		message: "",
 		all_matches: &[],
 		leaf_indices: &[],
