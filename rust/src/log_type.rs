@@ -41,6 +41,7 @@ impl LogType {
 	};
 
 	pub fn new<'a>(schema: &Schema, log_message: &str, matches: impl Iterator<Item = &'a Match>) -> Self {
+		return Self::BLANK;
 		let cached_representation: String = to_string(schema, log_message, matches);
 		Self { cached_representation }
 	}

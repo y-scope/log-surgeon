@@ -767,6 +767,7 @@ impl Tdfa {
 impl Tdfa {
 	/// Algorithm 4 in the paper.
 	fn fallback_regops(&mut self) {
+		return;
 		for i in 0..self.states.len() {
 			self.states[i].registers_clobbered = self.compute_registers_clobbered(i);
 		}

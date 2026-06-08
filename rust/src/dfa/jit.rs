@@ -71,8 +71,16 @@ impl Jit {
 	pub fn jit(&mut self, dfa: &Tdfa) -> Result<JittedDfa, ()> {
 		now!(u1);
 		let old_dfa: &Tdfa = dfa;
-		let dfa: Tdfa = old_dfa.minimize();
+		// let dfa: Tdfa = old_dfa.minimize();
 		now!(t0);
+		let mut ts: BTreeMap<usize, usize> = BTreeMap::new();
+		for s in dfa.states.iter() {
+			if s.accepting_rule.is_some() {
+				continue;
+			}
+			*ts.entry(s.transitions.len()).or_insert(0) += 1;
+		}
+		println!("dist: {ts:#?}");
 		println!(
 			"minimizing {} to {} took: {:?}",
 			old_dfa.states.len(),
@@ -135,6 +143,8 @@ impl Jit {
 
 		func_builder.ins().jump(states[0], &[BlockArg::Value(input_ptr)]);
 
+		let mut count1: usize = 0;
+		let mut count2: usize = 0;
 		let exit: Block = func_builder.create_block();
 		{
 			func_builder.switch_to_block(exit);
@@ -162,6 +172,8 @@ impl Jit {
 					let rule: Value = func_builder.ins().iconst(types::I16, i64::from(u16::from(rule_idx)));
 					func_builder.def_var(backup_rule_var, rule);
 					func_builder.def_var(backup_input_ptr_var, input_ptr);
+				} else {
+					assert_ne!(state.transitions.len(), 0);
 				}
 
 				decode_utf8_char(&mut func_builder, input_ptr, input_ptr_end, exit, ptr_ty)
@@ -169,7 +181,16 @@ impl Jit {
 				(anchor, input_ptr)
 			};
 
-			transition2(&mut func_builder, &dfa.states[i], states, input_ptr, input_ch, exit);
+			transition2(
+				&mut func_builder,
+				&dfa.states[i],
+				states,
+				input_ptr,
+				input_ch,
+				exit,
+				&mut count1,
+				&mut count2,
+			);
 			// transition(
 			// 	&mut func_builder,
 			// 	&dfa.states[i],
@@ -180,6 +201,7 @@ impl Jit {
 			// 	exit,
 			// );
 		}
+		println!("count1 {count1} count2 {count2}");
 
 		func_builder.set_cold_block(exit);
 
@@ -420,7 +442,77 @@ fn transition2(
 	input_ptr: Value,
 	input_ch: Value,
 	fallback: Block,
+	count1: &mut usize,
+	count2: &mut usize,
 ) {
+	let mut transitions1: Vec<(u32, u32, Block)> = Vec::new();
+	let mut transitions2: Vec<(u32, u32, Block)> = Vec::new();
+	let mut map: BTreeMap<usize, Block> = BTreeMap::new();
+
+	// let original: Block = func_builder.current_block().unwrap();
+
+	for (interval, transition) in current.transitions.iter() {
+		let mut target: Block = states[transition.target];
+		// Intervals of length 4 or less are converted to a switch;
+		// emprically, diminishing returns (fewer of them) of length greater than 4.
+		// (if interval.end() - interval.start() < 4 {
+		// 	target = *map.entry(transition.target).or_insert_with(|| {
+		// 		let block: Block = func_builder.create_block();
+		// 		func_builder.switch_to_block(block);
+		// 		func_builder.ins().jump(target, &[BlockArg::Value(input_ptr)]);
+		// 		block
+		// 	});
+
+		// 	&mut transitions1
+		// } else {
+		// 	&mut transitions2
+		// })
+		transitions2.push((interval.start(), interval.end(), target));
+	}
+
+	/*
+	func_builder.switch_to_block(original);
+
+	if !transitions1.is_empty() && transitions2.is_empty() {
+		let next: Block = func_builder.create_block();
+		let mut switch: Switch = Switch::new();
+
+		for &(start, end, target) in transitions1.iter() {
+			for ch in start..=end {
+				switch.set_entry(u128::from(ch), target);
+			}
+		}
+
+		switch.emit(func_builder, input_ch, next);
+		func_builder.seal_block(next);
+		func_builder.switch_to_block(next);
+	}
+	*/
+
+	if !transitions2.is_empty() {
+		/*
+		let mut next: Block = func_builder.create_block();
+		for &(start, end, target) in transitions2.iter() {
+			let end_offset: Value = func_builder.ins().iconst(types::I32, i64::from(end - start));
+
+			let x: Value = func_builder.ins().iadd_imm(input_ch, -i64::from(start));
+			let t: Value = func_builder.ins().icmp(IntCC::UnsignedLessThanOrEqual, x, end_offset);
+
+			func_builder
+				.ins()
+				.brif(t, target, &[BlockArg::Value(input_ptr)], next, &[]);
+			func_builder.seal_block(next);
+			func_builder.switch_to_block(next);
+			next = func_builder.create_block();
+		}
+		*/
+		*count2 += 1;
+	} else {
+		*count1 += 1;
+	}
+	binary_switch(func_builder, input_ch, input_ptr, &transitions2, fallback);
+
+	/*
 	let mut next: Block = func_builder.create_block();
 	for (interval, transition) in current.transitions.iter() {
 		let target: Block = states[transition.target];
@@ -440,7 +532,54 @@ fn transition2(
 		func_builder.switch_to_block(next);
 		next = func_builder.create_block();
 	}
-	func_builder.ins().jump(fallback, &[]);
+	*/
+	// func_builder.ins().jump(fallback, &[]);
+}
+
+fn binary_switch(
+	func_builder: &mut FunctionBuilder<'_>,
+	input_ch: Value,
+	input_ptr: Value,
+	intervals: &[(u32, u32, Block)],
+	fallback: Block,
+) {
+	if intervals.is_empty() {
+		func_builder.ins().jump(fallback, &[]);
+		return;
+	}
+
+	let mid: usize = intervals.len() / 2;
+	assert!(mid < intervals.len());
+	let (left, right): (&[(u32, u32, Block)], &[(u32, u32, Block)]) = intervals.split_at(mid);
+	let (lo, hi, target): (u32, u32, Block) = intervals[mid];
+
+	if left.is_empty() {
+		assert_eq!(right.len(), 1);
+		let t: Value = func_builder.ins().iadd_imm(input_ch, -i64::from(lo));
+		let t: Value = func_builder
+			.ins()
+			.icmp_imm(IntCC::UnsignedLessThanOrEqual, t, i64::from(hi - lo));
+
+		func_builder
+			.ins()
+			.brif(t, target, &[BlockArg::Value(input_ptr)], fallback, &[]);
+	} else {
+		let block1: Block = func_builder.create_block();
+		let block2: Block = func_builder.create_block();
+
+		let t: Value = func_builder
+			.ins()
+			.icmp_imm(IntCC::UnsignedLessThan, input_ch, i64::from(lo));
+
+		func_builder.ins().brif(t, block1, &[], block2, &[]);
+		func_builder.seal_block(block1);
+		func_builder.seal_block(block2);
+
+		func_builder.switch_to_block(block1);
+		binary_switch(func_builder, input_ch, input_ptr, left, fallback);
+		func_builder.switch_to_block(block2);
+		binary_switch(func_builder, input_ch, input_ptr, right, fallback);
+	}
 }
 
 fn transition(
