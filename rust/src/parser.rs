@@ -92,6 +92,9 @@ impl Parser {
 					lexeme,
 					has_captures,
 				} => {
+					let input_start: *const u8 = input[*pos..].as_ptr();
+					let lexeme_start: *const u8 = lexeme.as_ptr();
+
 					let name: &str = &rule.name;
 
 					let variable_is_implicit_capture: bool = !has_captures;
@@ -137,7 +140,11 @@ impl Parser {
 						}
 					}
 
-					last_was_delimited = 0;
+					last_was_delimited = if lexeme_start == input_start {
+						0
+					} else {
+						u32::from(self.schema.anchor_ch)
+					};
 					if name == "header" && previous_was_newline {
 						if have_header {
 							let pending_header: &mut WorkingLogEvent =

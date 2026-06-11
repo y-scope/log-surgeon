@@ -1,6 +1,7 @@
 use std::str::Chars;
 
 use crate::dfa::JittedDfa;
+use crate::dfa::MatchedRule;
 // use crate::dfa::MatchedRule;
 use crate::dfa::TdfaExecution;
 use crate::schema::RootRule;
@@ -30,36 +31,43 @@ impl Schema {
 	) -> Token<'schema, 'input> {
 		let start: usize = *pos;
 
+		/*
+		for (offset, ch) in input[start..].char_indices() {
+			if let Some(MatchedRule { rule_idx, lexeme }) =
+				self.execute_dfa(input, pos + offset, last_was_delimited, jitted_dfa)
+			{
+				let rule: &RootRule = &self[rule_idx];
+				let has_captures: bool = rule.has_captures();
+				data.clear();
+				if has_captures {
+					let matched: bool = rule.dfa.execute_with_captures(lexeme, data, rule.idx);
+					assert!(matched);
+				}
+				*pos += offset + lexeme.len();
+				return Token::Variable {
+					rule,
+					lexeme,
+					has_captures,
+				};
+			} else if ch == '\n' {
+				*pos += ch.len_utf8();
+				return Token::Newline;
+			}
+		}
+		*pos = input.len();
+		return Token::EndOfInput;
+		*/
+
 		if start == input.len() {
 			return Token::EndOfInput;
 		}
 
-		/*
-		assert!(start < input.len());
-		if start + 1 == input.len() {
-			return Token::EndOfInput;
-		}
-		*/
-
-		let input2: std::ops::Range<*const u8> = input[start..].as_bytes().as_ptr_range();
-		let mut end: *const u8 = std::ptr::null();
-		let maybe_rule_idx: Option<RuleIdx> = jitted_dfa(input2.start, input2.end, last_was_delimited, &mut end);
-
-		if let Some(rule_idx) = maybe_rule_idx
-		// if let Some(MatchedRule { rule_idx, lexeme }) = self
-		// 	.main_dfa
-		// 	.execute_without_captures(&input[start..], last_was_delimited)
+		if let Some(MatchedRule { rule_idx, lexeme }) =
+			self.execute_dfa::<true>(&input[start..], last_was_delimited, jitted_dfa)
 		{
 			let rule: &RootRule = &self[rule_idx];
 			let has_captures: bool = rule.has_captures();
 			data.clear();
-			let lexeme: &str = unsafe {
-				let start: *const u8 = input2.start;
-				let len: isize = end.offset_from(start);
-				assert!(len >= 0);
-				let bytes: &[u8] = std::slice::from_raw_parts(start, len as usize);
-				std::str::from_utf8_unchecked(bytes)
-			};
 			if has_captures {
 				let matched: bool = rule.dfa.execute_with_captures(lexeme, data, rule.idx);
 				assert!(matched);
@@ -81,6 +89,30 @@ impl Schema {
 				self.glob_static_text(input, pos);
 			}
 			Token::StaticText(&input[start..*pos])
+		}
+	}
+
+	fn execute_dfa<'input, const JIT: bool>(
+		&self,
+		input: &'input str,
+		last_was_delimited: u32,
+		jitted_dfa: JittedDfa,
+	) -> Option<MatchedRule<'input>> {
+		if JIT {
+			let input: std::ops::Range<*const u8> = input.as_bytes().as_ptr_range();
+			let mut end: *const u8 = std::ptr::null();
+
+			let rule_idx: RuleIdx = jitted_dfa(input.start, input.end, last_was_delimited, &mut end)?;
+			let lexeme: &str = unsafe {
+				let start: *const u8 = input.start;
+				let len: isize = end.offset_from(start);
+				assert!(len >= 0);
+				let bytes: &[u8] = std::slice::from_raw_parts(start, len as usize);
+				std::str::from_utf8_unchecked(bytes)
+			};
+			Some(MatchedRule { rule_idx, lexeme })
+		} else {
+			self.main_dfa.execute_without_captures(input, last_was_delimited)
 		}
 	}
 
