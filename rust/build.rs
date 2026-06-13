@@ -3,6 +3,8 @@ use std::path::Path;
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn Error>> {
+	println!("cargo:rerun-if-changed=build.rs");
+
 	let root_dir: PathBuf = std::env::current_dir().unwrap();
 
 	// Ignore error; don't choke rustfmt/rust-analyzer/rustc just because there's a syntax error.

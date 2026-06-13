@@ -54,7 +54,7 @@ impl Schema {
 			}))
 			.chain(std::iter::once(String::new()))
 			.chain(std::iter::once(format!("===")))
-			.chain(std::iter::once(serde_json::to_string(&self.main_dfa).unwrap()))
+			.chain(std::iter::once(serde_json::to_string_pretty(&self.main_dfa).unwrap()))
 			.fold(String::new(), |mut accumulated, line| {
 				accumulated.push_str(&line);
 				accumulated.push('\n');

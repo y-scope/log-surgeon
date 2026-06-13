@@ -30,7 +30,6 @@ use crate::schema::RootRule;
 use crate::schema::RuleIdx;
 use crate::schema::SubRule;
 use crate::utils::Range;
-use crate::utils::SerdeArray;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tdfa {
@@ -101,7 +100,8 @@ struct DfaState {
 	/// than the full range of unicode code points,
 	/// but technically the code should work for any value here;
 	/// comments in the relevant parts of the implementation explain why.
-	ascii_cache: SerdeArray<[Transition; 0x80]>,
+	#[serde(skip, default = "default_ascii_cache")]
+	ascii_cache: [Transition; 0x80],
 }
 
 /// In untagged DFA, the kernel of a DFA state is simply the set of corresponding NFA states;
@@ -388,6 +388,21 @@ impl Tdfa {
 		Self::determinization(&nfa, '\n')
 	}
 
+	pub fn initialize_ascii_cache(&mut self) {
+		for state in self.states.iter_mut() {
+			for (i, cached_transition) in state.ascii_cache.iter_mut().enumerate() {
+				// It doesn't matter whether this is a (lossless) upcast (`usize::BITS <= u32::BITS`)
+				// or (lossy) downcast (`usize::BITS > u32::BITS`);
+				// a lossless cast is necessarily harmless,
+				// and a lossy downcast simply means the cache contains more slots than necessary,
+				// which won't be touched during simulation/lexing.
+				if let Some(transition) = state.transitions.lookup(i as u32) {
+					*cached_transition = transition.clone();
+				}
+			}
+		}
+	}
+
 	/// Algorithm 3 in the paper.
 	#[tracing::instrument(skip_all, level = "trace")]
 	fn determinization(nfa: &Tnfa, anchor_ch: char) -> Self {
@@ -461,18 +476,7 @@ impl Tdfa {
 			i += 1;
 		}
 
-		for state in dfa.states.iter_mut() {
-			for (i, cached_transition) in state.ascii_cache.iter_mut().enumerate() {
-				// It doesn't matter whether this is a (lossless) upcast (`usize::BITS <= u32::BITS`)
-				// or (lossy) downcast (`usize::BITS > u32::BITS`);
-				// a lossless cast is necessarily harmless,
-				// and a lossy downcast simply means the cache contains more slots than necessary,
-				// which won't be touched during simulation/lexing.
-				if let Some(transition) = state.transitions.lookup(i as u32) {
-					*cached_transition = transition.clone();
-				}
-			}
-		}
+		dfa.initialize_ascii_cache();
 
 		dfa
 	}
@@ -526,7 +530,7 @@ impl Tdfa {
 			final_operations,
 			tag_for_register,
 			registers_clobbered: BTreeSet::new(),
-			ascii_cache: SerdeArray(std::array::from_fn(|_| Transition::invalid())),
+			ascii_cache: default_ascii_cache(),
 		});
 		self.kernels.insert(kernel, idx);
 		idx
@@ -1112,6 +1116,10 @@ impl std::ops::Index<NonZero<usize>> for PrefixTree {
 	fn index(&self, i: NonZero<usize>) -> &Self::Output {
 		&self.nodes[i.get()]
 	}
+}
+
+fn default_ascii_cache() -> [Transition; 0x80] {
+	std::array::from_fn(|_| Transition::invalid())
 }
 
 #[cfg(test)]

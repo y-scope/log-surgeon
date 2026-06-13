@@ -171,7 +171,8 @@ impl SchemaBuilder {
 		Ok(self)
 	}
 
-	pub fn set_cached_dfa(&mut self, cached: Tdfa) -> &mut Self {
+	pub fn set_cached_dfa(&mut self, mut cached: Tdfa) -> &mut Self {
+		cached.initialize_ascii_cache();
 		self.maybe_cached_dfa = Some(cached);
 		self
 	}
