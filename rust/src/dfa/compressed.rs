@@ -1,13 +1,53 @@
 use super::*;
 use crate::interval_tree::Interval;
+use crate::utils::SerdeArray;
 use crate::utils::TarjanSccs;
 use std::num::NonZero;
 
-#[derive(Debug, Clone)]
+/*
+mod serde_ {
+	use crate::utils::SerdeArray;
+	use serde::Deserialize;
+	use serde::Deserializer;
+	use serde::Serialize;
+	use serde::Serializer;
+	use serde::de::Error;
+	use serde::de::SeqAccess;
+	use serde::de::Visitor;
+	use serde::ser::SerializeSeq;
+	use serde::ser::SerializeTuple;
+	use std::marker::PhantomData;
+
+	fn serialize<T, const N: usize, S>(vec: &Vec<[T; N]>, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+	{
+		let mut seq: S::SerializeSeq = serializer.serialize_seq(Some(vec.len()))?;
+		for array in self.0.iter() {
+			let mut tup: S::SerializeTuple = serializer.serialize_tuple(N)?;
+			for element in array.iter() {
+				tup.serialize_element(element)?;
+			}
+			seq.serialize_element(&tup.end())?
+		}
+		seq.end()
+	}
+
+	fn deserialize<'de, D>(deserializer: D) -> Result<[T; N], D::Error>
+	where
+		D: Deserializer<'de>,
+	{
+		let array: [T; N] = deserializer.deserialize_tuple(N, ArrayVisitor::<T, N>(PhantomData))?;
+		Ok(SerdeArray(array))
+	}
+}
+*/
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompressedDfa {
 	intervals: Vec<Interval<u32>>,
 	accepts_for_rule: Vec<Option<RuleIdx>>,
-	ascii_transitions: Vec<[u16; 0x80]>,
+	ascii_transitions: Vec<SerdeArray<[u16; 0x80]>>,
 	non_ascii_transitions: Vec<u16>,
 }
 
@@ -41,7 +81,7 @@ impl Tdfa {
 		}
 
 		let mut accepts_for_rule: Vec<Option<RuleIdx>> = Vec::with_capacity(self.states.len());
-		let mut ascii_transitions: Vec<[u16; 0x80]> = Vec::with_capacity(self.states.len());
+		let mut ascii_transitions: Vec<SerdeArray<[u16; 0x80]>> = Vec::with_capacity(self.states.len());
 		let mut non_ascii_transitions: Vec<u16> = Vec::with_capacity(self.states.len() * all_intervals.len());
 
 		for state in self.states.iter() {
@@ -53,7 +93,7 @@ impl Tdfa {
 					*target = u16::try_from(transition.target).unwrap();
 				}
 			}
-			ascii_transitions.push(ascii);
+			ascii_transitions.push(SerdeArray(ascii));
 			for &interval in all_intervals.iter() {
 				if let Some(transition) = state.transitions.lookup(interval.start()) {
 					let target: u16 = u16::try_from(transition.target).unwrap();

@@ -11,7 +11,7 @@ pub struct IntervalTree<T: Number, V: Clone> {
 	intervals: Vec<(Interval<T>, V)>,
 }
 
-#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Interval<T: Number> {
 	start: T,
 	end: T,

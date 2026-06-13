@@ -10,6 +10,7 @@ pub use rule::RuleIdx;
 pub use rule::RuleInfo;
 pub use rule::SubRule;
 
+use crate::dfa::CompressedDfa;
 use crate::dfa::Tdfa;
 use crate::nfa::Tnfa;
 use crate::regex::AnchoredRegex;
@@ -22,6 +23,8 @@ pub struct SchemaBuilder {
 	rules_by_priority: BTreeMap<i32, Vec<(Arc<str>, AnchoredRegex)>>,
 	placeholders: BTreeMap<String, Regex>,
 	encodings: Vec<(String, Regex)>,
+
+	maybe_cached_dfa: Option<CompressedDfa>,
 
 	delimiters: String,
 	anchor_ch: char,
@@ -44,6 +47,8 @@ pub struct Schema {
 	pub main_dfa: Tdfa,
 	/// TNFA used for search.
 	pub main_nfa: Tnfa,
+	/// TODO
+	pub optimized_dfa: CompressedDfa,
 
 	pub encodings: Vec<Vec<String>>,
 
@@ -68,6 +73,7 @@ impl SchemaBuilder {
 			rules_by_priority: BTreeMap::new(),
 			placeholders: BTreeMap::new(),
 			encodings: Vec::new(),
+			maybe_cached_dfa: None,
 			delimiters: Schema::DEFAULT_DELIMITERS.to_owned(),
 			anchor_ch: '\n',
 		}
@@ -165,6 +171,11 @@ impl SchemaBuilder {
 		Ok(self)
 	}
 
+	pub fn set_cached_dfa(&mut self, cached: CompressedDfa) -> &mut Self {
+		self.maybe_cached_dfa = Some(cached);
+		self
+	}
+
 	pub fn build(self) -> Schema {
 		let mut rules: Vec<RootRule> = Vec::new();
 
@@ -226,12 +237,24 @@ impl SchemaBuilder {
 			}
 		}
 
+		let optimized_dfa: CompressedDfa = self.maybe_cached_dfa.unwrap_or_else(|| {
+			now!(t0);
+			let minimized: Tdfa = main_dfa.minimize();
+			now!(t1);
+			debug!("[minimizing dfa] took ({:?})", t1.duration_since(t0));
+			let compressed_dfa: CompressedDfa = minimized.compress();
+			now!(t2);
+			debug!("[compressing] took ({:?})", t2.duration_since(t1));
+			compressed_dfa
+		});
+
 		Schema {
 			rules,
 			placeholders: self.placeholders,
 			delimiters: self.delimiters,
 			main_nfa,
 			main_dfa,
+			optimized_dfa,
 			encodings,
 			anchor_ch: self.anchor_ch,
 			ascii_delimiters,

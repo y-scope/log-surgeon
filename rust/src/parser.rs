@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
-use crate::dfa::CompressedDfa;
 use crate::dfa::Jit;
 use crate::dfa::JittedDfa;
-use crate::dfa::Tdfa;
 use crate::dfa::TdfaExecution;
 use crate::ffi::UncheckedCArray;
 use crate::lexing::Token;
@@ -23,8 +21,6 @@ pub struct Parser {
 	#[allow(unused)]
 	jit: Arc<Jit>,
 	jitted_dfa: JittedDfa,
-	compressed_dfa: CompressedDfa,
-	minimized_dfa: Tdfa,
 }
 
 unsafe impl Send for Parser {}
@@ -49,14 +45,6 @@ impl Parser {
 		let dfa_execution: TdfaExecution = TdfaExecution::new(registers, tags);
 		let mut jit: Jit = Jit::new();
 		let jitted_dfa: JittedDfa = jit.jit(&schema.main_dfa).unwrap();
-		now!(t0);
-		let minimized: Tdfa = schema.main_dfa.minimize();
-		now!(t1);
-		debug!("[minimizing dfa] took ({:?})", t1.duration_since(t0));
-		// let minimized: &Tdfa = &schema.main_dfa;
-		let compressed_dfa: CompressedDfa = minimized.compress();
-		now!(t2);
-		debug!("[compressing] took ({:?})", t2.duration_since(t1));
 		Self {
 			schema,
 			current_log: WorkingLogEvent::new(),
@@ -64,8 +52,6 @@ impl Parser {
 			dfa_execution,
 			jit: Arc::new(jit),
 			jitted_dfa,
-			compressed_dfa,
-			minimized_dfa: minimized,
 		}
 	}
 
@@ -103,8 +89,7 @@ impl Parser {
 				last_was_delimited,
 				&mut self.dfa_execution,
 				self.jitted_dfa,
-				&self.compressed_dfa,
-				&self.minimized_dfa,
+				&self.schema.optimized_dfa,
 			) {
 				Token::Variable {
 					rule,

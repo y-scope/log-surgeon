@@ -52,6 +52,9 @@ impl Schema {
 				let pattern: String = rule.regex.to_pattern();
 				format!("{} ({}): {pattern}", rule.name, rule.priority)
 			}))
+			.chain(std::iter::once(String::new()))
+			.chain(std::iter::once(format!("===")))
+			.chain(serde_json::to_string(&self.optimized_dfa))
 			.fold(String::new(), |mut accumulated, line| {
 				accumulated.push_str(&line);
 				accumulated.push('\n');
@@ -63,7 +66,14 @@ impl Schema {
 impl SchemaBuilder {
 	pub fn from_schema_definition(contents: &str) -> Result<Self, SchemaFileError<'_>> {
 		let mut builder: Self = Self::new();
+
+		let mut maybe_cached: Option<String> = None;
+
 		for (line_offset, line) in contents.lines().enumerate() {
+			if let Some(cached) = &mut maybe_cached {
+				cached.push_str(line);
+				continue;
+			}
 			// TODO: line offset 0/1 based (currently 0).
 			let line: &str = line.trim();
 
@@ -72,6 +82,11 @@ impl SchemaBuilder {
 			}
 
 			if line.starts_with('#') {
+				continue;
+			}
+
+			if line.starts_with("===") {
+				maybe_cached = Some(String::new());
 				continue;
 			}
 
@@ -109,6 +124,10 @@ impl SchemaBuilder {
 					let Ok(_) = builder.add_rule_with_priority(priority, name, regex);
 				},
 			}
+		}
+
+		if let Some(cached) = maybe_cached {
+			builder.set_cached_dfa(serde_json::from_str(&cached).unwrap());
 		}
 
 		Ok(builder)
