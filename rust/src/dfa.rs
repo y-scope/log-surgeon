@@ -30,18 +30,23 @@ use crate::schema::RootRule;
 use crate::schema::RuleIdx;
 use crate::schema::SubRule;
 use crate::utils::Range;
+use crate::utils::SerdeArray;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tdfa {
 	states: Vec<DfaState>,
+	#[serde(skip)]
 	kernels: BTreeMap<Kernel, usize>,
+	#[serde(skip)]
 	pub tags: Vec<Tag>,
 	/// Bijection between corresponding starting and ending tags.
+	#[serde(skip)]
 	tag_pairs: Vec<usize>,
 	/// During construction, this is the "current" count;
 	/// after construction, this is the "total required".
 	/// The first `tags.len()` are initial registers for the corresponding tags.
 	/// The second `tags.len()` (i.e. `tags.len()..(2 * tags.len())`) are the corresponding final registers.
+	#[serde(skip)]
 	pub number_of_registers: usize,
 	anchor_ch: char,
 }
@@ -71,7 +76,7 @@ pub struct MatchedCapture {
 	pub range: Range<usize>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct DfaState {
 	kernel: Kernel,
 	transitions: IntervalTree<u32, Transition>,
@@ -79,12 +84,15 @@ struct DfaState {
 	/// the rule that this state has matched for.
 	accepting_rule: Option<RuleIdx>,
 	/// Register operations upon finalizing a match (if applicable); copy to the final registers.
+	#[serde(skip)]
 	final_operations: Vec<RegisterOperation>,
 	/// Cache/combined map from this state's configurations of "register -> which tag it holds".
 	/// Present for debugging.
+	#[serde(skip)]
 	tag_for_register: BTreeMap<usize, Tag>,
 	/// Registers that may be clobbered after leaving this state.
 	/// See [`Tdfa::compute_registers_clobbered`].
+	#[serde(skip)]
 	registers_clobbered: BTreeSet<usize>,
 	/// We cache the outgoing transitions for the first so many "common" characters;
 	/// ASCII is most common and happens to be the first 0x80 unicode code points.
@@ -93,7 +101,7 @@ struct DfaState {
 	/// than the full range of unicode code points,
 	/// but technically the code should work for any value here;
 	/// comments in the relevant parts of the implementation explain why.
-	ascii_cache: [Transition; 0x80],
+	ascii_cache: SerdeArray<[Transition; 0x80]>,
 }
 
 /// In untagged DFA, the kernel of a DFA state is simply the set of corresponding NFA states;
@@ -110,25 +118,28 @@ struct DfaState {
 ///
 /// However, both of the aforementioned procedures operate more naturally on a list of `Configuration`s,
 /// and `Vec<Configuration>` naturally has better memory locality.
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 struct Kernel(Vec<Configuration>);
 
 /// A "configuration" is essentially an augmented NFA state (as documented per field).
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 struct Configuration {
 	nfa_state: NfaIdx,
 	/// A mapping "tag (by ID/index) -> register"; answers "which register holds this tag?".
+	#[serde(skip)]
 	register_for_tag: Vec<usize>,
 	/// Sequence of tags accumulated to reach this state during [`Dfa::epsilon_closure`]
 	/// (corresponding to the execution of positive/negative tags during NFA simulation).
+	#[serde(skip)]
 	tag_path_in_closure: Vec<(Tag, SymbolicPosition)>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 struct Transition {
 	/// `usize::MAX` is used as an "invalid/empty" marker value.
 	/// See [`NfaIdx`] for a note on why this is "safe".
 	target: usize,
+	#[serde(skip)]
 	operations: Vec<RegisterOperation>,
 }
 
@@ -515,7 +526,7 @@ impl Tdfa {
 			final_operations,
 			tag_for_register,
 			registers_clobbered: BTreeSet::new(),
-			ascii_cache: std::array::from_fn(|_| Transition::invalid()),
+			ascii_cache: SerdeArray(std::array::from_fn(|_| Transition::invalid())),
 		});
 		self.kernels.insert(kernel, idx);
 		idx

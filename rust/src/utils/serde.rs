@@ -78,3 +78,9 @@ impl<T, const N: usize> std::ops::Deref for SerdeArray<[T; N]> {
 		&self.0
 	}
 }
+
+impl<T, const N: usize> std::ops::DerefMut for SerdeArray<[T; N]> {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
+}

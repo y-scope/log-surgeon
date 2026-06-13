@@ -1,6 +1,6 @@
 // TODO: replace with `std::range::Range` when stable.
 /// Rust's `std::ops::Range` is not `Copy` for... reasons.
-#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[repr(C)]
 pub struct Range<Idx> {
 	pub start: Idx,

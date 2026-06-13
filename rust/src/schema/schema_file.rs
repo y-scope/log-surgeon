@@ -54,7 +54,7 @@ impl Schema {
 			}))
 			.chain(std::iter::once(String::new()))
 			.chain(std::iter::once(format!("===")))
-			.chain(serde_json::to_string(&self.optimized_dfa))
+			.chain(std::iter::once(serde_json::to_string(&self.main_dfa).unwrap()))
 			.fold(String::new(), |mut accumulated, line| {
 				accumulated.push_str(&line);
 				accumulated.push('\n');
@@ -67,10 +67,10 @@ impl SchemaBuilder {
 	pub fn from_schema_definition(contents: &str) -> Result<Self, SchemaFileError<'_>> {
 		let mut builder: Self = Self::new();
 
-		let mut maybe_cached: Option<String> = None;
+		let mut maybe_cached_dfa: Option<String> = None;
 
 		for (line_offset, line) in contents.lines().enumerate() {
-			if let Some(cached) = &mut maybe_cached {
+			if let Some(cached) = &mut maybe_cached_dfa {
 				cached.push_str(line);
 				continue;
 			}
@@ -86,7 +86,7 @@ impl SchemaBuilder {
 			}
 
 			if line.starts_with("===") {
-				maybe_cached = Some(String::new());
+				maybe_cached_dfa = Some(String::new());
 				continue;
 			}
 
@@ -126,7 +126,7 @@ impl SchemaBuilder {
 			}
 		}
 
-		if let Some(cached) = maybe_cached {
+		if let Some(cached) = maybe_cached_dfa {
 			builder.set_cached_dfa(serde_json::from_str(&cached).unwrap());
 		}
 

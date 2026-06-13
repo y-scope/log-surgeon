@@ -2,11 +2,15 @@ use cranelift::codegen::Context;
 use cranelift::codegen::ir::AbiParam;
 use cranelift::codegen::ir::Block;
 use cranelift::codegen::ir::BlockArg;
+use cranelift::codegen::ir::BlockCall;
 use cranelift::codegen::ir::InstBuilder;
 use cranelift::codegen::ir::MemFlags;
 use cranelift::codegen::ir::Signature;
 use cranelift::codegen::ir::Type;
+// use cranelift::codegen::ir::ValueListPool;
 // use cranelift::codegen::ir::UserFuncName;
+use cranelift::codegen::ir::JumpTable;
+use cranelift::codegen::ir::JumpTableData;
 use cranelift::codegen::ir::Value;
 use cranelift::codegen::ir::condcodes::IntCC;
 use cranelift::codegen::ir::types;
@@ -77,25 +81,6 @@ impl Jit {
 	}
 
 	pub fn jit(&mut self, dfa: &Tdfa) -> Result<JittedDfa, ()> {
-		// now!(u1);
-		// let old_dfa: &Tdfa = dfa;
-		// let dfa: &Tdfa = &dfa.minimize();
-		now!(t0);
-		// let mut ts: BTreeMap<usize, usize> = BTreeMap::new();
-		// for s in dfa.states.iter() {
-		// 	if s.accepting_rule.is_some() {
-		// 		continue;
-		// 	}
-		// 	*ts.entry(s.transitions.len()).or_insert(0) += 1;
-		// }
-		// println!("dist: {ts:#?}");
-		// println!(
-		// 	"minimizing {} to {} took: {:?}",
-		// 	old_dfa.states.len(),
-		// 	dfa.states.len(),
-		// 	t0.duration_since(u1)
-		// );
-
 		let mut sig: Signature = self.module.make_signature();
 		let ptr_ty: Type = self.module.isa().pointer_type();
 
@@ -178,6 +163,7 @@ impl Compilation<'_> {
 		let exit_b: Block = self.asm.create_block();
 		self.asm.append_block_param(exit_b, self.ptr_ty); // last_matched_input_ptr
 		self.asm.append_block_param(exit_b, types::I16); // last_matched_rule
+		self.asm.set_cold_block(exit_b);
 		{
 			self.asm.switch_to_block(exit_b);
 
@@ -191,6 +177,28 @@ impl Compilation<'_> {
 			self.asm.ins().store(MemFlags::new(), last_matched_input_ptr, output, 0);
 
 			self.asm.ins().return_(&[last_matched_rule]);
+		}
+
+		let exit2_b: Block = self.asm.create_block();
+		self.asm.append_block_param(exit2_b, self.ptr_ty); // next_input_ch
+		self.asm.append_block_param(exit2_b, self.ptr_ty); // last_matched_input_ptr
+		self.asm.append_block_param(exit2_b, types::I16); // last_matched_rule
+		self.asm.set_cold_block(exit2_b);
+		{
+			self.asm.switch_to_block(exit2_b);
+
+			let params: &[Value] = self.asm.block_params(exit2_b);
+
+			let last_matched_input_ptr: Value = params[1];
+			let last_matched_rule: Value = params[2];
+
+			self.asm.ins().jump(
+				exit_b,
+				&[
+					BlockArg::Value(last_matched_input_ptr),
+					BlockArg::Value(last_matched_rule),
+				],
+			);
 		}
 
 		for (i, state) in dfa.states.iter().enumerate() {
@@ -222,12 +230,11 @@ impl Compilation<'_> {
 			};
 
 			self.do_transitions(
-				&dfa.states[i], states, next_input_ptr, input_ch, exit_b, &last_matched, &mut count1, &mut count2,
+				&dfa.states[i], states, next_input_ptr, input_ch, exit_b, exit2_b, &last_matched, &mut count1,
+				&mut count2,
 			);
 		}
 		// println!("count1 {count1} count2 {count2}");
-
-		self.asm.set_cold_block(exit_b);
 
 		now!(t1);
 		self.asm.seal_all_blocks();
@@ -460,10 +467,48 @@ impl Compilation<'_> {
 		next_input_ptr: Value,
 		input_ch: Value,
 		exit_b: Block,
+		exit2_b: Block,
 		last_match: &[BlockArg],
 		count1: &mut usize,
 		count2: &mut usize,
 	) {
+		/*
+		// let mut ascii_path_b: Block = self.asm.create_block();
+		let mut interval_path_b: Block = self.asm.create_block();
+		self.asm.append_block_param(interval_path_b, self.ptr_ty);
+		self.asm.append_block_param(interval_path_b, self.ptr_ty);
+		self.asm.append_block_param(interval_path_b, types::I16);
+		self.asm.set_cold_block(interval_path_b);
+
+		{
+			// self.asm.switch_to_block(ascii_path_b);
+			let default_call: BlockCall = self.asm.func.dfg.block_call(
+				interval_path_b,
+				&[BlockArg::Value(next_input_ptr), last_match[0], last_match[1]],
+			);
+			let mut table: [BlockCall; 0x80] = std::array::from_fn(|i| {
+				let target: usize = current.ascii_cache[i].target;
+				if target != usize::MAX {
+					self.asm.func.dfg.block_call(
+						states[target],
+						&[BlockArg::Value(next_input_ptr), last_match[0], last_match[1]],
+					)
+				} else {
+					self.asm.func.dfg.block_call(
+						exit2_b,
+						&[BlockArg::Value(next_input_ptr), last_match[0], last_match[1]],
+					)
+				}
+			});
+			let table: JumpTableData = JumpTableData::new(default_call, &table);
+			let table: JumpTable = self.asm.create_jump_table(table);
+			self.asm.ins().br_table(input_ch, table);
+			self.asm.seal_block(interval_path_b);
+		}
+
+		self.asm.switch_to_block(interval_path_b);
+		*/
+
 		// let mut transitions1: Vec<(u32, u32, Block)> = Vec::new();
 		let mut transitions2: Vec<(u32, u32, Block)> = Vec::new();
 		// let mut map: BTreeMap<usize, Block> = BTreeMap::new();

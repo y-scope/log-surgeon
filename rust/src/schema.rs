@@ -24,7 +24,7 @@ pub struct SchemaBuilder {
 	placeholders: BTreeMap<String, Regex>,
 	encodings: Vec<(String, Regex)>,
 
-	maybe_cached_dfa: Option<CompressedDfa>,
+	maybe_cached_dfa: Option<Tdfa>,
 
 	delimiters: String,
 	anchor_ch: char,
@@ -171,7 +171,7 @@ impl SchemaBuilder {
 		Ok(self)
 	}
 
-	pub fn set_cached_dfa(&mut self, cached: CompressedDfa) -> &mut Self {
+	pub fn set_cached_dfa(&mut self, cached: Tdfa) -> &mut Self {
 		self.maybe_cached_dfa = Some(cached);
 		self
 	}
@@ -223,7 +223,22 @@ impl SchemaBuilder {
 		}
 
 		let main_nfa: Tnfa = Tnfa::for_rules::<true, _>(rules.iter(), &self.delimiters);
-		let main_dfa: Tdfa = Tdfa::for_rules(rules.iter(), self.delimiters.clone());
+
+		let main_dfa: Tdfa = self.maybe_cached_dfa.unwrap_or_else(|| {
+			now!(t0);
+			let main_dfa: Tdfa = Tdfa::for_rules(rules.iter(), self.delimiters.clone());
+			now!(t1);
+			let minimized: Tdfa = main_dfa.minimize();
+			now!(t2);
+			debug!(
+				"[minimizing dfa] took ({:?}, {:?})",
+				t1.duration_since(t0),
+				t2.duration_since(t1)
+			);
+			minimized
+		});
+
+		let optimized_dfa: CompressedDfa = main_dfa.compress();
 
 		let mut ascii_delimiters: [bool; 0x80] = [false; 0x80];
 		let mut non_ascii_delimiters: String = String::new();
@@ -236,17 +251,6 @@ impl SchemaBuilder {
 				non_ascii_delimiters.push(ch);
 			}
 		}
-
-		let optimized_dfa: CompressedDfa = self.maybe_cached_dfa.unwrap_or_else(|| {
-			now!(t0);
-			let minimized: Tdfa = main_dfa.minimize();
-			now!(t1);
-			debug!("[minimizing dfa] took ({:?})", t1.duration_since(t0));
-			let compressed_dfa: CompressedDfa = minimized.compress();
-			now!(t2);
-			debug!("[compressing] took ({:?})", t2.duration_since(t1));
-			compressed_dfa
-		});
 
 		Schema {
 			rules,

@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 ///
 /// Internally, just an ordered list of non-overlapping intervals;
 /// lookups are `O(log(n))` with binary search.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct IntervalTree<T: Number, V: Clone> {
 	intervals: Vec<(Interval<T>, V)>,
 }

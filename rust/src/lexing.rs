@@ -64,7 +64,7 @@ impl Schema {
 		}
 
 		if let Some(MatchedRule { rule_idx, lexeme }) =
-			self.execute_dfa::<false>(&input[start..], last_was_delimited, jitted_dfa, compressed)
+			self.execute_dfa::<true>(&input[start..], last_was_delimited, jitted_dfa, compressed)
 		{
 			let rule: &RootRule = &self[rule_idx];
 			let has_captures: bool = rule.has_captures();

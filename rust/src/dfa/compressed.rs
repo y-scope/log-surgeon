@@ -45,10 +45,10 @@ mod serde_ {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompressedDfa {
-	intervals: Vec<Interval<u32>>,
-	accepts_for_rule: Vec<Option<RuleIdx>>,
-	ascii_transitions: Vec<SerdeArray<[u16; 0x80]>>,
-	non_ascii_transitions: Vec<u16>,
+	pub intervals: Vec<Interval<u32>>,
+	pub accepts_for_rule: Vec<Option<RuleIdx>>,
+	pub ascii_transitions: Vec<SerdeArray<[u16; 0x80]>>,
+	pub non_ascii_transitions: Vec<u16>,
 }
 
 impl Tdfa {
