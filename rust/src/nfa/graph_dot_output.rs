@@ -10,7 +10,7 @@ impl Tnfa {
 		lines.push_str("\tnode [shape=circle];\n");
 		lines.push('\n');
 
-		let (sccs, data, _indices): (Vec<Vec<NfaIdx>>, Vec<TarjanSccData>, Vec<NfaIdx>) = self.tarjan_scc();
+		let (sccs, data): (Vec<Vec<NfaIdx>>, Vec<TarjanSccData>) = self.tarjan_scc();
 		for scc in sccs.iter() {
 			for &state in scc.iter() {
 				let state: &NfaState = &self[state];

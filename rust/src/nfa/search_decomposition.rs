@@ -422,7 +422,7 @@ impl Tnfa {
 		acceptable
 	}
 
-	pub fn tarjan_scc(&self) -> (Vec<Vec<NfaIdx>>, Vec<TarjanSccData>, Vec<NfaIdx>) {
+	pub fn tarjan_scc(&self) -> (Vec<Vec<NfaIdx>>, Vec<TarjanSccData>) {
 		let mut data: Vec<TarjanSccData> = vec![
 			TarjanSccData {
 				index: None,
@@ -447,7 +447,7 @@ impl Tnfa {
 			data.scc = sccs.len() - data.scc - 1;
 		}
 
-		(sccs, data, indices)
+		(sccs, data)
 	}
 
 	fn strong_connect(
@@ -500,7 +500,7 @@ impl Tnfa {
 	}
 
 	pub fn compute_paths<const HAS_ANCHORS: bool>(&self) -> Vec<Path> {
-		let (sccs, data, _indices): (Vec<Vec<NfaIdx>>, Vec<TarjanSccData>, Vec<NfaIdx>) = self.tarjan_scc();
+		let (sccs, data): (Vec<Vec<NfaIdx>>, Vec<TarjanSccData>) = self.tarjan_scc();
 
 		let mut cache: Vec<Option<Vec<(NfaIdx, PartialPath, RuleIdx)>>> = vec![None; self.states.len()];
 

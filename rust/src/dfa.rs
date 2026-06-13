@@ -5,6 +5,7 @@
 //! - <https://arxiv.org/abs/2206.01398>
 //!
 
+mod compressed;
 mod jit;
 
 use std::collections::BTreeMap;
@@ -12,6 +13,7 @@ use std::collections::BTreeSet;
 use std::collections::btree_map::Entry;
 use std::num::NonZero;
 
+pub use compressed::CompressedDfa;
 pub use jit::Jit;
 pub use jit::JittedDfa;
 
@@ -175,7 +177,7 @@ struct PrefixTreeNode {
 
 #[derive(Debug, Clone, Copy)]
 struct BackupState {
-	rule: RuleIdx,
+	rule_idx: RuleIdx,
 	consumed: usize,
 }
 
@@ -203,7 +205,10 @@ impl Tdfa {
 			if let Some(transition) = self.lookup_transition(current_state, u32::from(ch)) {
 				current_state = transition.target;
 				if let Some(rule) = self.states[current_state].accepting_rule {
-					maybe_backup = Some(BackupState { rule, consumed: pos });
+					maybe_backup = Some(BackupState {
+						rule_idx: rule,
+						consumed: pos,
+					});
 				}
 			} else {
 				break;
@@ -213,7 +218,7 @@ impl Tdfa {
 		let backup: BackupState = maybe_backup?;
 
 		Some(MatchedRule {
-			rule_idx: backup.rule,
+			rule_idx: backup.rule_idx,
 			lexeme: &input[..backup.consumed],
 		})
 	}

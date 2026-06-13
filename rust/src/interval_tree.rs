@@ -215,13 +215,10 @@ where
 	fn lookup_entry(&self, pos: T) -> Option<(Interval<T>, &V)> {
 		self.check_invariants();
 		let index: usize = self.partition_point(pos);
-		if let Some((interval, value)) = self.intervals.get(index) {
-			assert!(pos <= interval.end);
-			if interval.start <= pos {
-				Some((*interval, value))
-			} else {
-				None
-			}
+		let (interval, value): &(Interval<T>, V) = self.intervals.get(index)?;
+		assert!(pos <= interval.end);
+		if interval.start <= pos {
+			Some((*interval, value))
 		} else {
 			None
 		}

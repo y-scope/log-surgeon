@@ -1,8 +1,9 @@
 use std::str::Chars;
 
+use crate::dfa::CompressedDfa;
 use crate::dfa::JittedDfa;
 use crate::dfa::MatchedRule;
-// use crate::dfa::MatchedRule;
+use crate::dfa::Tdfa;
 use crate::dfa::TdfaExecution;
 use crate::schema::RootRule;
 use crate::schema::RuleIdx;
@@ -28,6 +29,8 @@ impl Schema {
 		last_was_delimited: u32,
 		data: &mut TdfaExecution,
 		jitted_dfa: JittedDfa,
+		compressed: &CompressedDfa,
+		minimized: &Tdfa,
 	) -> Token<'schema, 'input> {
 		let start: usize = *pos;
 
@@ -63,7 +66,7 @@ impl Schema {
 		}
 
 		if let Some(MatchedRule { rule_idx, lexeme }) =
-			self.execute_dfa::<true>(&input[start..], last_was_delimited, jitted_dfa)
+			self.execute_dfa::<false>(&input[start..], last_was_delimited, jitted_dfa, compressed, minimized)
 		{
 			let rule: &RootRule = &self[rule_idx];
 			let has_captures: bool = rule.has_captures();
@@ -97,6 +100,8 @@ impl Schema {
 		input: &'input str,
 		last_was_delimited: u32,
 		jitted_dfa: JittedDfa,
+		compressed: &CompressedDfa,
+		minimized: &Tdfa,
 	) -> Option<MatchedRule<'input>> {
 		if JIT {
 			let input: std::ops::Range<*const u8> = input.as_bytes().as_ptr_range();
@@ -112,7 +117,9 @@ impl Schema {
 			};
 			Some(MatchedRule { rule_idx, lexeme })
 		} else {
-			self.main_dfa.execute_without_captures(input, last_was_delimited)
+			// minimized.execute_without_captures(input, last_was_delimited)
+			// self.main_dfa.execute_without_captures(input, last_was_delimited)
+			compressed.execute(input, last_was_delimited)
 		}
 	}
 

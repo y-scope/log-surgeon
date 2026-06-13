@@ -99,6 +99,12 @@ impl From<RuleIdx> for u16 {
 	}
 }
 
+impl From<NonZero<u16>> for RuleIdx {
+	fn from(rule_idx: NonZero<u16>) -> Self {
+		Self(rule_idx)
+	}
+}
+
 impl std::fmt::Display for RuleIdx {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		self.0.fmt(fmt)

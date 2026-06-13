@@ -1,6 +1,9 @@
 #[macro_use(debug)]
 extern crate tracing;
 
+#[macro_use(Serialize, Deserialize)]
+extern crate serde;
+
 #[macro_use]
 pub mod utils;
 pub mod dfa;

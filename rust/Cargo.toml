@@ -40,6 +40,7 @@ cbindgen = "0.29"
 nom = "8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde = { version = "1", features = ["derive"] }
 
 cranelift = "0.132"
 cranelift-module = "0.132"
