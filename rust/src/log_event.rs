@@ -3,7 +3,7 @@ use std::num::NonZero;
 
 use crate::ffi::UncheckedCArray;
 use crate::schema::RuleIdx;
-use crate::utils::Range;
+use std::range::Range;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LogEvent<'parser> {
@@ -81,11 +81,12 @@ impl<'parser> LogEvent<'parser> {
 impl std::fmt::Display for Match {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		fmt.write_fmt(format_args!(
-			"Match(rule: {}, id: {}, parent: {}, range: {})",
+			"Match(rule: {}, id: {}, parent: {}, range: {}..{})",
 			self.rule_idx,
 			self.sub_rule_id.map_or(0, NonZero::get),
 			self.parent_id.map_or(0, NonZero::get),
-			self.range
+			self.range.start,
+			self.range.end,
 		))
 	}
 }

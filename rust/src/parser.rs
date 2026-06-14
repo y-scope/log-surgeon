@@ -10,7 +10,7 @@ use crate::log_event::Match;
 use crate::log_event::MatchFfiPointers;
 use crate::schema::RuleInfo;
 use crate::schema::Schema;
-use crate::utils::Range;
+use std::range::Range;
 
 #[derive(Debug, Clone)]
 pub struct Parser {

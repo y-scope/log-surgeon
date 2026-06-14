@@ -29,7 +29,7 @@ use crate::regex::Regex;
 use crate::schema::RootRule;
 use crate::schema::RuleIdx;
 use crate::schema::SubRule;
-use crate::utils::Range;
+use std::range::Range;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tdfa {
@@ -50,7 +50,7 @@ pub struct Tdfa {
 	anchor_ch: char,
 }
 
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone)]
 pub struct TdfaExecution {
 	pub captures: Vec<MatchedCapture>,
 	registers: Vec<Option<NonZero<usize>>>,
@@ -64,7 +64,7 @@ pub struct MatchedRule<'input> {
 	pub lexeme: &'input str,
 }
 
-#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct MatchedCapture {
 	pub rule_idx: RuleIdx,
 	pub capture_id: NonZero<u16>,
