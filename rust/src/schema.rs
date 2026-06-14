@@ -16,7 +16,7 @@ use crate::nfa::Tnfa;
 use crate::regex::AnchoredRegex;
 use crate::regex::IntoRegex;
 use crate::regex::Regex;
-use crate::regex::RegexLookupPlaceholder;
+use crate::regex::RegexPlaceholderLookup;
 
 #[derive(Debug, Clone)]
 pub struct SchemaBuilder {
@@ -268,7 +268,7 @@ impl SchemaBuilder {
 	}
 }
 
-impl RegexLookupPlaceholder for SchemaBuilder {
+impl RegexPlaceholderLookup for SchemaBuilder {
 	fn lookup(&mut self, name: &str) -> Option<Regex> {
 		self.placeholders.get(name).cloned()
 	}
@@ -320,7 +320,7 @@ impl Schema {
 		collect: &mut Vec<(&'a RuleInfo, &'a Regex)>,
 	) {
 		match regex {
-			Regex::AnyChar | Regex::Literal(..) | Regex::Group { .. } => (),
+			Regex::AnyChar | Regex::Literal(..) | Regex::BracketedRanges { .. } => (),
 			Regex::Capture(sub_rule) => {
 				if sub_rule.name == first {
 					if let Some(first) = rest.first().copied() {
@@ -370,7 +370,7 @@ impl RootRule {
 		let mut stack: Vec<&Regex> = vec![&regex.inner];
 		while let Some(regex) = stack.pop() {
 			match regex {
-				Regex::AnyChar | Regex::Literal(..) | Regex::Group { .. } => (),
+				Regex::AnyChar | Regex::Literal(..) | Regex::BracketedRanges { .. } => (),
 				Regex::Capture(sub_rule) => {
 					let i: usize = sub_rule.id_as_usize();
 					assert_eq!(rule_info.len(), i);

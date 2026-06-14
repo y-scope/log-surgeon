@@ -10,17 +10,17 @@ use nom::error::ParseError;
 
 use super::*;
 
-pub trait RegexLookupPlaceholder {
+pub trait RegexPlaceholderLookup {
 	fn lookup(&mut self, name: &str) -> Option<Regex>;
 }
 
-impl RegexLookupPlaceholder for BTreeMap<String, Regex> {
+impl RegexPlaceholderLookup for BTreeMap<String, Regex> {
 	fn lookup(&mut self, name: &str) -> Option<Regex> {
 		self.get(name).cloned()
 	}
 }
 
-impl<T> RegexLookupPlaceholder for T
+impl<T> RegexPlaceholderLookup for T
 where
 	T: FnMut(&str) -> Option<Regex>,
 {
@@ -29,18 +29,22 @@ where
 	}
 }
 
-impl RegexLookupPlaceholder for () {
+impl RegexPlaceholderLookup for () {
 	fn lookup(&mut self, _name: &str) -> Option<Regex> {
 		None
 	}
 }
 
+// These fields are not currently explicitly used,
+// but are relevant in the `Debug` implementation
+// and would be needed to provide better (more specific)
+// error messages in the future.
 #[derive(Debug)]
-pub struct RegexError<'a> {
+pub struct RegexError {
 	#[allow(unused)]
-	consumed: &'a str,
+	consumed: String,
 	#[allow(unused)]
-	remaining: &'a str,
+	remaining: String,
 	#[allow(unused)]
 	kind: RegexErrorKind,
 }
@@ -49,21 +53,19 @@ type ParsingResult<'a, T> = IResult<&'a str, T, RegexParsingError<'a>>;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum RegexErrorKind {
-	/// Expected a certain character, e.g. '<' after '?' in a capture group.
+	/// Expected a certain character, e.g. '<' after '?' in a capture.
 	ExpectedChar(char),
 	/// Missing the closing delimiter for the following pair.
-	MissingClose(char, char),
-	/// "General" error kind, e.g. an isolated reptition suffix operator (e.g. the pattern "*").
+	ExpectedClose(char, char),
+	/// "General" error kind, e.g. an isolated repetition suffix operator (e.g. the pattern "*").
 	InvalidTerm,
-	// TODO
-	/// A valid literal character was expected but not found;
-	/// should only appear from an invalid group.
-	InvalidLiteral,
+	/// Expected a literal character in a bracketed expression.
+	ExpectedLiteralInBracketedExpression,
 	/// An empty bracketed expression "[]".
 	/// Note that "[^]" is allowed, being equivalent to the wildcard ".".
-	EmptyGroup,
-	/// Group range `min > max`.
-	InvalidGroupRange(char, char),
+	EmptyBrackets,
+	/// Bracket range `min > max`.
+	InvalidBracketRange(char, char),
 	/// Invalid escape character.
 	InvalidEscape,
 	/// Invalid repetition bound; `min > max` or `max == 0`.
@@ -80,14 +82,14 @@ enum RegexErrorKind {
 	InvalidCaptureName,
 	/// Too many captures.
 	TooManyCaptures,
-	/// An escape class (e.g. "\\d") was used as the start/end point of a range in a group.
-	EscapeClassInGroupRange,
-	/// An inverted escape class (e.g. "\\D") was used inside a group.
-	InvertedEscapeClassInGroup,
+	/// An escape class (e.g. "\\d") was used as the start/end point of a bracket range.
+	EscapeClassInBracketRange,
+	/// An inverted escape class (e.g. "\\D") was used inside a bracketed expression.
+	InvertedEscapeClassInBrackets,
 	/// Used for parsing a non-special character (`negate == true`)
 	/// and for parsing an escaped special character (`negate == false`).
 	/// This shouldn't actually bubble up publicly;
-	/// it'll either get consumed by/turned into `InvalidLiteral` or `InvalidTerm`,
+	/// it'll either get consumed by/turned into `ExpectedLiteralInBracketedExpression` or `InvalidTerm`,
 	/// but exists because 1. it models "what's happening", and 2. it's useful for debugging.
 	ExpectedOneOf { characters: &'static str, negate: bool },
 	/// No definition for placeholder.
@@ -105,15 +107,15 @@ struct RegexParsingError<'a> {
 
 #[derive(Debug, Clone)]
 enum Literal {
-	One(char),
-	Group { negated: bool, items: Vec<(char, char)> },
+	Char(char),
+	Bracketed { negated: bool, items: Vec<(char, char)> },
 }
 
 impl<'a> ParseError<&'a str> for RegexParsingError<'a> {
-	fn from_error_kind(input: &'a str, nom: NomErrorKind) -> Self {
+	fn from_error_kind(input: &'a str, kind: NomErrorKind) -> Self {
 		Self {
 			input,
-			kind: RegexErrorKind::Nom(nom),
+			kind: RegexErrorKind::Nom(kind),
 		}
 	}
 
@@ -135,16 +137,13 @@ impl<'a> RegexParsingError<'a> {
 }
 
 impl Regex {
-	pub fn from_pattern(pattern: &str) -> Result<AnchoredRegex, RegexError<'_>> {
+	pub fn from_pattern(pattern: &str) -> Result<AnchoredRegex, RegexError> {
 		Self::from_pattern_with_placeholders(pattern, &mut ())
 	}
 
-	pub fn from_pattern_with_placeholders<'a, T>(
-		pattern: &'a str,
-		lookup: &mut T,
-	) -> Result<AnchoredRegex, RegexError<'a>>
+	pub fn from_pattern_with_placeholders<T>(pattern: &str, lookup: &mut T) -> Result<AnchoredRegex, RegexError>
 	where
-		T: RegexLookupPlaceholder,
+		T: RegexPlaceholderLookup,
 	{
 		match parse_to_end(pattern) {
 			Ok((remaining, mut regex)) => {
@@ -154,8 +153,8 @@ impl Regex {
 					.inner
 					.replace_with_placeholders(lookup)
 					.map_err(|kind| RegexError {
-						consumed: pattern,
-						remaining,
+						consumed: pattern.to_owned(),
+						remaining: remaining.to_owned(),
 						kind,
 					})?;
 
@@ -163,8 +162,8 @@ impl Regex {
 					.inner
 					.number_captures(&mut { NonZero::<u16>::MIN }, &mut Vec::new())
 					.ok_or(RegexError {
-						consumed: pattern,
-						remaining: "",
+						consumed: pattern.to_owned(),
+						remaining: String::new(),
 						kind: RegexErrorKind::TooManyCaptures,
 					})?;
 				Ok(regex)
@@ -175,8 +174,8 @@ impl Regex {
 			Err(NomErr::Error(err) | NomErr::Failure(err)) => {
 				let consumed: &str = pattern.strip_suffix(err.input).unwrap();
 				Err(RegexError {
-					consumed,
-					remaining: err.input,
+					consumed: consumed.to_owned(),
+					remaining: err.input.to_owned(),
 					kind: err.kind,
 				})
 			},
@@ -185,10 +184,10 @@ impl Regex {
 
 	fn replace_with_placeholders<F>(&mut self, get_placeholder: &mut F) -> Result<(), RegexErrorKind>
 	where
-		F: RegexLookupPlaceholder,
+		F: RegexPlaceholderLookup,
 	{
 		match self {
-			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => Ok(()),
+			Self::AnyChar | Self::Literal(..) | Self::BracketedRanges { .. } => Ok(()),
 			Self::Capture(sub_rule) => sub_rule.regex.replace_with_placeholders(get_placeholder),
 			Self::Placeholder { name, item } => {
 				let Some(placeholder): Option<Regex> = get_placeholder.lookup(name) else {
@@ -217,7 +216,7 @@ impl Regex {
 	fn number_captures(&mut self, id: &mut NonZero<u16>, stack: &mut Vec<(NonZero<u16>, Arc<str>)>) -> Option<usize> {
 		let mut bread: usize = 0;
 		match self {
-			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => (),
+			Self::AnyChar | Self::Literal(..) | Self::BracketedRanges { .. } => (),
 			Self::Capture(sub_rule) => {
 				let maybe_parent: Option<&(NonZero<u16>, Arc<str>)> = stack.last();
 				sub_rule.parent_id = maybe_parent.map(|(id, _)| *id);
@@ -461,8 +460,8 @@ fn parse_term(input: &str) -> ParsingResult<'_, Regex> {
 	alt((
 		parse_char::<'.'>.map(|_| Regex::AnyChar),
 		parse_literal_character.map(|literal| match literal {
-			Literal::One(ch) => Regex::Literal(ch),
-			Literal::Group { negated, items } => Regex::Group { negated, items },
+			Literal::Char(ch) => Regex::Literal(ch),
+			Literal::Bracketed { negated, items } => Regex::BracketedRanges { negated, items },
 		}),
 		parse_parenthesized,
 		parse_bracketed_expression,
@@ -518,7 +517,7 @@ fn parse_bracketed_expression(input: &str) -> ParsingResult<'_, Regex> {
 	let (input, (negated, items)): (&str, (bool, Vec<(char, char)>)) =
 		combinator_surrounded_cut::<'[', ']', _, _>(parse_bracketed_inside).parse(input)?;
 
-	Ok((input, Regex::Group { negated, items }))
+	Ok((input, Regex::BracketedRanges { negated, items }))
 }
 
 fn parse_bracketed_inside(input: &str) -> ParsingResult<'_, (bool, Vec<(char, char)>)> {
@@ -561,7 +560,7 @@ fn parse_bracketed_inside(input: &str) -> ParsingResult<'_, (bool, Vec<(char, ch
 	}
 
 	if !negated && items.is_empty() {
-		return Err(RegexErrorKind::EmptyGroup.error(input));
+		return Err(RegexErrorKind::EmptyBrackets.error(input));
 	}
 
 	Ok((input, (negated, items)))
@@ -580,7 +579,7 @@ fn parse_bracketed_item(original_input: &str) -> ParsingResult<'_, Vec<(char, ch
 
 	if maybe_dash.is_some() {
 		match start {
-			Literal::One(start) => {
+			Literal::Char(start) => {
 				let (input, maybe_end): (&str, Option<Literal>) =
 					parse_literal_char_in_bracketed_expression(input_after_dash)?;
 
@@ -589,23 +588,23 @@ fn parse_bracketed_item(original_input: &str) -> ParsingResult<'_, Vec<(char, ch
 				};
 
 				match end {
-					Literal::One(end) => {
+					Literal::Char(end) => {
 						if start > end {
-							return Err(RegexErrorKind::InvalidGroupRange(start, end).fail(input_after_dash));
+							return Err(RegexErrorKind::InvalidBracketRange(start, end).fail(input_after_dash));
 						}
 						Ok((input, vec![(start, end)]))
 					},
-					Literal::Group { .. } => Err(RegexErrorKind::EscapeClassInGroupRange.fail(input_after_dash)),
+					Literal::Bracketed { .. } => Err(RegexErrorKind::EscapeClassInBracketRange.fail(input_after_dash)),
 				}
 			},
-			Literal::Group { .. } => Err(RegexErrorKind::EscapeClassInGroupRange.fail(original_input)),
+			Literal::Bracketed { .. } => Err(RegexErrorKind::EscapeClassInBracketRange.fail(original_input)),
 		}
 	} else {
 		match start {
-			Literal::One(ch) => Ok((input, vec![(ch, ch)])),
-			Literal::Group { negated, items } => {
+			Literal::Char(ch) => Ok((input, vec![(ch, ch)])),
+			Literal::Bracketed { negated, items } => {
 				if negated {
-					return Err(RegexErrorKind::InvertedEscapeClassInGroup.fail(original_input));
+					return Err(RegexErrorKind::InvertedEscapeClassInBrackets.fail(original_input));
 				}
 				Ok((input, items))
 			},
@@ -620,8 +619,7 @@ fn parse_literal_character(input: &str) -> ParsingResult<'_, Literal> {
 
 	alt((
 		parse_escaped_character,
-		parse_one_char_of::<true>(SPECIAL_CHARACTERS).map(Literal::One),
-		RegexErrorKind::InvalidLiteral.diagnostic(),
+		parse_one_char_of::<true>(SPECIAL_CHARACTERS).map(Literal::Char),
 	))
 	.parse(input)
 }
@@ -634,9 +632,9 @@ fn parse_escaped_character(original_input: &str) -> ParsingResult<'_, Literal> {
 
 	// Cut: If we parsed a '\\', we necessarily are looking for an escape character.
 	cut(alt((
-		parse_one_char_of::<false>(SPECIAL_CHARACTERS).map(Literal::One),
+		parse_one_char_of::<false>(SPECIAL_CHARACTERS).map(Literal::Char),
 		// TODO: deprecate this
-		parse_char::<'-'>.map(Literal::One),
+		parse_char::<'-'>.map(Literal::Char),
 		parse_standard_escape,
 	))
 	// Outside of the `alt` since the error starts at the original input, still inside the `cut`.
@@ -652,12 +650,12 @@ fn parse_literal_char_in_bracketed_expression(input: &str) -> ParsingResult<'_, 
 
 	alt((
 		parse_one_char_of::<true>(SPECIAL_CHARACTERS_IN_BRACKETED_EXPRESSIONS)
-			.map(Literal::One)
+			.map(Literal::Char)
 			.map(Some),
 		parse_escaped_character.map(Some),
 		value(None, peek(parse_char::<']'>)),
 		value(None, eof),
-		|input| Err(RegexErrorKind::InvalidLiteral.fail(input)),
+		|input| Err(RegexErrorKind::ExpectedLiteralInBracketedExpression.fail(input)),
 	))
 	.parse(input)
 }
@@ -706,7 +704,7 @@ fn parse_standard_escape(input: &str) -> ParsingResult<'_, Literal> {
 		let ch_lowercase: char = ch.to_ascii_lowercase();
 		return Ok((
 			chars.as_str(),
-			Literal::Group {
+			Literal::Bracketed {
 				negated: ch != ch_lowercase,
 				items: match ch_lowercase {
 					'd' => vec![('0', '9')],
@@ -721,7 +719,7 @@ fn parse_standard_escape(input: &str) -> ParsingResult<'_, Literal> {
 		));
 	}
 	match Escaped::unescape(input) {
-		Ok((input, ch)) => Ok((input, Literal::One(ch))),
+		Ok((input, ch)) => Ok((input, Literal::Char(ch))),
 		Err(InvalidEscape::Eof) => Err(RegexErrorKind::InvalidEscape.error(input)),
 		Err(InvalidEscape::Malformed) => Err(RegexErrorKind::ExpectedHexDigits.fail(input)),
 		Err(InvalidEscape::BadCodePoint(x)) => Err(RegexErrorKind::InvalidCodePoint(x).fail(input)),
@@ -806,7 +804,7 @@ where
 		// let (input, output): (&str, O) = cut(inside).parse(input)?;
 
 		let (input, _): (&str, char) =
-			cut(parse_char::<CLOSE>.or(RegexErrorKind::MissingClose(OPEN, CLOSE).diagnostic())).parse(input)?;
+			cut(parse_char::<CLOSE>.or(RegexErrorKind::ExpectedClose(OPEN, CLOSE).diagnostic())).parse(input)?;
 
 		Ok((input, output))
 	}
@@ -843,7 +841,7 @@ mod test {
 			Regex::from_pattern(r"\u{10ffff}").unwrap();
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern(r"\u{z}").unwrap_err();
+			let e: RegexError = Regex::from_pattern(r"\u{z}").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::ExpectedHexDigits);
 			assert_eq!(e.consumed, r"\");
 			assert_eq!(e.remaining, "u{z}");
@@ -852,7 +850,7 @@ mod test {
 			// assert_eq!(e.remaining, "z}");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern(r"\u{D800}").unwrap_err();
+			let e: RegexError = Regex::from_pattern(r"\u{D800}").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::InvalidCodePoint(0xD800));
 			assert_eq!(e.consumed, r"\");
 			assert_eq!(e.remaining, "u{D800}");
@@ -863,7 +861,7 @@ mod test {
 	}
 
 	#[test]
-	fn special_characters_in_group() {
+	fn special_characters_in_bracketed_range() {
 		{
 			Regex::from_pattern("[^]").unwrap();
 			Regex::from_pattern(r"[^^]").unwrap();
@@ -879,20 +877,20 @@ mod test {
 			Regex::from_pattern(r"[^-]").unwrap();
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern(r"[\]").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::MissingClose('[', ']'));
+			let e: RegexError = Regex::from_pattern(r"[\]").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::ExpectedClose('[', ']'));
 			assert_eq!(e.consumed, r"[\]");
 			assert_eq!(e.remaining, "");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern(r"[\a]").unwrap_err();
+			let e: RegexError = Regex::from_pattern(r"[\a]").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::InvalidEscape);
 			assert_eq!(e.consumed, r"[");
 			assert_eq!(e.remaining, r"\a]");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern(r"[[").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::InvalidLiteral);
+			let e: RegexError = Regex::from_pattern(r"[[").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::ExpectedLiteralInBracketedExpression);
 			assert_eq!(e.consumed, r"[");
 			assert_eq!(e.remaining, r"[");
 		}
@@ -901,31 +899,31 @@ mod test {
 	#[test]
 	fn invalid_term() {
 		{
-			let e: RegexError<'_> = Regex::from_pattern("|abc").unwrap_err();
+			let e: RegexError = Regex::from_pattern("|abc").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::InvalidTerm);
 			assert_eq!(e.consumed, "");
 			assert_eq!(e.remaining, "|abc");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern("abc|").unwrap_err();
+			let e: RegexError = Regex::from_pattern("abc|").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::InvalidTerm);
 			assert_eq!(e.consumed, "abc|");
 			assert_eq!(e.remaining, "");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern("a||bc").unwrap_err();
+			let e: RegexError = Regex::from_pattern("a||bc").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::InvalidTerm);
 			assert_eq!(e.consumed, "a|");
 			assert_eq!(e.remaining, "|bc");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern("*").unwrap_err();
+			let e: RegexError = Regex::from_pattern("*").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::InvalidTerm);
 			assert_eq!(e.consumed, "");
 			assert_eq!(e.remaining, "*");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern("a**").unwrap_err();
+			let e: RegexError = Regex::from_pattern("a**").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::InvalidTerm);
 			assert_eq!(e.consumed, "a*");
 			assert_eq!(e.remaining, "*");
@@ -935,26 +933,26 @@ mod test {
 	#[test]
 	fn unclosed_parentheses() {
 		{
-			let e: RegexError<'_> = Regex::from_pattern("(abc").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::MissingClose('(', ')'));
+			let e: RegexError = Regex::from_pattern("(abc").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::ExpectedClose('(', ')'));
 			assert_eq!(e.consumed, "(abc");
 			assert_eq!(e.remaining, "");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern("(?<abc*").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::MissingClose('<', '>'));
+			let e: RegexError = Regex::from_pattern("(?<abc*").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::ExpectedClose('<', '>'));
 			assert_eq!(e.consumed, "(?<abc");
 			assert_eq!(e.remaining, "*");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern("(abc[def)").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::MissingClose('[', ']'));
+			let e: RegexError = Regex::from_pattern("(abc[def)").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::ExpectedClose('[', ']'));
 			assert_eq!(e.consumed, "(abc[def)");
 			assert_eq!(e.remaining, "");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern(".{123a}").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::MissingClose('{', '}'));
+			let e: RegexError = Regex::from_pattern(".{123a}").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::ExpectedClose('{', '}'));
 			assert_eq!(e.consumed, ".{123");
 			assert_eq!(e.remaining, "a}");
 		}
@@ -963,13 +961,13 @@ mod test {
 	#[test]
 	fn expected_decimal() {
 		{
-			let e: RegexError<'_> = Regex::from_pattern(".{ }").unwrap_err();
+			let e: RegexError = Regex::from_pattern(".{ }").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::ExpectedDecimalDigits);
 			assert_eq!(e.consumed, ".{");
 			assert_eq!(e.remaining, " }");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern(".{123,").unwrap_err();
+			let e: RegexError = Regex::from_pattern(".{123,").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::ExpectedDecimalDigits);
 			assert_eq!(e.consumed, ".{123,");
 			assert_eq!(e.remaining, "");
@@ -980,7 +978,7 @@ mod test {
 	fn number_too_big() {
 		{
 			let pattern: String = format!(".{{{}}}", "9".repeat(64));
-			let e: RegexError<'_> = Regex::from_pattern(&pattern).unwrap_err();
+			let e: RegexError = Regex::from_pattern(&pattern).unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::NumberTooBig);
 			assert_eq!(e.consumed, ".{");
 			assert_eq!(e.remaining, &pattern[".{".len()..]);
@@ -990,7 +988,7 @@ mod test {
 	#[test]
 	fn capture_name() {
 		{
-			let e: RegexError<'_> = Regex::from_pattern("(?< ").unwrap_err();
+			let e: RegexError = Regex::from_pattern("(?< ").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::InvalidCaptureName);
 			assert_eq!(e.consumed, "(?<");
 			assert_eq!(e.remaining, " ");
@@ -1000,7 +998,7 @@ mod test {
 	#[test]
 	fn expected_char() {
 		{
-			let e: RegexError<'_> = Regex::from_pattern("(?a").unwrap_err();
+			let e: RegexError = Regex::from_pattern("(?a").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::ExpectedChar('<'));
 			assert_eq!(e.consumed, "(?");
 			assert_eq!(e.remaining, "a");
@@ -1008,10 +1006,10 @@ mod test {
 	}
 
 	#[test]
-	fn empty_group() {
+	fn empty_brackets() {
 		{
-			let e: RegexError<'_> = Regex::from_pattern("[]").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::EmptyGroup);
+			let e: RegexError = Regex::from_pattern("[]").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::EmptyBrackets);
 			assert_eq!(e.consumed, "[");
 			assert_eq!(e.remaining, "]");
 		}
@@ -1020,7 +1018,7 @@ mod test {
 	#[test]
 	fn invalid_escapes() {
 		{
-			let e: RegexError<'_> = Regex::from_pattern(r"[ \a]").unwrap_err();
+			let e: RegexError = Regex::from_pattern(r"[ \a]").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::InvalidEscape);
 			assert_eq!(e.consumed, "[ ");
 			assert_eq!(e.remaining, r"\a]");
@@ -1028,26 +1026,26 @@ mod test {
 	}
 
 	#[test]
-	fn escape_class_in_group_range() {
+	fn escape_class_in_bracketed_range() {
 		{
-			let e: RegexError<'_> = Regex::from_pattern(r"[\d-b]").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::EscapeClassInGroupRange);
+			let e: RegexError = Regex::from_pattern(r"[\d-b]").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::EscapeClassInBracketRange);
 			assert_eq!(e.consumed, r"[");
 			assert_eq!(e.remaining, r"\d-b]");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern(r"[b-\w]").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::EscapeClassInGroupRange);
+			let e: RegexError = Regex::from_pattern(r"[b-\w]").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::EscapeClassInBracketRange);
 			assert_eq!(e.consumed, r"[b-");
 			assert_eq!(e.remaining, r"\w]");
 		}
 	}
 
 	#[test]
-	fn inverted_escape_class_in_group() {
+	fn inverted_escape_class_in_bracketed_range() {
 		{
-			let e: RegexError<'_> = Regex::from_pattern(r"[\W]").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::InvertedEscapeClassInGroup);
+			let e: RegexError = Regex::from_pattern(r"[\W]").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::InvertedEscapeClassInBrackets);
 			assert_eq!(e.consumed, r"[");
 			assert_eq!(e.remaining, r"\W]");
 		}
@@ -1056,19 +1054,19 @@ mod test {
 	#[test]
 	fn reptition_bounds() {
 		{
-			let e: RegexError<'_> = Regex::from_pattern(r"a{2,1}").unwrap_err();
+			let e: RegexError = Regex::from_pattern(r"a{2,1}").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::InvalidRepetitionBound(2, 1));
 			assert_eq!(e.consumed, r"a{2,");
 			assert_eq!(e.remaining, r"1}");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern(r"a{0,0}").unwrap_err();
+			let e: RegexError = Regex::from_pattern(r"a{0,0}").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::InvalidRepetitionBound(0, 0));
 			assert_eq!(e.consumed, r"a{0,");
 			assert_eq!(e.remaining, r"0}");
 		}
 		{
-			let e: RegexError<'_> = Regex::from_pattern(r"a{0}").unwrap_err();
+			let e: RegexError = Regex::from_pattern(r"a{0}").unwrap_err();
 			assert_eq!(e.kind, RegexErrorKind::InvalidRepetitionBound(0, 0));
 			assert_eq!(e.consumed, r"a{");
 			assert_eq!(e.remaining, r"0}");
@@ -1076,10 +1074,10 @@ mod test {
 	}
 
 	#[test]
-	fn group_range() {
+	fn reversed_bracketed_range() {
 		{
-			let e: RegexError<'_> = Regex::from_pattern(r"[z-a]").unwrap_err();
-			assert_eq!(e.kind, RegexErrorKind::InvalidGroupRange('z', 'a'));
+			let e: RegexError = Regex::from_pattern(r"[z-a]").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::InvalidBracketRange('z', 'a'));
 			assert_eq!(e.consumed, r"[z-");
 			assert_eq!(e.remaining, r"a]");
 		}

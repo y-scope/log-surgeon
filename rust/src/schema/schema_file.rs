@@ -8,20 +8,20 @@ use crate::regex::RegexError;
 use crate::utils::Escaped;
 
 #[derive(Debug)]
-pub struct SchemaFileError<'input> {
+pub struct SchemaFileError {
 	/// 0-indexed line number.
 	pub line_offset: usize,
-	pub kind: SchemaParsingErrorKind<'input>,
+	pub kind: SchemaParsingErrorKind,
 }
 
 #[derive(Debug)]
-pub enum SchemaParsingErrorKind<'input> {
+pub enum SchemaParsingErrorKind {
 	InvalidName,
 	InvalidPriority,
 	MissingColon,
 	EmptyDelimiters,
 	InvalidDelimiters,
-	InvalidPattern(RegexError<'input>),
+	InvalidPattern(RegexError),
 	DuplicatePlaceholder(String),
 	UndefinedPlaceholder(String),
 }
@@ -64,7 +64,7 @@ impl Schema {
 }
 
 impl SchemaBuilder {
-	pub fn from_schema_definition(contents: &str) -> Result<Self, SchemaFileError<'_>> {
+	pub fn from_schema_definition(contents: &str) -> Result<Self, SchemaFileError> {
 		let mut builder: Self = Self::new();
 
 		let mut maybe_cached_dfa: Option<String> = None;
@@ -134,10 +134,10 @@ impl SchemaBuilder {
 	}
 }
 
-impl<'input> SchemaFileError<'input> {
+impl SchemaFileError {
 	fn with_line<E, F>(line_offset: usize, kind: F) -> impl FnOnce(E) -> Self
 	where
-		F: FnOnce(E) -> SchemaParsingErrorKind<'input>,
+		F: FnOnce(E) -> SchemaParsingErrorKind,
 	{
 		move |e| Self {
 			line_offset,
@@ -146,7 +146,7 @@ impl<'input> SchemaFileError<'input> {
 	}
 }
 
-fn parse_line(input: &str) -> Result<SchemaFileLine<'_>, SchemaParsingErrorKind<'_>> {
+fn parse_line(input: &str) -> Result<SchemaFileLine<'_>, SchemaParsingErrorKind> {
 	use nom::character::complete::char as char_parser;
 	use nom::combinator::opt;
 

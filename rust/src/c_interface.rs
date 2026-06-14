@@ -15,7 +15,6 @@ use crate::log_event::LogEvent;
 use crate::log_event::Match;
 use crate::parser::Parser;
 use crate::regex::Regex;
-use crate::regex::RegexError;
 use crate::schema::Schema;
 use crate::schema::SchemaBuilder;
 use crate::search::Interpretation;
@@ -47,37 +46,39 @@ mod schema {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_schema_builder_add_rule_with_priority<'pattern>(
+	extern "C" fn log_surgeon_schema_builder_add_rule_with_priority(
 		builder: &mut SchemaBuilder,
 		priority: i32,
 		name: CCharArray<'_>,
-		pattern: CCharArray<'pattern>,
-	) -> Option<Box<RegexError<'pattern>>> {
+		pattern: CCharArray<'_>,
+	) -> bool {
 		let name: &str = name.as_utf8().unwrap();
 		let pattern: &str = pattern.as_utf8().unwrap();
 		if let Err(err) = builder.add_rule_with_priority(priority, name, pattern) {
-			return Some(Box::new(err));
+			eprintln!("Invalid pattern '{}': {:?}", pattern.escape_default(), err);
+			return false;
 		}
-		None
+		true
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_schema_add_encoding<'pattern>(
+	extern "C" fn log_surgeon_schema_add_encoding(
 		builder: &mut SchemaBuilder,
 		name: CCharArray<'_>,
-		pattern: CCharArray<'pattern>,
-	) -> Option<Box<RegexError<'pattern>>> {
+		pattern: CCharArray<'_>,
+	) -> bool {
 		let name: &str = name.as_utf8().unwrap();
 		let pattern: &str = pattern.as_utf8().unwrap();
 		let regex: Regex = match Regex::from_pattern(pattern) {
 			Ok(anchored_regex) => anchored_regex.inner,
 			Err(err) => {
-				return Some(Box::new(err));
+				eprintln!("Invalid pattern '{}': {:?}", pattern.escape_default(), err);
+				return false;
 			},
 		};
 		// TODO unwrap
 		builder.add_encoding(name, regex).unwrap();
-		None
+		true
 	}
 
 	#[unsafe(no_mangle)]
@@ -239,11 +240,6 @@ mod clone_impls {
 /// but then `cbindgen` can't process them without `-Zunpretty=expanded`, which is only in nightly...
 mod destructor_impls {
 	use super::*;
-
-	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_regex_error_drop(value: Box<RegexError<'_>>) {
-		std::mem::drop(value);
-	}
 
 	#[unsafe(no_mangle)]
 	extern "C" fn log_surgeon_parser_drop(value: Box<Parser>) {

@@ -132,7 +132,7 @@ impl Tnfa {
 					self.build::<false>(rule, &sub_rule.regex, current, target)
 				}
 			},
-			Regex::Group { negated, items } => {
+			Regex::BracketedRanges { negated, items } => {
 				if *negated {
 					let mut intervals: Vec<Interval<u32>> = Vec::with_capacity(items.len());
 					for &(start, end) in items.iter() {

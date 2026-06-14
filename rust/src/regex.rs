@@ -4,7 +4,7 @@ use std::num::NonZero;
 use std::sync::Arc;
 
 pub use pattern_parsing::RegexError;
-pub use pattern_parsing::RegexLookupPlaceholder;
+pub use pattern_parsing::RegexPlaceholderLookup;
 
 use crate::schema::SubRule;
 use crate::utils::Escaped;
@@ -35,7 +35,7 @@ pub enum Regex {
 	AnyChar,
 	Literal(char),
 	Capture(Box<SubRule>),
-	Group { negated: bool, items: Vec<(char, char)> },
+	BracketedRanges { negated: bool, items: Vec<(char, char)> },
 	KleeneClosure(Box<Regex>),
 	KleenePlus(Box<Regex>),
 	BoundedRepetition { min: u32, max: u32, item: Box<Regex> },
@@ -58,8 +58,8 @@ impl IntoRegex for AnchoredRegex {
 	}
 }
 
-impl<'a> IntoRegex for &'a str {
-	type Error = RegexError<'a>;
+impl IntoRegex for &str {
+	type Error = RegexError;
 
 	fn into(self) -> Result<AnchoredRegex, Self::Error> {
 		Regex::from_pattern(self)
@@ -109,7 +109,7 @@ impl Regex {
 					Escaped::escape(ch).escape_space(false).to_string()
 				}
 			},
-			Self::Group { negated, items } => {
+			Self::BracketedRanges { negated, items } => {
 				fn escape(ch: char, buffer: &mut String) {
 					if SPECIAL_CHARACTERS_IN_BRACKETED_EXPRESSIONS.contains(ch) {
 						buffer.push('\\');
@@ -191,7 +191,7 @@ impl Regex {
 	/// except for a capture, which is "already" parenthesized.
 	fn precedence(&self) -> isize {
 		match self {
-			Self::AnyChar | Self::Literal(_) | Self::Group { .. } => 0,
+			Self::AnyChar | Self::Literal(_) | Self::BracketedRanges { .. } => 0,
 			Self::Capture { .. } | Self::Placeholder { .. } => 0,
 			Self::KleeneClosure(_) | Self::KleenePlus(_) | Self::BoundedRepetition { .. } => -1,
 			Self::Sequence(_) => -2,
@@ -203,7 +203,7 @@ impl Regex {
 impl Regex {
 	pub fn count_captures(&self) -> usize {
 		match self {
-			Self::AnyChar | Self::Literal(..) | Self::Group { .. } => 0,
+			Self::AnyChar | Self::Literal(..) | Self::BracketedRanges { .. } => 0,
 			Self::Capture(sub_rule) => 1 + sub_rule.descendents,
 			Self::KleeneClosure(item)
 			| Self::KleenePlus(item)

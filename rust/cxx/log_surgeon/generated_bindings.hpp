@@ -26,8 +26,6 @@ struct NfaIdx;
 
 struct Parser;
 
-struct RegexError;
-
 /// A `Schema` is conceptually a list of rules and a set of delimiter characters.
 ///
 /// [`Rule`]s may be added with a specific integer priority;
@@ -47,13 +45,6 @@ struct Vec;
 
 /// Index in the schema, offset by/starting at 1.
 using RuleIdx = uint16_t;
-
-/// Rust's `std::ops::Range` is not `Copy` for... reasons.
-template<typename Idx>
-struct Range {
-    Idx start;
-    Idx end;
-};
 
 template<typename T>
 struct UncheckedCArray {
@@ -123,16 +114,12 @@ Box<Parser> log_surgeon_parser_new(Box<Schema> schema);
 
 bool log_surgeon_parser_next(Parser *parser, CCharArray input, size_t *pos, LogEvent *out);
 
-void log_surgeon_regex_error_drop(Box<RegexError> value);
+bool log_surgeon_schema_add_encoding(SchemaBuilder *builder, CCharArray name, CCharArray pattern);
 
-Option<Box<RegexError>> log_surgeon_schema_add_encoding(SchemaBuilder *builder,
-                                                        CCharArray name,
-                                                        CCharArray pattern);
-
-Option<Box<RegexError>> log_surgeon_schema_builder_add_rule_with_priority(SchemaBuilder *builder,
-                                                                          int32_t priority,
-                                                                          CCharArray name,
-                                                                          CCharArray pattern);
+bool log_surgeon_schema_builder_add_rule_with_priority(SchemaBuilder *builder,
+                                                       int32_t priority,
+                                                       CCharArray name,
+                                                       CCharArray pattern);
 
 Box<Schema> log_surgeon_schema_builder_build(Box<SchemaBuilder> builder);
 
