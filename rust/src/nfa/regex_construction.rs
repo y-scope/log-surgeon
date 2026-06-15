@@ -1,4 +1,20 @@
-use super::*;
+use std::borrow::Cow;
+use std::collections::BTreeSet;
+
+use crate::interval_tree::Interval;
+use crate::interval_tree::IntervalTree;
+use crate::interval_tree::PolicyUnique;
+use crate::nfa::NfaIdx;
+use crate::nfa::NfaState;
+use crate::nfa::SpontaneousTransition;
+use crate::nfa::SpontaneousTransitionKind;
+use crate::nfa::Tag;
+use crate::nfa::Tnfa;
+use crate::nfa::Transitions;
+use crate::parsing_spec::RootRule;
+use crate::parsing_spec::RuleIdx;
+use crate::parsing_spec::SubRule;
+use crate::regex::Regex;
 
 impl Tnfa {
 	pub fn for_single_rule(rule: RuleIdx, regex: &Regex) -> Self {

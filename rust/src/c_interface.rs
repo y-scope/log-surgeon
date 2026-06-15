@@ -10,6 +10,8 @@
 //! to a function below, those functions would not be (are not) marked `unsafe`.
 //!
 
+use std::sync::Arc;
+
 use crate::ffi::CCharArray;
 use crate::log_event::LogEvent;
 use crate::log_event::Match;
@@ -20,7 +22,6 @@ use crate::regex::Regex;
 use crate::search::Interpretation;
 use crate::search::SearchString;
 use crate::search::SubQuery;
-use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct SearchResult {

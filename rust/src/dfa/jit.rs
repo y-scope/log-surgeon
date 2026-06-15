@@ -4,13 +4,13 @@ use cranelift::codegen::ir::Block;
 use cranelift::codegen::ir::BlockArg;
 use cranelift::codegen::ir::BlockCall;
 use cranelift::codegen::ir::InstBuilder;
-use cranelift::codegen::ir::MemFlags;
-use cranelift::codegen::ir::Signature;
-use cranelift::codegen::ir::Type;
 // use cranelift::codegen::ir::ValueListPool;
 // use cranelift::codegen::ir::UserFuncName;
 use cranelift::codegen::ir::JumpTable;
 use cranelift::codegen::ir::JumpTableData;
+use cranelift::codegen::ir::MemFlags;
+use cranelift::codegen::ir::Signature;
+use cranelift::codegen::ir::Type;
 use cranelift::codegen::ir::Value;
 use cranelift::codegen::ir::condcodes::IntCC;
 use cranelift::codegen::ir::types;
@@ -31,7 +31,9 @@ use cranelift_module::FuncId;
 use cranelift_module::Module;
 use cranelift_module::default_libcall_names;
 
-use super::*;
+use crate::dfa::DfaState;
+use crate::dfa::Tdfa;
+use crate::parsing_spec::RuleIdx;
 
 pub type JittedDfa = extern "C" fn(*const u8, *const u8, u32, *const *const u8) -> Option<RuleIdx>;
 
@@ -40,6 +42,9 @@ pub struct Jit {
 	context: Context,
 	function_context: FunctionBuilderContext,
 }
+
+unsafe impl Send for Jit {}
+unsafe impl Sync for Jit {}
 
 impl std::fmt::Debug for Jit {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

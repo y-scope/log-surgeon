@@ -3,7 +3,10 @@ use nom::IResult;
 use nom::Parser;
 use nom::error::Error as NomError;
 
-use super::*;
+use crate::parsing_spec::ParsingSpec;
+use crate::parsing_spec::ParsingSpecBuilder;
+use crate::regex::AnchoredRegex;
+use crate::regex::Regex;
 use crate::regex::RegexError;
 use crate::utils::Escaped;
 

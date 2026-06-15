@@ -20,9 +20,6 @@ pub struct Parser {
 	dfa_execution: TdfaExecution,
 }
 
-unsafe impl Send for Parser {}
-unsafe impl Sync for Parser {}
-
 #[derive(Debug, Clone)]
 struct WorkingLogEvent {
 	message: String,

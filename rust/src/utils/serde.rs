@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -6,7 +8,6 @@ use serde::de::Error;
 use serde::de::SeqAccess;
 use serde::de::Visitor;
 use serde::ser::SerializeTuple;
-use std::marker::PhantomData;
 
 #[repr(transparent)]
 #[derive(Debug, Clone)]

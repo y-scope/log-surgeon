@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
+use std::num::NonZero;
 use std::str::Chars;
+use std::sync::Arc;
 
 use nom::Err as NomErr;
 use nom::IResult;
@@ -8,7 +10,11 @@ use nom::error::ErrorKind as NomErrorKind;
 use nom::error::FromExternalError;
 use nom::error::ParseError;
 
-use super::*;
+use crate::parsing_spec::SubRule;
+use crate::regex::AnchoredRegex;
+use crate::regex::Regex;
+use crate::regex::SPECIAL_CHARACTERS;
+use crate::regex::SPECIAL_CHARACTERS_IN_BRACKETED_EXPRESSIONS;
 
 pub trait RegexPlaceholderLookup {
 	fn lookup(&mut self, name: &str) -> Option<Regex>;

@@ -351,9 +351,10 @@ fn python_unicode_or_bytes_as_str<'a>(input: &'a Bound<'_, PyAny>) -> PyResult<O
 
 // Legacy/testing.
 mod log_type {
+	use std::num::NonZero;
+
 	use crate::log_event::Match;
 	use crate::parsing_spec::ParsingSpec;
-	use std::num::NonZero;
 
 	/// A `LogType` is a "template string" for a [`LogEvent`](crate::log_event::LogEvent).
 	/// The string representation of a `LogType` (e.g. given by [`LogType::as_str`])

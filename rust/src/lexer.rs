@@ -1,4 +1,5 @@
 use std::str::Chars;
+use std::sync::Arc;
 
 use crate::dfa::Jit;
 use crate::dfa::JittedDfa;
@@ -7,7 +8,6 @@ use crate::dfa::TdfaExecution;
 use crate::parsing_spec::ParsingSpec;
 use crate::parsing_spec::RootRule;
 use crate::parsing_spec::RuleIdx;
-use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct Lexer {

@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::btree_map::Entry;
 use std::num::NonZero;
+use std::range::Range;
 
 pub use compressed::CompressedDfa;
 pub use jit::Jit;
@@ -25,11 +26,10 @@ use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tag;
 use crate::nfa::Tnfa;
 use crate::nfa::Transitions;
-use crate::regex::Regex;
 use crate::parsing_spec::RootRule;
 use crate::parsing_spec::RuleIdx;
 use crate::parsing_spec::SubRule;
-use std::range::Range;
+use crate::regex::Regex;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tdfa {

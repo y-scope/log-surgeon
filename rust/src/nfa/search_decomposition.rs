@@ -1,8 +1,20 @@
+use std::borrow::Cow;
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::num::NonZero;
 use std::sync::Arc;
 
-use super::*;
+use crate::interval_tree::Interval;
+use crate::interval_tree::IntervalTree;
+use crate::interval_tree::PolicyUnique;
+use crate::nfa::NfaIdx;
+use crate::nfa::NfaState;
+use crate::nfa::SpontaneousTransition;
+use crate::nfa::SpontaneousTransitionKind;
+use crate::nfa::Tag;
+use crate::nfa::Tnfa;
+use crate::nfa::Transitions;
+use crate::parsing_spec::RuleIdx;
 use crate::search::SymbolicChar;
 
 #[derive(Debug, Clone)]
@@ -860,6 +872,7 @@ impl Tnfa {
 #[cfg(test)]
 mod test {
 	use super::*;
+	use crate::regex::Regex;
 
 	#[test]
 	fn nfa_decomp() {

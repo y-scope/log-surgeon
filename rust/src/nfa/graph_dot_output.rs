@@ -1,4 +1,10 @@
-use super::*;
+use crate::nfa::NfaIdx;
+use crate::nfa::NfaState;
+use crate::nfa::SpontaneousTransitionKind;
+use crate::nfa::Tag;
+use crate::nfa::TarjanSccData;
+use crate::nfa::Tnfa;
+use crate::nfa::Transitions;
 
 impl Tnfa {
 	pub fn to_dot_output(&self) -> String {
