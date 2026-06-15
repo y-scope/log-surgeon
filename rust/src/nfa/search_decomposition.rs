@@ -40,7 +40,7 @@ enum PathEdge {
 	/// Search query allows for any character.
 	/// TODO... explain
 	QueryWildcard,
-	/// Schema pattern allows for any character.
+	/// Parsing spec rule pattern allows for any character.
 	PatternWildcard,
 }
 

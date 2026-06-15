@@ -14,8 +14,8 @@ pub mod log_event;
 // pub mod log_type;
 pub mod nfa;
 pub mod parser;
+pub mod parsing_spec;
 pub mod regex;
-pub mod schema;
 pub mod search;
 
 pub mod c_interface;

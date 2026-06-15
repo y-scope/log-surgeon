@@ -26,9 +26,9 @@ use crate::nfa::Tag;
 use crate::nfa::Tnfa;
 use crate::nfa::Transitions;
 use crate::regex::Regex;
-use crate::schema::RootRule;
-use crate::schema::RuleIdx;
-use crate::schema::SubRule;
+use crate::parsing_spec::RootRule;
+use crate::parsing_spec::RuleIdx;
+use crate::parsing_spec::SubRule;
 use std::range::Range;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

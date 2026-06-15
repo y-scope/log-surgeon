@@ -8,14 +8,14 @@ use crate::regex::RegexError;
 use crate::utils::Escaped;
 
 #[derive(Debug)]
-pub struct SchemaFileError {
+pub struct ParsingSpecFileError {
 	/// 0-indexed line number.
 	pub line_offset: usize,
-	pub kind: SchemaParsingErrorKind,
+	pub kind: ParsingSpecFileErrorKind,
 }
 
 #[derive(Debug)]
-pub enum SchemaParsingErrorKind {
+pub enum ParsingSpecFileErrorKind {
 	InvalidName,
 	InvalidPriority,
 	MissingColon,
@@ -29,14 +29,14 @@ pub enum SchemaParsingErrorKind {
 /// Currently, this is (almost) trivial,
 /// but this enum makes the intent more clear and allows for future additions.
 #[derive(Debug)]
-enum SchemaFileLine<'a> {
+enum SpecFileLine<'a> {
 	Delimiters(String),
 	Rule(i32, &'a str, &'a str),
 	Placeholder(&'a str, &'a str),
 }
 
-impl Schema {
-	pub fn to_schema_definition(&self) -> String {
+impl ParsingSpec {
+	pub fn to_parsing_spec_definition(&self) -> String {
 		std::iter::once(format!("delimiters:{}", escape_delimiters(&self.delimiters)))
 			// Empty line, pretty.
 			.chain(std::iter::once(String::new()))
@@ -63,8 +63,8 @@ impl Schema {
 	}
 }
 
-impl SchemaBuilder {
-	pub fn from_schema_definition(contents: &str) -> Result<Self, SchemaFileError> {
+impl ParsingSpecBuilder {
+	pub fn from_parsing_spec_definition(contents: &str) -> Result<Self, ParsingSpecFileError> {
 		let mut builder: Self = Self::new();
 
 		let mut maybe_cached_dfa: Option<String> = None;
@@ -90,36 +90,36 @@ impl SchemaBuilder {
 				continue;
 			}
 
-			let line: SchemaFileLine = parse_line(line).map_err(|kind| SchemaFileError { line_offset, kind })?;
+			let line: SpecFileLine = parse_line(line).map_err(|kind| ParsingSpecFileError { line_offset, kind })?;
 
 			match line {
-				SchemaFileLine::Delimiters(delimiters) => {
+				SpecFileLine::Delimiters(delimiters) => {
 					if delimiters.is_empty() {
-						return Err(SchemaFileError {
+						return Err(ParsingSpecFileError {
 							line_offset,
-							kind: SchemaParsingErrorKind::EmptyDelimiters,
+							kind: ParsingSpecFileErrorKind::EmptyDelimiters,
 						});
 					}
 					builder.set_delimiters(delimiters);
 				},
-				SchemaFileLine::Placeholder(name, pattern) => {
+				SpecFileLine::Placeholder(name, pattern) => {
 					let regex: Regex = Regex::from_pattern_with_placeholders(pattern, &mut builder)
-						.map_err(SchemaFileError::with_line(
+						.map_err(ParsingSpecFileError::with_line(
 							line_offset,
-							SchemaParsingErrorKind::InvalidPattern,
+							ParsingSpecFileErrorKind::InvalidPattern,
 						))?
 						.inner;
 
 					builder
 						.add_placeholder(name.to_owned(), regex)
-						.map_err(|_| SchemaFileError {
+						.map_err(|_| ParsingSpecFileError {
 							line_offset,
-							kind: SchemaParsingErrorKind::DuplicatePlaceholder(name.to_owned()),
+							kind: ParsingSpecFileErrorKind::DuplicatePlaceholder(name.to_owned()),
 						})?;
 				},
-				SchemaFileLine::Rule(priority, name, pattern) => {
+				SpecFileLine::Rule(priority, name, pattern) => {
 					let regex: AnchoredRegex = Regex::from_pattern_with_placeholders(pattern, &mut builder).map_err(
-						SchemaFileError::with_line(line_offset, SchemaParsingErrorKind::InvalidPattern),
+						ParsingSpecFileError::with_line(line_offset, ParsingSpecFileErrorKind::InvalidPattern),
 					)?;
 					let Ok(_) = builder.add_rule_with_priority(priority, name, regex);
 				},
@@ -134,10 +134,10 @@ impl SchemaBuilder {
 	}
 }
 
-impl SchemaFileError {
+impl ParsingSpecFileError {
 	fn with_line<E, F>(line_offset: usize, kind: F) -> impl FnOnce(E) -> Self
 	where
-		F: FnOnce(E) -> SchemaParsingErrorKind,
+		F: FnOnce(E) -> ParsingSpecFileErrorKind,
 	{
 		move |e| Self {
 			line_offset,
@@ -146,7 +146,7 @@ impl SchemaFileError {
 	}
 }
 
-fn parse_line(input: &str) -> Result<SchemaFileLine<'_>, SchemaParsingErrorKind> {
+fn parse_line(input: &str) -> Result<SpecFileLine<'_>, ParsingSpecFileErrorKind> {
 	use nom::character::complete::char as char_parser;
 	use nom::combinator::opt;
 
@@ -156,14 +156,14 @@ fn parse_line(input: &str) -> Result<SchemaFileLine<'_>, SchemaParsingErrorKind>
 		(input, false)
 	};
 
-	let (input, name): (&str, &str) = parse_name(input).map_err(|_| SchemaParsingErrorKind::InvalidName)?;
+	let (input, name): (&str, &str) = parse_name(input).map_err(|_| ParsingSpecFileErrorKind::InvalidName)?;
 
 	let input: &str = input.trim_start();
 
 	let (input, priority): (&str, i32) = if name != "delimiters" {
 		let (input, maybe_priority): (&str, Option<i32>) = opt(parse_priority)
 			.parse(input)
-			.map_err(|_| SchemaParsingErrorKind::InvalidPriority)?;
+			.map_err(|_| ParsingSpecFileErrorKind::InvalidPriority)?;
 		(input.trim_start(), maybe_priority.unwrap_or(0))
 	} else {
 		(input, 0)
@@ -171,18 +171,18 @@ fn parse_line(input: &str) -> Result<SchemaFileLine<'_>, SchemaParsingErrorKind>
 
 	let (input, _): (&str, char) = char_parser::<&str, NomError<&str>>(':')
 		.parse(input)
-		.map_err(|_| SchemaParsingErrorKind::MissingColon)?;
+		.map_err(|_| ParsingSpecFileErrorKind::MissingColon)?;
 
 	let input: &str = input.trim_start();
 
 	if name == "delimiters" {
 		// TODO error if `name == "delimiters" && is_placeholder`
-		let delimiters: String = parse_delimiters(input).map_err(|_| SchemaParsingErrorKind::InvalidDelimiters)?;
-		Ok(SchemaFileLine::Delimiters(delimiters))
+		let delimiters: String = parse_delimiters(input).map_err(|_| ParsingSpecFileErrorKind::InvalidDelimiters)?;
+		Ok(SpecFileLine::Delimiters(delimiters))
 	} else if is_placeholder {
-		Ok(SchemaFileLine::Placeholder(name, input))
+		Ok(SpecFileLine::Placeholder(name, input))
 	} else {
-		Ok(SchemaFileLine::Rule(priority, name, input))
+		Ok(SpecFileLine::Rule(priority, name, input))
 	}
 }
 
@@ -256,7 +256,7 @@ mod test {
 
 	#[test]
 	fn simple_roundtrip() {
-		let mut builder: SchemaBuilder = SchemaBuilder::new();
+		let mut builder: ParsingSpecBuilder = ParsingSpecBuilder::new();
 
 		builder.set_delimiters(" .\t");
 
@@ -267,70 +267,35 @@ mod test {
 			.unwrap();
 		builder.add_rule_with_priority(-10, "foobar", r"^\^\$$").unwrap();
 
-		let schema: Schema = builder.build();
+		let spec: ParsingSpec = builder.build();
 
-		let serialized: String = schema.to_schema_definition();
+		let serialized: String = spec.to_parsing_spec_definition();
 
-		let schema2: Schema = SchemaBuilder::from_schema_definition(&serialized).unwrap().build();
+		let spec2: ParsingSpec = ParsingSpecBuilder::from_parsing_spec_definition(&serialized)
+			.unwrap()
+			.build();
 
-		assert_eq!(schema, schema2);
+		assert_eq!(spec, spec2);
 	}
 
 	#[test]
 	fn pattern_begins_or_ends_with_whitespace() {
-		let mut builder: SchemaBuilder = SchemaBuilder::new();
+		let mut builder: ParsingSpecBuilder = ParsingSpecBuilder::new();
 
 		builder.add_rule("foo", r"hello ").unwrap();
 		builder.add_rule("foo", r" world").unwrap();
 
-		let schema: Schema = builder.build();
+		let spec: ParsingSpec = builder.build();
 
-		let serialized: String = schema.to_schema_definition();
+		let serialized: String = spec.to_parsing_spec_definition();
 
-		let schema2: Schema = SchemaBuilder::from_schema_definition(&serialized).unwrap().build();
-		let serialized2: String = schema2.to_schema_definition();
+		let spec2: ParsingSpec = ParsingSpecBuilder::from_parsing_spec_definition(&serialized)
+			.unwrap()
+			.build();
+		let serialized2: String = spec2.to_parsing_spec_definition();
 
 		assert_eq!(serialized, serialized2);
 	}
 
 	// TODO good way to test symbolically represented placeholders? nolonger flattened
-	/*
-	#[test]
-	fn test_placeholders() {
-		let schema1: Schema = schema!(
-			r#"
-			!p1: [a-z]
-			!p2: (?<p2>[0-9])
-
-			foo: (?<p1>)(?<p2>)
-			"#
-		);
-		let schema2: Schema = schema!(
-			r#"
-			foo: [a-z](?<p2>[0-9])
-			"#
-		);
-
-		assert_eq!(schema1, schema2);
-	}
-
-	#[test]
-	fn test_nested_placeholders() {
-		let schema1: Schema = schema!(
-			r#"
-			!p1: [a-z]
-			!p2: hello(?<p1>)
-
-			foo: (?<p1>)(?<p2>)world
-			"#
-		);
-		let schema2: Schema = schema!(
-			r#"
-			foo: [a-z]hello[a-z]world
-			"#
-		);
-
-		assert_eq!(schema1.to_schema_definition(), schema2.to_schema_definition());
-	}
-	*/
 }

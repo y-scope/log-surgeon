@@ -2,8 +2,7 @@ use std::ffi::c_char;
 use std::num::NonZero;
 
 use crate::ffi::UncheckedCArray;
-use crate::schema::RuleIdx;
-use std::range::Range;
+use crate::parsing_spec::RuleIdx;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LogEvent<'parser> {
@@ -19,7 +18,7 @@ pub struct Match {
 	pub rule_idx: RuleIdx,
 	/// SubRule ID, local to the containing rule/variable/regex pattern;
 	/// `None`/`0` for a root rule,
-	/// See [`SubRule`](crate::schema::SubRule).
+	/// See [`SubRule`](crate::parsing_spec::SubRule).
 	pub sub_rule_id: Option<NonZero<u16>>,
 	/// Parent SubRule ID, if any;
 	/// `None` for both a root rule and a top-level capture in a regex pattern.
@@ -39,6 +38,14 @@ pub struct Match {
 	/// DANGEROUS fields for FFI.
 	/// But it's not dangerous if you don't look at it.
 	pub ffi_pointers: MatchFfiPointers,
+}
+
+/// Need this to be `#[repr(C)]`.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[repr(C)]
+pub struct Range<Idx> {
+	pub start: Idx,
+	pub end: Idx,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]

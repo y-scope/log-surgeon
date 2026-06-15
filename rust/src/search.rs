@@ -5,11 +5,11 @@ use std::sync::Arc;
 use crate::nfa::Path;
 use crate::nfa::PathComponent;
 use crate::nfa::Tnfa;
+use crate::parsing_spec::ParsingSpec;
+use crate::parsing_spec::RootRule;
+use crate::parsing_spec::RuleIdx;
+use crate::parsing_spec::RuleInfo;
 use crate::regex::Regex;
-use crate::schema::RootRule;
-use crate::schema::RuleIdx;
-use crate::schema::RuleInfo;
-use crate::schema::Schema;
 
 #[derive(Debug)]
 pub struct SearchString(Vec<SymbolicChar>);
@@ -330,19 +330,19 @@ impl SearchString {
 		&self.0
 	}
 
-	pub fn get_interpretations(&self, schema: &Schema, name: &str) -> Vec<Interpretation> {
-		let Some(rows): Option<Vec<(&RuleInfo, &Regex)>> = schema.rules_for_name(name) else {
+	pub fn get_interpretations(&self, spec: &ParsingSpec, name: &str) -> Vec<Interpretation> {
+		let Some(rows): Option<Vec<(&RuleInfo, &Regex)>> = spec.rules_for_name(name) else {
 			return Vec::new();
 		};
 
 		if !name.is_empty() {
-			return self.view(0, self.0.len()).interpretations_for_name(schema, &rows);
+			return self.view(0, self.0.len()).interpretations_for_name(spec, &rows);
 		}
 
-		self.full_log_interpretations(schema)
+		self.full_log_interpretations(spec)
 	}
 
-	fn full_log_interpretations(&self, schema: &Schema) -> Vec<Interpretation> {
+	fn full_log_interpretations(&self, spec: &ParsingSpec) -> Vec<Interpretation> {
 		if self.0.is_empty() {
 			return Vec::new();
 		}
@@ -367,7 +367,7 @@ impl SearchString {
 				}
 
 				let single_token_interpretations: Vec<Interpretation> =
-					sub_view.single_token_interpretations(schema, group);
+					sub_view.single_token_interpretations(spec, group);
 
 				if single_token_interpretations.is_empty() {
 					continue;
@@ -422,7 +422,7 @@ impl SearchString {
 }
 
 impl<'a> SearchStringView<'a> {
-	fn single_token_interpretations(&self, schema: &Schema, group: usize) -> Vec<Interpretation> {
+	fn single_token_interpretations(&self, spec: &ParsingSpec, group: usize) -> Vec<Interpretation> {
 		assert!(!self.is_empty());
 
 		let extended: Self = self.extend_to_greedy_wildcards();
@@ -439,15 +439,15 @@ impl<'a> SearchStringView<'a> {
 		let has_wildcard: bool = extended.as_str().iter().any(SymbolicChar::is_wildcard);
 
 		let potential_interpretations: Vec<Interpretation> = extended.interpretations_for_nfa(
-			schema,
-			&schema.main_nfa,
+			spec,
+			&spec.main_nfa,
 			group,
 			None,
-			Some((extended.before(schema), extended.after(schema))),
+			Some((extended.before(spec), extended.after(spec))),
 		);
 
 		if has_wildcard || potential_interpretations.is_empty() {
-			if extended.ends_with_delimiter(schema) {
+			if extended.ends_with_delimiter(spec) {
 				interpretations.push(Interpretation {
 					sub_queries: vec![SubQuery::new_static_text(extended.as_str().to_owned())],
 				});
@@ -469,23 +469,23 @@ impl<'a> SearchStringView<'a> {
 		interpretations
 	}
 
-	fn before(&self, schema: &Schema) -> char {
+	fn before(&self, spec: &ParsingSpec) -> char {
 		if self.start == 0 {
-			return schema.anchor_ch;
+			return spec.anchor_ch;
 		}
 		match self.full_string.0[self.start - 1] {
 			SymbolicChar::Literal(ch) => ch,
-			SymbolicChar::GlobStar | SymbolicChar::GlobOne => schema.anchor_ch,
+			SymbolicChar::GlobStar | SymbolicChar::GlobOne => spec.anchor_ch,
 		}
 	}
 
-	fn after(&self, schema: &Schema) -> char {
+	fn after(&self, spec: &ParsingSpec) -> char {
 		if self.end == self.full_string.0.len() {
-			return schema.anchor_ch;
+			return spec.anchor_ch;
 		}
 		match self.full_string.0[self.end] {
 			SymbolicChar::Literal(ch) => ch,
-			SymbolicChar::GlobStar | SymbolicChar::GlobOne => schema.anchor_ch,
+			SymbolicChar::GlobStar | SymbolicChar::GlobOne => spec.anchor_ch,
 		}
 	}
 
@@ -538,14 +538,14 @@ impl<'a> SearchStringView<'a> {
 		)
 	}
 
-	fn interpretations_for_name(&self, schema: &Schema, rows: &[(&RuleInfo, &Regex)]) -> Vec<Interpretation> {
+	fn interpretations_for_name(&self, spec: &ParsingSpec, rows: &[(&RuleInfo, &Regex)]) -> Vec<Interpretation> {
 		let mut interpretations: Vec<Interpretation> = Vec::new();
 
 		for &(rule_info, regex) in rows.iter() {
 			let rule_nfa: Tnfa = Tnfa::for_single_rule(rule_info.root_idx, regex);
 
 			let potential_interpretations: Vec<Interpretation> =
-				self.interpretations_for_nfa(schema, &rule_nfa, 0, Some(rule_info), None);
+				self.interpretations_for_nfa(spec, &rule_nfa, 0, Some(rule_info), None);
 
 			interpretations.extend(potential_interpretations.into_iter());
 		}
@@ -558,7 +558,7 @@ impl<'a> SearchStringView<'a> {
 
 	fn interpretations_for_nfa(
 		&self,
-		schema: &Schema,
+		spec: &ParsingSpec,
 		nfa: &Tnfa,
 		group: usize,
 		maybe_rule_info: Option<&RuleInfo>,
@@ -586,7 +586,7 @@ impl<'a> SearchStringView<'a> {
 			if let PathComponent::Literal(contents) = path.components.first().unwrap()
 				&& (path.components.len() == 1)
 			{
-				let rule: &RootRule = &schema[path.rule_idx];
+				let rule: &RootRule = &spec[path.rule_idx];
 				let rule_info: &RuleInfo = if let Some(rule_info) = maybe_rule_info {
 					assert_eq!(rule_info.root_idx, rule.idx);
 					rule_info
@@ -628,7 +628,7 @@ impl<'a> SearchStringView<'a> {
 						maybe_sub_rule_id,
 						contents,
 					} => {
-						let rule: &RootRule = &schema[path.rule_idx];
+						let rule: &RootRule = &spec[path.rule_idx];
 						let rule_info: &RuleInfo = &rule[*maybe_sub_rule_id];
 						sub_queries.push(SubQuery::new(group, rule_info, contents.clone()));
 					},
@@ -645,11 +645,11 @@ impl<'a> SearchStringView<'a> {
 		interpretations
 	}
 
-	fn ends_with_delimiter(&self, schema: &Schema) -> bool {
+	fn ends_with_delimiter(&self, spec: &ParsingSpec) -> bool {
 		let SymbolicChar::Literal(ch): SymbolicChar = *self.as_str().last().unwrap() else {
 			return true;
 		};
-		schema.delimiters.contains(ch)
+		spec.delimiters.contains(ch)
 	}
 }
 
@@ -868,19 +868,19 @@ impl InterpretationPrefix {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::schema::SchemaBuilder;
+	use crate::parsing_spec::ParsingSpecBuilder;
 
 	#[test]
 	fn search_email() {
-		let mut builder: SchemaBuilder = SchemaBuilder::new();
+		let mut builder: ParsingSpecBuilder = ParsingSpecBuilder::new();
 		builder
 			.add_rule("email", r"(?<user>\w+)@((?<parts>\w+)\.)+(?<tld>\w+)")
 			.unwrap();
 
-		let schema: Schema = builder.build();
+		let spec: ParsingSpec = builder.build();
 
 		{
-			let interpretations: Vec<Interpretation> = do_search(&schema, "*a*@*mail*example*", "email");
+			let interpretations: Vec<Interpretation> = do_search(&spec, "*a*@*mail*example*", "email");
 			println!("===");
 
 			for i in interpretations.iter() {
@@ -891,15 +891,15 @@ mod test {
 
 	#[test]
 	fn search_block_id() {
-		let mut builder: SchemaBuilder = SchemaBuilder::new();
+		let mut builder: ParsingSpecBuilder = ParsingSpecBuilder::new();
 		builder
 			.add_rule("block_id", r"blk_(?<blockNum>[0-9]+)_(?<genStamp>[0-9]+)")
 			.unwrap();
 
-		let schema: Schema = builder.build();
+		let spec: ParsingSpec = builder.build();
 
 		{
-			let interpretations: Vec<Interpretation> = do_search(&schema, "*blk*_566*", "block_id");
+			let interpretations: Vec<Interpretation> = do_search(&spec, "*blk*_566*", "block_id");
 			println!("===");
 
 			for i in interpretations.iter() {
@@ -928,7 +928,7 @@ mod test {
 		}
 
 		{
-			let interpretations: Vec<Interpretation> = do_search(&schema, "*blk*_566*", "");
+			let interpretations: Vec<Interpretation> = do_search(&spec, "*blk*_566*", "");
 			println!("===");
 
 			for i in interpretations.iter() {
@@ -939,14 +939,14 @@ mod test {
 
 	#[test]
 	fn search_nested_name_without_leaf_capture() {
-		let schema: Schema = schema!(
+		let spec: ParsingSpec = spec! {
 			r"
 			foo: _(?<bar>[a-z]+|(?<baz>[0-9]+))_
 			"
-		);
+		};
 
 		{
-			let interpretations: Vec<Interpretation> = do_search(&schema, "_a*b_", "foo");
+			let interpretations: Vec<Interpretation> = do_search(&spec, "_a*b_", "foo");
 			println!("===");
 
 			for i in interpretations.iter() {
@@ -959,7 +959,7 @@ mod test {
 		}
 
 		{
-			let interpretations: Vec<Interpretation> = do_search(&schema, "a*b", "foo.bar");
+			let interpretations: Vec<Interpretation> = do_search(&spec, "a*b", "foo.bar");
 			println!("===");
 
 			for i in interpretations.iter() {
@@ -974,7 +974,7 @@ mod test {
 		}
 
 		{
-			let interpretations: Vec<Interpretation> = do_search(&schema, "0*1", "foo.bar.baz");
+			let interpretations: Vec<Interpretation> = do_search(&spec, "0*1", "foo.bar.baz");
 			println!("===");
 
 			for i in interpretations.iter() {
@@ -1060,14 +1060,14 @@ mod test {
 
 	#[test]
 	fn full_log_search() {
-		let mut builder: SchemaBuilder = SchemaBuilder::new();
+		let mut builder: ParsingSpecBuilder = ParsingSpecBuilder::new();
 		builder
 			.add_rule("email", r"(?<user>\w+)@((?<parts>\w+)\.)+(?<tld>\w+)")
 			.unwrap();
 
-		let schema: Schema = builder.build();
+		let spec: ParsingSpec = builder.build();
 
-		let interpretations: Vec<Interpretation> = do_search(&schema, "a@com*", "");
+		let interpretations: Vec<Interpretation> = do_search(&spec, "a@com*", "");
 
 		println!("=== Interpretations");
 		for interpretation in interpretations.iter() {
@@ -1077,15 +1077,15 @@ mod test {
 
 	#[test]
 	fn search_single_token_interpretation() {
-		let mut builder: SchemaBuilder = SchemaBuilder::new();
+		let mut builder: ParsingSpecBuilder = ParsingSpecBuilder::new();
 		builder
 			.add_rule("email", r"(?<user>\w+)@((?<parts>\w+)\.)+(?<tld>\w+)")
 			.unwrap();
 
-		let schema: Schema = builder.build();
+		let spec: ParsingSpec = builder.build();
 
 		{
-			let interpretations: Vec<Interpretation> = search_single_token(&schema, "a@com*");
+			let interpretations: Vec<Interpretation> = search_single_token(&spec, "a@com*");
 
 			println!("=== Interpretations");
 			for i in interpretations.iter() {
@@ -1095,19 +1095,18 @@ mod test {
 		}
 	}
 
-	fn do_search(schema: &Schema, query: &str, name: &str) -> Vec<Interpretation> {
+	fn do_search(spec: &ParsingSpec, query: &str, name: &str) -> Vec<Interpretation> {
 		let query: SearchString = SearchString::parse(query).unwrap();
 
-		let interpretations: Vec<Interpretation> = query.get_interpretations(&schema, name);
+		let interpretations: Vec<Interpretation> = query.get_interpretations(&spec, name);
 
 		interpretations
 	}
 
-	fn search_single_token(schema: &Schema, query: &str) -> Vec<Interpretation> {
+	fn search_single_token(spec: &ParsingSpec, query: &str) -> Vec<Interpretation> {
 		let query: SearchString = SearchString::parse(query).unwrap();
 
-		let interpretations: Vec<Interpretation> =
-			query.view(0, query.0.len()).single_token_interpretations(&schema, 0);
+		let interpretations: Vec<Interpretation> = query.view(0, query.0.len()).single_token_interpretations(&spec, 0);
 
 		interpretations
 	}

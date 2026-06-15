@@ -26,15 +26,15 @@ struct NfaIdx;
 
 struct Parser;
 
-/// A `Schema` is conceptually a list of rules and a set of delimiter characters.
+/// A `ParsingSpec` is conceptually a list of rules and a set of delimiter characters.
 ///
 /// [`Rule`]s may be added with a specific integer priority;
 /// larger integer value means higher priority.
 /// Within a priority level, rules are prioritized by insertion order.
 ///
-struct Schema;
+struct ParsingSpec;
 
-struct SchemaBuilder;
+struct ParsingSpecBuilder;
 
 struct SearchResult;
 
@@ -43,8 +43,15 @@ struct InternalSubQuery;
 template<typename T = void>
 struct Vec;
 
-/// Index in the schema, offset by/starting at 1.
+/// Index in the parsing spec, offset by/starting at 1.
 using RuleIdx = uint16_t;
+
+/// Need this to be `#[repr(C)]`.
+template<typename Idx>
+struct Range {
+    Idx start;
+    Idx end;
+};
 
 template<typename T>
 struct UncheckedCArray {
@@ -72,7 +79,7 @@ struct Match {
     RuleIdx rule_idx;
     /// SubRule ID, local to the containing rule/variable/regex pattern;
     /// `None`/`0` for a root rule,
-    /// See [`SubRule`](crate::schema::SubRule).
+    /// See [`SubRule`](crate::parsing_spec::SubRule).
     uint16_t sub_rule_id;
     /// Parent SubRule ID, if any;
     /// `None` for both a root rule and a top-level capture in a regex pattern.
@@ -110,28 +117,33 @@ Box<Parser> log_surgeon_parser_clone(const Parser *value);
 
 void log_surgeon_parser_drop(Box<Parser> value);
 
-Box<Parser> log_surgeon_parser_new(Box<Schema> schema);
+Box<Parser> log_surgeon_parser_new(Box<ParsingSpec> parsing_spec);
 
 bool log_surgeon_parser_next(Parser *parser, CCharArray input, size_t *pos, LogEvent *out);
 
-bool log_surgeon_schema_add_encoding(SchemaBuilder *builder, CCharArray name, CCharArray pattern);
+bool log_surgeon_parsing_spec_add_encoding(ParsingSpecBuilder *builder,
+                                           CCharArray name,
+                                           CCharArray pattern);
 
-bool log_surgeon_schema_builder_add_rule_with_priority(SchemaBuilder *builder,
-                                                       int32_t priority,
-                                                       CCharArray name,
-                                                       CCharArray pattern);
+bool log_surgeon_parsing_spec_builder_add_rule_with_priority(ParsingSpecBuilder *builder,
+                                                             int32_t priority,
+                                                             CCharArray name,
+                                                             CCharArray pattern);
 
-Box<Schema> log_surgeon_schema_builder_build(Box<SchemaBuilder> builder);
+Box<ParsingSpec> log_surgeon_parsing_spec_builder_build(Box<ParsingSpecBuilder> builder);
 
-Option<Box<SchemaBuilder>> log_surgeon_schema_builder_from_definition(CCharArray definition);
+Option<Box<ParsingSpecBuilder>> log_surgeon_parsing_spec_builder_from_definition(CCharArray definition);
 
-Box<SchemaBuilder> log_surgeon_schema_builder_new();
+Box<ParsingSpecBuilder> log_surgeon_parsing_spec_builder_new();
 
-void log_surgeon_schema_builder_set_delimiters(SchemaBuilder *builder, CCharArray delimiters);
+void log_surgeon_parsing_spec_builder_set_delimiters(ParsingSpecBuilder *builder,
+                                                     CCharArray delimiters);
 
-Option<Box<Schema>> log_surgeon_schema_from_definition(CCharArray definition);
+Option<Box<ParsingSpec>> log_surgeon_parsing_spec_from_definition(CCharArray definition);
 
-CCharArray log_surgeon_schema_get_encoding(const Parser *parser, size_t encoding_idx, size_t i);
+CCharArray log_surgeon_parsing_spec_get_encoding(const Parser *parser,
+                                                 size_t encoding_idx,
+                                                 size_t i);
 
 const Interpretation *log_surgeon_search_get_interpretation(const Vec<Interpretation> *interpretations,
                                                             size_t i);

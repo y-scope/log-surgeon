@@ -656,12 +656,13 @@ impl Compilation<'_> {
 #[cfg(test)]
 mod test {
 	use super::*;
+	use crate::parsing_spec::ParsingSpec;
 
 	#[test]
 	fn jit_test() {
 		let mut jit: Jit = Jit::new();
 
-		let schema = schema! {
+		let spec: ParsingSpec = spec! {
 			r#"
 			delimiters: \ .
 			int: [0-9]+$
@@ -669,9 +670,9 @@ mod test {
 			"#
 		};
 
-		assert_eq!(schema.delimiters, " .\n");
+		assert_eq!(spec.delimiters, " .\n");
 
-		let f = jit.jit(&schema.main_dfa).unwrap();
+		let f = jit.jit(&spec.main_dfa).unwrap();
 
 		let input: &[u8] = "abc 123 def 456".as_bytes();
 

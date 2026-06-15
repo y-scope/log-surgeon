@@ -23,22 +23,22 @@ struct SubQuery;
 class ParserHandle {
 public:
     /**
-     * Creates a parser (handle) for the given schema.
+     * Creates a parser (handle) for the given parsing spec.
      *
-     * @param schema An owned`Schema*` (takes ownership).
+     * @param spec An owned`ParsingSpec*` (takes ownership).
      */
-    ParserHandle(Schema* schema) : ParserHandle{} {
-        if (nullptr == schema) {
-            throw std::invalid_argument("schema must not be null");
+    ParserHandle(ParsingSpec* spec) : ParserHandle{} {
+        if (nullptr == spec) {
+            throw std::invalid_argument("spec must not be null");
         }
-        m_parser = log_surgeon_parser_new(schema);
+        m_parser = log_surgeon_parser_new(spec);
         m_event = log_surgeon_log_event_new();
 
         m_encodings.emplace_back();
         while (true) {
             std::vector<std::string_view> encodings;
             while (true) {
-                std::string_view const name{log_surgeon_schema_get_encoding(
+                std::string_view const name{log_surgeon_parsing_spec_get_encoding(
                         m_parser,
                         m_encodings.size(),
                         encodings.size()

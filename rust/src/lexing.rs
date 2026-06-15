@@ -4,14 +4,14 @@ use crate::dfa::CompressedDfa;
 use crate::dfa::JittedDfa;
 use crate::dfa::MatchedRule;
 use crate::dfa::TdfaExecution;
-use crate::schema::RootRule;
-use crate::schema::RuleIdx;
-use crate::schema::Schema;
+use crate::parsing_spec::ParsingSpec;
+use crate::parsing_spec::RootRule;
+use crate::parsing_spec::RuleIdx;
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum Token<'schema, 'input> {
+pub enum Token<'spec, 'input> {
 	Variable {
-		rule: &'schema RootRule,
+		rule: &'spec RootRule,
 		lexeme: &'input str,
 		has_captures: bool,
 	},
@@ -20,16 +20,16 @@ pub enum Token<'schema, 'input> {
 	EndOfInput,
 }
 
-impl Schema {
-	pub fn next_token<'schema, 'input>(
-		&'schema self,
+impl ParsingSpec {
+	pub fn next_token<'spec, 'input>(
+		&'spec self,
 		input: &'input str,
 		pos: &mut usize,
 		last_was_delimited: u32,
 		data: &mut TdfaExecution,
 		jitted_dfa: JittedDfa,
 		compressed: &CompressedDfa,
-	) -> Token<'schema, 'input> {
+	) -> Token<'spec, 'input> {
 		let start: usize = *pos;
 
 		/*

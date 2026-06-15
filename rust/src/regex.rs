@@ -6,7 +6,7 @@ use std::sync::Arc;
 pub use pattern_parsing::RegexError;
 pub use pattern_parsing::RegexPlaceholderLookup;
 
-use crate::schema::SubRule;
+use crate::parsing_spec::SubRule;
 use crate::utils::Escaped;
 
 // TODO: relax need to escape `<>`?

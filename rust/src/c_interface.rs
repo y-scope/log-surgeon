@@ -14,9 +14,9 @@ use crate::ffi::CCharArray;
 use crate::log_event::LogEvent;
 use crate::log_event::Match;
 use crate::parser::Parser;
+use crate::parsing_spec::ParsingSpec;
+use crate::parsing_spec::ParsingSpecBuilder;
 use crate::regex::Regex;
-use crate::schema::Schema;
-use crate::schema::SchemaBuilder;
 use crate::search::Interpretation;
 use crate::search::SearchString;
 use crate::search::SubQuery;
@@ -31,23 +31,26 @@ unsafe extern "C" fn log_surgeon_enable_tracing() {
 	crate::enable_tracing();
 }
 
-mod schema {
+mod parsing_spec {
 	use super::*;
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_schema_builder_new() -> Box<SchemaBuilder> {
-		Box::new(SchemaBuilder::new())
+	extern "C" fn log_surgeon_parsing_spec_builder_new() -> Box<ParsingSpecBuilder> {
+		Box::new(ParsingSpecBuilder::new())
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_schema_builder_set_delimiters(builder: &mut SchemaBuilder, delimiters: CCharArray<'_>) {
+	extern "C" fn log_surgeon_parsing_spec_builder_set_delimiters(
+		builder: &mut ParsingSpecBuilder,
+		delimiters: CCharArray<'_>,
+	) {
 		let delimiters: &str = delimiters.as_utf8().unwrap();
 		builder.set_delimiters(delimiters);
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_schema_builder_add_rule_with_priority(
-		builder: &mut SchemaBuilder,
+	extern "C" fn log_surgeon_parsing_spec_builder_add_rule_with_priority(
+		builder: &mut ParsingSpecBuilder,
 		priority: i32,
 		name: CCharArray<'_>,
 		pattern: CCharArray<'_>,
@@ -62,8 +65,8 @@ mod schema {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_schema_add_encoding(
-		builder: &mut SchemaBuilder,
+	extern "C" fn log_surgeon_parsing_spec_add_encoding(
+		builder: &mut ParsingSpecBuilder,
 		name: CCharArray<'_>,
 		pattern: CCharArray<'_>,
 	) -> bool {
@@ -82,14 +85,14 @@ mod schema {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_schema_builder_build(builder: Box<SchemaBuilder>) -> Box<Schema> {
+	extern "C" fn log_surgeon_parsing_spec_builder_build(builder: Box<ParsingSpecBuilder>) -> Box<ParsingSpec> {
 		Box::new(builder.build())
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_schema_from_definition(definition: CCharArray<'_>) -> Option<Box<Schema>> {
+	extern "C" fn log_surgeon_parsing_spec_from_definition(definition: CCharArray<'_>) -> Option<Box<ParsingSpec>> {
 		let definition: &str = definition.as_utf8().unwrap();
-		if let Ok(builder) = SchemaBuilder::from_schema_definition(definition) {
+		if let Ok(builder) = ParsingSpecBuilder::from_parsing_spec_definition(definition) {
 			Some(Box::new(builder.build()))
 		} else {
 			None
@@ -97,9 +100,11 @@ mod schema {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_schema_builder_from_definition(definition: CCharArray<'_>) -> Option<Box<SchemaBuilder>> {
+	extern "C" fn log_surgeon_parsing_spec_builder_from_definition(
+		definition: CCharArray<'_>,
+	) -> Option<Box<ParsingSpecBuilder>> {
 		let definition: &str = definition.as_utf8().unwrap();
-		if let Ok(builder) = SchemaBuilder::from_schema_definition(definition) {
+		if let Ok(builder) = ParsingSpecBuilder::from_parsing_spec_definition(definition) {
 			Some(Box::new(builder))
 		} else {
 			None
@@ -107,8 +112,12 @@ mod schema {
 	}
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_schema_get_encoding(parser: &Parser, encoding_idx: usize, i: usize) -> CCharArray<'_> {
-		let Some(possible_encodings): Option<&Vec<String>> = parser.schema.encodings.get(encoding_idx) else {
+	extern "C" fn log_surgeon_parsing_spec_get_encoding(
+		parser: &Parser,
+		encoding_idx: usize,
+		i: usize,
+	) -> CCharArray<'_> {
+		let Some(possible_encodings): Option<&Vec<String>> = parser.spec.encodings.get(encoding_idx) else {
 			return CCharArray::null();
 		};
 		let Some(encoding_name): Option<&String> = possible_encodings.get(i) else {
@@ -122,8 +131,8 @@ mod parser {
 	use super::*;
 
 	#[unsafe(no_mangle)]
-	extern "C" fn log_surgeon_parser_new(schema: Box<Schema>) -> Box<Parser> {
-		let parser: Parser = Parser::new(*schema);
+	extern "C" fn log_surgeon_parser_new(parsing_spec: Box<ParsingSpec>) -> Box<Parser> {
+		let parser: Parser = Parser::new(*parsing_spec);
 		Box::new(parser)
 	}
 
@@ -179,7 +188,7 @@ mod search {
 	) -> Box<Vec<Interpretation>> {
 		let query: SearchString = SearchString::parse(input.as_utf8().unwrap()).unwrap();
 		let name: &str = name.as_utf8().unwrap();
-		let interpretations: Vec<Interpretation> = query.get_interpretations(&parser.schema, name);
+		let interpretations: Vec<Interpretation> = query.get_interpretations(&parser.spec, name);
 		Box::new(interpretations)
 	}
 

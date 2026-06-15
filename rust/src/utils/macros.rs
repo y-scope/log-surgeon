@@ -25,19 +25,23 @@ macro_rules! how_long {
 #[macro_use]
 mod test {
 	#[macro_export]
-	macro_rules! schema {
+	macro_rules! spec {
 		($definition:expr) => {{
-			use $crate::schema::Schema;
-			use $crate::schema::SchemaBuilder;
+			use $crate::parsing_spec::ParsingSpec;
+			use $crate::parsing_spec::ParsingSpecBuilder;
 
 			let definition: &::std::primitive::str = $definition;
 
-			// Canonicalize schema by round-tripping.
-			let schema: Schema = SchemaBuilder::from_schema_definition(definition).unwrap().build();
-			let roundtrip: String = schema.to_schema_definition();
-			let schema: Schema = SchemaBuilder::from_schema_definition(&roundtrip).unwrap().build();
+			// Canonicalize spec by round-tripping.
+			let spec: ParsingSpec = ParsingSpecBuilder::from_parsing_spec_definition(definition)
+				.unwrap()
+				.build();
+			let roundtrip: String = spec.to_parsing_spec_definition();
+			let spec: ParsingSpec = ParsingSpecBuilder::from_parsing_spec_definition(&roundtrip)
+				.unwrap()
+				.build();
 
-			schema
+			spec
 		}};
 	}
 }

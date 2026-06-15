@@ -5,7 +5,7 @@ use crate::dfa::Tdfa;
 use crate::regex::AnchoredRegex;
 use crate::regex::Regex;
 
-/// Index in the schema, offset by/starting at 1.
+/// Index in the parsing spec, offset by/starting at 1.
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct RuleIdx(NonZero<u16>);

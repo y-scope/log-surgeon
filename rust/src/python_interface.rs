@@ -15,9 +15,9 @@ use pyo3::types::PyString;
 
 use crate::log_event::LogEvent;
 use crate::parser::Parser;
-use crate::schema::RootRule;
-use crate::schema::Schema;
-use crate::schema::SchemaBuilder;
+use crate::parsing_spec::ParsingSpec;
+use crate::parsing_spec::ParsingSpecBuilder;
+use crate::parsing_spec::RootRule;
 
 pyo3::create_exception!(log_surgeon, LogSurgeonException, PyRuntimeError);
 pyo3::create_exception!(log_surgeon, LogSurgeonInvalidRegexPattern, LogSurgeonException);
@@ -26,8 +26,8 @@ pyo3::create_exception!(log_surgeon, LogSurgeonInvalidRegexPattern, LogSurgeonEx
 #[derive(Debug)]
 struct PyParser {
 	input: Py<PyAny>,
-	schema_builder: SchemaBuilder,
-	maybe_schema: Option<Schema>,
+	spec_builder: ParsingSpecBuilder,
+	maybe_spec: Option<ParsingSpec>,
 	maybe_parser: Option<Parser>,
 	buffer: String,
 	pos: usize,
@@ -90,8 +90,8 @@ impl PyParser {
 	fn new(debug: bool) -> Self {
 		Self {
 			input: Python::attach(|py| py.None()),
-			schema_builder: SchemaBuilder::new(),
-			maybe_schema: None,
+			spec_builder: ParsingSpecBuilder::new(),
+			maybe_spec: None,
 			maybe_parser: None,
 			buffer: String::new(),
 			pos: 0,
@@ -100,10 +100,10 @@ impl PyParser {
 	}
 
 	/// Raises an exception if `name` is empty, or `"delimiters"`
-	/// (see [`SchemaBuilder::add_rule_with_priority`]).
+	/// (see [`ParsingSpecBuilder::add_rule_with_priority`]).
 	#[pyo3(signature = (name, pattern, *, priority=0))]
 	fn add_variable_pattern(&mut self, name: &str, pattern: &str, priority: i32) -> PyResult<()> {
-		self.schema_builder
+		self.spec_builder
 			.add_rule_with_priority(priority, name, pattern)
 			.map_err(|err| LogSurgeonInvalidRegexPattern::new_err(format!("invalid pattern: {err:?}")))?;
 		Ok(())
@@ -114,14 +114,14 @@ impl PyParser {
 		if delimiters.is_empty() {
 			return Err(LogSurgeonException::new_err("delimiters cannot be empty"));
 		}
-		self.schema_builder.set_delimiters(delimiters);
+		self.spec_builder.set_delimiters(delimiters);
 		Ok(())
 	}
 
 	fn compile(&mut self) -> PyResult<()> {
-		let schema: Schema = self.schema_builder.clone().build();
-		self.maybe_schema = Some(schema.clone());
-		self.maybe_parser = Some(Parser::new(schema));
+		let spec: ParsingSpec = self.spec_builder.clone().build();
+		self.maybe_spec = Some(spec.clone());
+		self.maybe_parser = Some(Parser::new(spec));
 		Ok(())
 	}
 
@@ -157,10 +157,10 @@ impl PyParser {
 			let root_matches: Bound<'_, PyList> = PyList::empty(py);
 			let mut all_matches: Vec<Bound<'_, PyMatch>> = Vec::new();
 
-			let schema: &Schema = self.maybe_schema.as_ref().unwrap();
+			let spec: &ParsingSpec = self.maybe_spec.as_ref().unwrap();
 
 			for (i, cap) in event.all_matches.iter().enumerate() {
-				let rule: &RootRule = &schema[cap.rule_idx];
+				let rule: &RootRule = &spec[cap.rule_idx];
 				let root_rule_name: &str = &rule.name;
 				let sub_rule_name: &str = rule[cap.sub_rule_id].sub_rule_name();
 				let (name, parent): (&str, Option<Py<PyMatch>>) = if cap.parent_index < i {
@@ -194,7 +194,7 @@ impl PyParser {
 				all_matches.push(py_cap);
 			}
 			let all_matches: Bound<'_, PyList> = PyList::new(py, all_matches)?;
-			let log_type: String = log_type::stringify(schema, &event.message, event.all_matches);
+			let log_type: String = log_type::stringify(spec, &event.message, event.all_matches);
 
 			Ok(Some(PyLogEvent {
 				log_type: PyString::new(py, &log_type).unbind(),
@@ -211,32 +211,32 @@ impl PyParser {
 		self.pos == self.buffer.len()
 	}
 
-	fn generate_schema_definition(&self) -> PyResult<String> {
-		let Some(schema): Option<&Schema> = self.maybe_schema.as_ref() else {
+	fn generate_parsing_spec_definition(&self) -> PyResult<String> {
+		let Some(spec): Option<&ParsingSpec> = self.maybe_spec.as_ref() else {
 			return Err(LogSurgeonException::new_err("parser has not been compiled"));
 		};
 
-		Ok(schema.to_schema_definition())
+		Ok(spec.to_parsing_spec_definition())
 	}
 
 	#[staticmethod]
 	#[pyo3(signature = (definition, *, debug = false))]
-	fn from_schema_definition(definition: &str, debug: bool) -> PyResult<Self> {
-		match SchemaBuilder::from_schema_definition(definition) {
+	fn from_parsing_spec_definition(definition: &str, debug: bool) -> PyResult<Self> {
+		match ParsingSpecBuilder::from_parsing_spec_definition(definition) {
 			Ok(builder) => {
-				let schema: Schema = builder.build();
+				let spec: ParsingSpec = builder.build();
 				Ok(Self {
 					input: Python::attach(|py| py.None()),
-					schema_builder: SchemaBuilder::new(),
-					maybe_schema: Some(schema.clone()),
-					maybe_parser: Some(Parser::new(schema)),
+					spec_builder: ParsingSpecBuilder::new(),
+					maybe_spec: Some(spec.clone()),
+					maybe_parser: Some(Parser::new(spec)),
 					buffer: String::new(),
 					pos: 0,
 					debug,
 				})
 			},
 			Err(err) => Err(LogSurgeonException::new_err(format!(
-				"invalid schema definition on line {}",
+				"invalid parsing spec definition on line {}",
 				err.line_offset + 1
 			))),
 		}
@@ -349,7 +349,7 @@ fn python_unicode_or_bytes_as_str<'a>(input: &'a Bound<'_, PyAny>) -> PyResult<O
 // Legacy/testing.
 mod log_type {
 	use crate::log_event::Match;
-	use crate::schema::Schema;
+	use crate::parsing_spec::ParsingSpec;
 	use std::num::NonZero;
 
 	/// A `LogType` is a "template string" for a [`LogEvent`](crate::log_event::LogEvent).
@@ -360,7 +360,11 @@ mod log_type {
 	/// - capture placeholders surrounded by a single `'%'` on each side;
 	///   a capture `bar` with capture id `2` in a variable `foo` with rule id `1`
 	///   shows up at `%1.2:foo.bar%` in the string representation.
-	pub fn stringify<'a>(schema: &Schema, log_message: &str, matches: impl IntoIterator<Item = &'a Match>) -> String {
+	pub fn stringify<'a>(
+		spec: &ParsingSpec,
+		log_message: &str,
+		matches: impl IntoIterator<Item = &'a Match>,
+	) -> String {
 		use std::fmt::Write;
 
 		let mut buf: String = String::new();
@@ -373,8 +377,8 @@ mod log_type {
 			for s in escape::<'%'>(&log_message[last_pos..pos]) {
 				buf.push_str(s);
 			}
-			let root_rule_name: &str = &schema[mat.rule_idx].name;
-			let sub_rule_name: &str = schema[mat.rule_idx][mat.sub_rule_id].sub_rule_name();
+			let root_rule_name: &str = &spec[mat.rule_idx].name;
+			let sub_rule_name: &str = spec[mat.rule_idx][mat.sub_rule_id].sub_rule_name();
 			write!(
 				&mut buf,
 				"%{}.{}:{}.{}%",

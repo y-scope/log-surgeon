@@ -8,13 +8,13 @@ use crate::lexing::Token;
 use crate::log_event::LogEvent;
 use crate::log_event::Match;
 use crate::log_event::MatchFfiPointers;
-use crate::schema::RuleInfo;
-use crate::schema::Schema;
-use std::range::Range;
+use crate::log_event::Range;
+use crate::parsing_spec::ParsingSpec;
+use crate::parsing_spec::RuleInfo;
 
 #[derive(Debug, Clone)]
 pub struct Parser {
-	pub schema: Schema,
+	pub spec: ParsingSpec,
 	current_log: WorkingLogEvent,
 	maybe_pending_header: Option<WorkingLogEvent>,
 	dfa_execution: TdfaExecution,
@@ -35,18 +35,18 @@ struct WorkingLogEvent {
 }
 
 impl Parser {
-	pub fn new(schema: Schema) -> Self {
+	pub fn new(spec: ParsingSpec) -> Self {
 		let mut registers: usize = 0;
 		let mut tags: usize = 0;
-		for rule in schema.rules.iter() {
+		for rule in spec.rules.iter() {
 			registers = registers.max(rule.dfa.number_of_registers);
 			tags = tags.max(rule.dfa.tags.len());
 		}
 		let dfa_execution: TdfaExecution = TdfaExecution::new(registers, tags);
 		let mut jit: Jit = Jit::new();
-		let jitted_dfa: JittedDfa = jit.jit(&schema.main_dfa).unwrap();
+		let jitted_dfa: JittedDfa = jit.jit(&spec.main_dfa).unwrap();
 		Self {
-			schema,
+			spec,
 			current_log: WorkingLogEvent::new(),
 			maybe_pending_header: None,
 			dfa_execution,
@@ -76,20 +76,20 @@ impl Parser {
 
 		// Simulates whether we can match a start-anchored pattern.
 		// Currently, the start-anchor just means "must come after static text".
-		let mut last_was_delimited: u32 = u32::from(self.schema.anchor_ch);
+		let mut last_was_delimited: u32 = u32::from(self.spec.anchor_ch);
 
 		let pos_end: usize = loop {
 			let pos_before_token: usize = *pos;
 			let token_start: usize = pos_before_token - pos_after_header + header_len;
 			let token_starting_capture_count: usize = self.current_log.all_matches.len();
 			let token_starting_leaf_indices: usize = self.current_log.leaf_indices.len();
-			match self.schema.next_token(
+			match self.spec.next_token(
 				input,
 				pos,
 				last_was_delimited,
 				&mut self.dfa_execution,
 				self.jitted_dfa,
-				&self.schema.optimized_dfa,
+				&self.spec.optimized_dfa,
 			) {
 				Token::Variable {
 					rule,
@@ -147,7 +147,7 @@ impl Parser {
 					last_was_delimited = if lexeme_start == input_start {
 						0
 					} else {
-						u32::from(self.schema.anchor_ch)
+						u32::from(self.spec.anchor_ch)
 					};
 					if name == "header" && previous_was_newline {
 						if have_header {
@@ -186,7 +186,7 @@ impl Parser {
 				},
 				Token::StaticText(static_text) => {
 					assert!(!static_text.is_empty());
-					last_was_delimited = u32::from(self.schema.anchor_ch);
+					last_was_delimited = u32::from(self.spec.anchor_ch);
 				},
 				Token::EndOfInput => {
 					assert_eq!(*pos, input.len());
@@ -205,7 +205,7 @@ impl Parser {
 			mat.ffi_pointers.parent = matches_base.wrapping_add(mat.parent_index);
 			mat.ffi_pointers.lexeme = UncheckedCArray::new(&self.current_log.message[mat.range.start..mat.range.end]);
 
-			let rule_info: &RuleInfo = &self.schema[mat.rule_idx][mat.sub_rule_id];
+			let rule_info: &RuleInfo = &self.spec[mat.rule_idx][mat.sub_rule_id];
 			mat.ffi_pointers.root_rule_name = UncheckedCArray::new(&rule_info.root_name);
 			mat.ffi_pointers.rule_name = UncheckedCArray::new(if let Some(sub_rule) = &rule_info.maybe_sub_rule {
 				&sub_rule.name

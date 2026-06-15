@@ -91,7 +91,7 @@ impl std::fmt::Display for Escaped {
 		let ch: char = self.ch;
 		if self.escape_space && (ch == ' ') {
 			// We escape space because it can easily be "lost" at the start or end of a pattern,
-			// e.g. a text editor may trim trailing whitespace when saving a schema file.
+			// e.g. a text editor may trim trailing whitespace when saving a parsing spec file.
 			// Tabs, carriage returns, newlines, and other (unicode) whitespace will be escaped below.
 			fmt.write_str("\\ ")
 		} else if (ch == '\'') || (ch == '"') {

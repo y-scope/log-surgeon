@@ -1,5 +1,5 @@
 mod rule;
-mod schema_file;
+mod spec_file;
 
 use std::collections::BTreeMap;
 use std::num::NonZero;
@@ -19,7 +19,7 @@ use crate::regex::Regex;
 use crate::regex::RegexPlaceholderLookup;
 
 #[derive(Debug, Clone)]
-pub struct SchemaBuilder {
+pub struct ParsingSpecBuilder {
 	rules_by_priority: BTreeMap<i32, Vec<(Arc<str>, AnchoredRegex)>>,
 	placeholders: BTreeMap<String, Regex>,
 	encodings: Vec<(String, Regex)>,
@@ -30,14 +30,14 @@ pub struct SchemaBuilder {
 	anchor_ch: char,
 }
 
-/// A `Schema` is conceptually a list of rules and a set of delimiter characters.
+/// A `ParsingSpec` is conceptually a list of rules and a set of delimiter characters.
 ///
 /// [`Rule`]s may be added with a specific integer priority;
 /// larger integer value means higher priority.
 /// Within a priority level, rules are prioritized by insertion order.
 ///
 #[derive(Debug, Clone)]
-pub struct Schema {
+pub struct ParsingSpec {
 	pub rules: Vec<RootRule>,
 	pub placeholders: BTreeMap<String, Regex>,
 
@@ -59,22 +59,22 @@ pub struct Schema {
 	pub non_ascii_delimiters: String,
 }
 
-impl Eq for Schema {}
+impl Eq for ParsingSpec {}
 
-impl PartialEq for Schema {
+impl PartialEq for ParsingSpec {
 	fn eq(&self, other: &Self) -> bool {
 		(&self.rules, &self.delimiters, &self.encodings).eq(&(&other.rules, &other.delimiters, &other.encodings))
 	}
 }
 
-impl SchemaBuilder {
+impl ParsingSpecBuilder {
 	pub fn new() -> Self {
 		Self {
 			rules_by_priority: BTreeMap::new(),
 			placeholders: BTreeMap::new(),
 			encodings: Vec::new(),
 			maybe_cached_dfa: None,
-			delimiters: Schema::DEFAULT_DELIMITERS.to_owned(),
+			delimiters: ParsingSpec::DEFAULT_DELIMITERS.to_owned(),
 			anchor_ch: '\n',
 		}
 	}
@@ -177,7 +177,7 @@ impl SchemaBuilder {
 		self
 	}
 
-	pub fn build(self) -> Schema {
+	pub fn build(self) -> ParsingSpec {
 		let mut rules: Vec<RootRule> = Vec::new();
 
 		let mut encodings: Vec<Vec<String>> = vec![Vec::new()];
@@ -253,7 +253,7 @@ impl SchemaBuilder {
 			}
 		}
 
-		Schema {
+		ParsingSpec {
 			rules,
 			placeholders: self.placeholders,
 			delimiters: self.delimiters,
@@ -268,13 +268,13 @@ impl SchemaBuilder {
 	}
 }
 
-impl RegexPlaceholderLookup for SchemaBuilder {
+impl RegexPlaceholderLookup for ParsingSpecBuilder {
 	fn lookup(&mut self, name: &str) -> Option<Regex> {
 		self.placeholders.get(name).cloned()
 	}
 }
 
-impl Schema {
+impl ParsingSpec {
 	pub const DEFAULT_DELIMITERS: &str = " \t\r\n:,!;%";
 
 	pub fn build_dfa(&self) -> Tdfa {
@@ -345,7 +345,7 @@ impl Schema {
 	}
 }
 
-impl std::ops::Index<RuleIdx> for Schema {
+impl std::ops::Index<RuleIdx> for ParsingSpec {
 	type Output = RootRule;
 
 	fn index(&self, idx: RuleIdx) -> &Self::Output {
@@ -421,7 +421,7 @@ mod test {
 
 	#[test]
 	fn number_encoding() {
-		let mut builder: SchemaBuilder = SchemaBuilder::new();
+		let mut builder: ParsingSpecBuilder = ParsingSpecBuilder::new();
 		builder
 			.add_rule("has_number", r"\w*\d\w*")
 			.unwrap()
@@ -430,9 +430,9 @@ mod test {
 			.add_encoding("int", Regex::from_pattern(r"\d+").unwrap().inner)
 			.unwrap();
 
-		let schema: Schema = builder.build();
+		let spec: ParsingSpec = builder.build();
 
-		assert_eq!(schema.rules[0][None].encoding_idx, Some(NonZero::<u16>::MIN));
-		assert_eq!(schema.rules[1][None].encoding_idx, None);
+		assert_eq!(spec.rules[0][None].encoding_idx, Some(NonZero::<u16>::MIN));
+		assert_eq!(spec.rules[1][None].encoding_idx, None);
 	}
 }

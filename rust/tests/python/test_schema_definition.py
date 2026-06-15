@@ -5,7 +5,7 @@ from textwrap import dedent
 
 from log_surgeon import Parser
 
-class TestSchemaDefinition(unittest.TestCase):
+class TestParsingSpecDefinition(unittest.TestCase):
 	def setUp(self):
 		pass
 
@@ -19,14 +19,14 @@ class TestSchemaDefinition(unittest.TestCase):
 		delimiters: \\ \\r\\t\\n
 		""")
 
-		p1 = Parser.from_schema_definition(definition)
+		p1 = Parser.from_parsing_spec_definition(definition)
 
-		definition1 = p1.generate_schema_definition()
+		definition1 = p1.generate_parsing_spec_definition()
 
-		# Because the "initial" schema definition isn't canonical,
+		# Because the "initial" parsing spec definition isn't canonical,
 		# we need to do an extra roundtrip to compare equality.
-		p2 = Parser.from_schema_definition(definition1)
+		p2 = Parser.from_parsing_spec_definition(definition1)
 
-		definition2 = p2.generate_schema_definition()
+		definition2 = p2.generate_parsing_spec_definition()
 
 		self.assertEqual(definition1, definition2)
