@@ -47,7 +47,6 @@ pub struct Tdfa {
 	/// The second `tags.len()` (i.e. `tags.len()..(2 * tags.len())`) are the corresponding final registers.
 	#[serde(skip)]
 	pub number_of_registers: usize,
-	anchor_ch: char,
 }
 
 #[derive(Debug, Clone)]
@@ -209,10 +208,7 @@ impl Tdfa {
 
 		let mut maybe_backup: Option<BackupState> = None;
 
-		for (pos, ch) in input
-			.char_indices()
-			.chain(std::iter::once((input.len(), self.anchor_ch)))
-		{
+		for (pos, ch) in input.char_indices().chain(std::iter::once((input.len(), '\n'))) {
 			if let Some(transition) = self.lookup_transition(current_state, u32::from(ch)) {
 				current_state = transition.target;
 				if let Some(rule) = self.states[current_state].accepting_rule {
@@ -379,13 +375,12 @@ impl Tdfa {
 		Rules: IntoIterator<Item = &'a RootRule>,
 	{
 		let nfa: Tnfa = Tnfa::for_rules::<false, _>(rules, &delimiters);
-		let anchor_char: char = delimiters.chars().next().unwrap();
-		Self::determinization(&nfa, anchor_char)
+		Self::determinization(&nfa)
 	}
 
 	pub fn for_single_rule(rule_idx: RuleIdx, regex: &Regex) -> Self {
 		let nfa: Tnfa = Tnfa::for_single_rule(rule_idx, regex);
-		Self::determinization(&nfa, '\n')
+		Self::determinization(&nfa)
 	}
 
 	pub fn initialize_ascii_cache(&mut self) {
@@ -405,7 +400,7 @@ impl Tdfa {
 
 	/// Algorithm 3 in the paper.
 	#[tracing::instrument(skip_all, level = "trace")]
-	fn determinization(nfa: &Tnfa, anchor_ch: char) -> Self {
+	fn determinization(nfa: &Tnfa) -> Self {
 		assert_eq!(nfa.tags().len() % 2, 0);
 		let mut tag_pairs: Vec<usize> = Vec::with_capacity(nfa.tags().len() / 2);
 		for (i, tag) in nfa.tags().iter().enumerate() {
@@ -423,7 +418,6 @@ impl Tdfa {
 			tags: nfa.tags().to_owned(),
 			tag_pairs,
 			number_of_registers: 2 * nfa.tags().len(),
-			anchor_ch,
 		};
 
 		let initial: (Configuration, Vec<(Tag, SymbolicPosition)>) = (
@@ -923,7 +917,6 @@ impl Tdfa {
 			tags: Vec::new(),
 			tag_pairs: Vec::new(),
 			number_of_registers: 0,
-			anchor_ch: self.anchor_ch,
 		}
 	}
 

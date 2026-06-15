@@ -67,29 +67,17 @@ impl Parser {
 
 		let mut previous_was_newline: bool = true;
 
-		// Simulates whether we can match a start-anchored pattern.
-		// Currently, the start-anchor just means "must come after static text".
-		let mut last_was_delimited: u32 = u32::from(self.spec.anchor_ch);
-
 		let pos_end: usize = loop {
 			let pos_before_token: usize = *pos;
 			let token_start: usize = pos_before_token - pos_after_header + header_len;
 			let token_starting_capture_count: usize = self.current_log.all_matches.len();
 			let token_starting_leaf_indices: usize = self.current_log.leaf_indices.len();
-			match self
-				.lexer
-				.next_token(input, pos, last_was_delimited, &mut self.dfa_execution)
-			{
+			match self.lexer.next_token(input, pos, &mut self.dfa_execution) {
 				Token::Variable {
 					rule,
 					lexeme,
 					has_captures,
 				} => {
-					let input_start: *const u8 = input[pos_before_token..].as_ptr();
-					let lexeme_start: *const u8 = lexeme.as_ptr();
-
-					let name: &str = &rule.name;
-
 					let variable_is_implicit_capture: bool = !has_captures;
 
 					let variable_capture: Match = Match {
@@ -133,12 +121,7 @@ impl Parser {
 						}
 					}
 
-					last_was_delimited = if lexeme_start == input_start {
-						0
-					} else {
-						u32::from(self.spec.anchor_ch)
-					};
-					if name == "header" && previous_was_newline {
+					if &*rule.name == "header" && previous_was_newline {
 						if have_header {
 							let pending_header: &mut WorkingLogEvent =
 								self.maybe_pending_header.get_or_insert_with(WorkingLogEvent::new);
@@ -170,12 +153,10 @@ impl Parser {
 						break *pos;
 					}
 					previous_was_newline = true;
-					last_was_delimited = u32::from('\n');
 					continue;
 				},
 				Token::StaticText(static_text) => {
 					assert!(!static_text.is_empty());
-					last_was_delimited = u32::from(self.spec.anchor_ch);
 				},
 				Token::EndOfInput => {
 					assert_eq!(*pos, input.len());

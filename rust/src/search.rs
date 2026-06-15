@@ -443,7 +443,7 @@ impl<'a> SearchStringView<'a> {
 			&spec.main_nfa,
 			group,
 			None,
-			Some((extended.before(spec), extended.after(spec))),
+			Some((extended.before(), extended.after())),
 		);
 
 		if has_wildcard || potential_interpretations.is_empty() {
@@ -469,23 +469,23 @@ impl<'a> SearchStringView<'a> {
 		interpretations
 	}
 
-	fn before(&self, spec: &ParsingSpec) -> char {
+	fn before(&self) -> char {
 		if self.start == 0 {
-			return spec.anchor_ch;
+			return '\n';
 		}
 		match self.full_string.0[self.start - 1] {
 			SymbolicChar::Literal(ch) => ch,
-			SymbolicChar::GlobStar | SymbolicChar::GlobOne => spec.anchor_ch,
+			SymbolicChar::GlobStar | SymbolicChar::GlobOne => '\n',
 		}
 	}
 
-	fn after(&self, spec: &ParsingSpec) -> char {
+	fn after(&self) -> char {
 		if self.end == self.full_string.0.len() {
-			return spec.anchor_ch;
+			return '\n';
 		}
 		match self.full_string.0[self.end] {
 			SymbolicChar::Literal(ch) => ch,
-			SymbolicChar::GlobStar | SymbolicChar::GlobOne => spec.anchor_ch,
+			SymbolicChar::GlobStar | SymbolicChar::GlobOne => '\n',
 		}
 	}
 

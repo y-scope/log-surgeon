@@ -27,7 +27,6 @@ pub struct ParsingSpecBuilder {
 	maybe_cached_dfa: Option<Tdfa>,
 
 	delimiters: String,
-	anchor_ch: char,
 }
 
 /// A `ParsingSpec` is conceptually a list of rules and a set of delimiter characters.
@@ -52,9 +51,7 @@ pub struct ParsingSpec {
 
 	pub encodings: Vec<Vec<String>>,
 
-	/// Derived from `delimiters`;
-	/// used to insert "phantom characters" to implement start/end anchors.
-	pub anchor_ch: char,
+	/// Derived from `delimiters`.
 	pub ascii_delimiters: [bool; 0x80],
 	pub non_ascii_delimiters: String,
 }
@@ -75,7 +72,6 @@ impl ParsingSpecBuilder {
 			encodings: Vec::new(),
 			maybe_cached_dfa: None,
 			delimiters: ParsingSpec::DEFAULT_DELIMITERS.to_owned(),
-			anchor_ch: '\n',
 		}
 	}
 
@@ -89,7 +85,6 @@ impl ParsingSpecBuilder {
 		if !delimiters.contains('\n') {
 			delimiters.push('\n');
 		}
-		self.anchor_ch = delimiters.chars().next().unwrap();
 		self.delimiters = delimiters;
 		self
 	}
@@ -261,7 +256,6 @@ impl ParsingSpecBuilder {
 			main_dfa,
 			optimized_dfa,
 			encodings,
-			anchor_ch: self.anchor_ch,
 			ascii_delimiters,
 			non_ascii_delimiters,
 		}
