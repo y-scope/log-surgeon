@@ -42,8 +42,8 @@ pub struct SubRule {
 	/// For example, the pattern `(?<start>[a-z]+(?<rest>\.[a-z]+)*)|(?<start>[0-9]+)` has three non-zero capture IDs.
 	/// When the pattern is actually matched,
 	/// there may be multiple instances of capture ID 2 (corresponding to `"rest"`).
-	/// The capture ID also differentiates between different capture groups given the same name,
-	/// e.g. the two instances of `"start"` in the pattern.
+	/// The capture ID also differentiates between different captures with the same text name,
+	/// e.g. the two instances of `"start"` in the pattern above.
 	pub id: NonZero<u16>,
 	/// ID of the parent capture, if any.
 	pub parent_id: Option<NonZero<u16>>,

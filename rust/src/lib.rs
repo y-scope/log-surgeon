@@ -59,5 +59,5 @@ const _LENGTH_AT_MOST_HALF_USIZE_MAX: () = ();
 /// We assume we're on at least a 32-bit platform for lossless `u32` <-> `usize` casts.
 /// The only "smaller" platforms rustc supports are 16-bits.
 const _USIZE_AT_LEAST_32_BITS: () = {
-	assert!(usize::BITS >= u32::BITS, "possibly lossy u32 to usize cast");
+	assert!(usize::BITS >= u32::BITS, "possibly lossy cast from `u32` to `usize`");
 };

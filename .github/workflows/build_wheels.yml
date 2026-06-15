@@ -113,7 +113,7 @@ jobs:
         run: |
           pip install dist/*.whl
           python -c "
-          from log_surgeon import Parser, LogEvent, Capture, LogType
+          from log_surgeon import Parser, LogEvent, Match, LogType
           print('Import OK')
           "
           python -m unittest discover rust/tests/python

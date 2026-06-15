@@ -287,6 +287,8 @@ impl ParsingSpec {
 		Tdfa::for_rules(&self.rules, self.delimiters.clone())
 	}
 
+	/// Returns `None` iff `name` is empty.
+	/// Otherwise, returns (sub)rules with the exact fully qualified name match.
 	pub fn rules_for_name(&self, name: &str) -> Option<Vec<(&RuleInfo, &Regex)>> {
 		let parts: Vec<&str> = name.split('.').collect::<Vec<_>>();
 		let rule_name: &str = parts.first().copied()?;
@@ -298,16 +300,11 @@ impl ParsingSpec {
 				if &*root_rule.name != rule_name {
 					continue;
 				}
-				Self::find_capture(
-					root_rule,
-					&root_rule.regex.inner,
-					first,
-					&capture_names[1..],
-					&mut possibilities,
-				);
+				root_rule.find_capture(&root_rule.regex.inner, first, &capture_names[1..], &mut possibilities);
 			}
 			Some(possibilities)
 		} else {
+			// Just a root name (no trailing parts).
 			Some(
 				self.rules
 					.iter()
@@ -315,38 +312,6 @@ impl ParsingSpec {
 					.map(|root_rule| (&root_rule[None], &root_rule.regex.inner))
 					.collect::<Vec<_>>(),
 			)
-		}
-	}
-
-	fn find_capture<'a>(
-		root_rule: &'a RootRule,
-		regex: &'a Regex,
-		first: &str,
-		rest: &[&str],
-		collect: &mut Vec<(&'a RuleInfo, &'a Regex)>,
-	) {
-		match regex {
-			Regex::AnyChar | Regex::Literal(..) | Regex::BracketedRanges { .. } => (),
-			Regex::Capture(sub_rule) => {
-				if sub_rule.name == first {
-					if let Some(first) = rest.first().copied() {
-						Self::find_capture(root_rule, &sub_rule.regex, first, &rest[1..], collect);
-					} else {
-						collect.push((&root_rule[Some(sub_rule.id)], regex));
-					}
-				}
-			},
-			Regex::KleeneClosure(item)
-			| Regex::KleenePlus(item)
-			| Regex::BoundedRepetition { item, .. }
-			| Regex::Placeholder { item, .. } => {
-				Self::find_capture(root_rule, item, first, rest, collect);
-			},
-			Regex::Sequence(items) | Regex::Alternation(items) => {
-				for item in items.iter() {
-					Self::find_capture(root_rule, item, first, rest, collect);
-				}
-			},
 		}
 	}
 }
@@ -417,6 +382,39 @@ impl RootRule {
 			regex,
 			rule_info,
 			dfa,
+		}
+	}
+
+	/// Find matching (nested) captures matching exactly (the fragments of) a fully qualified name.
+	fn find_capture<'a>(
+		&'a self,
+		current: &'a Regex,
+		first: &str,
+		rest: &[&str],
+		collect: &mut Vec<(&'a RuleInfo, &'a Regex)>,
+	) {
+		match current {
+			Regex::AnyChar | Regex::Literal(..) | Regex::BracketedRanges { .. } => (),
+			Regex::Capture(sub_rule) => {
+				if sub_rule.name == first {
+					if let Some(first) = rest.first().copied() {
+						self.find_capture(&sub_rule.regex, first, &rest[1..], collect);
+					} else {
+						collect.push((&self[Some(sub_rule.id)], current));
+					}
+				}
+			},
+			Regex::KleeneClosure(item)
+			| Regex::KleenePlus(item)
+			| Regex::BoundedRepetition { item, .. }
+			| Regex::Placeholder { item, .. } => {
+				self.find_capture(item, first, rest, collect);
+			},
+			Regex::Sequence(items) | Regex::Alternation(items) => {
+				for item in items.iter() {
+					self.find_capture(item, first, rest, collect);
+				}
+			},
 		}
 	}
 }

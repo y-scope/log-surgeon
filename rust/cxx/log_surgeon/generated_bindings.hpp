@@ -46,13 +46,14 @@ struct Vec;
 /// Index in the parsing spec, offset by/starting at 1.
 using RuleIdx = uint16_t;
 
-/// Need this to be `#[repr(C)]`.
+/// Can't use `std::range::Range` because it's not `#[repr(C)]`.
 template<typename Idx>
-struct Range {
+struct CRange {
     Idx start;
     Idx end;
 };
 
+/// A pointer-length pair with unchecked/untied lifetime.
 template<typename T>
 struct UncheckedCArray {
     const T *pointer;
@@ -75,6 +76,7 @@ struct MatchFfiPointers {
     UncheckedCArray<char> fully_qualified_name;
 };
 
+/// `Match`es are exposed to FFI, so they need to be `#[repr(C)]`.
 struct Match {
     RuleIdx rule_idx;
     /// SubRule ID, local to the containing rule/variable/regex pattern;
@@ -88,7 +90,7 @@ struct Match {
     /// For a variable, the parent index equals its own index.
     size_t parent_index;
     /// Relative to the start of the log message.
-    Range<size_t> range;
+    CRange<size_t> range;
     bool is_leaf;
     uint16_t encoding_idx;
     /// DANGEROUS fields for FFI.

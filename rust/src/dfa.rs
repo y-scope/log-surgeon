@@ -8,6 +8,7 @@
 mod compressed;
 mod jit;
 
+use std::cmp::Reverse;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::btree_map::Entry;
@@ -49,6 +50,7 @@ pub struct Tdfa {
 	pub number_of_registers: usize,
 }
 
+/// This struct caches memory for [`Tdfa::execute_with_captures`].
 #[derive(Debug, Clone)]
 pub struct TdfaExecution {
 	pub captures: Vec<MatchedCapture>,
@@ -70,7 +72,7 @@ pub struct MatchedCapture {
 	pub parent_id: Option<NonZero<u16>>,
 	pub parent_index: usize,
 	pub is_leaf: bool,
-	/// Relative to rule/variable match.
+	/// Relative to root [`MatchedRule`]'s lexeme.
 	pub range: Range<usize>,
 }
 
@@ -206,6 +208,10 @@ impl Tdfa {
 
 	/// Used for determining which rule matched.
 	/// Assumes the DFA was constructed with anchor transitions.
+	///
+	/// [`TdfaExecution::captures`] is sorted:
+	/// 1. left to right w.r.t. the input,
+	/// 2. top-down w.r.t the regex (i.e. left to right w.r.t. the regex pattern; parent before children).
 	pub fn execute_without_captures<'input>(
 		&self,
 		input: &'input str,
@@ -297,16 +303,10 @@ impl Tdfa {
 				maybe_stop = prefix_tree[stop_node].maybe_predecessor;
 			}
 		}
-		captures.sort_by(|lhs, rhs| {
-			lhs.range
-				.start
-				.cmp(&rhs.range.start)
-				.then(lhs.range.end.cmp(&rhs.range.end).reverse())
-				.then(lhs.capture_id.cmp(&rhs.capture_id))
-		});
+		captures.sort_by_key(|cap| (cap.range.start, Reverse(cap.range.end), cap.capture_id));
 		for i in 0..captures.len() {
 			if let Some(parent_id) = captures[i].parent_id {
-				// Linear search since it should usually be small.
+				// Linear search (backwards) since it should usually be small.
 				for j in (0..i).rev() {
 					if captures[j].capture_id == parent_id
 						&& (captures[j].range.start <= captures[i].range.start)
@@ -315,8 +315,7 @@ impl Tdfa {
 						captures[i].parent_index = 1 + j;
 					}
 				}
-				// TODO Happens in search.
-				// assert_ne!(captures[i].parent_index, usize::MAX);
+				assert_ne!(captures[i].parent_index, usize::MAX);
 			} else {
 				captures[i].parent_index = 0;
 			}
@@ -326,9 +325,7 @@ impl Tdfa {
 
 	fn lookup_transition(&self, current_state: usize, ch: u32) -> Option<&Transition> {
 		let cache_index: usize = {
-			const _: () = const {
-				assert!(usize::BITS >= u32::BITS, "lossy cast from `u32` to `usize`");
-			};
+			// See [`crate::_USIZE_AT_LEAST_32_BITS`].
 			ch as usize
 		};
 		let current_state: &DfaState = &self.states[current_state];
@@ -1135,7 +1132,7 @@ mod test {
 	}
 
 	#[test]
-	fn group_with_overlapping_range() {
+	fn bracketed_expression_with_overlapping_range() {
 		let dfa: Tdfa = for_pattern("[aa]");
 		let b: bool = dfa.execute("a");
 		assert!(b);
