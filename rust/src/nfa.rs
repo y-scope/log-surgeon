@@ -11,7 +11,6 @@ use std::borrow::Cow;
 
 pub use search_decomposition::Path;
 pub use search_decomposition::PathComponent;
-pub use search_decomposition::TarjanSccData;
 
 use crate::interval_tree::IntervalTree;
 use crate::parsing_spec::RuleIdx;

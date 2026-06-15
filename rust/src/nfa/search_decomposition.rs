@@ -16,6 +16,7 @@ use crate::nfa::Tnfa;
 use crate::nfa::Transitions;
 use crate::parsing_spec::RuleIdx;
 use crate::search::SymbolicChar;
+use crate::utils::TarjanSccs;
 
 #[derive(Debug, Clone)]
 pub struct Path {
@@ -30,14 +31,6 @@ pub enum PathComponent {
 		maybe_sub_rule_id: Option<NonZero<u16>>,
 		contents: Vec<SymbolicChar>,
 	},
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct TarjanSccData {
-	pub index: Option<usize>,
-	pub low_link: usize,
-	pub on_stack: bool,
-	pub scc: usize,
 }
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
@@ -434,85 +427,9 @@ impl Tnfa {
 		acceptable
 	}
 
-	pub fn tarjan_scc(&self) -> (Vec<Vec<NfaIdx>>, Vec<TarjanSccData>) {
-		let mut data: Vec<TarjanSccData> = vec![
-			TarjanSccData {
-				index: None,
-				low_link: 0,
-				on_stack: false,
-				scc: usize::MAX,
-			};
-			self.states.len()
-		];
-
-		let mut indices: Vec<NfaIdx> = Vec::with_capacity(self.states.len());
-		let mut stack: Vec<NfaIdx> = Vec::new();
-
-		let mut sccs: Vec<Vec<NfaIdx>> = Vec::new();
-
-		for state in self.states.iter() {
-			self.strong_connect(&mut data, &mut stack, &mut indices, state.idx, &mut sccs);
-		}
-
-		sccs.reverse();
-		for data in data.iter_mut() {
-			data.scc = sccs.len() - data.scc - 1;
-		}
-
-		(sccs, data)
-	}
-
-	fn strong_connect(
-		&self,
-		data: &mut [TarjanSccData],
-		stack: &mut Vec<NfaIdx>,
-		indices: &mut Vec<NfaIdx>,
-		idx: NfaIdx,
-		sccs: &mut Vec<Vec<NfaIdx>>,
-	) {
-		if data[idx.0].index.is_some() {
-			return;
-		}
-
-		let i: usize = indices.len();
-		data[idx.0] = TarjanSccData {
-			index: Some(i),
-			low_link: i,
-			on_stack: true,
-			scc: usize::MAX,
-		};
-		stack.push(idx);
-		indices.push(idx);
-
-		let state: &NfaState = &self[idx];
-		for jdx in state.transitions.successors() {
-			if let Some(j) = data[jdx.0].index {
-				if data[jdx.0].on_stack {
-					data[idx.0].low_link = std::cmp::min(data[idx.0].low_link, j);
-				}
-			} else {
-				self.strong_connect(data, stack, indices, jdx, sccs);
-				data[idx.0].low_link = std::cmp::min(data[idx.0].low_link, data[jdx.0].low_link);
-			}
-		}
-
-		if data[idx.0].low_link == i {
-			let mut scc: Vec<NfaIdx> = Vec::new();
-			loop {
-				let jdx: NfaIdx = stack.pop().unwrap();
-				data[jdx.0].on_stack = false;
-				data[jdx.0].scc = sccs.len();
-				scc.push(jdx);
-				if jdx == idx {
-					break;
-				}
-			}
-			sccs.push(scc);
-		}
-	}
-
-	pub fn compute_paths<const HAS_ANCHORS: bool>(&self) -> Vec<Path> {
-		let (sccs, data): (Vec<Vec<NfaIdx>>, Vec<TarjanSccData>) = self.tarjan_scc();
+	pub fn compute_paths<const WITH_ANCHORS: bool>(&self) -> Vec<Path> {
+		let tarjan: TarjanSccs =
+			TarjanSccs::tarjan_scc(&self.states, |state| state.transitions.successors().map(|idx| idx.0));
 
 		let mut cache: Vec<Option<Vec<(NfaIdx, PartialPath, RuleIdx)>>> = vec![None; self.states.len()];
 
@@ -527,8 +444,7 @@ impl Tnfa {
 			&self[NfaIdx::BEGIN],
 			&prefix,
 			&mut seen_prefix,
-			&sccs,
-			&data,
+			&tarjan,
 			&mut cache,
 			&mut finished,
 		);
@@ -538,7 +454,7 @@ impl Tnfa {
 		for (_, edges, rule_idx) in paths.iter() {
 			let edges: &[PathEdge] = &edges.edges;
 
-			let skip: usize = if HAS_ANCHORS {
+			let skip: usize = if WITH_ANCHORS {
 				assert!(!edges.is_empty());
 				assert_ne!(edges.len(), 2);
 
@@ -634,8 +550,7 @@ impl Tnfa {
 		entry: &NfaState,
 		prefix: &PartialPath,
 		seen_prefix: &mut BTreeMap<NfaIdx, BTreeSet<PartialPath>>,
-		sccs: &[Vec<NfaIdx>],
-		data: &[TarjanSccData],
+		tarjan: &TarjanSccs,
 		cache: &mut [Option<Vec<(NfaIdx, PartialPath, RuleIdx)>>],
 		finished: &mut Vec<(PartialPath, RuleIdx)>,
 	) -> Vec<(NfaIdx, PartialPath, RuleIdx)> {
@@ -654,7 +569,7 @@ impl Tnfa {
 
 		let mut paths: Vec<(NfaIdx, PartialPath, RuleIdx)> = Vec::new();
 
-		let scc: &Vec<NfaIdx> = &sccs[data[entry.idx.0].scc];
+		let scc: &[usize] = &tarjan.sccs[tarjan.vertices[entry.idx.0].scc];
 		assert!(!scc.is_empty());
 
 		if let Some(rule) = entry.maybe_accepts_for_rule {
@@ -675,8 +590,8 @@ impl Tnfa {
 						.iter()
 						.zip(std::iter::repeat_n(prefix.clone(), transitions.len()))
 					{
-						assert!(data[target.0].index > data[entry.idx.0].index);
-						assert!(data[target.0].scc > data[entry.idx.0].scc);
+						assert!(tarjan.vertices[target.0].encountered_at > tarjan.vertices[entry.idx.0].encountered_at);
+						assert!(tarjan.vertices[target.0].scc > tarjan.vertices[entry.idx.0].scc);
 
 						let ch: PathEdge = if interval.start() == interval.end() {
 							let ch: char = char::try_from(interval.start()).unwrap();
@@ -688,8 +603,8 @@ impl Tnfa {
 						};
 						prefix.push(ch.clone());
 
-						let mut partials: Vec<(NfaIdx, PartialPath, RuleIdx)> = self
-							.compute_paths_internal(&self[target], &prefix, seen_prefix, sccs, data, cache, finished);
+						let mut partials: Vec<(NfaIdx, PartialPath, RuleIdx)> =
+							self.compute_paths_internal(&self[target], &prefix, seen_prefix, tarjan, cache, finished);
 						for (_state, path, _rule) in partials.iter_mut() {
 							path.push(ch.clone());
 						}
@@ -702,7 +617,7 @@ impl Tnfa {
 				},
 				Transitions::Spontaneous(transitions) => {
 					for transition in transitions.iter() {
-						assert!(data[transition.target.0].scc > data[entry.idx.0].scc);
+						assert!(tarjan.vertices[transition.target.0].scc > tarjan.vertices[entry.idx.0].scc);
 
 						match &transition.kind {
 							SpontaneousTransitionKind::Positive(
@@ -722,8 +637,7 @@ impl Tnfa {
 											&self[transition.target],
 											&prefix,
 											seen_prefix,
-											sccs,
-											data,
+											tarjan,
 											cache,
 											finished,
 										);
@@ -741,8 +655,7 @@ impl Tnfa {
 							&self[transition.target],
 							prefix,
 							seen_prefix,
-							sccs,
-							data,
+							tarjan,
 							cache,
 							finished,
 						);
@@ -756,7 +669,7 @@ impl Tnfa {
 				},
 			}
 		} else {
-			self.compute_scc_path(entry, prefix, seen_prefix, sccs, data, cache, finished)
+			self.compute_scc_path(entry, prefix, seen_prefix, tarjan, cache, finished)
 		}
 	}
 
@@ -765,8 +678,7 @@ impl Tnfa {
 		entry: &NfaState,
 		prefix: &PartialPath,
 		seen_prefix: &mut BTreeMap<NfaIdx, BTreeSet<PartialPath>>,
-		sccs: &[Vec<NfaIdx>],
-		data: &[TarjanSccData],
+		tarjan: &TarjanSccs,
 		cache: &mut [Option<Vec<(NfaIdx, PartialPath, RuleIdx)>>],
 		finished: &mut Vec<(PartialPath, RuleIdx)>,
 	) -> Vec<(NfaIdx, PartialPath, RuleIdx)> {
@@ -789,7 +701,7 @@ impl Tnfa {
 						.iter()
 						.zip(std::iter::repeat_n((path, seen), transitions.len()))
 					{
-						assert_eq!(data[target.0].scc, data[entry.idx.0].scc);
+						assert_eq!(tarjan.vertices[target.0].scc, tarjan.vertices[entry.idx.0].scc);
 
 						let inserted: bool = seen.insert(target);
 						assert!(inserted);
@@ -811,15 +723,20 @@ impl Tnfa {
 						.iter()
 						.zip(std::iter::repeat_n((path, seen), transitions.len()))
 					{
-						assert!(data[transition.target.0].scc >= data[entry.idx.0].scc);
+						if !(tarjan.vertices[transition.target.0].scc >= tarjan.vertices[entry.idx.0].scc) {
+							println!(
+								"{}, {}",
+								tarjan.vertices[transition.target.0].scc, tarjan.vertices[entry.idx.0].scc
+							);
+						}
+						assert!(tarjan.vertices[transition.target.0].scc >= tarjan.vertices[entry.idx.0].scc);
 
-						if data[transition.target.0].scc != data[entry.idx.0].scc {
+						if tarjan.vertices[transition.target.0].scc != tarjan.vertices[entry.idx.0].scc {
 							let partials: Vec<(NfaIdx, PartialPath, RuleIdx)> = self.compute_paths_internal(
 								&self[transition.target],
 								prefix,
 								seen_prefix,
-								sccs,
-								data,
+								tarjan,
 								cache,
 								finished,
 							);

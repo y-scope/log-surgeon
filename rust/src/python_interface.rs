@@ -53,17 +53,19 @@ struct PyLogEvent {
 	all_matches: Py<PyList>,
 }
 
-#[pyclass(name = "Capture")]
+#[pyclass(name = "Match")]
 #[derive(Debug)]
 struct PyMatch {
 	#[pyo3(get)]
-	rule_id: Py<PyInt>,
+	root_rule_id: Py<PyInt>,
+	/// [`SubRule`](crate::parsing_spec::SubRule) ID; `0` iff this match is a root rule.
 	#[pyo3(get)]
 	sub_rule_id: Py<PyInt>,
 
 	#[pyo3(get)]
 	parent: Option<Py<PyMatch>>,
 
+	/// Slice indexing into the text of this match.
 	#[pyo3(get)]
 	offsets: Py<PySlice>,
 
@@ -132,7 +134,6 @@ impl PyParser {
 		self.pos = 0;
 		self.buffer.clear();
 		read_from_input(input, &mut self.buffer)?;
-		// self.buffer.push('\n');
 		Ok(())
 	}
 
@@ -174,7 +175,7 @@ impl PyParser {
 				// 	format!("{}{}", root_rule_name, rule.rule_info(cap.sub_rule_id).qualified_name());
 				let name: Py<PyString> = PyString::new(py, name).unbind();
 				let py_cap: Bound<'_, PyMatch> = PyMatch {
-					rule_id: PyInt::new(py, u16::from(cap.rule_idx)).unbind(),
+					root_rule_id: PyInt::new(py, u16::from(cap.rule_idx)).unbind(),
 					sub_rule_id: PyInt::new(py, cap.sub_rule_id.map_or(0, NonZero::get)).unbind(),
 					parent,
 					offsets: PySlice::new(py, cap.range.start as isize, cap.range.end as isize, 1).unbind(),

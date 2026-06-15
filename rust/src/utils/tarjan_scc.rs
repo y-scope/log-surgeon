@@ -41,6 +41,7 @@ impl TarjanSccs {
 		}
 
 		this.sccs.reverse();
+
 		for vertex in this.vertices.iter_mut() {
 			vertex.scc = this.sccs.len() - vertex.scc - 1;
 		}
@@ -69,7 +70,6 @@ impl TarjanSccs {
 		stack.push(i);
 
 		for j in successors(&vertices[i]) {
-			self.strong_connect(vertices, j, successors, stack);
 			if self.vertices[j].encountered_at != usize::MAX {
 				if self.vertices[j].on_stack {
 					self.vertices[i].low_link =

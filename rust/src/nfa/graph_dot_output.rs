@@ -1,10 +1,9 @@
-use crate::nfa::NfaIdx;
 use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tag;
-use crate::nfa::TarjanSccData;
 use crate::nfa::Tnfa;
 use crate::nfa::Transitions;
+use crate::utils::TarjanSccs;
 
 impl Tnfa {
 	pub fn to_dot_output(&self) -> String {
@@ -16,10 +15,11 @@ impl Tnfa {
 		lines.push_str("\tnode [shape=circle];\n");
 		lines.push('\n');
 
-		let (sccs, data): (Vec<Vec<NfaIdx>>, Vec<TarjanSccData>) = self.tarjan_scc();
-		for scc in sccs.iter() {
+		let tarjan: TarjanSccs =
+			TarjanSccs::tarjan_scc(&self.states, |state| state.transitions.successors().map(|idx| idx.0));
+		for scc in tarjan.sccs.iter() {
 			for &state in scc.iter() {
-				let state: &NfaState = &self[state];
+				let state: &NfaState = &self.states[state];
 				let shape: &str = if state.is_accepting() {
 					" [shape=doublecircle]"
 				} else {
@@ -38,8 +38,8 @@ impl Tnfa {
 			match &state.transitions {
 				Transitions::Interval(transitions) => {
 					for (interval, &target) in transitions.iter() {
-						let src_scc: usize = data[state.idx.0].scc;
-						let dst_scc: usize = data[target.0].scc;
+						let src_scc: usize = tarjan.vertices[state.idx.0].scc;
+						let dst_scc: usize = tarjan.vertices[target.0].scc;
 						let colour: &str = if src_scc == dst_scc { " [color=\"red\"]" } else { "" };
 						lines.push_str(&format!(
 							"\t{} -> {} [label=\"{}\"]{colour}\n",
@@ -85,8 +85,8 @@ impl Tnfa {
 								lines.push_str(&sub_rule.qualified_name);
 							},
 						}
-						let src_scc: usize = data[state.idx.0].scc;
-						let dst_scc: usize = data[transition.target.0].scc;
+						let src_scc: usize = tarjan.vertices[state.idx.0].scc;
+						let dst_scc: usize = tarjan.vertices[transition.target.0].scc;
 						let colour: &str = if src_scc == dst_scc { " [color=\"red\"]" } else { "" };
 						lines.push_str(&format!("\"]{colour};\n"));
 					}
