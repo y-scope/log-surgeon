@@ -120,6 +120,13 @@ impl Tdfa {
 }
 
 impl CompressedDfa {
+	pub const BLANK: Self = Self {
+		intervals: Vec::new(),
+		accepts_for_rule: Vec::new(),
+		ascii_transitions: Vec::new(),
+		non_ascii_transitions: Vec::new(),
+	};
+
 	pub fn execute<'input>(&self, input: &'input str, last_was_delimited: u32) -> Option<MatchedRule<'input>> {
 		let anchor_transition: u16 = self.lookup_next_state(0, last_was_delimited)?.get();
 		let mut current_state: u16 = anchor_transition;

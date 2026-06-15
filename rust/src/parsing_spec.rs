@@ -271,6 +271,18 @@ impl RegexPlaceholderLookup for ParsingSpecBuilder {
 impl ParsingSpec {
 	pub const DEFAULT_DELIMITERS: &str = " \t\r\n:,!;%";
 
+	pub const BLANK: Self = Self {
+		rules: Vec::new(),
+		placeholders: BTreeMap::new(),
+		delimiters: String::new(),
+		main_dfa: Tdfa::BLANK,
+		main_nfa: Tnfa::BLANK,
+		optimized_dfa: CompressedDfa::BLANK,
+		encodings: Vec::new(),
+		ascii_delimiters: [false; 0x80],
+		non_ascii_delimiters: String::new(),
+	};
+
 	pub fn build_dfa(&self) -> Tdfa {
 		Tdfa::for_rules(&self.rules, self.delimiters.clone())
 	}

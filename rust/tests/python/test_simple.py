@@ -177,12 +177,12 @@ class TestSimple(unittest.TestCase):
 		e = p.next_log_event()
 
 		self.assertEqual(e.message, text)
-		self.assertEqual(len(e.leaf_captures), 3)
+		self.assertEqual(len(e.leaf_matches), 3)
 
-		self.assertEqual(e.leaf_captures[2].offsets.start, 7)
-		self.assertEqual(e.leaf_captures[2].offsets.stop, 10)
+		self.assertEqual(e.leaf_matches[2].offsets.start, 7)
+		self.assertEqual(e.leaf_matches[2].offsets.stop, 10)
 
-		for cap in e.leaf_captures:
+		for cap in e.leaf_matches:
 			self.assertEqual(cap.text, e.message[cap.offsets])
 
 	def test_nested_captures(self):
@@ -202,20 +202,20 @@ class TestSimple(unittest.TestCase):
 			e = p.next_log_event()
 
 			self.assertEqual(e.message, line)
-			self.assertEqual(len(e.leaf_captures), 1)
-			self.assertEqual(e.leaf_captures[0].offsets, slice(len(":abc"), len(line) - 1, 1))
-			self.assertEqual(e.leaf_captures[0].text, "123")
+			self.assertEqual(len(e.leaf_matches), 1)
+			self.assertEqual(e.leaf_matches[0].offsets, slice(len(":abc"), len(line) - 1, 1))
+			self.assertEqual(e.leaf_matches[0].text, "123")
 
-			self.assertEqual(len(e.non_leaf_captures), 2)
-			self.assertEqual(e.non_leaf_captures[0].offsets, slice(0, len(line) - 1, 1))
-			self.assertEqual(e.non_leaf_captures[0].text, ":abc123")
-			self.assertEqual(e.non_leaf_captures[1].offsets, slice(len(":"), len(line) - 1, 1))
-			self.assertEqual(e.non_leaf_captures[1].text, "abc123")
+			self.assertEqual(len(e.non_leaf_matches), 2)
+			self.assertEqual(e.non_leaf_matches[0].offsets, slice(0, len(line) - 1, 1))
+			self.assertEqual(e.non_leaf_matches[0].text, ":abc123")
+			self.assertEqual(e.non_leaf_matches[1].offsets, slice(len(":"), len(line) - 1, 1))
+			self.assertEqual(e.non_leaf_matches[1].text, "abc123")
 
-			self.assertEqual(len(e.variables), 1)
-			self.assertEqual(e.variables[0].offsets, slice(0, len(line) - 1, 1))
-			self.assertEqual(e.variables[0].variable_name, "wordint")
-			self.assertEqual(e.variables[0].text, ":abc123")
+			self.assertEqual(len(e.root_matches), 1)
+			self.assertEqual(e.root_matches[0].offsets, slice(0, len(line) - 1, 1))
+			self.assertEqual(e.root_matches[0].fully_qualified_name, "wordint")
+			self.assertEqual(e.root_matches[0].text, ":abc123")
 
 	def test_headers(self):
 		p = Parser(debug=True)
@@ -235,13 +235,13 @@ class TestSimple(unittest.TestCase):
 		p.set_input_stream(text)
 
 		e = p.next_log_event()
-		self.assertEqual(len(e.variables), 5)
+		self.assertEqual(len(e.root_matches), 5)
 
 		e = p.next_log_event()
-		self.assertEqual(len(e.variables), 2)
+		self.assertEqual(len(e.root_matches), 2)
 
 		e = p.next_log_event()
-		self.assertEqual(len(e.variables), 3)
+		self.assertEqual(len(e.root_matches), 3)
 
 		e = p.next_log_event()
 		self.assertIsNone(e)
@@ -260,11 +260,11 @@ class TestSimple(unittest.TestCase):
 
 		e = p.next_log_event()
 
-		self.assertEqual(len(e.variables), 1)
-		self.assertEqual(len(e.leaf_captures), 1)
-		self.assertEqual(len(e.all_captures), 4)
+		self.assertEqual(len(e.root_matches), 1)
+		self.assertEqual(len(e.leaf_matches), 1)
+		self.assertEqual(len(e.all_matches), 4)
 
-		leaf = e.leaf_captures[0]
+		leaf = e.leaf_matches[0]
 
 		self.assertEqual(leaf.name, "three")
 		self.assertEqual(leaf.text, "3")

@@ -11,6 +11,9 @@ use crate::parsing_spec::RuleIdx;
 
 #[derive(Debug, Clone)]
 pub struct Lexer {
+	/// Strictly speaking, this field is unnecessary;
+	/// `Parser` already has the spec and could pass it every time to `Lexer::next_token`.
+	/// However, it's cheap and cleaner to clone it here for encapsulation.
 	spec: Arc<ParsingSpec>,
 	#[allow(unused)]
 	jit: Arc<Jit>,

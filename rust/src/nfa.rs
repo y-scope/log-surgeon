@@ -61,6 +61,11 @@ pub enum Tag {
 }
 
 impl Tnfa {
+	pub const BLANK: Self = Self {
+		states: Vec::new(),
+		tags: Vec::new(),
+	};
+
 	pub fn tags(&self) -> &[Tag] {
 		&self.tags
 	}

@@ -173,7 +173,6 @@ public:
     [[nodiscard]] auto get_leaf_match(size_t i) const -> std::optional<Match>;
 
 private:
-    LogEvent const* m_event;
     std::span<Match const> m_matches;
     std::span<size_t const> m_leaf_indices;
 };
@@ -245,7 +244,7 @@ inline auto ParserHandle::get_encoding(size_t encoding_idx) const
     return m_encodings.at(encoding_idx);
 }
 
-inline EventHandle::EventHandle(LogEvent const* event) : m_event(event) {
+inline EventHandle::EventHandle(LogEvent const* event) {
     size_t len{0};
     Match const* matches{log_surgeon_log_event_all_matches(event, &len)};
     m_matches = {matches, len};

@@ -113,7 +113,7 @@ class TestRegression(unittest.TestCase):
 		e = p.next_log_event()
 		self.assertIsNotNone(e)
 
-		self.assertEqual(len(e.variables), 3)
-		self.assertEqual(e.variables[0].text, "abc")
-		self.assertEqual(e.variables[1].text, "123")
-		self.assertEqual(e.variables[2].text, "def")
+		self.assertEqual(len(e.root_matches), 3)
+		self.assertEqual(e.root_matches[0].text, "abc")
+		self.assertEqual(e.root_matches[1].text, "123")
+		self.assertEqual(e.root_matches[2].text, "def")

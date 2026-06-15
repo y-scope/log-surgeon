@@ -13,6 +13,8 @@ use crate::parsing_spec::RuleInfo;
 
 #[derive(Debug, Clone)]
 pub struct Parser {
+	/// We hold an `Arc<ParsingSpec>` since it may be convenient for others to
+	/// clone/"hold an owned reference" to the spec too.
 	pub spec: Arc<ParsingSpec>,
 	lexer: Lexer,
 	current_log: WorkingLogEvent,
@@ -186,6 +188,7 @@ impl Parser {
 		}
 
 		Some(LogEvent {
+			spec: &self.spec,
 			message: &self.current_log.message,
 			all_matches: &self.current_log.all_matches,
 			leaf_indices: &self.current_log.leaf_indices,

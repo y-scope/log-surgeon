@@ -192,6 +192,14 @@ struct BackupState {
 }
 
 impl Tdfa {
+	pub const BLANK: Self = Self {
+		states: Vec::new(),
+		kernels: BTreeMap::new(),
+		tags: Vec::new(),
+		tag_pairs: Vec::new(),
+		number_of_registers: 0,
+	};
+
 	pub fn execute(&self, input: &str) -> bool {
 		self.execute_with_captures(input, &mut self.execution_data(), RuleIdx::NIL)
 	}

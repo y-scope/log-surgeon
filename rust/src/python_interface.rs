@@ -19,6 +19,7 @@ use crate::parser::Parser;
 use crate::parsing_spec::ParsingSpec;
 use crate::parsing_spec::ParsingSpecBuilder;
 use crate::parsing_spec::RootRule;
+use crate::parsing_spec::RuleInfo;
 
 pyo3::create_exception!(log_surgeon, LogSurgeonException, PyRuntimeError);
 pyo3::create_exception!(log_surgeon, LogSurgeonInvalidRegexPattern, LogSurgeonException);
@@ -28,7 +29,6 @@ pyo3::create_exception!(log_surgeon, LogSurgeonInvalidRegexPattern, LogSurgeonEx
 struct PyParser {
 	input: Py<PyAny>,
 	spec_builder: ParsingSpecBuilder,
-	maybe_spec: Option<Arc<ParsingSpec>>,
 	maybe_parser: Option<Parser>,
 	buffer: String,
 	pos: usize,
@@ -36,24 +36,24 @@ struct PyParser {
 	debug: bool,
 }
 
-#[pyclass(name = "LogEvent")]
+#[pyclass(name = "LogEvent", frozen)]
 #[derive(Debug)]
 struct PyLogEvent {
 	#[pyo3(get)]
 	log_type: Py<PyString>,
 	#[pyo3(get)]
 	message: Py<PyString>,
-	#[pyo3(get, name = "leaf_captures")]
+	#[pyo3(get)]
 	leaf_matches: Py<PyList>,
-	#[pyo3(get, name = "non_leaf_captures")]
+	#[pyo3(get)]
 	non_leaf_matches: Py<PyList>,
-	#[pyo3(get, name = "variables")]
+	#[pyo3(get)]
 	root_matches: Py<PyList>,
-	#[pyo3(get, name = "all_captures")]
+	#[pyo3(get)]
 	all_matches: Py<PyList>,
 }
 
-#[pyclass(name = "Match")]
+#[pyclass(name = "Match", frozen)]
 #[derive(Debug)]
 struct PyMatch {
 	#[pyo3(get)]
@@ -62,8 +62,8 @@ struct PyMatch {
 	#[pyo3(get)]
 	sub_rule_id: Py<PyInt>,
 
-	#[pyo3(get)]
-	parent: Option<Py<PyMatch>>,
+	#[pyo3(get, name = "parent")]
+	maybe_parent: Option<Py<PyMatch>>,
 
 	/// Slice indexing into the text of this match.
 	#[pyo3(get)]
@@ -72,15 +72,9 @@ struct PyMatch {
 	/// Non-qualified name of this match.
 	#[pyo3(get)]
 	name: Py<PyString>,
-	// /// Fully-qualified name of this match.
-	// #[pyo3(get)]
-	// qualified_name: Py<PyString>,
-	/// Name of the containing root rule.
-	#[pyo3(get, name = "variable_name")]
-	root_rule_name: Py<PyString>,
-	/// Name of this sub rule (if applicable); empty string if this is a root rule.
-	#[pyo3(get, name = "capture_name")]
-	sub_rule_name: Py<PyString>,
+	/// Fully-qualified name of this match.
+	#[pyo3(get)]
+	fully_qualified_name: Py<PyString>,
 
 	#[pyo3(get, name = "text")]
 	lexeme: Py<PyString>,
@@ -94,7 +88,6 @@ impl PyParser {
 		Self {
 			input: Python::attach(|py| py.None()),
 			spec_builder: ParsingSpecBuilder::new(),
-			maybe_spec: None,
 			maybe_parser: None,
 			buffer: String::new(),
 			pos: 0,
@@ -124,7 +117,6 @@ impl PyParser {
 	fn compile(&mut self) -> PyResult<()> {
 		let spec: ParsingSpec = self.spec_builder.clone().build();
 		let spec: Arc<ParsingSpec> = Arc::new(spec);
-		self.maybe_spec = Some(Arc::clone(&spec));
 		self.maybe_parser = Some(Parser::new(spec));
 		Ok(())
 	}
@@ -137,7 +129,7 @@ impl PyParser {
 		Ok(())
 	}
 
-	fn next_log_event(&mut self) -> PyResult<Option<PyLogEvent>> {
+	fn next_log_event(&mut self, py: Python<'_>) -> PyResult<Option<PyLogEvent>> {
 		if self.done() {
 			return Ok(None);
 		}
@@ -154,60 +146,57 @@ impl PyParser {
 			event.check_invariants();
 		}
 
-		Python::attach(|py| {
-			let leaf_matches: Bound<'_, PyList> = PyList::empty(py);
-			let non_leaf_matches: Bound<'_, PyList> = PyList::empty(py);
-			let root_matches: Bound<'_, PyList> = PyList::empty(py);
-			let mut all_matches: Vec<Bound<'_, PyMatch>> = Vec::new();
+		let leaf_matches: Bound<'_, PyList> = PyList::empty(py);
+		let non_leaf_matches: Bound<'_, PyList> = PyList::empty(py);
+		let root_matches: Bound<'_, PyList> = PyList::empty(py);
+		let mut all_matches: Vec<Bound<'_, PyMatch>> = Vec::new();
 
-			let spec: &ParsingSpec = self.maybe_spec.as_ref().unwrap();
+		let spec: &ParsingSpec = event.spec;
 
-			for (i, cap) in event.all_matches.iter().enumerate() {
-				let rule: &RootRule = &spec[cap.rule_idx];
-				let root_rule_name: &str = &rule.name;
-				let sub_rule_name: &str = rule[cap.sub_rule_id].sub_rule_name();
-				let (name, parent): (&str, Option<Py<PyMatch>>) = if cap.parent_index < i {
-					(sub_rule_name, Some(all_matches[cap.parent_index].clone().unbind()))
-				} else {
-					(root_rule_name, None)
-				};
-				// let qualified_name: String =
-				// 	format!("{}{}", root_rule_name, rule.rule_info(cap.sub_rule_id).qualified_name());
-				let name: Py<PyString> = PyString::new(py, name).unbind();
-				let py_cap: Bound<'_, PyMatch> = PyMatch {
-					root_rule_id: PyInt::new(py, u16::from(cap.rule_idx)).unbind(),
-					sub_rule_id: PyInt::new(py, cap.sub_rule_id.map_or(0, NonZero::get)).unbind(),
-					parent,
-					offsets: PySlice::new(py, cap.range.start as isize, cap.range.end as isize, 1).unbind(),
-					name,
-					// qualified_name: PyString::new(py, &qualified_name).unbind(),
-					root_rule_name: PyString::new(py, root_rule_name).unbind(),
-					sub_rule_name: PyString::new(py, sub_rule_name).unbind(),
-					lexeme: PyString::new(py, &event.message[cap.range.start..cap.range.end]).unbind(),
-				}
-				.into_pyobject(py)?;
-				if cap.sub_rule_id.is_none() {
-					root_matches.append(py_cap.clone())?;
-				}
-				if cap.is_leaf {
-					leaf_matches.append(py_cap.clone())?;
-				} else {
-					non_leaf_matches.append(py_cap.clone())?;
-				}
-				all_matches.push(py_cap);
+		for (i, mat) in event.all_matches.iter().enumerate() {
+			let rule: &RootRule = &spec[mat.rule_idx];
+			let rule_info: &RuleInfo = &rule[mat.sub_rule_id];
+			let (name, maybe_parent): (&str, Option<Py<PyMatch>>) = if mat.parent_index < i {
+				assert!(!rule_info.is_root());
+				(
+					rule_info.sub_rule_name(),
+					Some(all_matches[mat.parent_index].clone().unbind()),
+				)
+			} else {
+				assert!(rule_info.is_root());
+				(&rule.name, None)
+			};
+			let py_mat: Bound<'_, PyMatch> = PyMatch {
+				root_rule_id: PyInt::new(py, u16::from(mat.rule_idx)).unbind(),
+				sub_rule_id: PyInt::new(py, mat.sub_rule_id.map_or(0, NonZero::get)).unbind(),
+				maybe_parent,
+				offsets: PySlice::new(py, mat.range.start as isize, mat.range.end as isize, 1).unbind(),
+				name: PyString::new(py, name).unbind(),
+				fully_qualified_name: PyString::new(py, &rule_info.fully_qualified_name).unbind(),
+				lexeme: PyString::new(py, &event.message[mat.range.start..mat.range.end]).unbind(),
 			}
-			let all_matches: Bound<'_, PyList> = PyList::new(py, all_matches)?;
-			let log_type: String = log_type::stringify(spec, &event.message, event.all_matches);
+			.into_pyobject(py)?;
+			if mat.sub_rule_id.is_none() {
+				root_matches.append(py_mat.clone())?;
+			}
+			if mat.is_leaf {
+				leaf_matches.append(py_mat.clone())?;
+			} else {
+				non_leaf_matches.append(py_mat.clone())?;
+			}
+			all_matches.push(py_mat);
+		}
+		let all_matches: Bound<'_, PyList> = PyList::new(py, all_matches)?;
+		let log_type: String = log_type::stringify(spec, &event.message, event.all_matches);
 
-			Ok(Some(PyLogEvent {
-				log_type: PyString::new(py, &log_type).unbind(),
-				message: PyString::new(py, event.message).unbind(),
-				leaf_matches: leaf_matches.unbind(),
-				non_leaf_matches: non_leaf_matches.unbind(),
-				root_matches: root_matches.unbind(),
-				all_matches: all_matches.unbind(),
-			}))
-		})
+		Ok(Some(PyLogEvent {
+			log_type: PyString::new(py, &log_type).unbind(),
+			message: PyString::new(py, event.message).unbind(),
+			leaf_matches: leaf_matches.unbind(),
+			non_leaf_matches: non_leaf_matches.unbind(),
+			root_matches: root_matches.unbind(),
+			all_matches: all_matches.unbind(),
+		}))
 	}
 
 	fn done(&self) -> bool {
@@ -215,11 +204,11 @@ impl PyParser {
 	}
 
 	fn generate_parsing_spec_definition(&self) -> PyResult<String> {
-		let Some(spec): Option<&ParsingSpec> = self.maybe_spec.as_deref() else {
+		let Some(parser): Option<&Parser> = self.maybe_parser.as_ref() else {
 			return Err(LogSurgeonException::new_err("parser has not been compiled"));
 		};
 
-		Ok(spec.to_parsing_spec_definition())
+		Ok(parser.spec.to_parsing_spec_definition())
 	}
 
 	#[staticmethod]
@@ -232,7 +221,6 @@ impl PyParser {
 				Ok(Self {
 					input: Python::attach(|py| py.None()),
 					spec_builder: ParsingSpecBuilder::new(),
-					maybe_spec: Some(Arc::clone(&spec)),
 					maybe_parser: Some(Parser::new(spec)),
 					buffer: String::new(),
 					pos: 0,
@@ -288,6 +276,15 @@ impl PyMatch {
 	// fn contains(&self, key: &str) -> bool {
 	// 	self.captures.contains_key(key)
 	// }
+
+	#[getter]
+	fn root<'py>(this: &Bound<'py, Self>) -> Bound<'py, Self> {
+		if let Some(parent) = &this.get().maybe_parent {
+			PyMatch::root(parent.bind(this.py()))
+		} else {
+			this.clone()
+		}
+	}
 
 	#[pyo3(name = "__repr__")]
 	fn repr(&self) -> String {
