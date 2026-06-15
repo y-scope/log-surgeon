@@ -1,6 +1,7 @@
 use std::ffi::c_char;
 use std::num::NonZero;
 
+use crate::ffi::CRange;
 use crate::ffi::UncheckedCArray;
 use crate::parsing_spec::RuleIdx;
 
@@ -12,6 +13,7 @@ pub struct LogEvent<'parser> {
 	pub variable_indices: &'parser [usize],
 }
 
+/// `Match`es are exposed to FFI, so they need to be `#[repr(C)]`.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[repr(C)]
 pub struct Match {
@@ -29,7 +31,7 @@ pub struct Match {
 	pub parent_index: usize,
 
 	/// Relative to the start of the log message.
-	pub range: Range<usize>,
+	pub range: CRange<usize>,
 
 	pub is_leaf: bool,
 
@@ -38,14 +40,6 @@ pub struct Match {
 	/// DANGEROUS fields for FFI.
 	/// But it's not dangerous if you don't look at it.
 	pub ffi_pointers: MatchFfiPointers,
-}
-
-/// Need this to be `#[repr(C)]`.
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-#[repr(C)]
-pub struct Range<Idx> {
-	pub start: Idx,
-	pub end: Idx,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]

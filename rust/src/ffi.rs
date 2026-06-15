@@ -16,18 +16,15 @@ pub struct CArray<'lifetime, T> {
 
 pub type CCharArray<'lifetime> = CArray<'lifetime, c_char>;
 
-#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+/// Can't use `std::range::Range` because it's not `#[repr(C)]`.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[repr(C)]
-pub struct CUtf8<'lifetime> {
-	pointer: *const c_char,
-	length: usize,
-	_lifetime: PhantomData<&'lifetime [c_char]>,
+pub struct CRange<Idx> {
+	pub start: Idx,
+	pub end: Idx,
 }
 
-/// Rust is annoying about Send/Sync for pointers, even when it technically **is** safe.
-unsafe impl Send for CUtf8<'_> {}
-unsafe impl Sync for CUtf8<'_> {}
-
+/// A pointer-length pair with unchecked/untied lifetime.
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(C)]
 pub struct UncheckedCArray<T> {
@@ -38,34 +35,6 @@ pub struct UncheckedCArray<T> {
 /// Rust is annoying about Send/Sync for pointers, even when it technically **is** safe.
 unsafe impl<T> Send for UncheckedCArray<T> {}
 unsafe impl<T> Sync for UncheckedCArray<T> {}
-
-impl<'lifetime> CUtf8<'lifetime> {
-	pub const NULL: Self = Self {
-		pointer: std::ptr::null(),
-		length: 0,
-		_lifetime: PhantomData,
-	};
-
-	pub fn new(s: &'lifetime str) -> Self {
-		Self {
-			pointer: s.as_bytes().as_ptr().cast::<c_char>(),
-			length: s.as_bytes().len(),
-			_lifetime: PhantomData,
-		}
-	}
-
-	pub fn as_str(&self) -> &str {
-		unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(self.pointer.cast::<u8>(), self.length)) }
-	}
-}
-
-impl std::ops::Deref for CUtf8<'_> {
-	type Target = str;
-
-	fn deref(&self) -> &Self::Target {
-		self.as_str()
-	}
-}
 
 impl<'lifetime, T> CArray<'lifetime, T> {
 	pub fn null() -> Self {
@@ -91,6 +60,9 @@ impl<'lifetime, T> CArray<'lifetime, T> {
 
 impl<'lifetime> CCharArray<'lifetime> {
 	pub fn from_utf8(utf8: &'lifetime str) -> Self {
+		// `str::len` is indeed the byte length,
+		// as opposed to the number of unicode characters/code points,
+		// but let's be explicit.
 		Self {
 			pointer: utf8.as_bytes().as_ptr().cast::<c_char>(),
 			length: utf8.as_bytes().len(),

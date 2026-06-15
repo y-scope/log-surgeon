@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use crate::dfa::TdfaExecution;
+use crate::ffi::CRange;
 use crate::ffi::UncheckedCArray;
 use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::log_event::LogEvent;
 use crate::log_event::Match;
 use crate::log_event::MatchFfiPointers;
-use crate::log_event::Range;
 use crate::parsing_spec::ParsingSpec;
 use crate::parsing_spec::RuleInfo;
 
@@ -97,7 +97,7 @@ impl Parser {
 						sub_rule_id: None,
 						parent_id: None,
 						parent_index: token_starting_capture_count,
-						range: Range {
+						range: CRange {
 							start: token_start,
 							end: token_start + lexeme.len(),
 						},
@@ -120,7 +120,7 @@ impl Parser {
 							sub_rule_id: Some(regex_capture.capture_id),
 							parent_id: regex_capture.parent_id,
 							parent_index: token_starting_capture_count + regex_capture.parent_index,
-							range: Range {
+							range: CRange {
 								start: token_start + regex_capture.range.start,
 								end: token_start + regex_capture.range.end,
 							},

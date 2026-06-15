@@ -11,7 +11,6 @@ pub mod ffi;
 pub mod interval_tree;
 pub mod lexer;
 pub mod log_event;
-// pub mod log_type;
 pub mod nfa;
 pub mod parser;
 pub mod parsing_spec;
@@ -19,10 +18,21 @@ pub mod regex;
 pub mod search;
 
 pub mod c_interface;
+
 #[cfg(feature = "python")]
 pub mod python_interface;
 
+/// Registers a global "trace sink" with environment variable `LOG_SURGEON_LOG`;
+/// e.g. set `LOG_SURGEON_LOG=log_surgeon=info` to show `info` and higher messages.
+/// See [`tracing_subscriber::filter::EnvFilter`] for more details on the syntax for the environment variable.
+///
+/// See also:
+/// - <https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives>
+///
 pub fn enable_tracing() {
+	// Note: calling `.without_time()` disables both timestamps per log message
+	// _and_ timing events/showing their duration.
+	// Call `.with_timer()` with an empty formatter to just disable timestamps in each log printed.
 	tracing_subscriber::fmt::fmt()
 		// .without_time()
 		.with_timer(())
