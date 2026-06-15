@@ -57,6 +57,8 @@ pub struct RegexError {
 
 type ParsingResult<'a, T> = IResult<&'a str, T, RegexParsingError<'a>>;
 
+/// Note: Most errors are parsing/syntax errors, but not all.
+/// Strictly speaking, we could separate them, but would probably be excessive right now.
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum RegexErrorKind {
 	/// Expected a certain character, e.g. '<' after '?' in a capture.
@@ -67,26 +69,28 @@ enum RegexErrorKind {
 	InvalidTerm,
 	/// Expected a literal character in a bracketed expression.
 	ExpectedLiteralInBracketedExpression,
-	/// An empty bracketed expression "[]".
+	/// An empty bracketed expression "[]";
+	/// not meaningful since it corresponds to an empty set of characters.
 	/// Note that "[^]" is allowed, being equivalent to the wildcard ".".
 	EmptyBrackets,
-	/// Bracket range `min > max`.
+	/// Bracket range `min > max` (semantic error).
 	InvalidBracketRange(char, char),
 	/// Invalid escape character.
 	InvalidEscape,
-	/// Invalid repetition bound; `min > max` or `max == 0`.
+	/// Invalid repetition bound; `min > max` or `max == 0` (semantic error, like `InvalidBracketRange`).
 	InvalidRepetitionBound(u32, u32),
-	/// Too large of a repetition bound.
+	/// Too large of a repetition bound
+	/// (~implementation detail/restriction; repetition bounds are stored as `u32`).
 	NumberTooBig,
-	/// Expected decimal digits (for repetition bound).
+	/// Expected decimal digits (for repetition bound) (syntax error).
 	ExpectedDecimalDigits,
-	/// Expected hex digits (for unicode escape).
+	/// Expected hex digits (for unicode escape) (syntax error).
 	ExpectedHexDigits,
-	/// Invalid code point in unicode escape.
+	/// Invalid code point in unicode escape (semantic error).
 	InvalidCodePoint(u32),
-	/// Invalid capture name.
+	/// Invalid capture name; only letters, numbers, and underscores allowed.
 	InvalidCaptureName,
-	/// Too many captures.
+	/// Too many captures (implementation detail/restriction).
 	TooManyCaptures,
 	/// An escape class (e.g. "\\d") was used as the start/end point of a bracket range.
 	EscapeClassInBracketRange,
@@ -100,8 +104,9 @@ enum RegexErrorKind {
 	ExpectedOneOf { characters: &'static str, negate: bool },
 	/// No definition for placeholder.
 	UndefinedPlaceholder(String),
-	/// An error from nom; shouldn't happen, but in implementation of [`nom::error::ParseError`]
-	/// (useful for debugging/failing gracefully in a non-critical scenario).
+	/// An error from nom; should be caught/never bubble up,
+	/// but used to implement the trait [`nom::error::ParseError`],
+	/// and useful for debugging/failing gracefully.
 	Nom(NomErrorKind),
 }
 
@@ -643,7 +648,7 @@ fn parse_escaped_character(original_input: &str) -> ParsingResult<'_, Literal> {
 	// Cut: If we parsed a '\\', we necessarily are looking for an escape character.
 	cut(alt((
 		parse_one_char_of::<false>(SPECIAL_CHARACTERS).map(Literal::Char),
-		// TODO: deprecate this
+		// TODO: deprecate allowing this outside bracketed expressions.
 		parse_char::<'-'>.map(Literal::Char),
 		parse_standard_escape,
 	))
@@ -664,6 +669,8 @@ fn parse_literal_char_in_bracketed_expression(input: &str) -> ParsingResult<'_, 
 			.map(Some),
 		parse_escaped_character.map(Some),
 		value(None, peek(parse_char::<']'>)),
+		// This branch is for a more intuitive [`RegexErrorKind::ExpectedClose`] error,
+		// as opposed to `ExpectedLiteralInBracketedExpression` for a pattern like `[abc`.
 		value(None, eof),
 		|input| Err(RegexErrorKind::ExpectedLiteralInBracketedExpression.fail(input)),
 	))
@@ -754,7 +761,6 @@ fn parse_char<const CHAR: char>(input: &str) -> ParsingResult<'_, char> {
 // =======================================
 
 fn parse_capture_name(input: &str) -> ParsingResult<'_, &str> {
-	// use nom::character::complete::alphanumeric1;
 	use nom::AsChar;
 	use nom::bytes::take_while1;
 
@@ -786,6 +792,13 @@ fn parse_digits(input: &str) -> ParsingResult<'_, u32> {
 }
 
 // ==================================
+
+/// Parse `inside` between `OPEN` and `CLOSE` characters;
+/// "cut" (commit to this parse) after seeing the opening character;
+/// i.e. transform [`NomErr::Error`] to [`NomErr::Failure`].
+///
+/// See also:
+/// - [`nom::combinator::cut`].
 fn combinator_surrounded_cut<'a, const OPEN: char, const CLOSE: char, O, F>(
 	mut inside: F,
 ) -> impl Parser<&'a str, Output = O, Error = RegexParsingError<'a>>
@@ -797,6 +810,15 @@ where
 	move |input| {
 		let (input, _): (&str, char) = parse_char::<OPEN>(input)?;
 
+		// At this point, we've seen/parsed the opening character.
+		// "Cut" (require) `inside` to parse necessarily,
+		// as well as the closing character.
+
+		// TODO this doesn't work because this `inside` is moved into `cut`,
+		// making this closure only `FnOnce` instead of `FnMut`,
+		// and the closure must be `FnMut` for the generic implementation of `Parser`.
+		// Is there a cleaner way to write this (avoiding re-implementing `cut`)?
+		// let (input, output): (&str, O) = cut(inside).parse(input)?;
 		let (input, output): (&str, O) = match inside.parse(input) {
 			Ok(ok) => ok,
 			Err(err @ NomErr::Incomplete(_)) => {
@@ -810,8 +832,6 @@ where
 				return Err(NomErr::Failure(err));
 			},
 		};
-		// TODO cut prevents fnmut
-		// let (input, output): (&str, O) = cut(inside).parse(input)?;
 
 		let (input, _): (&str, char) =
 			cut(parse_char::<CLOSE>.or(RegexErrorKind::ExpectedClose(OPEN, CLOSE).diagnostic())).parse(input)?;
