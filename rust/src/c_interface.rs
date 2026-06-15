@@ -20,6 +20,7 @@ use crate::regex::Regex;
 use crate::search::Interpretation;
 use crate::search::SearchString;
 use crate::search::SubQuery;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct SearchResult {
@@ -132,7 +133,7 @@ mod parser {
 
 	#[unsafe(no_mangle)]
 	extern "C" fn log_surgeon_parser_new(parsing_spec: Box<ParsingSpec>) -> Box<Parser> {
-		let parser: Parser = Parser::new(*parsing_spec);
+		let parser: Parser = Parser::new(Arc::new(*parsing_spec));
 		Box::new(parser)
 	}
 

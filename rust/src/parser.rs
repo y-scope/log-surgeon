@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
-use crate::dfa::Jit;
-use crate::dfa::JittedDfa;
 use crate::dfa::TdfaExecution;
 use crate::ffi::UncheckedCArray;
-use crate::lexing::Token;
+use crate::lexer::Lexer;
+use crate::lexer::Token;
 use crate::log_event::LogEvent;
 use crate::log_event::Match;
 use crate::log_event::MatchFfiPointers;
@@ -14,13 +13,11 @@ use crate::parsing_spec::RuleInfo;
 
 #[derive(Debug, Clone)]
 pub struct Parser {
-	pub spec: ParsingSpec,
+	pub spec: Arc<ParsingSpec>,
+	lexer: Lexer,
 	current_log: WorkingLogEvent,
 	maybe_pending_header: Option<WorkingLogEvent>,
 	dfa_execution: TdfaExecution,
-	#[allow(unused)]
-	jit: Arc<Jit>,
-	jitted_dfa: JittedDfa,
 }
 
 unsafe impl Send for Parser {}
@@ -35,7 +32,8 @@ struct WorkingLogEvent {
 }
 
 impl Parser {
-	pub fn new(spec: ParsingSpec) -> Self {
+	pub fn new(spec: Arc<ParsingSpec>) -> Self {
+		let lexer: Lexer = Lexer::new(Arc::clone(&spec));
 		let mut registers: usize = 0;
 		let mut tags: usize = 0;
 		for rule in spec.rules.iter() {
@@ -43,15 +41,13 @@ impl Parser {
 			tags = tags.max(rule.dfa.tags.len());
 		}
 		let dfa_execution: TdfaExecution = TdfaExecution::new(registers, tags);
-		let mut jit: Jit = Jit::new();
-		let jitted_dfa: JittedDfa = jit.jit(&spec.main_dfa).unwrap();
+
 		Self {
 			spec,
+			lexer,
 			current_log: WorkingLogEvent::new(),
 			maybe_pending_header: None,
 			dfa_execution,
-			jit: Arc::new(jit),
-			jitted_dfa,
 		}
 	}
 
@@ -83,14 +79,10 @@ impl Parser {
 			let token_start: usize = pos_before_token - pos_after_header + header_len;
 			let token_starting_capture_count: usize = self.current_log.all_matches.len();
 			let token_starting_leaf_indices: usize = self.current_log.leaf_indices.len();
-			match self.spec.next_token(
-				input,
-				pos,
-				last_was_delimited,
-				&mut self.dfa_execution,
-				self.jitted_dfa,
-				&self.spec.optimized_dfa,
-			) {
+			match self
+				.lexer
+				.next_token(input, pos, last_was_delimited, &mut self.dfa_execution)
+			{
 				Token::Variable {
 					rule,
 					lexeme,

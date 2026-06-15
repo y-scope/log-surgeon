@@ -62,7 +62,7 @@ pub struct RuleInfo {
 	pub root_name: Arc<str>,
 
 	/// If this is not a root rule, additional sub-rule info.
-	pub maybe_sub_rule: Option<Box<SubRule>>,
+	pub maybe_sub_rule: Option<Arc<SubRule>>,
 
 	pub fully_qualified_name: Arc<str>,
 

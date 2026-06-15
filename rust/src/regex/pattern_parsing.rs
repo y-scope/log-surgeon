@@ -188,7 +188,10 @@ impl Regex {
 	{
 		match self {
 			Self::AnyChar | Self::Literal(..) | Self::BracketedRanges { .. } => Ok(()),
-			Self::Capture(sub_rule) => sub_rule.regex.replace_with_placeholders(get_placeholder),
+			Self::Capture(sub_rule) => Arc::get_mut(sub_rule)
+				.unwrap()
+				.regex
+				.replace_with_placeholders(get_placeholder),
 			Self::Placeholder { name, item } => {
 				let Some(placeholder): Option<Regex> = get_placeholder.lookup(name) else {
 					return Err(RegexErrorKind::UndefinedPlaceholder(name.clone()));
@@ -218,6 +221,7 @@ impl Regex {
 		match self {
 			Self::AnyChar | Self::Literal(..) | Self::BracketedRanges { .. } => (),
 			Self::Capture(sub_rule) => {
+				let sub_rule: &mut SubRule = Arc::get_mut(sub_rule).unwrap();
 				let maybe_parent: Option<&(NonZero<u16>, Arc<str>)> = stack.last();
 				sub_rule.parent_id = maybe_parent.map(|(id, _)| *id);
 				sub_rule.id = *id;
@@ -498,7 +502,7 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 
 		Ok((
 			input,
-			Regex::Capture(Box::new(SubRule {
+			Regex::Capture(Arc::new(SubRule {
 				name: name.to_owned(),
 				regex,
 				// This is a valid placeholder; see note for [`Regex::number_captures`].

@@ -1,12 +1,21 @@
 use std::str::Chars;
 
-use crate::dfa::CompressedDfa;
+use crate::dfa::Jit;
 use crate::dfa::JittedDfa;
 use crate::dfa::MatchedRule;
 use crate::dfa::TdfaExecution;
 use crate::parsing_spec::ParsingSpec;
 use crate::parsing_spec::RootRule;
 use crate::parsing_spec::RuleIdx;
+use std::sync::Arc;
+
+#[derive(Debug, Clone)]
+pub struct Lexer {
+	spec: Arc<ParsingSpec>,
+	#[allow(unused)]
+	jit: Arc<Jit>,
+	jitted_dfa: JittedDfa,
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Token<'spec, 'input> {
@@ -20,15 +29,24 @@ pub enum Token<'spec, 'input> {
 	EndOfInput,
 }
 
-impl ParsingSpec {
+impl Lexer {
+	pub fn new(spec: Arc<ParsingSpec>) -> Self {
+		let mut jit: Jit = Jit::new();
+		let jitted_dfa: JittedDfa = jit.jit(&spec.main_dfa).unwrap();
+
+		Self {
+			spec,
+			jit: Arc::new(jit),
+			jitted_dfa,
+		}
+	}
+
 	pub fn next_token<'spec, 'input>(
 		&'spec self,
 		input: &'input str,
 		pos: &mut usize,
 		last_was_delimited: u32,
-		data: &mut TdfaExecution,
-		jitted_dfa: JittedDfa,
-		compressed: &CompressedDfa,
+		dfa_execution: &mut TdfaExecution,
 	) -> Token<'spec, 'input> {
 		let start: usize = *pos;
 
@@ -63,14 +81,12 @@ impl ParsingSpec {
 			return Token::EndOfInput;
 		}
 
-		if let Some(MatchedRule { rule_idx, lexeme }) =
-			self.execute_dfa::<true>(&input[start..], last_was_delimited, jitted_dfa, compressed)
-		{
-			let rule: &RootRule = &self[rule_idx];
+		if let Some(MatchedRule { rule_idx, lexeme }) = self.execute_dfa::<true>(&input[start..], last_was_delimited) {
+			let rule: &RootRule = &self.spec[rule_idx];
 			let has_captures: bool = rule.has_captures();
-			data.clear();
+			dfa_execution.clear();
 			if has_captures {
-				let matched: bool = rule.dfa.execute_with_captures(lexeme, data, rule.idx);
+				let matched: bool = rule.dfa.execute_with_captures(lexeme, dfa_execution, rule.idx);
 				assert!(matched);
 			}
 			*pos += lexeme.len();
@@ -97,14 +113,12 @@ impl ParsingSpec {
 		&self,
 		input: &'input str,
 		last_was_delimited: u32,
-		jitted_dfa: JittedDfa,
-		compressed: &CompressedDfa,
 	) -> Option<MatchedRule<'input>> {
 		if JIT {
 			let input: std::ops::Range<*const u8> = input.as_bytes().as_ptr_range();
 			let mut end: *const u8 = std::ptr::null();
 
-			let rule_idx: RuleIdx = jitted_dfa(input.start, input.end, last_was_delimited, &mut end)?;
+			let rule_idx: RuleIdx = (self.jitted_dfa)(input.start, input.end, last_was_delimited, &mut end)?;
 			let lexeme: &str = unsafe {
 				let start: *const u8 = input.start;
 				let len: isize = end.offset_from(start);
@@ -115,7 +129,7 @@ impl ParsingSpec {
 			Some(MatchedRule { rule_idx, lexeme })
 		} else {
 			// self.main_dfa.execute_without_captures(input, last_was_delimited)
-			compressed.execute(input, last_was_delimited)
+			self.spec.optimized_dfa.execute(input, last_was_delimited)
 		}
 	}
 
@@ -133,11 +147,11 @@ impl ParsingSpec {
 
 	fn is_delimiter(&self, ch: char) -> bool {
 		if let Ok(i) = u8::try_from(ch)
-			&& let Some(ch_is_delimiter) = self.ascii_delimiters.get(usize::from(i))
+			&& let Some(ch_is_delimiter) = self.spec.ascii_delimiters.get(usize::from(i))
 		{
 			*ch_is_delimiter
 		} else {
-			self.non_ascii_delimiters.contains(ch)
+			self.spec.non_ascii_delimiters.contains(ch)
 		}
 	}
 }

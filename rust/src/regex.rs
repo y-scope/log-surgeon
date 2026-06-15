@@ -34,7 +34,7 @@ pub struct AnchoredRegex {
 pub enum Regex {
 	AnyChar,
 	Literal(char),
-	Capture(Box<SubRule>),
+	Capture(Arc<SubRule>),
 	BracketedRanges { negated: bool, items: Vec<(char, char)> },
 	KleeneClosure(Box<Regex>),
 	KleenePlus(Box<Regex>),

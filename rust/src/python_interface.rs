@@ -1,4 +1,5 @@
 use std::num::NonZero;
+use std::sync::Arc;
 
 use pyo3::buffer::PyBuffer;
 // use pyo3::exceptions::PyIndexError;
@@ -27,7 +28,7 @@ pyo3::create_exception!(log_surgeon, LogSurgeonInvalidRegexPattern, LogSurgeonEx
 struct PyParser {
 	input: Py<PyAny>,
 	spec_builder: ParsingSpecBuilder,
-	maybe_spec: Option<ParsingSpec>,
+	maybe_spec: Option<Arc<ParsingSpec>>,
 	maybe_parser: Option<Parser>,
 	buffer: String,
 	pos: usize,
@@ -120,7 +121,8 @@ impl PyParser {
 
 	fn compile(&mut self) -> PyResult<()> {
 		let spec: ParsingSpec = self.spec_builder.clone().build();
-		self.maybe_spec = Some(spec.clone());
+		let spec: Arc<ParsingSpec> = Arc::new(spec);
+		self.maybe_spec = Some(Arc::clone(&spec));
 		self.maybe_parser = Some(Parser::new(spec));
 		Ok(())
 	}
@@ -212,7 +214,7 @@ impl PyParser {
 	}
 
 	fn generate_parsing_spec_definition(&self) -> PyResult<String> {
-		let Some(spec): Option<&ParsingSpec> = self.maybe_spec.as_ref() else {
+		let Some(spec): Option<&ParsingSpec> = self.maybe_spec.as_deref() else {
 			return Err(LogSurgeonException::new_err("parser has not been compiled"));
 		};
 
@@ -225,10 +227,11 @@ impl PyParser {
 		match ParsingSpecBuilder::from_parsing_spec_definition(definition) {
 			Ok(builder) => {
 				let spec: ParsingSpec = builder.build();
+				let spec: Arc<ParsingSpec> = Arc::new(spec);
 				Ok(Self {
 					input: Python::attach(|py| py.None()),
 					spec_builder: ParsingSpecBuilder::new(),
-					maybe_spec: Some(spec.clone()),
+					maybe_spec: Some(Arc::clone(&spec)),
 					maybe_parser: Some(Parser::new(spec)),
 					buffer: String::new(),
 					pos: 0,

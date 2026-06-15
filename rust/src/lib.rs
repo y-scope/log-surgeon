@@ -9,7 +9,7 @@ pub mod utils;
 pub mod dfa;
 pub mod ffi;
 pub mod interval_tree;
-pub mod lexing;
+pub mod lexer;
 pub mod log_event;
 // pub mod log_type;
 pub mod nfa;
