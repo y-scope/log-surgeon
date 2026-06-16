@@ -187,11 +187,11 @@ impl PyParser {
 			all_matches.push(py_mat);
 		}
 		let all_matches: Bound<'_, PyList> = PyList::new(py, all_matches)?;
-		let log_type: String = log_type::stringify(spec, &event.message, event.all_matches);
+		let log_type: String = log_type::stringify(spec, event.message.as_str(), event.all_matches.as_slice());
 
 		Ok(Some(PyLogEvent {
 			log_type: PyString::new(py, &log_type).unbind(),
-			message: PyString::new(py, event.message).unbind(),
+			message: PyString::new(py, event.message.as_str()).unbind(),
 			leaf_matches: leaf_matches.unbind(),
 			non_leaf_matches: non_leaf_matches.unbind(),
 			root_matches: root_matches.unbind(),

@@ -245,11 +245,8 @@ inline auto ParserHandle::get_encoding(size_t encoding_idx) const
 }
 
 inline EventHandle::EventHandle(LogEvent const* event) {
-    size_t len{0};
-    Match const* matches{log_surgeon_log_event_all_matches(event, &len)};
-    m_matches = {matches, len};
-    size_t const* leaf_indices{log_surgeon_log_event_leaf_match_indices(event, &len)};
-    m_leaf_indices = {leaf_indices, len};
+    m_matches = event->all_matches.as_span();
+    m_leaf_indices = event->leaf_indices.as_span();
 }
 
 inline auto EventHandle::get_leaf_match(size_t i) const -> std::optional<Match> {

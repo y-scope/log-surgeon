@@ -19,8 +19,6 @@ namespace log_surgeon {
 
 struct Interpretation;
 
-struct LogEvent;
-
 /// Newtype wrapper around a `usize` index.
 struct NfaIdx;
 
@@ -96,6 +94,21 @@ struct Match {
     /// DANGEROUS fields for FFI.
     /// But it's not dangerous if you don't look at it.
     MatchFfiPointers ffi_pointers;
+};
+
+struct LogEvent {
+    /// Strictly speaking, this field is redundant;
+    /// however, the spec is needed to get info about the rules,
+    /// and is included here for convenience.
+    /// Note that since [`Parser::next_event`](crate::parser::Parser::next_event)
+    /// returns a `LogEvent` that `mut` (exclusively) borrows from the parser,
+    /// the caller can't access the parser's spec and the event at the same time.
+    /// So, `Parser::next_event` passes a reference to the spec through the returned `LogEvent`.
+    const ParsingSpec *spec;
+    CCharArray message;
+    CArray<Match> all_matches;
+    CArray<size_t> leaf_indices;
+    CArray<size_t> variable_indices;
 };
 
 

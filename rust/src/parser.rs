@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use crate::dfa::TdfaExecution;
+use crate::ffi::CArray;
 use crate::ffi::CRange;
+use crate::ffi::CUtf8;
 use crate::ffi::UncheckedCArray;
 use crate::lexer::Lexer;
 use crate::lexer::Token;
@@ -189,10 +191,10 @@ impl Parser {
 
 		Some(LogEvent {
 			spec: &self.spec,
-			message: &self.current_log.message,
-			all_matches: &self.current_log.all_matches,
-			leaf_indices: &self.current_log.leaf_indices,
-			variable_indices: &self.current_log.variable_indices,
+			message: CUtf8::new(&self.current_log.message),
+			all_matches: CArray::from_slice(&self.current_log.all_matches),
+			leaf_indices: CArray::from_slice(&self.current_log.leaf_indices),
+			variable_indices: CArray::from_slice(&self.current_log.variable_indices),
 		})
 	}
 }

@@ -82,6 +82,7 @@ exclude = [
 	"Option",
 	"CArray",
 	"CCharArray",
+	"CUtf8",
 ]
 # prefix = "CAPI_"
 item_types = []
@@ -90,6 +91,7 @@ renaming_overrides_prefixing = false
 
 [export.rename]
 "SubQuery" = "InternalSubQuery"
+"CUtf8" = "CCharArray"
 
 [export.pre_body]
 

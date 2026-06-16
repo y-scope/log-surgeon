@@ -1,12 +1,15 @@
 use std::ffi::c_char;
 use std::num::NonZero;
 
+use crate::ffi::CArray;
 use crate::ffi::CRange;
+use crate::ffi::CUtf8;
 use crate::ffi::UncheckedCArray;
 use crate::parsing_spec::ParsingSpec;
 use crate::parsing_spec::RuleIdx;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[repr(C)]
 pub struct LogEvent<'parser> {
 	/// Strictly speaking, this field is redundant;
 	/// however, the spec is needed to get info about the rules,
@@ -16,10 +19,10 @@ pub struct LogEvent<'parser> {
 	/// the caller can't access the parser's spec and the event at the same time.
 	/// So, `Parser::next_event` passes a reference to the spec through the returned `LogEvent`.
 	pub spec: &'parser ParsingSpec,
-	pub message: &'parser str,
-	pub all_matches: &'parser [Match],
-	pub leaf_indices: &'parser [usize],
-	pub variable_indices: &'parser [usize],
+	pub message: CUtf8<'parser>,
+	pub all_matches: CArray<'parser, Match>,
+	pub leaf_indices: CArray<'parser, usize>,
+	pub variable_indices: CArray<'parser, usize>,
 }
 
 /// `Match`es are exposed to FFI, so they need to be `#[repr(C)]`.
@@ -71,10 +74,10 @@ impl<'parser> LogEvent<'parser> {
 	/// Blank `LogEvent`; default value required for C FFI.
 	pub const BLANK: Self = Self {
 		spec: &ParsingSpec::BLANK,
-		message: "",
-		all_matches: &[],
-		leaf_indices: &[],
-		variable_indices: &[],
+		message: CUtf8::NULL,
+		all_matches: CArray::null(),
+		leaf_indices: CArray::null(),
+		variable_indices: CArray::null(),
 	};
 
 	pub fn check_invariants(&self) {
