@@ -8,9 +8,13 @@ pub struct Escaped {
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub enum InvalidEscape {
+	/// Reached EOF after initial backslash (empty input).
 	Eof,
+	/// Malformed Unicode code point (as hexadecimal digit pairs).
 	Malformed,
+	/// Unknown escape character.
 	Unknown(char),
+	/// Invalid Unicode code point.
 	BadCodePoint(u32),
 }
 
@@ -24,6 +28,14 @@ impl Escaped {
 		self
 	}
 
+	/// Parses the following "common" escape sequences, after the backslash
+	/// (switches on the first character of `input`):
+	///
+	/// - ` ` for a literal space (for usages that need to avoid ambiguity).
+	/// - a (second) backslash for a literal backslash.
+	/// - `t`, `r`, `n`: tab, carriage return, and newline respectively.
+	/// - `u{xx}`, `u{xxyy}`, `u{xxyyzz}` for a Unicode code point in hexadecimal representation.
+	///   - Hex digits may be upper or lower case, and must come in pairs.
 	pub fn unescape(input: &str) -> Result<(&str, char), InvalidEscape> {
 		let mut chars: Chars<'_> = input.chars();
 

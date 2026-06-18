@@ -1,8 +1,10 @@
 #ifndef LOG_SURGEON_LOG_SURGEON_HPP
 #define LOG_SURGEON_LOG_SURGEON_HPP
 
+// IWYU pragma: begin_exports
 #include "log_surgeon/generated_bindings.hpp"
 #include "log_surgeon/rust_compat.hpp"
+// IWYU pragma: end_exports
 
 #include <algorithm>
 #include <cassert>
