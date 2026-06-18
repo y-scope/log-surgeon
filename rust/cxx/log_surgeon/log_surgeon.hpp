@@ -116,10 +116,11 @@ public:
 
     /**
      * Get the next log event, as a handle.
-     * Updates `pos` before returning.
+     * Conceptually, `pos` is the current position/offset to parse the next event;
+     * specifically, it's passed as a pointer so log surgeon advances it before returning.
      *
      * @param input A view of the entire input text.
-     * @param pos A pointer to the current position in the text.
+     * @param pos Pointer to an offset value in the text.
      * @return `std::nullopt` iff EOF.
      */
     [[nodiscard]] auto next_event(std::string_view input, size_t* pos)
@@ -172,7 +173,10 @@ public:
      */
     [[nodiscard]] auto get_leaf_match(size_t i) const -> std::optional<Match>;
 
+    [[nodiscard]] auto get_message() const -> std::string_view;
+
 private:
+    LogEvent const* m_event;
     std::span<Match const> m_matches;
     std::span<size_t const> m_leaf_indices;
 };
@@ -244,7 +248,7 @@ inline auto ParserHandle::get_encoding(size_t encoding_idx) const
     return m_encodings.at(encoding_idx);
 }
 
-inline EventHandle::EventHandle(LogEvent const* event) {
+inline EventHandle::EventHandle(LogEvent const* event) : m_event(event) {
     m_matches = event->all_matches.as_span();
     m_leaf_indices = event->leaf_indices.as_span();
 }
@@ -256,6 +260,10 @@ inline auto EventHandle::get_leaf_match(size_t i) const -> std::optional<Match> 
         return std::make_optional(m_matches[m_leaf_indices[i]]);
     }
     return std::nullopt;
+}
+
+inline auto EventHandle::get_message() const -> std::string_view {
+    return m_event->message;
 }
 }  // namespace log_surgeon
 
