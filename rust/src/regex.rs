@@ -34,13 +34,25 @@ pub enum Regex {
 	AnyChar,
 	Literal(char),
 	Capture(Arc<SubRule>),
-	BracketedRanges { negated: bool, items: Vec<(char, char)> },
+	BracketedRanges {
+		negated: bool,
+		items: Vec<(char, char)>,
+	},
 	KleeneClosure(Box<Regex>),
 	KleenePlus(Box<Regex>),
-	BoundedRepetition { min: u32, max: u32, item: Box<Regex> },
+	BoundedRepetition {
+		min: u32,
+		max: u32,
+		item: Box<Regex>,
+	},
 	Sequence(Vec<Regex>),
 	Alternation(Vec<Regex>),
-	Placeholder { name: String, item: Box<Regex> },
+	/// No effect on string matching;
+	/// this variant is for serializing a [`crate::parsing_spec::ParsingSpec`].
+	Placeholder {
+		name: String,
+		item: Box<Regex>,
+	},
 }
 
 impl std::fmt::Debug for Regex {
@@ -98,6 +110,13 @@ impl AnchoredRegex {
 }
 
 impl Regex {
+	/// An "invalid" `Regex` value; conceptually (and literally) it matches no strings,
+	/// so it's not meaningful in an actual parsing spec.
+	///
+	/// Currently, only used during pattern parsing for [`Regex::Placeholder`],
+	/// where the actual placeholder value will be filled in later.
+	pub const NIL: Self = Self::Alternation(Vec::new());
+
 	pub fn to_pattern(&self) -> String {
 		match self {
 			Self::AnyChar => ".".to_owned(),
@@ -213,21 +232,47 @@ impl Regex {
 			},
 		}
 	}
-}
 
-impl Regex {
 	/// "Desugars" a pattern `(self)+` as `(self)(self)*`.
 	pub fn into_kleene_plus(&self) -> Self {
 		Self::Sequence(vec![self.clone(), Regex::KleeneClosure(Box::new(self.clone()))])
 	}
-}
 
-impl SubRule {
-	pub fn id_as_usize(&self) -> usize {
-		usize::from(self.id.get())
-	}
-
-	pub fn is_leaf(&self) -> bool {
-		self.descendents == 0
+	/// Whether this regex accepts an empty string;
+	/// return the first (minimal) child that does (for diagnostics).
+	///
+	/// An empty sequence should be not-parsable,
+	/// but repetition suffixes allow for empty matches,
+	/// e.g. `a*` or `a{0,3}`.
+	fn is_nullable(&self) -> Option<&Self> {
+		match self {
+			Self::AnyChar | Self::Literal(..) | Self::BracketedRanges { .. } => None,
+			Self::Capture(sub_rule) => sub_rule.regex.is_nullable(),
+			Self::KleeneClosure(item) => Some(item.is_nullable().unwrap_or(self)),
+			Self::KleenePlus(item) => item.is_nullable(),
+			Self::BoundedRepetition { min, item, .. } => {
+				if *min > 0 {
+					item.is_nullable()
+				} else {
+					Some(item.is_nullable().unwrap_or(self))
+				}
+			},
+			Self::Placeholder { item, .. } => item.is_nullable(),
+			Self::Sequence(items) => {
+				if items.iter().all(|item| item.is_nullable().is_some()) {
+					Some(self)
+				} else {
+					None
+				}
+			},
+			Self::Alternation(items) => {
+				for item in items.iter() {
+					if let Some(child) = item.is_nullable() {
+						return Some(child);
+					}
+				}
+				None
+			},
+		}
 	}
 }

@@ -264,7 +264,7 @@ mod test {
 		builder.set_delimiters(" .\t");
 
 		builder.add_rule("foo", r"hello world|goodbye").unwrap();
-		builder.add_rule_with_priority(10, "bar", r"[^a-b-]*").unwrap();
+		builder.add_rule_with_priority(10, "bar", r"[^a-b-]*z").unwrap();
 		builder
 			.add_rule_with_priority(-10, "baz", r"(?<quux>\.{6,7}){9}")
 			.unwrap();

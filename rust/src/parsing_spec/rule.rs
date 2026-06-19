@@ -118,6 +118,16 @@ impl RootRule {
 	}
 }
 
+impl SubRule {
+	pub fn id_as_usize(&self) -> usize {
+		usize::from(self.id.get())
+	}
+
+	pub fn is_leaf(&self) -> bool {
+		self.descendents == 0
+	}
+}
+
 impl RuleInfo {
 	pub fn sub_rule_name(&self) -> &str {
 		if let Some(sub_rule) = &self.maybe_sub_rule {

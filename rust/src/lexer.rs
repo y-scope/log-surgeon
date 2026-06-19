@@ -17,7 +17,7 @@ pub struct Lexer {
 	spec: Arc<ParsingSpec>,
 	#[allow(unused)]
 	jit: Arc<Jit>,
-	jitted_dfa: JittedDfa,
+	maybe_jitted_dfa: Option<JittedDfa>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -35,12 +35,17 @@ pub enum Token<'spec, 'input> {
 impl Lexer {
 	pub fn new(spec: Arc<ParsingSpec>) -> Self {
 		let mut jit: Jit = Jit::new();
-		let jitted_dfa: JittedDfa = jit.jit(&spec.main_dfa).unwrap();
+
+		let maybe_jitted_dfa: Option<JittedDfa> = if cfg!(feature = "jit") {
+			Some(jit.jit(&spec.main_dfa).unwrap())
+		} else {
+			None
+		};
 
 		Self {
 			spec,
 			jit: Arc::new(jit),
-			jitted_dfa,
+			maybe_jitted_dfa,
 		}
 	}
 
@@ -87,7 +92,9 @@ impl Lexer {
 
 		let char_before: u32 = u32::from(input_before.chars().rev().next().unwrap_or('\n'));
 
-		if let Some(MatchedRule { rule_idx, lexeme }) = self.execute_dfa::<true>(input_remaining, char_before) {
+		if let Some(MatchedRule { rule_idx, lexeme }) =
+			self.execute_dfa::<{ cfg!(feature = "jit") }>(input_remaining, char_before)
+		{
 			let rule: &RootRule = &self.spec[rule_idx];
 			let has_captures: bool = rule.has_captures();
 			dfa_execution.clear();
@@ -124,15 +131,16 @@ impl Lexer {
 			let input: std::ops::Range<*const u8> = input.as_bytes().as_ptr_range();
 			let mut end: *const u8 = std::ptr::null();
 
-			let rule_idx: RuleIdx = (self.jitted_dfa)(input.start, input.end, char_before, &mut end)?;
-			let lexeme: &str = unsafe {
+			unsafe {
+				let rule_idx: RuleIdx =
+					(self.maybe_jitted_dfa.unwrap_unchecked())(input.start, input.end, char_before, &mut end)?;
 				let start: *const u8 = input.start;
 				let len: isize = end.offset_from(start);
 				assert!(len >= 0);
 				let bytes: &[u8] = std::slice::from_raw_parts(start, len as usize);
-				std::str::from_utf8_unchecked(bytes)
-			};
-			Some(MatchedRule { rule_idx, lexeme })
+				let lexeme: &str = std::str::from_utf8_unchecked(bytes);
+				Some(MatchedRule { rule_idx, lexeme })
+			}
 		} else {
 			// self.main_dfa.execute_without_captures(input, last_was_delimited)
 			self.spec.optimized_dfa.execute(input, char_before)

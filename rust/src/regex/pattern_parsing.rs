@@ -104,6 +104,10 @@ enum RegexErrorKind {
 	ExpectedOneOf { characters: &'static str, negate: bool },
 	/// No definition for placeholder.
 	UndefinedPlaceholder(String),
+	/// A (sub)expression of a regex can match an empty string,
+	/// which isn't meaningful for parsing.
+	/// See [`Regex::is_nullable`].
+	NullableExpression(Box<Regex>),
 	/// An error from nom; should be caught/never bubble up,
 	/// but used to implement the trait [`nom::error::ParseError`],
 	/// and useful for debugging/failing gracefully.
@@ -177,6 +181,15 @@ impl Regex {
 						remaining: String::new(),
 						kind: RegexErrorKind::TooManyCaptures,
 					})?;
+
+				if let Some(item) = regex.inner.is_nullable() {
+					return Err(RegexError {
+						consumed: pattern.to_owned(),
+						remaining: String::new(),
+						kind: RegexErrorKind::NullableExpression(Box::new(item.clone())),
+					});
+				}
+
 				Ok(regex)
 			},
 			Err(NomErr::Incomplete(_)) => {
@@ -515,7 +528,7 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 			input,
 			Regex::Placeholder {
 				name: name.to_owned(),
-				item: Box::new(Regex::AnyChar),
+				item: Box::new(Regex::NIL),
 			},
 		))
 	} else {
@@ -1170,6 +1183,46 @@ mod test {
 			assert_eq!(e.kind, RegexErrorKind::InvalidBracketRange('z', 'a'));
 			assert_eq!(e.consumed, r"[z-");
 			assert_eq!(e.remaining, r"a]");
+		}
+	}
+
+	#[test]
+	fn nullable_subexpression() {
+		{
+			let e: RegexError = Regex::from_pattern(r"a{0,3}").unwrap_err();
+			assert_eq!(
+				e.kind,
+				RegexErrorKind::NullableExpression(Box::new(Regex::BoundedRepetition {
+					min: 0,
+					max: 3,
+					item: Box::new(Regex::Literal('a')),
+				}))
+			);
+		}
+		{
+			let e: RegexError = Regex::from_pattern(r"a|b?").unwrap_err();
+			assert_eq!(
+				e.kind,
+				RegexErrorKind::NullableExpression(Box::new(Regex::BoundedRepetition {
+					min: 0,
+					max: 1,
+					item: Box::new(Regex::Literal('b')),
+				}))
+			);
+		}
+		{
+			let e: RegexError = Regex::from_pattern(r"a|b*").unwrap_err();
+			assert_eq!(
+				e.kind,
+				RegexErrorKind::NullableExpression(Box::new(Regex::KleeneClosure(Box::new(Regex::Literal('b')),)))
+			);
+		}
+		{
+			let e: RegexError = Regex::from_pattern(r"(a|b*)+").unwrap_err();
+			assert_eq!(
+				e.kind,
+				RegexErrorKind::NullableExpression(Box::new(Regex::KleeneClosure(Box::new(Regex::Literal('b')),)))
+			);
 		}
 	}
 }

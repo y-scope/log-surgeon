@@ -26,7 +26,10 @@ overflow-checks = true
 # at once. We leave "default" empty here, and let each build tool enable only
 # what it needs: maturin automatically enables the "python" feature (configured
 # in pyproject.toml).
-default = []
+default = [
+	"jit",
+]
+jit = []
 python = [
 	"dep:pyo3",
 	"pyo3/extension-module",
