@@ -14,9 +14,9 @@ use crate::dfa::CompressedDfa;
 use crate::dfa::Tdfa;
 use crate::nfa::Tnfa;
 use crate::regex::AnchoredRegex;
-use crate::regex::IntoRegex;
 use crate::regex::Regex;
 use crate::regex::RegexPlaceholderLookup;
+use crate::utils::LocalTryInto;
 
 #[derive(Debug, Clone)]
 pub struct ParsingSpecBuilder {
@@ -102,7 +102,7 @@ impl ParsingSpecBuilder {
 	) -> Result<&mut Self, RegexOrPattern::Error>
 	where
 		LikeString: Into<Arc<str>>,
-		RegexOrPattern: IntoRegex,
+		RegexOrPattern: LocalTryInto<AnchoredRegex>,
 	{
 		self.add_rule_with_priority(0, name, regex)
 	}
@@ -122,13 +122,13 @@ impl ParsingSpecBuilder {
 	) -> Result<&mut Self, RegexOrPattern::Error>
 	where
 		LikeString: Into<Arc<str>>,
-		RegexOrPattern: IntoRegex,
+		RegexOrPattern: LocalTryInto<AnchoredRegex>,
 	{
 		let name: Arc<str> = name.into();
 		assert!(!name.is_empty());
 		assert_ne!(&*name, "delimiters");
 
-		let regex: AnchoredRegex = regex.into()?;
+		let regex: AnchoredRegex = regex.try_into()?;
 
 		let rules: &mut Vec<(Arc<str>, AnchoredRegex)> =
 			self.rules_by_priority.entry(priority).or_insert_with(Vec::new);

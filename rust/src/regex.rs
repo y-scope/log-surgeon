@@ -7,20 +7,11 @@ pub use pattern_parsing::RegexPlaceholderLookup;
 
 use crate::parsing_spec::SubRule;
 use crate::utils::Escaped;
+use crate::utils::LocalTryInto;
 
-// TODO: relax need to escape `<>`?
-const SPECIAL_CHARACTERS: &str = r"\()[]{}*+?.|^$<>";
+const SPECIAL_CHARACTERS: &str = r"\()[]{}*+?.|^$";
 
 const SPECIAL_CHARACTERS_IN_BRACKETED_EXPRESSIONS: &str = r"\[]";
-
-/// Morally, this is just `TryInto<AnchoredRegex>`,
-/// since we can't have `impl<'a> TryFrom<&'a str> for Result<AnchoredRegex, RegexError<'a>>`,
-/// because of Rust's forsaken orphan rules.
-pub trait IntoRegex {
-	type Error;
-
-	fn into(self) -> Result<AnchoredRegex, Self::Error>;
-}
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct AnchoredRegex {
@@ -57,22 +48,20 @@ pub enum Regex {
 
 impl std::fmt::Debug for Regex {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		fmt.write_str(&self.to_pattern())
+		self.to_pattern().escape_default().fmt(fmt)
 	}
 }
 
-impl IntoRegex for AnchoredRegex {
-	type Error = std::convert::Infallible;
-
-	fn into(self) -> Result<AnchoredRegex, Self::Error> {
-		Ok(self)
+impl std::fmt::Display for Regex {
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		self.to_pattern().escape_default().fmt(fmt)
 	}
 }
 
-impl IntoRegex for &str {
+impl LocalTryInto<AnchoredRegex> for &str {
 	type Error = RegexError;
 
-	fn into(self) -> Result<AnchoredRegex, Self::Error> {
+	fn try_into(self) -> Result<AnchoredRegex, Self::Error> {
 		Regex::from_pattern(self)
 	}
 }

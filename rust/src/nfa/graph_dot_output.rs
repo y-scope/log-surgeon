@@ -1,6 +1,6 @@
+use crate::nfa::CaptureTag;
 use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransitionKind;
-use crate::nfa::Tag;
 use crate::nfa::Tnfa;
 use crate::nfa::Transitions;
 use crate::utils::TarjanSccs;
@@ -72,14 +72,14 @@ impl Tnfa {
 							SpontaneousTransitionKind::Epsilon => {
 								lines.push('\u{03b5}');
 							},
-							SpontaneousTransitionKind::Positive(Tag::StartCapture(sub_rule)) => {
+							SpontaneousTransitionKind::Positive(CaptureTag::StartCapture(sub_rule)) => {
 								lines.push_str(&format!("start({})", sub_rule.qualified_name));
 							},
-							SpontaneousTransitionKind::Positive(Tag::StopCapture(sub_rule)) => {
+							SpontaneousTransitionKind::Positive(CaptureTag::StopCapture(sub_rule)) => {
 								lines.push_str(&format!("stop({})", sub_rule.qualified_name));
 							},
 							SpontaneousTransitionKind::Negative(
-								Tag::StartCapture(sub_rule) | Tag::StopCapture(sub_rule),
+								CaptureTag::StartCapture(sub_rule) | CaptureTag::StopCapture(sub_rule),
 							) => {
 								lines.push('-');
 								lines.push_str(&sub_rule.qualified_name);

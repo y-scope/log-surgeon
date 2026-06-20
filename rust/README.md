@@ -21,8 +21,7 @@ cargo build
 
 # Rust tests
 cargo test
-cargo test -- --nocapture
-cargo test -- [--nocapture] test_name
+cargo test -- [--nocapture] [test_name]
 
 # Python setup
 python3 -m venv .env
@@ -33,7 +32,7 @@ pip install maturin
 maturin develop --release
 
 # Python tests
-python3 -m unittest discover tests/python
+python3 -m unittest discover tests/python [-k test_name]
 ```
 
 ## Development
@@ -59,7 +58,7 @@ e.g.
 export LOG_SURGEON_LOG=log_surgeon=trace
 ```
 
-`#[tracing::instrument]` spans should be set to level `trace` in this crate.
+`#[tracing::instrument]` spans should be set to level `trace` or `debug` in this crate.
 
 [re2c]: https://re2c.org/
 [pyo3]: https://pyo3.rs/

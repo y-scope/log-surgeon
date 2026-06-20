@@ -1,14 +1,12 @@
-use std::borrow::Cow;
 use std::collections::BTreeSet;
 
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
 use crate::interval_tree::PolicyUnique;
+use crate::nfa::CaptureTag;
 use crate::nfa::NfaIdx;
-use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransition;
 use crate::nfa::SpontaneousTransitionKind;
-use crate::nfa::Tag;
 use crate::nfa::Tnfa;
 use crate::nfa::Transitions;
 use crate::parsing_spec::RootRule;
@@ -17,22 +15,14 @@ use crate::parsing_spec::SubRule;
 use crate::regex::Regex;
 
 impl Tnfa {
-	pub fn for_single_rule(rule: RuleIdx, regex: &Regex) -> Self {
-		let mut nfa: Self = Self {
-			states: vec![NfaState {
-				idx: NfaIdx::BEGIN,
-				name: Cow::Borrowed("begin"),
-				transitions: Transitions::Spontaneous(Vec::new()),
-				maybe_accepts_for_rule: None,
-			}],
-			tags: Vec::new(),
-		};
+	pub fn for_single_rule(rule_idx: RuleIdx, regex: &Regex) -> Self {
+		let mut nfa: Self = Self::new();
 
 		let rule_start: NfaIdx = NfaIdx::BEGIN;
 		let rule_end: NfaIdx = nfa.new_state("end");
 
-		let tags: BTreeSet<Tag> = nfa.build::<true>(rule, regex, rule_start, rule_end);
-		nfa[rule_end].maybe_accepts_for_rule = Some(rule);
+		let tags: BTreeSet<CaptureTag> = nfa.build::<true>(rule_idx, regex, rule_start, rule_end);
+		nfa[rule_end].maybe_accepts_for_rule = Some(rule_idx);
 
 		nfa.tags = tags.into_iter().collect::<Vec<_>>();
 
@@ -47,31 +37,31 @@ impl Tnfa {
 	where
 		Rules: IntoIterator<Item = &'a RootRule>,
 	{
-		let mut nfa: Self = Self {
-			states: vec![NfaState {
-				idx: NfaIdx::BEGIN,
-				name: Cow::Borrowed("begin"),
-				transitions: Transitions::Spontaneous(Vec::new()),
-				maybe_accepts_for_rule: None,
-			}],
-			tags: Vec::new(),
-		};
+		let mut nfa: Self = Self::new();
 
-		let mut tags: BTreeSet<Tag> = BTreeSet::new();
+		let mut tags: BTreeSet<CaptureTag> = BTreeSet::new();
 
 		let mut spontaneous: Vec<SpontaneousTransition> = Vec::new();
 
 		for rule in rules.into_iter() {
-			let rule_start: NfaIdx = nfa.new_state(format!("rule '{}' start", rule.name));
-			let rule_end: NfaIdx = nfa.new_state(format!("rule '{}' end", rule.name));
+			let rule_start: NfaIdx = nfa.new_state(format!(
+				"rule {} ('{}') start (outside)",
+				rule.idx,
+				rule.name.escape_default()
+			));
+			let rule_end: NfaIdx = nfa.new_state(format!(
+				"rule {} ('{}') end (outside)",
+				rule.idx,
+				rule.name.escape_default()
+			));
 
 			spontaneous.push(SpontaneousTransition {
 				kind: SpontaneousTransitionKind::Epsilon,
 				target: rule_start,
 			});
 
-			let rule_inner_start: NfaIdx = nfa.new_state(format!("rule '{}' inner start", rule.name));
-			let rule_inner_end: NfaIdx = nfa.new_state(format!("rule '{}' inner end", rule.name));
+			let rule_inner_start: NfaIdx = nfa.new_state(format!("rule '{}' start (inside)", rule.name));
+			let rule_inner_end: NfaIdx = nfa.new_state(format!("rule '{}' end (inside)", rule.name));
 
 			if rule.regex.anchor_before {
 				nfa[rule_start].transitions =
@@ -118,11 +108,11 @@ impl Tnfa {
 
 	fn build<const CAPTURE: bool>(
 		&mut self,
-		rule: RuleIdx,
+		rule_idx: RuleIdx,
 		regex: &Regex,
 		mut current: NfaIdx,
 		target: NfaIdx,
-	) -> BTreeSet<Tag> {
+	) -> BTreeSet<CaptureTag> {
 		assert_eq!(self[current].transitions.len(), 0);
 		match regex {
 			Regex::AnyChar => {
@@ -143,9 +133,9 @@ impl Tnfa {
 			},
 			Regex::Capture(sub_rule) => {
 				if CAPTURE {
-					self.capture(rule, sub_rule, current, target)
+					self.capture(rule_idx, sub_rule, current, target)
 				} else {
-					self.build::<false>(rule, &sub_rule.regex, current, target)
+					self.build::<false>(rule_idx, &sub_rule.regex, current, target)
 				}
 			},
 			Regex::BracketedRanges { negated, items } => {
@@ -174,9 +164,9 @@ impl Tnfa {
 				BTreeSet::new()
 			},
 			Regex::KleeneClosure(item) => {
-				let item_start: NfaIdx = self.new_state("kleene item start");
-				let item_end: NfaIdx = self.new_state("kleene item end");
-				let item_skip: NfaIdx = self.new_state("kleene skip");
+				let item_start: NfaIdx = self.new_state(format!("kleene item start ({item})"));
+				let item_end: NfaIdx = self.new_state(format!("kleene item end ({item})"));
+				let item_skip: NfaIdx = self.new_state(format!("kleene item skip ({item})"));
 
 				self[current].transitions = Transitions::Spontaneous(vec![
 					SpontaneousTransition {
@@ -189,7 +179,7 @@ impl Tnfa {
 					},
 				]);
 
-				let tags: BTreeSet<Tag> = self.build::<CAPTURE>(rule, item, item_start, item_end);
+				let tags: BTreeSet<CaptureTag> = self.build::<CAPTURE>(rule_idx, item, item_start, item_end);
 
 				self[item_end].transitions = Transitions::Spontaneous(vec![
 					SpontaneousTransition {
@@ -210,18 +200,18 @@ impl Tnfa {
 
 				tags
 			},
-			Regex::KleenePlus(item) => self.build::<CAPTURE>(rule, &item.into_kleene_plus(), current, target),
+			Regex::KleenePlus(item) => self.build::<CAPTURE>(rule_idx, &item.into_kleene_plus(), current, target),
 			Regex::BoundedRepetition { min, max, item } => {
 				// Should have been verified during regex pattern parsing.
 				assert!(*max > 0);
 				assert!(min <= max);
 
-				let middle: NfaIdx = self.new_state("bounded middle");
+				let middle: NfaIdx = self.new_state(format!("bounded middle {min}..={max} ({item})"));
 
-				let mut tags: BTreeSet<Tag> = BTreeSet::new();
-				for _ in 0..*min {
-					let sub_target: NfaIdx = self.new_state("bounded sub 1/2 target");
-					tags.append(&mut self.build::<CAPTURE>(rule, item, current, sub_target));
+				let mut tags: BTreeSet<CaptureTag> = BTreeSet::new();
+				for i in 0..*min {
+					let sub_target: NfaIdx = self.new_state(format!("bounded {i} of {min}..={max} ({item})"));
+					tags.append(&mut self.build::<CAPTURE>(rule_idx, item, current, sub_target));
 					current = sub_target;
 				}
 
@@ -237,10 +227,10 @@ impl Tnfa {
 				]);
 
 				current = middle;
-				for _ in *min..*max {
-					let sub_skip: NfaIdx = self.new_state("bounded sub skip");
-					let sub_have: NfaIdx = self.new_state("bounded sub have");
-					let sub_target: NfaIdx = self.new_state("bounded sub 2/2 target");
+				for i in *min..*max {
+					let sub_skip: NfaIdx = self.new_state(format!("bounded {i} of {min}..={max} break ({item})"));
+					let sub_have: NfaIdx = self.new_state(format!("bounded {i} of {min}..={max} continue ({item})"));
+					let sub_target: NfaIdx = self.new_state(format!("bounded {i} of {min}..={max} success ({item})"));
 
 					self[current].transitions = Transitions::Spontaneous(vec![
 						SpontaneousTransition {
@@ -258,7 +248,7 @@ impl Tnfa {
 						target,
 					}]);
 
-					tags.append(&mut self.build::<CAPTURE>(rule, item, sub_have, sub_target));
+					tags.append(&mut self.build::<CAPTURE>(rule_idx, item, sub_have, sub_target));
 					current = sub_target;
 				}
 
@@ -269,7 +259,7 @@ impl Tnfa {
 				tags
 			},
 			Regex::Sequence(items) => {
-				let mut tags: BTreeSet<Tag> = BTreeSet::new();
+				let mut tags: BTreeSet<CaptureTag> = BTreeSet::new();
 				// TODO this is for search... handle it better?
 				if items.is_empty() {
 					self[current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
@@ -279,33 +269,33 @@ impl Tnfa {
 				}
 				for (i, sub_item) in items.iter().enumerate() {
 					let sub_target: NfaIdx = if i + 1 < items.len() {
-						self.new_state("sequence sub target")
+						self.new_state(format!("sequence sub target (of {sub_item})"))
 					} else {
 						target
 					};
-					tags.append(&mut self.build::<CAPTURE>(rule, sub_item, current, sub_target));
+					tags.append(&mut self.build::<CAPTURE>(rule_idx, sub_item, current, sub_target));
 					current = sub_target;
 				}
 				tags
 			},
-			Regex::Alternation(items) => self.alternate::<CAPTURE>(rule, items, current, target),
-			Regex::Placeholder { item, .. } => self.build::<CAPTURE>(rule, item, current, target),
+			Regex::Alternation(items) => self.alternate::<CAPTURE>(rule_idx, items, current, target),
+			Regex::Placeholder { item, .. } => self.build::<CAPTURE>(rule_idx, item, current, target),
 		}
 	}
 
-	fn capture(&mut self, rule: RuleIdx, sub_rule: &SubRule, current: NfaIdx, target: NfaIdx) -> BTreeSet<Tag> {
-		let start_capture: Tag = Tag::StartCapture(sub_rule.clone());
-		let end_capture: Tag = Tag::StopCapture(sub_rule.clone());
+	fn capture(&mut self, rule: RuleIdx, sub_rule: &SubRule, current: NfaIdx, target: NfaIdx) -> BTreeSet<CaptureTag> {
+		let start_capture: CaptureTag = CaptureTag::StartCapture(sub_rule.clone());
+		let end_capture: CaptureTag = CaptureTag::StopCapture(sub_rule.clone());
 
-		let sub_start: NfaIdx = self.new_state("capture started");
-		let sub_end: NfaIdx = self.new_state("capture before end");
+		let sub_start: NfaIdx = self.new_state(format!("capture {} started", sub_rule.name.escape_default()));
+		let sub_end: NfaIdx = self.new_state(format!("capture {} ended", sub_rule.name.escape_default()));
 
 		self[current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
 			kind: SpontaneousTransitionKind::Positive(start_capture.clone()),
 			target: sub_start,
 		}]);
 
-		let mut tags: BTreeSet<Tag> = self.build::<true>(rule, &sub_rule.regex, sub_start, sub_end);
+		let mut tags: BTreeSet<CaptureTag> = self.build::<true>(rule, &sub_rule.regex, sub_start, sub_end);
 
 		self[sub_end].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
 			kind: SpontaneousTransitionKind::Positive(end_capture.clone()),
@@ -320,25 +310,28 @@ impl Tnfa {
 
 	fn alternate<const CAPTURE: bool>(
 		&mut self,
-		rule: RuleIdx,
+		rule_idx: RuleIdx,
 		items: &[Regex],
 		current: NfaIdx,
 		target: NfaIdx,
-	) -> BTreeSet<Tag> {
-		let mut tags: BTreeSet<Tag> = BTreeSet::new();
-		let mut intermediate_states: Vec<(NfaIdx, BTreeSet<Tag>)> = Vec::new();
+	) -> BTreeSet<CaptureTag> {
+		let mut tags: BTreeSet<CaptureTag> = BTreeSet::new();
+		let mut intermediate_states: Vec<(NfaIdx, BTreeSet<CaptureTag>)> = Vec::new();
 
 		let mut starts: Vec<SpontaneousTransition> = Vec::new();
 		for sub_item in items.iter() {
-			let sub_start: NfaIdx = self.new_state("alternate sub start");
-			let sub_target: NfaIdx = self.new_state("alternate sub target");
+			let sub_start: NfaIdx = self.new_state("alternate sub start (of {sub_item})");
+			let sub_target: NfaIdx = self.new_state("alternate sub target (of {sub_item})");
 
 			starts.push(SpontaneousTransition {
 				kind: SpontaneousTransitionKind::Epsilon,
 				target: sub_start,
 			});
 
-			intermediate_states.push((sub_target, self.build::<CAPTURE>(rule, sub_item, sub_start, sub_target)));
+			intermediate_states.push((
+				sub_target,
+				self.build::<CAPTURE>(rule_idx, sub_item, sub_start, sub_target),
+			));
 		}
 		self[current].transitions = Transitions::Spontaneous(starts);
 
@@ -365,9 +358,9 @@ impl Tnfa {
 		tags
 	}
 
-	fn negative_tags(&mut self, tags: impl Iterator<Item = Tag>, mut current: NfaIdx) -> NfaIdx {
+	fn negative_tags(&mut self, tags: impl IntoIterator<Item = CaptureTag>, mut current: NfaIdx) -> NfaIdx {
 		for t in tags {
-			let next: NfaIdx = self.new_state("negative tags");
+			let next: NfaIdx = self.new_state("negative tag ({t:?})");
 			self[current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
 				kind: SpontaneousTransitionKind::Negative(t),
 				target: next,

@@ -21,10 +21,10 @@ pub use jit::JittedDfa;
 
 use crate::interval_tree::IntervalTree;
 use crate::interval_tree::PolicyFunction;
+use crate::nfa::CaptureTag;
 use crate::nfa::NfaIdx;
 use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransitionKind;
-use crate::nfa::Tag;
 use crate::nfa::Tnfa;
 use crate::nfa::Transitions;
 use crate::parsing_spec::RootRule;
@@ -38,7 +38,7 @@ pub struct Tdfa {
 	#[serde(skip)]
 	kernels: BTreeMap<Kernel, usize>,
 	#[serde(skip)]
-	pub tags: Vec<Tag>,
+	pub tags: Vec<CaptureTag>,
 	/// Bijection between corresponding starting and ending tags.
 	#[serde(skip)]
 	tag_pairs: Vec<usize>,
@@ -89,7 +89,7 @@ struct DfaState {
 	/// Cache/combined map from this state's configurations of "register -> which tag it holds".
 	/// Present for debugging.
 	#[serde(skip)]
-	tag_for_register: BTreeMap<usize, Tag>,
+	tag_for_register: BTreeMap<usize, CaptureTag>,
 	/// Registers that may be clobbered after leaving this state.
 	/// See [`Tdfa::compute_registers_clobbered`].
 	#[serde(skip)]
@@ -120,6 +120,7 @@ struct DfaState {
 /// However, both of the aforementioned procedures operate more naturally on a list of `Configuration`s,
 /// and `Vec<Configuration>` naturally has better memory locality.
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[serde(transparent)]
 struct Kernel(Vec<Configuration>);
 
 /// A "configuration" is essentially an augmented NFA state (as documented per field).
@@ -132,7 +133,7 @@ struct Configuration {
 	/// Sequence of tags accumulated to reach this state during [`Dfa::epsilon_closure`]
 	/// (corresponding to the execution of positive/negative tags during NFA simulation).
 	#[serde(skip)]
-	tag_path_in_closure: Vec<(Tag, SymbolicPosition)>,
+	tag_path_in_closure: Vec<(CaptureTag, SymbolicPosition)>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -342,7 +343,7 @@ impl Tdfa {
 		prefix_tree: &mut PrefixTree,
 		pos: usize,
 		ops: &[RegisterOperation],
-		_tag_for_register: &BTreeMap<usize, Tag>,
+		_tag_for_register: &BTreeMap<usize, CaptureTag>,
 	) {
 		for o in ops.iter() {
 			match &o.action {
@@ -425,7 +426,7 @@ impl Tdfa {
 			number_of_registers: 2 * nfa.tags().len(),
 		};
 
-		let initial: (Configuration, Vec<(Tag, SymbolicPosition)>) = (
+		let initial: (Configuration, Vec<(CaptureTag, SymbolicPosition)>) = (
 			Configuration {
 				nfa_state: NfaIdx::BEGIN,
 				register_for_tag: (0..dfa.tags.len()).collect::<Vec<_>>(),
@@ -434,7 +435,8 @@ impl Tdfa {
 			Vec::new(),
 		);
 
-		let initial: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Self::epsilon_closure(nfa, &vec![initial]);
+		let initial: Vec<(Configuration, Vec<(CaptureTag, SymbolicPosition)>)> =
+			Self::epsilon_closure(nfa, &vec![initial]);
 
 		dfa.add_state(nfa, initial, &mut Vec::new());
 
@@ -447,12 +449,12 @@ impl Tdfa {
 			// (borrow checker will complain without the `.clone()`.
 			let kernel: Kernel = dfa.states[i].kernel.clone();
 
-			let mut register_action_tag: BTreeMap<(Tag, RegisterAction), usize> = BTreeMap::new();
+			let mut register_action_tag: BTreeMap<(CaptureTag, RegisterAction), usize> = BTreeMap::new();
 			for (interval, next) in kernel.step_on_intervals(nfa).iter() {
-				let next: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Self::epsilon_closure(nfa, next);
+				let next: Vec<(Configuration, Vec<(CaptureTag, SymbolicPosition)>)> = Self::epsilon_closure(nfa, next);
 
 				let (next, mut operations): (
-					Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
+					Vec<(Configuration, Vec<(CaptureTag, SymbolicPosition)>)>,
 					Vec<RegisterOperation>,
 				) = dfa.transition_operations(next, &mut register_action_tag);
 
@@ -483,12 +485,12 @@ impl Tdfa {
 	fn add_state(
 		&mut self,
 		nfa: &Tnfa,
-		configurations: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
+		configurations: Vec<(Configuration, Vec<(CaptureTag, SymbolicPosition)>)>,
 		ops: &mut Vec<RegisterOperation>,
 	) -> usize {
 		let mut accepting_rule: Option<RuleIdx> = None;
 		let mut final_operations: Vec<RegisterOperation> = Vec::new();
-		let mut tag_for_register: BTreeMap<usize, Tag> = BTreeMap::new();
+		let mut tag_for_register: BTreeMap<usize, CaptureTag> = BTreeMap::new();
 		let configurations: Vec<Configuration> = configurations
 			.into_iter()
 			.map(|(config, _)| {
@@ -516,7 +518,7 @@ impl Tdfa {
 
 		for config in kernel.0.iter() {
 			for (i, &r) in config.register_for_tag.iter().enumerate() {
-				let old: Option<Tag> = tag_for_register.insert(r, self.tags[i].clone());
+				let old: Option<CaptureTag> = tag_for_register.insert(r, self.tags[i].clone());
 				assert!(old.is_none() || (old.as_ref() == Some(&self.tags[i])));
 			}
 		}
@@ -658,16 +660,16 @@ impl Tdfa {
 
 	fn epsilon_closure(
 		nfa: &Tnfa,
-		configurations: &Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
-	) -> Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> {
-		let mut closure: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Vec::new();
+		configurations: &Vec<(Configuration, Vec<(CaptureTag, SymbolicPosition)>)>,
+	) -> Vec<(Configuration, Vec<(CaptureTag, SymbolicPosition)>)> {
+		let mut closure: Vec<(Configuration, Vec<(CaptureTag, SymbolicPosition)>)> = Vec::new();
 
 		let mut nfa_states_on_stack: BTreeSet<NfaIdx> = configurations
 			.iter()
 			.map(|(config, _)| config.nfa_state)
 			.collect::<BTreeSet<_>>();
 
-		let mut stack: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = configurations.clone();
+		let mut stack: Vec<(Configuration, Vec<(CaptureTag, SymbolicPosition)>)> = configurations.clone();
 		stack.reverse();
 
 		while let Some((config, inherited)) = stack.pop() {
@@ -712,13 +714,13 @@ impl Tdfa {
 
 	fn transition_operations(
 		&mut self,
-		configurations: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
-		register_action_tag: &mut BTreeMap<(Tag, RegisterAction), usize>,
+		configurations: Vec<(Configuration, Vec<(CaptureTag, SymbolicPosition)>)>,
+		register_action_tag: &mut BTreeMap<(CaptureTag, RegisterAction), usize>,
 	) -> (
-		Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>,
+		Vec<(Configuration, Vec<(CaptureTag, SymbolicPosition)>)>,
 		Vec<RegisterOperation>,
 	) {
-		let mut new_configurations: Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)> = Vec::new();
+		let mut new_configurations: Vec<(Configuration, Vec<(CaptureTag, SymbolicPosition)>)> = Vec::new();
 		let mut ops: BTreeSet<RegisterOperation> = BTreeSet::new();
 
 		for (mut config, inherited) in configurations.into_iter() {
@@ -747,7 +749,11 @@ impl Tdfa {
 		(new_configurations, ops.into_iter().collect::<Vec<_>>())
 	}
 
-	fn final_operations(&self, registers: &[usize], history: &[(Tag, SymbolicPosition)]) -> Vec<RegisterOperation> {
+	fn final_operations(
+		&self,
+		registers: &[usize],
+		history: &[(CaptureTag, SymbolicPosition)],
+	) -> Vec<RegisterOperation> {
 		let mut ops: Vec<RegisterOperation> = Vec::new();
 
 		for (tag_idx, tag) in self.tags.iter().enumerate() {
@@ -775,7 +781,7 @@ impl Tdfa {
 		}
 	}
 
-	fn filter_history_for_tag(history: &[(Tag, SymbolicPosition)], tag1: &Tag) -> Vec<SymbolicPosition> {
+	fn filter_history_for_tag(history: &[(CaptureTag, SymbolicPosition)], tag1: &CaptureTag) -> Vec<SymbolicPosition> {
 		history
 			.iter()
 			.filter_map(|(tag2, pos)| if tag2 == tag1 { Some(*pos) } else { None })
@@ -847,6 +853,7 @@ impl Tdfa {
 }
 
 impl Tdfa {
+	#[tracing::instrument(skip_all, level = "debug")]
 	pub fn minimize(&self) -> Tdfa {
 		let partitions: Vec<BTreeSet<usize>> = self.partition_states();
 
@@ -1016,7 +1023,7 @@ impl TdfaExecution {
 
 impl Kernel {
 	/// There should be no duplicate NFA states; see comment above on [`Kernel`].
-	fn invariants(configurations: &[(Configuration, Vec<(Tag, SymbolicPosition)>)]) {
+	fn invariants(configurations: &[(Configuration, Vec<(CaptureTag, SymbolicPosition)>)]) {
 		let states: Vec<NfaIdx> = configurations
 			.iter()
 			.map(|(config, _)| config.nfa_state)
@@ -1027,10 +1034,14 @@ impl Kernel {
 		assert_eq!(states, unique_states);
 	}
 
-	fn step_on_intervals(&self, nfa: &Tnfa) -> IntervalTree<u32, Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>> {
+	fn step_on_intervals(
+		&self,
+		nfa: &Tnfa,
+	) -> IntervalTree<u32, Vec<(Configuration, Vec<(CaptureTag, SymbolicPosition)>)>> {
 		use crate::interval_tree::PolicyExtend;
 
-		let mut combined: IntervalTree<u32, Vec<(Configuration, Vec<(Tag, SymbolicPosition)>)>> = IntervalTree::new();
+		let mut combined: IntervalTree<u32, Vec<(Configuration, Vec<(CaptureTag, SymbolicPosition)>)>> =
+			IntervalTree::new();
 
 		for config in self.0.iter() {
 			let nfa_state: &NfaState = &nfa[config.nfa_state];

@@ -19,13 +19,15 @@ use crate::parsing_spec::SubRule;
 #[derive(Debug, Clone)]
 pub struct Tnfa {
 	states: Vec<NfaState>,
-	tags: Vec<Tag>,
+	tags: Vec<CaptureTag>,
 }
 
 #[derive(Debug, Clone)]
 pub struct NfaState {
 	/// ID and also an index into an [`Nfa`]'s list of states.
 	pub idx: NfaIdx,
+	/// By construction, an NFA state should have _either_
+	/// symbol transitions or priority-ordered spontaneous transitions.
 	pub transitions: Transitions,
 	pub maybe_accepts_for_rule: Option<RuleIdx>,
 	pub name: Cow<'static, str>,
@@ -33,6 +35,7 @@ pub struct NfaState {
 
 /// Newtype wrapper around a `usize` index.
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct NfaIdx(usize);
 
 #[derive(Debug, Clone)]
@@ -50,12 +53,12 @@ pub struct SpontaneousTransition {
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum SpontaneousTransitionKind {
 	Epsilon,
-	Positive(Tag),
-	Negative(Tag),
+	Positive(CaptureTag),
+	Negative(CaptureTag),
 }
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub enum Tag {
+pub enum CaptureTag {
 	StartCapture(SubRule),
 	StopCapture(SubRule),
 }
@@ -66,7 +69,19 @@ impl Tnfa {
 		tags: Vec::new(),
 	};
 
-	pub fn tags(&self) -> &[Tag] {
+	pub fn new() -> Self {
+		Self {
+			states: vec![NfaState {
+				idx: NfaIdx::BEGIN,
+				name: Cow::Borrowed("begin"),
+				transitions: Transitions::Spontaneous(Vec::new()),
+				maybe_accepts_for_rule: None,
+			}],
+			tags: Vec::new(),
+		}
+	}
+
+	pub fn tags(&self) -> &[CaptureTag] {
 		&self.tags
 	}
 
@@ -132,7 +147,7 @@ impl Transitions {
 	}
 }
 
-impl Tag {
+impl CaptureTag {
 	pub fn sub_rule(&self) -> &SubRule {
 		let (Self::StartCapture(sub_rule) | Self::StopCapture(sub_rule)) = self;
 		sub_rule

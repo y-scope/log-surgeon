@@ -7,11 +7,11 @@ use std::sync::Arc;
 use crate::interval_tree::Interval;
 use crate::interval_tree::IntervalTree;
 use crate::interval_tree::PolicyUnique;
+use crate::nfa::CaptureTag;
 use crate::nfa::NfaIdx;
 use crate::nfa::NfaState;
 use crate::nfa::SpontaneousTransition;
 use crate::nfa::SpontaneousTransitionKind;
-use crate::nfa::Tag;
 use crate::nfa::Tnfa;
 use crate::nfa::Transitions;
 use crate::parsing_spec::RuleIdx;
@@ -621,10 +621,10 @@ impl Tnfa {
 
 						match &transition.kind {
 							SpontaneousTransitionKind::Positive(
-								tag @ (Tag::StartCapture(sub_rule) | Tag::StopCapture(sub_rule)),
+								tag @ (CaptureTag::StartCapture(sub_rule) | CaptureTag::StopCapture(sub_rule)),
 							) => {
 								if sub_rule.is_leaf() {
-									let is_start: bool = matches!(tag, Tag::StartCapture(_));
+									let is_start: bool = matches!(tag, CaptureTag::StartCapture(_));
 									let mut prefix: PartialPath = prefix.clone();
 									let edge: PathEdge = PathEdge::Capture {
 										sub_rule_id: sub_rule.id,
@@ -757,13 +757,13 @@ impl Tnfa {
 
 						match &transition.kind {
 							SpontaneousTransitionKind::Positive(
-								tag @ (Tag::StartCapture(sub_rule) | Tag::StopCapture(sub_rule)),
+								tag @ (CaptureTag::StartCapture(sub_rule) | CaptureTag::StopCapture(sub_rule)),
 							) => {
 								if sub_rule.is_leaf() {
 									path.push(PathEdge::Capture {
 										sub_rule_id: sub_rule.id,
 										qualified_name: sub_rule.qualified_name.clone(),
-										is_start: matches!(tag, Tag::StartCapture(_)),
+										is_start: matches!(tag, CaptureTag::StartCapture(_)),
 									});
 									stack.push((&self[transition.target], path, seen));
 									continue;

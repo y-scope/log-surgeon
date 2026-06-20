@@ -6,6 +6,7 @@ extern crate serde;
 
 #[macro_use]
 pub mod utils;
+
 pub mod dfa;
 pub mod ffi;
 pub mod interval_tree;
@@ -22,35 +23,45 @@ pub mod c_interface;
 #[cfg(feature = "python")]
 pub mod python_interface;
 
-/// Registers a global "trace sink" with environment variable `LOG_SURGEON_LOG`;
-/// e.g. set `LOG_SURGEON_LOG=log_surgeon=info` to show `info` and higher messages.
+/// Registers a global [`tracing`] [`tracing_subscriber::fmt::Subscriber`]
+/// with environment variable `LOG_SURGEON_LOG`.
+///
+/// For example, set `LOG_SURGEON_LOG=log_surgeon=info` to show `info` and higher level messages.
 /// See [`tracing_subscriber::filter::EnvFilter`] for more details on the syntax for the environment variable.
 ///
+/// There can only be one global subscriber, and it can only be set once
+/// (by [`tracing_subscriber::fmt::SubscriberBuilder::init`]/`try_init`).
+///
+/// This global subscriber also includes records from <https://docs.rs/log/latest/log/>.
+///
 /// See also:
+/// - <https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/struct.SubscriberBuilder.html#method.init>
 /// - <https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives>
 ///
 pub fn enable_tracing() {
-	// Note: calling `.without_time()` disables both timestamps per log message
-	// _and_ timing events/showing their duration.
-	// Call `.with_timer()` with an empty formatter to just disable timestamps in each log printed.
-	tracing_subscriber::fmt::fmt()
-		// .without_time()
+	use tracing_subscriber::filter::EnvFilter;
+	use tracing_subscriber::fmt::format::FmtSpan;
+
+	// Note: [`tracing_subscriber::fmt::SubscriberBuilder::without_time`]
+	// disables _both_ timestamps per log message _and_ timing events/showing their duration.
+	// Call `.with_timer()` with an empty formatter to _just_ disable timestamps in each log printed.
+	tracing_subscriber::fmt()
 		.with_timer(())
 		.with_target(false)
-		.with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+		.with_span_events(FmtSpan::CLOSE)
 		.with_file(true)
 		.with_line_number(true)
-		.with_env_filter(tracing_subscriber::filter::EnvFilter::from_env("LOG_SURGEON_LOG"))
+		.with_env_filter(EnvFilter::from_env("LOG_SURGEON_LOG"))
 		.init()
 }
 
-/// A `usize` that comes from a "length" of things is at most `isize::MAX as usize` (aka `usize::MAX / 2`):
+/// The length of an array (`usize`) is at most `isize::MAX` (equivalently `usize::MAX / 2`):
 ///
 /// 1. Rust's only real implementation is rustc,
 /// 2. rustc is built on LLVM,
 /// 3. LLVM fundamentally assumes that pointer subtraction returns a value in the C `ptrdiff_t` type,
 /// 4. so objects/arrays are at most half the address space,
-/// 5. and an array/vector of length `(isize::MAX as usize) + 1` would violate this.
+/// 5. and an object/array/vector of size `(isize::MAX as usize) + 1` would violate this.
 ///
 /// Of course, `usize::MAX / 2` states is also massive on 64-bit systems,
 /// and for practical purposes we simply wouldn't reach that length.
