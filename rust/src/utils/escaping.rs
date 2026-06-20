@@ -107,12 +107,9 @@ impl std::fmt::Display for Escaped {
 			// e.g. a text editor may trim trailing whitespace when saving a parsing spec file.
 			// Tabs, carriage returns, newlines, and other (unicode) whitespace will be escaped below.
 			fmt.write_str("\\ ")
-		} else if (ch == '\'') || (ch == '"') {
-			// [`char::escape_default`] also escapes quotes, which aren't relevant to us;
-			// we pass through quotes as is.
-			ch.fmt(fmt)
 		} else {
 			// `\t`, `\r`, `\n`, `\\`, non-printable ASCII, non-ASCII unicode characters.
+			// [`char::escape_default`] also escapes quotes, which aren't relevant to us, but it doesn't hurt.
 			ch.escape_default().fmt(fmt)
 		}
 	}
