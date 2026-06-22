@@ -41,13 +41,13 @@ and repeats attempting to match a root rule _after_ the delimiter.
 WIP: We hope to generalize root rule matching to find the earliest possible occurrence of a root rule at each step.
 
 #### Implementation Details
-To determine if/what rule matches at a given input position,
-Log Surgeon builds an [automaton][dfa] for the combination of all rules in the parsing specification,
-using the classical regex -> NFA -> DFA construction.
+To determine if/what rule matches from an input position,
+Log Surgeon builds an [automaton][dfa] for the combination of all root rule patterns in the parsing specification;
+an automaton is just a state machine with transitions based on an input character.
+Specifically, Log Surgeon implements the classical regex -> NFA -> DFA construction.
 
-DFAs are useful because they can simulate matching multiple patterns/rules at once
-with just a single pass through the input.
-The classical DFA matching loop looks something like:
+DFAs simulate matching multiple patterns/rules at once with just a single pass through the input.
+"Executing" the DFA is just a loop that traverses the states:
 
 ```rust
 let mut current_state: usize = 0;
@@ -56,6 +56,7 @@ for (pos, ch) in input.char_indices() {
 	if let Some(next_state) = states[current_state].lookup_transition(ch) {
 		current_state = next_state;
 		if let Some(rule) = states[current_state].accepting_rule {
+			// Save the match, but don't stop yet; see if we can match longer.
 			maybe_match = Some((rule, pos + ch.len_utf8()));
 		}
 	} else {
@@ -67,12 +68,52 @@ return maybe_match;
 
 Note: The theoretical complexity of determining whether input matches
 is very different from finding the longest possible match;
-longest match semantics inherently requires "reading more" to attempt a longer match,
+longest match semantics inherently requires "looking ahead" to attempt a longer match,
 even if the extra input does not result in a match.
-Fortunately, in practice, the non-static text of logs is small compared to the static text,
-and the rules of a parsing specification rarely require backtracking.
+In practice, the non-static text of logs is small compared to the static text,
+and confirming the longest possible match for rules in a parsing specification
+rarely require consuming much extra input.
 
-So classical DFA execution determines which rule matches;
+Notice that each iteration of the loop requires looking up the transition for the current state and input character.
+In fact, transitions for a state are stored as a list of (non-overlapping) Unicode code point intervals,
+so this lookup means comparing the input character against these intervals.
+Further, at each step, we need to check if the current state is an accepting state.
+In a sense, this DFA loop is an "interpreter" for instructions "goto next state" and "record match".
+
+To speed up matching, we compile DFAs into native functions.
+Currently, Log Surgeon just in time (JIT) compiles them for ease of deployment,
+but conceptually the DFAs are the same as if they were "ahead of time" compiled.
+
+Each state in the DFA will be compiled to a short sequence of basic blocks
+that looks like/roughly corresponds to the following pseudocode:
+
+```
+state10:
+ch = read_next_character();
+record_match(); // Only if this state is actually an accepting state.
+if ('a' <= ch) && (ch <= 'z') {
+	goto state20;
+} else if ('0' <= ch) && (ch <= '9') {
+	goto state30;
+} else if ch == '_' {
+	goto state40;
+// etc.
+} else {
+	goto done;
+}
+```
+
+When executing this code, the current state is naturally encoded by the CPU's instruction pointer
+(pointing to the compiled instructions for the state).
+Because we know everything about the states when compiling the DFA,
+all the information is baked into the native instructions;
+instead of looking up the list of transitions/intervals for the current state (as in the loop above),
+the instructions for the state contain exactly the comparisons to choose the next state.
+Also, instead of checking if a state is accepting during execution (as in the loop above),
+we simply don't emit `record_match()` for a state if it isn't an accepting state.
+
+##### Submatch Extraction
+The classical DFA execution determines which rule matches;
 once the rule and matched text is known,
 Log Surgeon uses a [tagged DFA][tagged-dfa] for the specific rule to extract sub-rule matches.
 Conceptually, a tagged DFA is just a DFA with operations to execute on state transitions;
@@ -100,36 +141,11 @@ i.e. recording many potential sub-rule matches that are discarded.
 Therefore, we have found it better to execute a classical DFA to determine which rule,
 and a tagged DFA specifically for the matched rule.
 
-Notice that for DFA execution,
-each iteration of the loop requires looking up the transition for the current state and input character.
-Further, notice that at each step, we need to check if the current state is an accepting state.
-
-To speed up matching, we compile a native functions for each DFA corresponding to their execution;
-each state in the DFA corresponds to a sequence of basic blocks
-with the transition data directly part of the instructions.
-For example, one state might be compiled to a sequence of instructions corresponding to the following pseudocode:
-
-```
-ch = read_next_character();
-record_match(); // Only if this state is actually an accepting state.
-if ('a' <= ch) && (ch <= 'z') {
-	goto state10;
-} else if ('0' <= ch) && (ch <= '9') {
-	goto state20;
-// Other potential transitions.
-} else {
-	goto done;
-}
-```
-
-Because we know everything about the states when we are compiling the DFA,
-all the information is "baked into" the native instructions;
-for example, we don't need to emit `record_match()` for a state if it isn't an accepting state.
-
 #### Future Work
 Many search tools and algorithms have optimizations for fixed strings, i.e. static text.
-However, since Log Surgeon inherently works with many patterns for non-static text,
-we have not found meaningful opportunity for these optimizations.
+However, Log Surgeon inherently works with patterns for non-static text;
+in fact, it needs to identify matches among many different patterns of non-static text,
+so we have not found meaningful opportunity for these optimizations.
 
 Currently, Log Surgeon does not report the earliest possible match for each rule;
 heuristically, it makes use of delimiter characters to achieve similar results.
@@ -172,12 +188,13 @@ in other words, log events are always terminated by newlines
 Regexes are defined recursively; one can think of them as expressions composed of terms and operators.
 Terms are:
 
-- individual characters/character sets, e.g. `a` or `[a-z]`
+- individual characters/character sets, e.g. `.` (any single character), `a`, `[a-z]`, or `[a-z0-9ABC]`
 - parenthesized expressions/sub-rules, e.g. `(hello)` or `(?<greeting>hello world)`
 
 Operators are, from highest to lowest precedence (always left-associative):
 
-- postfix repetition, e.g. `a*`
+- postfix repetition, e.g. `a*` (0 or more), `a+` (1 or more), `a?` (0 or 1),
+	`a{n}` (exactly `n`), and `a{min,max}` (at least `min`, up to and including `max` times)
 - binary concatenation, e.g. `a*b`, equivalent to `(a*)b`
 - binary alternation ("or"), e.g. `a*b|c`, equivalent to `((a*)b)|c`
 
