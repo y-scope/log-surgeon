@@ -300,7 +300,7 @@ impl ParsingSpec {
 				if &*root_rule.name != rule_name {
 					continue;
 				}
-				root_rule.find_capture(&root_rule.regex.inner, first, &capture_names[1..], &mut possibilities);
+				root_rule.find_capture(&root_rule.regex.regex, first, &capture_names[1..], &mut possibilities);
 			}
 			Some(possibilities)
 		} else {
@@ -309,7 +309,7 @@ impl ParsingSpec {
 				self.rules
 					.iter()
 					.filter(|root_rule| &*root_rule.name == rule_name)
-					.map(|root_rule| (&root_rule[None], &root_rule.regex.inner))
+					.map(|root_rule| (&root_rule[None], &root_rule.regex.regex))
 					.collect::<Vec<_>>(),
 			)
 		}
@@ -329,16 +329,16 @@ impl RootRule {
 	where
 		F: FnMut(&Regex) -> Option<NonZero<u16>>,
 	{
-		let mut rule_info: Vec<RuleInfo> = Vec::with_capacity(1 + regex.inner.count_captures());
+		let mut rule_info: Vec<RuleInfo> = Vec::with_capacity(usize::from(regex.total_captures.get()));
 		rule_info.push(RuleInfo {
 			root_idx: idx,
 			root_name: name.clone(),
 			maybe_sub_rule: None,
 			fully_qualified_name: name.clone(),
-			encoding_idx: lookup_encoding(&regex.inner),
+			encoding_idx: lookup_encoding(&regex.regex),
 		});
 
-		let mut stack: Vec<&Regex> = vec![&regex.inner];
+		let mut stack: Vec<&Regex> = vec![&regex.regex];
 		while let Some(regex) = stack.pop() {
 			match regex {
 				Regex::AnyChar | Regex::Literal(..) | Regex::BracketedRanges { .. } => (),
@@ -373,7 +373,7 @@ impl RootRule {
 			}
 		}
 
-		let dfa: Tdfa = Tdfa::for_single_rule(idx, &regex.inner);
+		let dfa: Tdfa = Tdfa::for_single_rule(idx, &regex.regex);
 
 		Self {
 			idx,
@@ -431,7 +431,7 @@ mod test {
 			.unwrap()
 			.add_rule("ip_address", r"\d(\.\d){3}")
 			.unwrap()
-			.add_encoding("int", Regex::from_pattern(r"\d+").unwrap().inner)
+			.add_encoding("int", Regex::from_pattern(r"\d+").unwrap().regex)
 			.unwrap();
 
 		let spec: ParsingSpec = builder.build();

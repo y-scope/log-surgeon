@@ -67,7 +67,7 @@ impl Escaped {
 					return Err(InvalidEscape::Malformed);
 				};
 
-				for _ in 1..=MAX_BYTES_PER_CODE_POINT {
+				for _ in 1..MAX_BYTES_PER_CODE_POINT {
 					let backup: Chars<'_> = chars.clone();
 					if let Some(byte) = parse_hex_digit_pair(&mut chars) {
 						code_point = (code_point << u8::BITS) | byte;
@@ -84,11 +84,9 @@ impl Escaped {
 					return Err(InvalidEscape::Malformed);
 				}
 
-				return if let Some(ch) = char::from_u32(code_point) {
-					Ok((chars.as_str(), ch))
-				} else {
-					Err(InvalidEscape::BadCodePoint(code_point))
-				};
+				let ch: char = char::from_u32(code_point).ok_or(InvalidEscape::BadCodePoint(code_point))?;
+
+				return Ok((chars.as_str(), ch));
 			},
 			_ => {
 				return Err(InvalidEscape::Unknown(ch));

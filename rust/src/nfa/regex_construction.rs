@@ -80,7 +80,7 @@ impl Tnfa {
 				))));
 			}
 
-			tags = &tags | &nfa.build::<WITH_CAPTURES>(rule.idx, &rule.regex.inner, rule_inner_start, rule_inner_end);
+			tags = &tags | &nfa.build::<WITH_CAPTURES>(rule.idx, &rule.regex.regex, rule_inner_start, rule_inner_end);
 
 			if rule.regex.anchor_after {
 				nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(
@@ -200,7 +200,9 @@ impl Tnfa {
 
 				tags
 			},
-			Regex::KleenePlus(item) => self.build::<CAPTURE>(rule_idx, &item.into_kleene_plus(), current, target),
+			Regex::KleenePlus(item) => {
+				self.build::<CAPTURE>(rule_idx, &item.wrap_as_desugared_kleene_plus(), current, target)
+			},
 			Regex::BoundedRepetition { min, max, item } => {
 				// Should have been verified during regex pattern parsing.
 				assert!(*max > 0);

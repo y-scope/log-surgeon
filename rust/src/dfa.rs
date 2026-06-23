@@ -1150,7 +1150,7 @@ mod test {
 	}
 
 	fn for_pattern(pattern: &str) -> Tdfa {
-		let regex: Regex = Regex::from_pattern(pattern).unwrap().inner;
+		let regex: Regex = Regex::from_pattern(pattern).unwrap().regex;
 		Tdfa::for_single_rule(RuleIdx::NIL, &regex)
 	}
 }

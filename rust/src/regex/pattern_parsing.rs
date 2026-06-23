@@ -153,10 +153,13 @@ impl<'a> RegexParsingError<'a> {
 
 impl Regex {
 	pub fn from_pattern(pattern: &str) -> Result<AnchoredRegex, RegexError> {
-		Self::from_pattern_with_placeholders(pattern, &mut ())
+		Self::from_pattern_with_placeholders::<false, _>(pattern, &mut ())
 	}
 
-	pub fn from_pattern_with_placeholders<T>(pattern: &str, lookup: &mut T) -> Result<AnchoredRegex, RegexError>
+	pub fn from_pattern_with_placeholders<const ALLOW_NULLABLE: bool, T>(
+		pattern: &str,
+		lookup: &mut T,
+	) -> Result<AnchoredRegex, RegexError>
 	where
 		T: RegexPlaceholderLookup,
 	{
@@ -165,7 +168,7 @@ impl Regex {
 				assert_eq!(remaining, "");
 
 				regex
-					.inner
+					.regex
 					.replace_with_placeholders(lookup)
 					.map_err(|kind| RegexError {
 						consumed: pattern.to_owned(),
@@ -174,20 +177,22 @@ impl Regex {
 					})?;
 
 				regex
-					.inner
-					.number_captures(&mut { NonZero::<u16>::MIN }, &mut Vec::new())
+					.regex
+					.number_captures(&mut regex.total_captures, &mut Vec::new())
 					.ok_or(RegexError {
 						consumed: pattern.to_owned(),
 						remaining: String::new(),
 						kind: RegexErrorKind::TooManyCaptures,
 					})?;
 
-				if let Some(item) = regex.inner.is_nullable() {
-					return Err(RegexError {
-						consumed: pattern.to_owned(),
-						remaining: String::new(),
-						kind: RegexErrorKind::NullableExpression(Box::new(item.clone())),
-					});
+				if !ALLOW_NULLABLE {
+					if let Some(item) = regex.regex.is_nullable() {
+						return Err(RegexError {
+							consumed: pattern.to_owned(),
+							remaining: String::new(),
+							kind: RegexErrorKind::NullableExpression(Box::new(item.clone())),
+						});
+					}
 				}
 
 				Ok(regex)
@@ -278,6 +283,12 @@ impl Regex {
 	}
 }
 
+impl From<std::convert::Infallible> for RegexError {
+	fn from(infallible: std::convert::Infallible) -> Self {
+		infallible.into()
+	}
+}
+
 impl RegexErrorKind {
 	fn error(self, input: &str) -> NomErr<RegexParsingError<'_>> {
 		NomErr::Error(RegexParsingError::new(input, self))
@@ -322,7 +333,8 @@ fn parse_to_end(input: &str) -> ParsingResult<'_, AnchoredRegex> {
 		AnchoredRegex {
 			anchor_before,
 			anchor_after,
-			inner: regex,
+			regex,
+			total_captures: NonZero::<u16>::MIN,
 		},
 	))
 }
@@ -905,13 +917,13 @@ mod test {
 		Regex::from_pattern(r"a\-b").unwrap();
 
 		{
-			let a: Regex = Regex::from_pattern(r"(((abc)))").unwrap().inner;
-			let b: Regex = Regex::from_pattern(r"abc").unwrap().inner;
+			let a: Regex = Regex::from_pattern(r"(((abc)))").unwrap().regex;
+			let b: Regex = Regex::from_pattern(r"abc").unwrap().regex;
 			assert_eq!(a, b);
 		}
 		{
-			let a: Regex = Regex::from_pattern(r"([abc])").unwrap().inner;
-			let b: Regex = Regex::from_pattern(r"[abc]").unwrap().inner;
+			let a: Regex = Regex::from_pattern(r"([abc])").unwrap().regex;
+			let b: Regex = Regex::from_pattern(r"[abc]").unwrap().regex;
 			assert_eq!(a, b);
 		}
 	}

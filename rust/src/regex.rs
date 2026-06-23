@@ -1,5 +1,6 @@
 mod pattern_parsing;
 
+use std::num::NonZero;
 use std::sync::Arc;
 
 pub use pattern_parsing::RegexError;
@@ -17,7 +18,9 @@ const SPECIAL_CHARACTERS_IN_BRACKETED_EXPRESSIONS: &str = r"\[]";
 pub struct AnchoredRegex {
 	pub anchor_before: bool,
 	pub anchor_after: bool,
-	pub inner: Regex,
+	pub regex: Regex,
+	/// Total "captures" in the regex - total [`Regex::Capture`] **plus 1** for the implicit full capture behaviour.
+	pub total_captures: NonZero<u16>,
 }
 
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
@@ -30,6 +33,13 @@ pub enum Regex {
 		items: Vec<(char, char)>,
 	},
 	KleeneClosure(Box<Regex>),
+	/// In terms of matching (e.g. when building the NFA),
+	/// this variant is equivalent to ("desugars as") a sequence of
+	/// the inner item and the Kleene closure of the item
+	/// (see [`Regex::wrap_as_desugared_kleene_plus`]).
+	///
+	/// However, when parsing patterns, we store `(item)+` explicitly so we can (re)serialize it
+	/// without the "desguaring".
 	KleenePlus(Box<Regex>),
 	BoundedRepetition {
 		min: u32,
@@ -67,34 +77,12 @@ impl LocalTryInto<AnchoredRegex> for &str {
 }
 
 impl AnchoredRegex {
-	pub fn unanchored(inner: Regex) -> Self {
-		Self {
-			anchor_before: false,
-			anchor_after: false,
-			inner,
-		}
-	}
-
 	pub fn to_pattern(&self) -> String {
-		let mut pattern: String = self.inner.to_pattern();
-
-		// We do this replacement before the anchors for consistency.
-		if let Some(suffix) = pattern.strip_prefix(' ') {
-			pattern = format!("[ ]{suffix}");
-		}
-		if let Some(prefix) = pattern.strip_suffix(' ') {
-			pattern = format!("{prefix}[ ]");
-		}
-
+		let pattern: String = self.regex.to_pattern();
 		let anchor_before: &str = if self.anchor_before { "^" } else { "" };
 		let anchor_after: &str = if self.anchor_after { "$" } else { "" };
 
-		let pattern: String = format!("{anchor_before}{pattern}{anchor_after}");
-
-		assert!(!pattern.starts_with(|ch: char| ch.is_whitespace()));
-		assert!(!pattern.ends_with(|ch: char| ch.is_whitespace()));
-
-		pattern
+		format!("{anchor_before}{pattern}{anchor_after}")
 	}
 }
 
@@ -106,7 +94,27 @@ impl Regex {
 	/// where the actual placeholder value will be filled in later.
 	pub const NIL: Self = Self::Alternation(Vec::new());
 
+	/// String representation/"to pattern" conversion of this regex,
+	/// replacing any leading or trailing space literal with `[ ]` for explicitness.
 	pub fn to_pattern(&self) -> String {
+		let mut pattern: String = self.to_pattern_internal();
+
+		if let Some(suffix) = pattern.strip_prefix(' ') {
+			pattern = format!("[ ]{suffix}");
+		}
+		if let Some(prefix) = pattern.strip_suffix(' ') {
+			pattern = format!("{prefix}[ ]");
+		}
+
+		// Other whitespace should always be escaped.
+		assert!(!pattern.starts_with(|ch: char| ch.is_whitespace()));
+		assert!(!pattern.ends_with(|ch: char| ch.is_whitespace()));
+
+		pattern
+	}
+
+	/// Direct string representation/"to pattern" conversion of this regex.
+	fn to_pattern_internal(&self) -> String {
 		match self {
 			Self::AnyChar => ".".to_owned(),
 			&Self::Literal(ch) => {
@@ -131,7 +139,7 @@ impl Regex {
 				}
 
 				let negation: &str = if *negated { "^" } else { "" };
-				let items: String = items.iter().fold(String::new(), |mut accumulated, &(lo, hi)| {
+				let serialized: String = items.iter().fold(String::new(), |mut accumulated, &(lo, hi)| {
 					escape(lo, &mut accumulated);
 					if lo != hi {
 						accumulated.push('-');
@@ -139,10 +147,10 @@ impl Regex {
 					}
 					accumulated
 				});
-				format!("[{negation}{items}]")
+				format!("[{negation}{serialized}]")
 			},
 			Self::Capture(sub_rule) => {
-				format!("(?<{}>{})", sub_rule.name, sub_rule.regex.to_pattern())
+				format!("(?<{}>{})", sub_rule.name, sub_rule.regex.to_pattern_internal())
 			},
 			Self::Placeholder { name, .. } => {
 				format!("(?<{}>)", name)
@@ -154,13 +162,13 @@ impl Regex {
 				format!("{}+", self.surround(item))
 			},
 			Self::BoundedRepetition { min, max, item } => {
-				let sub_pattern: String = self.surround(item);
+				let item_pattern: String = self.surround(item);
 				if (*min, *max) == (0, 1) {
-					format!("{sub_pattern}?")
+					format!("{item_pattern}?")
 				} else if min == max {
-					format!("{sub_pattern}{{{min}}}")
+					format!("{item_pattern}{{{min}}}")
 				} else {
-					format!("{sub_pattern}{{{min},{max}}}")
+					format!("{item_pattern}{{{min},{max}}}")
 				}
 			},
 			Self::Sequence(items) => items.iter().fold(String::new(), |mut accumulated, item| {
@@ -170,21 +178,20 @@ impl Regex {
 			Self::Alternation(items) => {
 				// There should be at least one alternative.
 				let first: &Self = items.first().unwrap();
-				// Alternation is already the lowest precedence (and associative),
-				// so no need to parenthesize subexpressions.
-				let mut buffer: String = first.to_pattern();
-				for item in items[1..].iter() {
-					buffer.push('|');
-					buffer.push_str(&item.to_pattern());
-				}
-				buffer
+				items[1..]
+					.iter()
+					.fold(first.to_pattern_internal(), |mut accumulated, item| {
+						accumulated.push('|');
+						accumulated.push_str(&self.surround(item));
+						accumulated
+					})
 			},
 		}
 	}
 
 	/// Parenthesizes a subexpression if necessary; see [`Regex::precedence`].
 	fn surround(&self, item: &Self) -> String {
-		let sub_pattern: String = item.to_pattern();
+		let sub_pattern: String = item.to_pattern_internal();
 		if item.precedence() < self.precedence() {
 			format!("({sub_pattern})")
 		} else {
@@ -208,23 +215,10 @@ impl Regex {
 }
 
 impl Regex {
-	pub fn count_captures(&self) -> usize {
-		match self {
-			Self::AnyChar | Self::Literal(..) | Self::BracketedRanges { .. } => 0,
-			Self::Capture(sub_rule) => 1 + sub_rule.descendents,
-			Self::KleeneClosure(item)
-			| Self::KleenePlus(item)
-			| Self::BoundedRepetition { item, .. }
-			| Self::Placeholder { item, .. } => item.count_captures(),
-			Self::Sequence(items) | Self::Alternation(items) => {
-				items.iter().fold(0, |total, item| total + item.count_captures())
-			},
-		}
-	}
-
-	/// "Desugars" a pattern `(self)+` as `(self)(self)*`.
-	pub fn into_kleene_plus(&self) -> Self {
-		Self::Sequence(vec![self.clone(), Regex::KleeneClosure(Box::new(self.clone()))])
+	/// "Desugars" a pattern `(self)+` as `(self)(self)*`;
+	/// see [`Regex::KleenePlus`] for more details.
+	pub fn wrap_as_desugared_kleene_plus(&self) -> Self {
+		Self::Sequence(vec![self.clone(), Self::KleeneClosure(Box::new(self.clone()))])
 	}
 
 	/// Whether this regex accepts an empty string;

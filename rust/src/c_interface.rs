@@ -75,7 +75,7 @@ mod parsing_spec {
 		let name: &str = name.as_utf8().unwrap();
 		let pattern: &str = pattern.as_utf8().unwrap();
 		let regex: Regex = match Regex::from_pattern(pattern) {
-			Ok(anchored_regex) => anchored_regex.inner,
+			Ok(anchored_regex) => anchored_regex.regex,
 			Err(err) => {
 				eprintln!("Invalid pattern '{}': {:?}", pattern.escape_default(), err);
 				return false;

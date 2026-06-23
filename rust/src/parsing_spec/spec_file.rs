@@ -45,7 +45,7 @@ impl ParsingSpec {
 			.chain(std::iter::once(String::new()))
 			// Placeholders.
 			.chain(self.placeholders.iter().map(|(name, regex)| {
-				let pattern: String = AnchoredRegex::unanchored(regex.clone()).to_pattern();
+				let pattern: String = regex.to_pattern();
 				format!("!{name}: {pattern}")
 			}))
 			// Empty line, pretty.
@@ -106,12 +106,12 @@ impl ParsingSpecBuilder {
 					builder.set_delimiters(delimiters);
 				},
 				SpecFileLine::Placeholder(name, pattern) => {
-					let regex: Regex = Regex::from_pattern_with_placeholders(pattern, &mut builder)
+					let regex: Regex = Regex::from_pattern_with_placeholders::<true, _>(pattern, &mut builder)
 						.map_err(ParsingSpecFileError::with_line(
 							line_offset,
 							ParsingSpecFileErrorKind::InvalidPattern,
 						))?
-						.inner;
+						.regex;
 
 					builder
 						.add_placeholder(name.to_owned(), regex)
@@ -121,9 +121,11 @@ impl ParsingSpecBuilder {
 						})?;
 				},
 				SpecFileLine::Rule(priority, name, pattern) => {
-					let regex: AnchoredRegex = Regex::from_pattern_with_placeholders(pattern, &mut builder).map_err(
-						ParsingSpecFileError::with_line(line_offset, ParsingSpecFileErrorKind::InvalidPattern),
-					)?;
+					let regex: AnchoredRegex =
+						Regex::from_pattern_with_placeholders::<false, _>(pattern, &mut builder).map_err(
+							ParsingSpecFileError::with_line(line_offset, ParsingSpecFileErrorKind::InvalidPattern),
+						)?;
+
 					let Ok(_) = builder.add_rule_with_priority(priority, name, regex);
 				},
 			}

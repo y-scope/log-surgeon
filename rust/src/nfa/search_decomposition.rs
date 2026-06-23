@@ -818,7 +818,7 @@ mod test {
 	}
 
 	fn nfa_for(pattern: &str) -> Tnfa {
-		let regex: Regex = Regex::from_pattern(pattern).unwrap().inner;
+		let regex: Regex = Regex::from_pattern(pattern).unwrap().regex;
 		Tnfa::for_regex(&regex)
 	}
 }
