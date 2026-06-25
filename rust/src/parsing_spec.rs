@@ -42,14 +42,14 @@ pub struct ParsingSpec {
 
 	pub delimiters: String,
 
+	pub encodings: Vec<Vec<String>>,
+
 	/// TDFA used for lexing/parsing.
 	pub main_dfa: Tdfa,
 	/// TNFA used for search.
 	pub main_nfa: Tnfa,
 	/// TODO
 	pub optimized_dfa: CompressedDfa,
-
-	pub encodings: Vec<Vec<String>>,
 
 	/// Derived from `delimiters`.
 	pub ascii_delimiters: [bool; 0x80],
@@ -60,7 +60,12 @@ impl Eq for ParsingSpec {}
 
 impl PartialEq for ParsingSpec {
 	fn eq(&self, other: &Self) -> bool {
-		(&self.rules, &self.delimiters, &self.encodings).eq(&(&other.rules, &other.delimiters, &other.encodings))
+		(&self.rules, &self.delimiters, &self.placeholders, &self.encodings).eq(&(
+			&other.rules,
+			&other.delimiters,
+			&other.placeholders,
+			&other.encodings,
+		))
 	}
 }
 
@@ -138,7 +143,11 @@ impl ParsingSpecBuilder {
 		Ok(self)
 	}
 
-	pub fn add_placeholder(&mut self, name: String, regex: Regex) -> Result<&mut Self, Regex> {
+	pub fn add_placeholder<LikeString>(&mut self, name: LikeString, regex: Regex) -> Result<&mut Self, Regex>
+	where
+		LikeString: Into<String>,
+	{
+		let name: String = name.into();
 		assert!(!name.is_empty());
 		assert_ne!(name, "delimiters");
 

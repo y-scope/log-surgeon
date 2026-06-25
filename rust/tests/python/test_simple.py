@@ -12,8 +12,8 @@ class TestSimple(unittest.TestCase):
 	def test_basic(self):
 		p = Parser(debug=True)
 
-		p.add_variable_pattern("number", r"[0-9]+")
-		p.add_variable_pattern("at_host", r"@(?<inside>[a-z]+)(?<parts>(?<dot>\.)[a-z]*(?<end>[a-z]))*")
+		p.add_rule("number", r"[0-9]+")
+		p.add_rule("at_host", r"@(?<inside>[a-z]+)(?<parts>(?<dot>\.)[a-z]*(?<end>[a-z]))*")
 
 		p.compile()
 
@@ -56,9 +56,9 @@ class TestSimple(unittest.TestCase):
 		p = Parser(debug=True)
 
 		p.set_delimiters(" ")
-		p.add_variable_pattern("word", r"[a-z]+")
-		p.add_variable_pattern("int1", r"^\d+")
-		p.add_variable_pattern("int2", r"\d+$")
+		p.add_rule("word", r"[a-z]+")
+		p.add_rule("int1", r"^\d+")
+		p.add_rule("int2", r"\d+$")
 
 		p.compile()
 
@@ -96,7 +96,7 @@ class TestSimple(unittest.TestCase):
 		p = Parser(debug=True)
 
 		p.set_delimiters(" ")
-		p.add_variable_pattern("word", r"[a-z]+")
+		p.add_rule("word", r"[a-z]+")
 
 		p.compile()
 
@@ -130,15 +130,15 @@ class TestSimple(unittest.TestCase):
 		# `"var1"` will be returned.
 		# If both the second and third rules match (with the same length),
 		# `"var2"` will be returned.
-		p.add_variable_pattern("var1", r"[a-z]+")
-		p.add_variable_pattern("var2", r"[a-z0-9]+")
-		p.add_variable_pattern("var1", r"[0-9]+")
+		p.add_rule("var1", r"[a-z]+")
+		p.add_rule("var2", r"[a-z0-9]+")
+		p.add_rule("var1", r"[0-9]+")
 
 		# Add them in reverse order, but hardcode the priority
 		# (so that the end result should be as above).
-		p.add_variable_pattern("var1", r":[0-9]+", priority=10)
-		p.add_variable_pattern("var2", r":[a-z0-9]+", priority=20)
-		p.add_variable_pattern("var1", r":[a-z]+", priority=30)
+		p.add_rule("var1", r":[0-9]+", priority=10)
+		p.add_rule("var2", r":[a-z0-9]+", priority=20)
+		p.add_rule("var1", r":[a-z]+", priority=30)
 
 		p.compile()
 
@@ -167,7 +167,7 @@ class TestSimple(unittest.TestCase):
 		p = Parser(debug=True)
 
 		p.set_delimiters(" ")
-		p.add_variable_pattern("int", r"[0-9]+")
+		p.add_rule("int", r"[0-9]+")
 
 		p.compile()
 
@@ -189,7 +189,7 @@ class TestSimple(unittest.TestCase):
 		p = Parser(debug=True)
 
 		p.set_delimiters(" ")
-		p.add_variable_pattern("wordint", r":(?<word>[a-z]+(?<int>[0-9]+))")
+		p.add_rule("wordint", r":(?<word>[a-z]+(?<int>[0-9]+))")
 
 		p.compile()
 
@@ -221,8 +221,8 @@ class TestSimple(unittest.TestCase):
 		p = Parser(debug=True)
 
 		p.set_delimiters(" ")
-		p.add_variable_pattern("header", r"\d{4}\-\d{2}\-\d{2} \d{2}")
-		p.add_variable_pattern("word", r"\w+")
+		p.add_rule("header", r"\d{4}\-\d{2}\-\d{2} \d{2}")
+		p.add_rule("word", r"\w+")
 
 		p.compile()
 
@@ -250,7 +250,7 @@ class TestSimple(unittest.TestCase):
 		p = Parser(debug=True)
 
 		p.set_delimiters(" ")
-		p.add_variable_pattern("zero", r"0(?<one>1(?<two>2(?<three>3)))")
+		p.add_rule("zero", r"0(?<one>1(?<two>2(?<three>3)))")
 
 		p.compile()
 

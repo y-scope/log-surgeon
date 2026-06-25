@@ -197,6 +197,13 @@ impl Parser {
 			variable_indices: CArray::from_slice(&self.current_log.variable_indices),
 		})
 	}
+
+	pub fn reset(&mut self) {
+		self.current_log.clear();
+		if let Some(pending_header) = &mut self.maybe_pending_header {
+			pending_header.clear();
+		}
+	}
 }
 
 impl WorkingLogEvent {

@@ -98,7 +98,7 @@ impl PyParser {
 	/// Raises an exception if `name` is empty, or `"delimiters"`
 	/// (see [`ParsingSpecBuilder::add_rule_with_priority`]).
 	#[pyo3(signature = (name, pattern, *, priority=0))]
-	fn add_variable_pattern(&mut self, name: &str, pattern: &str, priority: i32) -> PyResult<()> {
+	fn add_rule(&mut self, name: &str, pattern: &str, priority: i32) -> PyResult<()> {
 		self.spec_builder
 			.add_rule_with_priority(priority, name, pattern)
 			.map_err(|err| LogSurgeonInvalidRegexPattern::new_err(format!("invalid pattern: {err:?}")))?;

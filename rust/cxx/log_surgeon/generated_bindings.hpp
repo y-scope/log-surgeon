@@ -93,6 +93,10 @@ struct Match {
     uint16_t encoding_idx;
     /// DANGEROUS fields for FFI.
     /// But it's not dangerous if you don't look at it.
+    ///
+    /// Note: [`LogEvent`] can borrow from [`crate::parser::Parser`] since it's an "external" value,
+    /// but the [`Match`]es of a `LogEvent` live in a `Vec` inside `Parser`,
+    /// so they can't safely reference the `Parser` (be self-referential).
     MatchFfiPointers ffi_pointers;
 };
 
@@ -135,6 +139,8 @@ void log_surgeon_parser_drop(Box<Parser> value);
 Box<Parser> log_surgeon_parser_new(Box<ParsingSpec> parsing_spec);
 
 bool log_surgeon_parser_next(Parser *parser, CCharArray input, size_t *pos, LogEvent *out);
+
+void log_surgeon_parser_reset(Parser *parser);
 
 bool log_surgeon_parsing_spec_add_encoding(ParsingSpecBuilder *builder,
                                            CCharArray name,

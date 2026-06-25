@@ -107,10 +107,10 @@ impl ParsingSpecBuilder {
 				},
 				SpecFileLine::Placeholder(name, pattern) => {
 					let regex: Regex = Regex::from_pattern_with_placeholders::<true, _>(pattern, &mut builder)
-						.map_err(ParsingSpecFileError::with_line(
+						.map_err(|e| ParsingSpecFileError {
 							line_offset,
-							ParsingSpecFileErrorKind::InvalidPattern,
-						))?
+							kind: ParsingSpecFileErrorKind::InvalidPattern(e),
+						})?
 						.regex;
 
 					builder
@@ -121,10 +121,11 @@ impl ParsingSpecBuilder {
 						})?;
 				},
 				SpecFileLine::Rule(priority, name, pattern) => {
-					let regex: AnchoredRegex =
-						Regex::from_pattern_with_placeholders::<false, _>(pattern, &mut builder).map_err(
-							ParsingSpecFileError::with_line(line_offset, ParsingSpecFileErrorKind::InvalidPattern),
-						)?;
+					let regex: AnchoredRegex = Regex::from_pattern_with_placeholders::<false, _>(pattern, &mut builder)
+						.map_err(|e| ParsingSpecFileError {
+							line_offset,
+							kind: ParsingSpecFileErrorKind::InvalidPattern(e),
+						})?;
 
 					let Ok(_) = builder.add_rule_with_priority(priority, name, regex);
 				},
@@ -136,18 +137,6 @@ impl ParsingSpecBuilder {
 		}
 
 		Ok(builder)
-	}
-}
-
-impl ParsingSpecFileError {
-	fn with_line<E, F>(line_offset: usize, kind: F) -> impl FnOnce(E) -> Self
-	where
-		F: FnOnce(E) -> ParsingSpecFileErrorKind,
-	{
-		move |e| Self {
-			line_offset,
-			kind: kind(e),
-		}
 	}
 }
 
@@ -204,7 +193,7 @@ fn parse_priority(input: &str) -> IResult<&str, i32> {
 	use nom::combinator::cut;
 	use nom::sequence::delimited;
 
-	delimited(char_parser('('), cut(i32_parser), char_parser(')')).parse(input)
+	delimited(char_parser('('), cut(i32_parser), cut(char_parser(')'))).parse(input)
 }
 
 fn parse_delimiters(mut input: &str) -> Result<String, NomErr<NomError<&str>>> {
@@ -272,15 +261,17 @@ mod test {
 			.unwrap();
 		builder.add_rule_with_priority(-10, "foobar", r"^\^\$$").unwrap();
 
-		let spec: ParsingSpec = builder.build();
+		let spec1: ParsingSpec = builder.build();
 
-		let serialized: String = spec.to_parsing_spec_definition();
+		let serialized1: String = spec1.to_parsing_spec_definition();
 
-		let spec2: ParsingSpec = ParsingSpecBuilder::from_parsing_spec_definition(&serialized)
+		let spec2: ParsingSpec = ParsingSpecBuilder::from_parsing_spec_definition(&serialized1)
 			.unwrap()
 			.build();
+		let serialized2: String = spec2.to_parsing_spec_definition();
 
-		assert_eq!(spec, spec2);
+		assert_eq!(spec1, spec2);
+		assert_eq!(serialized1, serialized2);
 	}
 
 	#[test]
@@ -290,16 +281,28 @@ mod test {
 		builder.add_rule("foo", r"hello ").unwrap();
 		builder.add_rule("foo", r" world").unwrap();
 
-		let spec: ParsingSpec = builder.build();
+		let spec1: ParsingSpec = builder.build();
 
-		let serialized: String = spec.to_parsing_spec_definition();
+		let serialized1: String = spec1.to_parsing_spec_definition();
 
-		let spec2: ParsingSpec = ParsingSpecBuilder::from_parsing_spec_definition(&serialized)
+		let spec2: ParsingSpec = ParsingSpecBuilder::from_parsing_spec_definition(&serialized1)
 			.unwrap()
 			.build();
 		let serialized2: String = spec2.to_parsing_spec_definition();
 
-		assert_eq!(serialized, serialized2);
+		assert_eq!(serialized1, serialized2);
+	}
+
+	#[test]
+	fn normalizing_parentheses() {
+		let spec1: ParsingSpec = spec! {
+			"foo: abcd"
+		};
+		let spec2: ParsingSpec = spec! {
+			"foo: (ab)(cd)"
+		};
+
+		assert_eq!(spec1, spec2);
 	}
 
 	// TODO good way to test symbolically represented placeholders? nolonger flattened

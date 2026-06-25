@@ -16,11 +16,11 @@ pip install log-surgeon-ffi
 from log_surgeon import Parser
 
 parser = Parser()
-parser.add_variable_pattern(
+parser.add_rule(
     "timestamp",
     r"(?<hours>\d{2}):(?<minutes>\d{2}):(?<seconds>\d{2})",
 )
-parser.add_variable_pattern("level", r"(?<level>INFO|WARN|ERROR)")
+parser.add_rule("level", r"(?<level>INFO|WARN|ERROR)")
 parser.compile()
 
 parser.set_input_stream("10:30:00 INFO starting up")

@@ -3,7 +3,7 @@
 from log_surgeon import Parser
 
 a = Parser()
-a.add_variable_pattern("hello", "abc|d(?<foo>[a-z])f")
+a.add_rule("hello", "abc|d(?<foo>[a-z])f")
 text = "def foobarbaz"
 
 a.compile()

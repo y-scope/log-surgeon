@@ -51,6 +51,10 @@ pub struct Match {
 
 	/// DANGEROUS fields for FFI.
 	/// But it's not dangerous if you don't look at it.
+	///
+	/// Note: [`LogEvent`] can borrow from [`crate::parser::Parser`] since it's an "external" value,
+	/// but the [`Match`]es of a `LogEvent` live in a `Vec` inside `Parser`,
+	/// so they can't safely reference the `Parser` (be self-referential).
 	pub ffi_pointers: MatchFfiPointers,
 }
 

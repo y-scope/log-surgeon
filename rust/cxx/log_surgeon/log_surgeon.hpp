@@ -129,6 +129,12 @@ public:
             -> std::optional<EventHandle>;
 
     /**
+     * Reset the internal state of the parser;
+     * e.g. when refilling a partial buffer and re-parsing the last log event.
+     */
+    auto reset();
+
+    /**
      * Computes interpretations for a query.
      *
      * @param name
@@ -194,6 +200,10 @@ inline auto ParserHandle::next_event(std::string_view input, size_t* pos)
         return std::nullopt;
     }
     return std::make_optional(EventHandle{m_event});
+}
+
+inline auto ParserHandle::reset() {
+    log_surgeon_parser_reset(m_parser);
 }
 
 inline auto ParserHandle::query_interpretations(std::string_view name, std::string_view query)

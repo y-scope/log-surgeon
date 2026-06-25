@@ -153,6 +153,11 @@ mod parser {
 			false
 		}
 	}
+
+	#[unsafe(no_mangle)]
+	extern "C" fn log_surgeon_parser_reset(parser: &mut Parser) {
+		parser.reset();
+	}
 }
 
 mod log_event {

@@ -13,8 +13,8 @@ class TestRegression(unittest.TestCase):
 		p = Parser()
 
 		p.set_delimiters(" \t\r\n:,!;%@/()[].=")
-		p.add_variable_pattern("handler_class", r"for class (?<handler_class>org\.apache\.hadoop\.yarn\.server\.[a-zA-Z0-9\.\$]+)")
-		p.add_variable_pattern("container", r"container[0-9_]+")
+		p.add_rule("handler_class", r"for class (?<handler_class>org\.apache\.hadoop\.yarn\.server\.[a-zA-Z0-9\.\$]+)")
+		p.add_rule("container", r"container[0-9_]+")
 
 		p.compile()
 
@@ -31,8 +31,8 @@ class TestRegression(unittest.TestCase):
 		p = Parser()
 
 		p.set_delimiters(" \t\r\n,!;%@=()[]")
-		p.add_variable_pattern("c", r"Container")
-		p.add_variable_pattern("VAR", r"[a-zA-Z0-9_\.\-/\\#!]*[0-9][a-zA-Z0-9_\.\-/\\]*")
+		p.add_rule("c", r"Container")
+		p.add_rule("VAR", r"[a-zA-Z0-9_\.\-/\\#!]*[0-9][a-zA-Z0-9_\.\-/\\]*")
 
 		p.compile()
 
@@ -47,7 +47,7 @@ class TestRegression(unittest.TestCase):
 		p = Parser()
 
 		p.set_delimiters(" \t\r\n!\"#\\$%&'()*,:;<=>?{}@()[|]^_`~'")
-		p.add_variable_pattern("role", r"'roles': \[u'(?<role>[^']+)'\]")
+		p.add_rule("role", r"'roles': \[u'(?<role>[^']+)'\]")
 
 		p.compile()
 
@@ -77,7 +77,7 @@ class TestRegression(unittest.TestCase):
 		p = Parser()
 
 		p.set_delimiters(" \t\r\n")
-		p.add_variable_pattern("header", r"\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2},\d{3}")
+		p.add_rule("header", r"\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2},\d{3}")
 
 		p.compile()
 
@@ -101,8 +101,8 @@ class TestRegression(unittest.TestCase):
 		p = Parser()
 
 		p.set_delimiters(" \t\r\n")
-		p.add_variable_pattern("num", r"^[0-9]+$")
-		p.add_variable_pattern("word", r"^[a-z]+$")
+		p.add_rule("num", r"^[0-9]+$")
+		p.add_rule("word", r"^[a-z]+$")
 
 		p.compile()
 
