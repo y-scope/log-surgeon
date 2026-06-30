@@ -184,50 +184,46 @@ impl ParsingSpecBuilder {
 	pub fn build(self) -> ParsingSpec {
 		let mut rules: Vec<RootRule> = Vec::new();
 
-		let mut encodings: Vec<Vec<String>> = vec![Vec::new()];
-		let mut encodings_lookup: BTreeMap<Vec<String>, usize> = BTreeMap::from([(Vec::new(), 0)]);
+		let mut encoding_combinations: Vec<Vec<String>> = vec![Vec::new()];
+		let mut encoding_combination_index_map: BTreeMap<Vec<String>, usize> = BTreeMap::from([(Vec::new(), 0)]);
 
 		let mut index: NonZero<u16> = NonZero::<u16>::MIN;
 		for (priority, rules_at_priority) in self.rules_by_priority.into_iter().rev() {
-			for (name, regex) in rules_at_priority.into_iter() {
+			for (rule_name, rule_regex) in rules_at_priority.into_iter() {
 				let rule_idx: RuleIdx = RuleIdx::new(index);
 
-				rules.push(RootRule::new(rule_idx, name, priority, regex, |regex| {
-					let rule_nfa: Tnfa = Tnfa::for_single_rule(rule_idx, regex);
+				rules.push(RootRule::new(rule_idx, rule_name, priority, rule_regex, |regex| {
+					let rule_nfa: Tnfa = Tnfa::from_single_rule(rule_idx, regex);
 
 					let mut possible_encodings: Vec<String> = Vec::new();
 					for (encoding_name, encoding_regex) in self.encodings.iter() {
-						let encoding_nfa: Tnfa = Tnfa::for_single_rule(RuleIdx::NIL, encoding_regex);
+						let encoding_nfa: Tnfa = Tnfa::from_regex(encoding_regex);
 						let intersection: Tnfa = rule_nfa.intersect::<false>(&encoding_nfa);
 						if intersection.can_accept() {
 							possible_encodings.push(encoding_name.clone());
 						}
 					}
-					let encoding_idx: usize =
-						*encodings_lookup
-							.entry(possible_encodings)
-							.or_insert_with_key(|possible_encodings| {
-								let n: usize = encodings.len();
-								encodings.push(possible_encodings.clone());
-								n
-							});
+					let encoding_idx: usize = *encoding_combination_index_map
+						.entry(possible_encodings)
+						.or_insert_with_key(|possible_encodings| {
+							let n: usize = encoding_combinations.len();
+							encoding_combinations.push(possible_encodings.clone());
+							n
+						});
 
-					let Some(encoding_idx): Option<u16> = u16::try_from(encoding_idx).ok() else {
-						panic!("more than u16::MAX encodings (not supported)");
-					};
+					let encoding_idx: u16 =
+						u16::try_from(encoding_idx).expect("more than `u16::MAX` encodings (not supported)");
 
-					let encoding_idx: Option<NonZero<u16>> = NonZero::new(encoding_idx);
-					encoding_idx
+					NonZero::new(encoding_idx)
 				}));
 
-				let Some(next): Option<NonZero<u16>> = index.checked_add(1) else {
-					panic!("more than u16::MAX rules (not supported)");
-				};
-				index = next;
+				index = index
+					.checked_add(1)
+					.expect("more than `u16::MAX` rules (not supported)");
 			}
 		}
 
-		let main_nfa: Tnfa = Tnfa::for_rules::<true, _>(rules.iter(), &self.delimiters);
+		let main_nfa: Tnfa = Tnfa::from_rules::<true, _>(rules.iter(), &self.delimiters);
 
 		let main_dfa: Tdfa = self.maybe_cached_dfa.unwrap_or_else(|| {
 			now!(t0);
@@ -264,7 +260,7 @@ impl ParsingSpecBuilder {
 			main_nfa,
 			main_dfa,
 			optimized_dfa,
-			encodings,
+			encodings: encoding_combinations,
 			ascii_delimiters,
 			non_ascii_delimiters,
 		}
@@ -291,10 +287,6 @@ impl ParsingSpec {
 		ascii_delimiters: [false; 0x80],
 		non_ascii_delimiters: String::new(),
 	};
-
-	pub fn build_dfa(&self) -> Tdfa {
-		Tdfa::for_rules(&self.rules, self.delimiters.clone())
-	}
 
 	/// Returns `None` iff `name` is empty.
 	/// Otherwise, returns (sub)rules with the exact fully qualified name match.
@@ -344,7 +336,11 @@ impl RootRule {
 			root_name: name.clone(),
 			maybe_sub_rule: None,
 			fully_qualified_name: name.clone(),
-			encoding_idx: lookup_encoding(&regex.regex),
+			maybe_encoding_idx: if regex.total_captures > NonZero::<u16>::MIN {
+				None
+			} else {
+				lookup_encoding(&regex.regex)
+			},
 		});
 
 		let mut stack: Vec<&Regex> = vec![&regex.regex];
@@ -359,7 +355,7 @@ impl RootRule {
 						root_name: name.clone(),
 						maybe_sub_rule: Some(sub_rule.clone()),
 						fully_qualified_name: Arc::from(format!("{}{}", name, sub_rule.qualified_name)),
-						encoding_idx: if sub_rule.is_leaf() {
+						maybe_encoding_idx: if sub_rule.is_leaf() {
 							lookup_encoding(&sub_rule.regex)
 						} else {
 							None
@@ -397,19 +393,19 @@ impl RootRule {
 	/// Find matching (nested) captures matching exactly (the fragments of) a fully qualified name.
 	fn find_capture<'a>(
 		&'a self,
-		current: &'a Regex,
+		current_regex: &'a Regex,
 		first: &str,
 		rest: &[&str],
 		collect: &mut Vec<(&'a RuleInfo, &'a Regex)>,
 	) {
-		match current {
+		match current_regex {
 			Regex::AnyChar | Regex::Literal(..) | Regex::BracketedRanges { .. } => (),
 			Regex::Capture(sub_rule) => {
 				if sub_rule.name == first {
 					if let Some(first) = rest.first().copied() {
 						self.find_capture(&sub_rule.regex, first, &rest[1..], collect);
 					} else {
-						collect.push((&self[Some(sub_rule.id)], current));
+						collect.push((&self[Some(sub_rule.id)], current_regex));
 					}
 				}
 			},
@@ -445,7 +441,7 @@ mod test {
 
 		let spec: ParsingSpec = builder.build();
 
-		assert_eq!(spec.rules[0][None].encoding_idx, Some(NonZero::<u16>::MIN));
-		assert_eq!(spec.rules[1][None].encoding_idx, None);
+		assert_eq!(spec.rules[0][None].maybe_encoding_idx, Some(NonZero::<u16>::MIN));
+		assert_eq!(spec.rules[1][None].maybe_encoding_idx, None);
 	}
 }

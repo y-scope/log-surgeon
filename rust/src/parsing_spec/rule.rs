@@ -66,7 +66,7 @@ pub struct RuleInfo {
 
 	pub fully_qualified_name: Arc<str>,
 
-	pub encoding_idx: Option<NonZero<u16>>,
+	pub maybe_encoding_idx: Option<NonZero<u16>>,
 }
 
 impl std::ops::Index<Option<NonZero<u16>>> for RootRule {

@@ -15,25 +15,30 @@ use crate::parsing_spec::SubRule;
 use crate::regex::Regex;
 
 impl Tnfa {
-	pub fn for_single_rule(rule_idx: RuleIdx, regex: &Regex) -> Self {
+	pub fn from_single_rule(rule_idx: RuleIdx, regex: &Regex) -> Self {
 		let mut nfa: Self = Self::new();
 
 		let rule_start: NfaIdx = NfaIdx::BEGIN;
 		let rule_end: NfaIdx = nfa.new_state("end");
 
-		let tags: BTreeSet<CaptureTag> = nfa.build::<true>(rule_idx, regex, rule_start, rule_end);
+		let tags: BTreeSet<CaptureTag> = nfa.build_regex_nfa::<true>(rule_idx, regex, rule_start, rule_end);
 		nfa[rule_end].maybe_accepts_for_rule = Some(rule_idx);
 
-		nfa.tags = tags.into_iter().collect::<Vec<_>>();
+		nfa.tags = tags;
 
 		nfa
 	}
 
-	pub fn for_regex(regex: &Regex) -> Tnfa {
-		Self::for_single_rule(RuleIdx::NIL, regex)
+	pub fn from_regex(regex: &Regex) -> Tnfa {
+		Self::from_single_rule(RuleIdx::NIL, regex)
 	}
 
-	pub fn for_rules<'a, const WITH_CAPTURES: bool, Rules>(rules: Rules, delimiters: &str) -> Self
+	/// `WITH_CAPTURES` also controls "with(out) anchors"; with captures <=> without anchors.
+	/// A `Tnfa` without captures additionally has transitions for "before" and "after" characters,
+	/// used to match anchors/delimiters/any character (if the rule is unanchored).
+	///
+	/// See [`crate::dfa::Tdfa::execute_without_captures`] for more details.
+	pub fn from_rules<'a, const WITH_CAPTURES: bool, Rules>(rules: Rules, delimiters: &str) -> Self
 	where
 		Rules: IntoIterator<Item = &'a RootRule>,
 	{
@@ -44,69 +49,66 @@ impl Tnfa {
 		let mut spontaneous: Vec<SpontaneousTransition> = Vec::new();
 
 		for rule in rules.into_iter() {
-			let rule_start: NfaIdx = nfa.new_state(format!(
-				"rule {} ('{}') start (outside)",
+			let anchored_rule_start: NfaIdx = nfa.new_state(format!(
+				"anchored rule {} ('{}') start",
 				rule.idx,
 				rule.name.escape_default()
 			));
-			let rule_end: NfaIdx = nfa.new_state(format!(
-				"rule {} ('{}') end (outside)",
+			let anchored_rule_end: NfaIdx = nfa.new_state(format!(
+				"anchored rule {} ('{}') end",
 				rule.idx,
 				rule.name.escape_default()
 			));
+			let rule_start: NfaIdx = nfa.new_state(format!("rule '{}' start", rule.name));
+			let rule_end: NfaIdx = nfa.new_state(format!("rule '{}' end", rule.name));
 
 			spontaneous.push(SpontaneousTransition {
 				kind: SpontaneousTransitionKind::Epsilon,
-				target: rule_start,
+				target: anchored_rule_start,
 			});
 
-			let rule_inner_start: NfaIdx = nfa.new_state(format!("rule '{}' start (inside)", rule.name));
-			let rule_inner_end: NfaIdx = nfa.new_state(format!("rule '{}' end (inside)", rule.name));
-
 			if rule.regex.anchor_before {
-				nfa[rule_start].transitions =
+				nfa[anchored_rule_start].transitions = Transitions::Interval(IntervalTree::from_iter(
+					delimiters
+						.chars()
+						.map(|ch| (Interval::new(u32::from(ch), u32::from(ch)), rule_start, PolicyUnique)),
+				));
+			} else {
+				nfa[anchored_rule_start].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once(
+					(Interval::new(0, u32::from(char::MAX)), rule_start, PolicyUnique),
+				)));
+			}
+
+			tags = &tags | &nfa.build_regex_nfa::<WITH_CAPTURES>(rule.idx, &rule.regex.regex, rule_start, rule_end);
+
+			if rule.regex.anchor_after {
+				nfa[rule_end].transitions =
 					Transitions::Interval(IntervalTree::from_iter(delimiters.chars().map(|ch| {
 						(
 							Interval::new(u32::from(ch), u32::from(ch)),
-							rule_inner_start,
+							anchored_rule_end,
 							PolicyUnique,
 						)
 					})));
 			} else {
-				nfa[rule_start].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once((
+				nfa[rule_end].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once((
 					Interval::new(0, u32::from(char::MAX)),
-					rule_inner_start,
+					anchored_rule_end,
 					PolicyUnique,
 				))));
 			}
 
-			tags = &tags | &nfa.build::<WITH_CAPTURES>(rule.idx, &rule.regex.regex, rule_inner_start, rule_inner_end);
-
-			if rule.regex.anchor_after {
-				nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(
-					delimiters
-						.chars()
-						.map(|ch| (Interval::new(u32::from(ch), u32::from(ch)), rule_end, PolicyUnique)),
-				));
-			} else {
-				nfa[rule_inner_end].transitions = Transitions::Interval(IntervalTree::from_iter(std::iter::once((
-					Interval::new(0, u32::from(char::MAX)),
-					rule_end,
-					PolicyUnique,
-				))));
-			}
-
-			nfa[rule_end].maybe_accepts_for_rule = Some(rule.idx);
+			nfa[anchored_rule_end].maybe_accepts_for_rule = Some(rule.idx);
 		}
 
 		nfa[NfaIdx::BEGIN].transitions = Transitions::Spontaneous(spontaneous);
 
-		nfa.tags = tags.into_iter().collect::<Vec<_>>();
+		nfa.tags = tags;
 
 		nfa
 	}
 
-	fn build<const CAPTURE: bool>(
+	fn build_regex_nfa<const WITH_CAPTURES: bool>(
 		&mut self,
 		rule_idx: RuleIdx,
 		regex: &Regex,
@@ -132,14 +134,14 @@ impl Tnfa {
 				BTreeSet::new()
 			},
 			Regex::Capture(sub_rule) => {
-				if CAPTURE {
+				if WITH_CAPTURES {
 					self.capture(rule_idx, sub_rule, current, target)
 				} else {
-					self.build::<false>(rule_idx, &sub_rule.regex, current, target)
+					self.build_regex_nfa::<false>(rule_idx, &sub_rule.regex, current, target)
 				}
 			},
 			Regex::BracketedRanges { negated, items } => {
-				if *negated {
+				let intervals: Vec<Interval<u32>> = if *negated {
 					let mut intervals: Vec<Interval<u32>> = Vec::with_capacity(items.len());
 					for &(start, end) in items.iter() {
 						// Should have been verified during regex pattern parsing.
@@ -147,20 +149,16 @@ impl Tnfa {
 
 						intervals.push(Interval::new(u32::from(start), u32::from(end)));
 					}
-					self[current].transitions = Transitions::Interval(IntervalTree::from_iter(
-						Interval::complement(&mut intervals)
-							.into_iter()
-							.map(|interval| (interval, target, PolicyUnique)),
-					));
+					Interval::complement(&mut intervals)
 				} else {
-					self[current].transitions =
-						Transitions::Interval(IntervalTree::from_iter(items.iter().map(|&(start, end)| {
-							// Should have been verified during regex pattern parsing.
-							assert!(start <= end);
-
-							(Interval::new(u32::from(start), u32::from(end)), target, PolicyUnique)
-						})));
-				}
+					items
+						.iter()
+						.map(|&(start, end)| Interval::new(u32::from(start), u32::from(end)))
+						.collect::<Vec<_>>()
+				};
+				self[current].transitions = Transitions::Interval(IntervalTree::from_iter(
+					intervals.into_iter().map(|interval| (interval, target, PolicyUnique)),
+				));
 				BTreeSet::new()
 			},
 			Regex::KleeneClosure(item) => {
@@ -179,7 +177,8 @@ impl Tnfa {
 					},
 				]);
 
-				let tags: BTreeSet<CaptureTag> = self.build::<CAPTURE>(rule_idx, item, item_start, item_end);
+				let tags: BTreeSet<CaptureTag> =
+					self.build_regex_nfa::<WITH_CAPTURES>(rule_idx, item, item_start, item_end);
 
 				self[item_end].transitions = Transitions::Spontaneous(vec![
 					SpontaneousTransition {
@@ -201,7 +200,7 @@ impl Tnfa {
 				tags
 			},
 			Regex::KleenePlus(item) => {
-				self.build::<CAPTURE>(rule_idx, &item.wrap_as_desugared_kleene_plus(), current, target)
+				self.build_regex_nfa::<WITH_CAPTURES>(rule_idx, &item.wrap_as_desugared_kleene_plus(), current, target)
 			},
 			Regex::BoundedRepetition { min, max, item } => {
 				// Should have been verified during regex pattern parsing.
@@ -213,7 +212,7 @@ impl Tnfa {
 				let mut tags: BTreeSet<CaptureTag> = BTreeSet::new();
 				for i in 0..*min {
 					let sub_target: NfaIdx = self.new_state(format!("bounded {i} of {min}..={max} ({item})"));
-					tags.append(&mut self.build::<CAPTURE>(rule_idx, item, current, sub_target));
+					tags.append(&mut self.build_regex_nfa::<WITH_CAPTURES>(rule_idx, item, current, sub_target));
 					current = sub_target;
 				}
 
@@ -250,7 +249,7 @@ impl Tnfa {
 						target,
 					}]);
 
-					tags.append(&mut self.build::<CAPTURE>(rule_idx, item, sub_have, sub_target));
+					tags.append(&mut self.build_regex_nfa::<WITH_CAPTURES>(rule_idx, item, sub_have, sub_target));
 					current = sub_target;
 				}
 
@@ -275,13 +274,13 @@ impl Tnfa {
 					} else {
 						target
 					};
-					tags.append(&mut self.build::<CAPTURE>(rule_idx, sub_item, current, sub_target));
+					tags.append(&mut self.build_regex_nfa::<WITH_CAPTURES>(rule_idx, sub_item, current, sub_target));
 					current = sub_target;
 				}
 				tags
 			},
-			Regex::Alternation(items) => self.alternate::<CAPTURE>(rule_idx, items, current, target),
-			Regex::Placeholder { item, .. } => self.build::<CAPTURE>(rule_idx, item, current, target),
+			Regex::Alternation(items) => self.alternate::<WITH_CAPTURES>(rule_idx, items, current, target),
+			Regex::Placeholder { item, .. } => self.build_regex_nfa::<WITH_CAPTURES>(rule_idx, item, current, target),
 		}
 	}
 
@@ -297,7 +296,7 @@ impl Tnfa {
 			target: sub_start,
 		}]);
 
-		let mut tags: BTreeSet<CaptureTag> = self.build::<true>(rule, &sub_rule.regex, sub_start, sub_end);
+		let mut tags: BTreeSet<CaptureTag> = self.build_regex_nfa::<true>(rule, &sub_rule.regex, sub_start, sub_end);
 
 		self[sub_end].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
 			kind: SpontaneousTransitionKind::Positive(end_capture.clone()),
@@ -332,7 +331,7 @@ impl Tnfa {
 
 			intermediate_states.push((
 				sub_target,
-				self.build::<CAPTURE>(rule_idx, sub_item, sub_start, sub_target),
+				self.build_regex_nfa::<CAPTURE>(rule_idx, sub_item, sub_start, sub_target),
 			));
 		}
 		self[current].transitions = Transitions::Spontaneous(starts);

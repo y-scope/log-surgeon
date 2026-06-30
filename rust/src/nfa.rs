@@ -8,6 +8,7 @@ mod regex_construction;
 mod search_decomposition;
 
 use std::borrow::Cow;
+use std::collections::BTreeSet;
 
 pub use search_decomposition::Path;
 pub use search_decomposition::PathComponent;
@@ -19,7 +20,7 @@ use crate::parsing_spec::SubRule;
 #[derive(Debug, Clone)]
 pub struct Tnfa {
 	states: Vec<NfaState>,
-	tags: Vec<CaptureTag>,
+	tags: BTreeSet<CaptureTag>,
 }
 
 #[derive(Debug, Clone)]
@@ -66,7 +67,7 @@ pub enum CaptureTag {
 impl Tnfa {
 	pub const BLANK: Self = Self {
 		states: Vec::new(),
-		tags: Vec::new(),
+		tags: BTreeSet::new(),
 	};
 
 	pub fn new() -> Self {
@@ -77,11 +78,11 @@ impl Tnfa {
 				transitions: Transitions::Spontaneous(Vec::new()),
 				maybe_accepts_for_rule: None,
 			}],
-			tags: Vec::new(),
+			tags: BTreeSet::new(),
 		}
 	}
 
-	pub fn tags(&self) -> &[CaptureTag] {
+	pub fn tags(&self) -> &BTreeSet<CaptureTag> {
 		&self.tags
 	}
 

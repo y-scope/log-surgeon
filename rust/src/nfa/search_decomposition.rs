@@ -250,7 +250,7 @@ impl Tnfa {
 				transitions: Transitions::Spontaneous(Vec::new()),
 				maybe_accepts_for_rule: None,
 			}],
-			tags: Vec::new(),
+			tags: BTreeSet::new(),
 		};
 
 		while let Some((pair, state)) = stack.pop() {
@@ -819,6 +819,6 @@ mod test {
 
 	fn nfa_for(pattern: &str) -> Tnfa {
 		let regex: Regex = Regex::from_pattern(pattern).unwrap().regex;
-		Tnfa::for_regex(&regex)
+		Tnfa::from_regex(&regex)
 	}
 }

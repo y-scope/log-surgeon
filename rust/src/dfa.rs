@@ -213,6 +213,13 @@ impl Tdfa {
 	/// [`TdfaExecution::captures`] is sorted:
 	/// 1. left to right w.r.t. the input,
 	/// 2. top-down w.r.t the regex (i.e. left to right w.r.t. the regex pattern; parent before children).
+	///
+	/// `last_was_delimited` should be the "previous" character in the input,
+	/// or newline (`'\n'`) if at the very start of input.
+	/// Newline is "always" an anchor character since newlines are already (and necessarily)
+	/// used to terminate/separate log events;
+	/// an anchored rule should match the same in a log event
+	/// regardless of the log event's position in the entire log.
 	pub fn execute_without_captures<'input>(
 		&self,
 		input: &'input str,
@@ -380,12 +387,12 @@ impl Tdfa {
 	where
 		Rules: IntoIterator<Item = &'a RootRule>,
 	{
-		let nfa: Tnfa = Tnfa::for_rules::<false, _>(rules, &delimiters);
+		let nfa: Tnfa = Tnfa::from_rules::<false, _>(rules, &delimiters);
 		Self::determinization(&nfa)
 	}
 
 	pub fn for_single_rule(rule_idx: RuleIdx, regex: &Regex) -> Self {
-		let nfa: Tnfa = Tnfa::for_single_rule(rule_idx, regex);
+		let nfa: Tnfa = Tnfa::from_single_rule(rule_idx, regex);
 		Self::determinization(&nfa)
 	}
 
@@ -407,21 +414,22 @@ impl Tdfa {
 	/// Algorithm 3 in the paper.
 	#[tracing::instrument(skip_all, level = "trace")]
 	fn determinization(nfa: &Tnfa) -> Self {
-		assert_eq!(nfa.tags().len() % 2, 0);
-		let mut tag_pairs: Vec<usize> = Vec::with_capacity(nfa.tags().len() / 2);
-		for (i, tag) in nfa.tags().iter().enumerate() {
-			if i >= nfa.tags().len() / 2 {
+		let tags: Vec<CaptureTag> = nfa.tags().iter().cloned().collect::<Vec<_>>();
+		assert_eq!(tags.len() % 2, 0);
+		let mut tag_pairs: Vec<usize> = Vec::with_capacity(tags.len() / 2);
+		for (i, tag) in tags.iter().enumerate() {
+			if i >= tags.len() / 2 {
 				break;
 			}
-			let j: usize = i + nfa.tags().len() / 2;
-			assert_eq!(tag.sub_rule(), nfa.tags()[j].sub_rule());
+			let j: usize = i + tags.len() / 2;
+			assert_eq!(tag.sub_rule(), tags[j].sub_rule());
 			tag_pairs.push(j);
 		}
 
 		let mut dfa: Self = Self {
 			states: Vec::new(),
 			kernels: BTreeMap::new(),
-			tags: nfa.tags().to_owned(),
+			tags,
 			tag_pairs,
 			number_of_registers: 2 * nfa.tags().len(),
 		};

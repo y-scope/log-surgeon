@@ -542,7 +542,7 @@ impl<'a> SearchStringView<'a> {
 		let mut interpretations: Vec<Interpretation> = Vec::new();
 
 		for &(rule_info, regex) in rows.iter() {
-			let rule_nfa: Tnfa = Tnfa::for_single_rule(rule_info.root_idx, regex);
+			let rule_nfa: Tnfa = Tnfa::from_single_rule(rule_info.root_idx, regex);
 
 			let potential_interpretations: Vec<Interpretation> =
 				self.interpretations_for_nfa(spec, &rule_nfa, 0, Some(rule_info), None);
@@ -568,7 +568,7 @@ impl<'a> SearchStringView<'a> {
 
 		let mut interpretations: Vec<Interpretation> = Vec::new();
 
-		let search_nfa: Tnfa = Tnfa::for_regex(&self.to_regex(maybe_delimiters));
+		let search_nfa: Tnfa = Tnfa::from_regex(&self.to_regex(maybe_delimiters));
 
 		let intersection: Tnfa = nfa.intersect::<true>(&search_nfa);
 
