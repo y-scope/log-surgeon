@@ -1,32 +1,6 @@
 ## Parsing in Log Surgeon
 An overview of the title.
-
-### Parsing Specification
-A parsing specification is used to determine non-static text in logs,
-determined by regex patterns.
-For example, a pattern `[0-9]+` may be used to identify numbers.
-Log Surgeon supports common regex syntax; the exact syntax is specified [below](#regex-pattern-syntax).
-
-A rule is a `name: "pattern"` pair, and rules are given in priority-order for a parsing specification.
-These rules are also called root rules;
-a pattern may also define sub-rules as `(?<sub_rule_name>sub_rule_pattern)`, arbitrarily nested.
-A (sub)rule with no child sub-rules is called a leaf rule;
-a root rule may also be a leaf rule.
-The fully qualified name of a rule starts with its root rule name and is followed by any/all sub-rule names,
-separated by periods, e.g. `foo.bar.baz`.
-
-Note: We generally avoid "capture" terminology to avoid ambiguity between
-top-level pattern matching and sub-match extraction (i.e. captures within a regex pattern),
-which require very different implementations internally.
-From the outside, Log Surgeon matches and stores both root rule matches and sub-rule regex captures alike,
-so we simply refer to them as "rules", "patterns", and "matches".
-
-A name denotes the "type" of the matched text,
-and the same name/type may have multiple rules/patterns.
-For more details on matching priority, see [below](#matching-root-rules).
-
-A parsing specification also contains a set of delimiter characters,
-which are additionally used to differentiate between static and non-static text.
+See also: [Parsing Specification File][parsing-spec].
 
 ### Matching Root Rules
 A lexer processes input left to right and reports root rule matches.
@@ -184,96 +158,12 @@ Newlines are part of the line preceding it;
 in other words, log events are always terminated by newlines
 (but a newline doesn't necessarily terminate a log event).
 
-### Regex Pattern Syntax
-Regexes are defined recursively; one can think of them as expressions composed of terms and operators.
-Terms are:
-
-- individual characters/character sets, e.g. `.` (any single character), `a`, `[a-z]`, or `[a-z0-9ABC]`
-- parenthesized expressions/sub-rules, e.g. `(hello)` or `(?<greeting>hello world)`
-
-Operators are, from highest to lowest precedence (always left-associative):
-
-- postfix repetition, e.g. `a*` (0 or more), `a+` (1 or more), `a?` (0 or 1),
-	`a{n}` (exactly `n`), and `a{min,max}` (at least `min`, up to and including `max` times)
-- binary concatenation, e.g. `a*b`, equivalent to `(a*)b`
-- binary alternation ("or"), e.g. `a*b|c`, equivalent to `((a*)b)|c`
-
-More explicitly, pattern syntax follows this [EBNF][ebnf] grammar.
-
-```
-// A top-level pattern may be "anchored".
-top_level_pattern: "^"? alternation "$"?
-
-alternation: sequence ("|" sequence)*
-
-sequence: suffixed_term+
-
-suffixed_term: term repetition_suffix?
-
-term:
-	"."
-	bracketed_ranges
-	symbol
-	"(" alternation ")"
-	"(?<" name ">" alternation ")" // A sub-rule.
-
-repetition_suffix:
-	"*" // 0 or more.
-	"+" // 1 or more.
-	"?" // 0 or 1.
-	"{" decimal_integer "}" // Repeat exactly this many times.
-	"{" decimal_integer "," decimal_integer "}" // Repeat min to max times (inclusive).
-
-bracketed_ranges: "[" bracketed_item+ "]"
-
-symbol:
-	"\" escaped_character
-	unescaped_character
-
-bracketed_item:
-	"^"
-	"\^"
-	symbol "-" symbol // Character range, inclusive.
-	symbol
-```
-
-The following meta-characters must generally be escaped with a backslash: `\()[]{}*+?.|^$`.
-Furthermore, the following common escapes are supported:
-
-- `\t`, `\r`, and `\n` correspond to ASCII tab, carriage return, and newline feed respectively.
-- `\d`, `\w`, and `\s` correspond to `[0-9]`, `[a-zA-Z0-9]`, and `[ \t\r\n]` respectively.
-- `\D`, `\W`, and `\S` correspond to the negation of their lowercase counterparts.
-- `\u{xx}`, `\u{xxyy}`, and `\u{xxyyzz}` translate to the corresponding Unicode code points in hexadecimal.
-	Hexadecimal digits may be upper or lower case and must come in pairs.
-	Note that the maximum Unicode code point is `\u{10FFFF}`, so at most 3 pairs are necessary.
-- Additionally, `\ ` (space), `\'` (single quote), and `\"` (double quote) correspond to their literal values,
-	and may be used to avoid ambiguity.
-
-The interpretation of `bracketed_item`s in a `bracketed_range` is not strictly context-free
-(don't worry about this unless you care about formal languages),
-but follows common regex syntax conventions:
-
-- If the first item is `^`, the range is negated; `[^0-9]` matches any character that is not in `[0-9]`.
-- A literal `^` may be escaped as `\^`.
-- If not the first item, `^` has no special meaning and may appear escaped (with a backslash) or unescaped.
-	In other words, `\^` may appear in any position to unambiguously indicate a literal `^`.
-- The negation of an empty range matches any character, and is equivalent to the term `.`.
-- An empty range matches no characters, and is (for the purposes of Log Surgeon) invalid.
-- Character ranges are parsed optimistically; if a `symbol` is followed by a dash (`-`) and another `symbol`, it is treated as a range.
-	In particular:
-	- Ranges are not chained; `[0-5-9]` is interpreted as 3 `bracketed_item`s: the range `0-5`, a literal `-`, and a literal `9`.
-	- If a dash is encountered first, it is interpreted as a literal dash; e.g. in the previous example, or in `[-a]` or `[^-a]`.
-	- A dash at the end is also a literal dash; e.g. in `[a-]`.
-	- A dash may appear escaped in any position; e.g. `[a\-z]` is 3 literal characters: `a`, `-`, and `z`.
-- As shorthand, `\d`, `\w`, and `\s` may appear inside bracketed ranges with limitations;
-	they may not be used with negation or as a range endpoint, to avoid potential ambiguity.
-	For example, `[\w_-]` is equivalent to `[a-zA-Z0-9_-]`.
-
 ### TODO
 Explain:
 - anchors
 - leaf ambiguity
 
+[parsing-spec]: parsing-spec-file.md
 [ebnf]: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
 [python-regex]: https://docs.python.org/3/howto/regex.html
 [dfa]: https://en.wikipedia.org/wiki/Deterministic_finite_automaton
