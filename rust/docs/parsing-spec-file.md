@@ -1,7 +1,7 @@
 ## Parsing Specification
 A parsing specification is a list of rules used to determine non-static text in logs.
 A rule is a `name: "pattern"` pair;
-Log Surgeon supports most common regex syntax/semantics.
+Log Surgeon supports most common regex syntax/semantics (the outside double-quotes are not part of the pattern).
 For example, a pattern `[0-9]+` may be used to identify numbers.
 
 In a Parsing Specification File,
@@ -19,6 +19,8 @@ so we simply refer to them as "rules", "patterns", and "matches".
 
 A (sub)rule with no child subrules is called a leaf rule;
 a root rule whose pattern has no regex captures is also a leaf rule.
+For example, the root rule `email: "(?<user>\w+)@(?<hostname>((?<subdomain>\w+)\.)*(?<domain>\w+)\.(?<tld>\w+))"`
+has leaf rules `user`, `subdomain`, `domain`, and `tld`.
 
 The fully qualified name of a rule starts with its root rule name and is followed by any/all subrule names,
 separated by periods, e.g. `foo.bar.baz`.
@@ -36,15 +38,21 @@ For example:
 
 ```
 delimiters: ".,?!:;[]{}() \n\r\t"
-email: "(?<user>\w+)@(?<hostname>((?<subdomain>\w+)\.)*(?<domain>\w+)\.(?<tld>\w+))"
-ip_address: "\d+\.\d+\.\d+\.\d+"
+
+!hex_digit: "[0-9a-fA-F]"
+
+username: "@(?<username>\w+)"
+ipv4: "\d+\.\d+\.\d+\.\d+"
+ipv6: "(?<hex_digit>)+(::(?<hex_digit>)){7}"
 int: "^[0-9]+$"
 ```
 
-Placeholders are defined as `!name: "pattern"` can be referred to as an empty regex capture `(?<name>)`.
-Placeholders must be defined before they are used.
-The pattern of a placeholder is substituted in-place as a single subexpression.
-In the following example, `rule1` and `rule2` are semantically equivalent to each other, but not to `rule3`:
+In the above example, `!hex_digit` defines a placeholder,
+later referred to by an empty regex capture `(?<hex_digit>)`.
+The pattern of a placeholder is substituted in-place as a single subexpression,
+and on its own **is not** a subrule,
+though any subrules in the placeholder's pattern are likewise included in the substitution.
+In the following example, `rule1` and `rule2` are semantically equivalent to each other, but not to `rule3` or `rule4`:
 
 ```
 !greeting: "hello"
@@ -52,11 +60,17 @@ In the following example, `rule1` and `rule2` are semantically equivalent to eac
 rule1: "(?<greeting>)+"
 rule2: "(hello)+"
 rule3: "hello+"
+rule4: "(?<greeting>hello)+"
 ```
 
 #### Other Notes
 - Rules may not match the empty string;
 	e.g. the root rule pattern `[0-9]*` or subrule pattern `(?<number>[0-9]*)` is not allowed.
+- Placeholders must be defined before they are used.
+- Rules must be defined on a single line (they cannot span multiple lines).
+- Leading and trailing whitespace on a line are ignored.
+- Empty lines are ignored.
+- A line starting with a hashtag `#` (ignoring whitespace) is a comment and ignored.
 
 ### Regex Pattern Syntax
 Regexes are ("regular") expressions composed of terms and operators.
