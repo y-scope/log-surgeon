@@ -10,11 +10,10 @@ use crate::interval_tree::PolicyUnique;
 use crate::nfa::CaptureTag;
 use crate::nfa::NfaIdx;
 use crate::nfa::NfaState;
-use crate::nfa::SpontaneousTransition;
-use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tnfa;
 use crate::nfa::Transitions;
 use crate::parsing_spec::RuleIdx;
+use crate::parsing_spec::SubRule;
 use crate::search::SymbolicChar;
 use crate::utils::TarjanSccs;
 
@@ -272,20 +271,29 @@ impl Tnfa {
 
 			// TODO: nicer way to combine the branches?
 			match (&pair.state1().transitions, &pair.state2().transitions) {
+				(_, Transitions::Tagged { .. }) => {
+					panic!("the right hand side of `Tnfa::intersect` should not contain tags");
+				},
+				(Transitions::Tagged { tag, positive, target }, _) => {
+					let next: NfaIdx =
+						lookup_state(StatePair::new(self, other, *target, pair.states.1), &mut intersection);
+					intersection[state].transitions = Transitions::Tagged {
+						tag: tag.clone(),
+						positive: *positive,
+						target: next,
+					};
+				},
 				(Transitions::Spontaneous(transitions1), Transitions::Spontaneous(transitions2)) => {
 					if !transitions1.is_empty() {
 						intersection[state].transitions = Transitions::Spontaneous(
 							transitions1
 								.iter()
-								.map(|spontaneous1| {
+								.map(|&target1| {
 									let next: NfaIdx = lookup_state(
-										StatePair::new(self, other, spontaneous1.target, pair.states.1),
+										StatePair::new(self, other, target1, pair.states.1),
 										&mut intersection,
 									);
-									SpontaneousTransition {
-										kind: spontaneous1.kind.clone(),
-										target: next,
-									}
+									next
 								})
 								.collect::<Vec<_>>(),
 						);
@@ -293,16 +301,12 @@ impl Tnfa {
 						intersection[state].transitions = Transitions::Spontaneous(
 							transitions2
 								.iter()
-								.map(|spontaneous2| {
-									assert_eq!(spontaneous2.kind, SpontaneousTransitionKind::Epsilon);
-									let target: NfaIdx = lookup_state(
-										StatePair::new(self, other, pair.states.0, spontaneous2.target),
+								.map(|&target2| {
+									let next: NfaIdx = lookup_state(
+										StatePair::new(self, other, pair.states.0, target2),
 										&mut intersection,
 									);
-									SpontaneousTransition {
-										kind: SpontaneousTransitionKind::Epsilon,
-										target,
-									}
+									next
 								})
 								.collect::<Vec<_>>(),
 						);
@@ -312,15 +316,12 @@ impl Tnfa {
 					intersection[state].transitions = Transitions::Spontaneous(
 						transitions1
 							.iter()
-							.map(|spontaneous1| {
+							.map(|&target1| {
 								let next: NfaIdx = lookup_state(
-									StatePair::new(self, other, spontaneous1.target, pair.states.1),
+									StatePair::new(self, other, target1, pair.states.1),
 									&mut intersection,
 								);
-								SpontaneousTransition {
-									kind: spontaneous1.kind.clone(),
-									target: next,
-								}
+								next
 							})
 							.collect::<Vec<_>>(),
 					);
@@ -329,16 +330,12 @@ impl Tnfa {
 					intersection[state].transitions = Transitions::Spontaneous(
 						transitions2
 							.iter()
-							.map(|spontaneous2| {
-								assert_eq!(spontaneous2.kind, SpontaneousTransitionKind::Epsilon);
-								let target: NfaIdx = lookup_state(
-									StatePair::new(self, other, pair.states.0, spontaneous2.target),
+							.map(|&target2| {
+								let next: NfaIdx = lookup_state(
+									StatePair::new(self, other, pair.states.0, target2),
 									&mut intersection,
 								);
-								SpontaneousTransition {
-									kind: SpontaneousTransitionKind::Epsilon,
-									target,
-								}
+								next
 							})
 							.collect::<Vec<_>>(),
 					);
@@ -387,7 +384,10 @@ impl Tnfa {
 					transitions.retain(|&(_interval, target)| can_accept[target.0]);
 				},
 				Transitions::Spontaneous(transitions) => {
-					transitions.retain(|transition| can_accept[transition.target.0]);
+					transitions.retain(|&target| can_accept[target.0]);
+				},
+				Transitions::Tagged { target, .. } => {
+					assert_eq!(can_accept[state.idx.0], can_accept[target.0]);
 				},
 			}
 		}
@@ -616,51 +616,44 @@ impl Tnfa {
 					unreachable!();
 				},
 				Transitions::Spontaneous(transitions) => {
-					for transition in transitions.iter() {
-						assert!(tarjan.vertices[transition.target.0].scc > tarjan.vertices[entry.idx.0].scc);
+					for &target in transitions.iter() {
+						assert!(tarjan.vertices[target.0].scc > tarjan.vertices[entry.idx.0].scc);
 
-						match &transition.kind {
-							SpontaneousTransitionKind::Positive(
-								tag @ (CaptureTag::StartCapture(sub_rule) | CaptureTag::StopCapture(sub_rule)),
-							) => {
-								if sub_rule.is_leaf() {
-									let is_start: bool = matches!(tag, CaptureTag::StartCapture(_));
-									let mut prefix: PartialPath = prefix.clone();
-									let edge: PathEdge = PathEdge::Capture {
-										sub_rule_id: sub_rule.id,
-										qualified_name: sub_rule.qualified_name.clone(),
-										is_start,
-									};
-									prefix.push(edge.clone());
-									let mut partials: Vec<(NfaIdx, PartialPath, RuleIdx)> = self
-										.compute_paths_internal(
-											&self[transition.target],
-											&prefix,
-											seen_prefix,
-											tarjan,
-											cache,
-											finished,
-										);
-									for (_state, path, _rule) in partials.iter_mut() {
-										path.push(edge.clone());
-									}
-									paths.extend(partials.into_iter());
-									continue;
-								}
-							},
-							SpontaneousTransitionKind::Negative(_) => (),
-							SpontaneousTransitionKind::Epsilon => (),
-						}
-						let partials: Vec<(NfaIdx, PartialPath, RuleIdx)> = self.compute_paths_internal(
-							&self[transition.target],
-							prefix,
-							seen_prefix,
-							tarjan,
-							cache,
-							finished,
-						);
+						let partials: Vec<(NfaIdx, PartialPath, RuleIdx)> =
+							self.compute_paths_internal(&self[target], prefix, seen_prefix, tarjan, cache, finished);
 						paths.extend(partials.into_iter());
 					}
+					paths.sort();
+					paths.dedup();
+
+					assert!(cache[entry.idx.0].is_none());
+					cache[entry.idx.0].insert(paths).clone()
+				},
+				Transitions::Tagged { tag, positive, target } => {
+					assert!(tarjan.vertices[target.0].scc > tarjan.vertices[entry.idx.0].scc);
+
+					let sub_rule: &SubRule = tag.sub_rule();
+					if *positive && sub_rule.is_leaf() {
+						let is_start: bool = matches!(tag, CaptureTag::StartCapture(_));
+						let mut prefix: PartialPath = prefix.clone();
+						let edge: PathEdge = PathEdge::Capture {
+							sub_rule_id: sub_rule.id,
+							qualified_name: sub_rule.qualified_name.clone(),
+							is_start,
+						};
+						prefix.push(edge.clone());
+						let mut partials: Vec<(NfaIdx, PartialPath, RuleIdx)> =
+							self.compute_paths_internal(&self[*target], &prefix, seen_prefix, tarjan, cache, finished);
+						for (_state, path, _rule) in partials.iter_mut() {
+							path.push(edge.clone());
+						}
+						paths.extend(partials.into_iter());
+					} else {
+						let partials: Vec<(NfaIdx, PartialPath, RuleIdx)> =
+							self.compute_paths_internal(&self[*target], prefix, seen_prefix, tarjan, cache, finished);
+						paths.extend(partials.into_iter());
+					}
+
 					paths.sort();
 					paths.dedup();
 
@@ -719,27 +712,15 @@ impl Tnfa {
 					}
 				},
 				Transitions::Spontaneous(transitions) => {
-					for (transition, (mut path, mut seen)) in transitions
+					for (&target, (path, mut seen)) in transitions
 						.iter()
 						.zip(std::iter::repeat_n((path, seen), transitions.len()))
 					{
-						if !(tarjan.vertices[transition.target.0].scc >= tarjan.vertices[entry.idx.0].scc) {
-							println!(
-								"{}, {}",
-								tarjan.vertices[transition.target.0].scc, tarjan.vertices[entry.idx.0].scc
-							);
-						}
-						assert!(tarjan.vertices[transition.target.0].scc >= tarjan.vertices[entry.idx.0].scc);
+						assert!(tarjan.vertices[target.0].scc >= tarjan.vertices[entry.idx.0].scc);
 
-						if tarjan.vertices[transition.target.0].scc != tarjan.vertices[entry.idx.0].scc {
-							let partials: Vec<(NfaIdx, PartialPath, RuleIdx)> = self.compute_paths_internal(
-								&self[transition.target],
-								prefix,
-								seen_prefix,
-								tarjan,
-								cache,
-								finished,
-							);
+						if tarjan.vertices[target.0].scc != tarjan.vertices[entry.idx.0].scc {
+							let partials: Vec<(NfaIdx, PartialPath, RuleIdx)> = self
+								.compute_paths_internal(&self[target], prefix, seen_prefix, tarjan, cache, finished);
 							for (end, mut remaining, rule) in partials.into_iter() {
 								remaining.push(PathEdge::PatternWildcard);
 								remaining.extend(path.iter().rev().cloned());
@@ -748,32 +729,53 @@ impl Tnfa {
 							continue;
 						}
 
-						if seen.contains(&transition.target) {
+						if seen.contains(&target) {
 							continue;
 						}
 
-						let inserted: bool = seen.insert(transition.target);
+						let inserted: bool = seen.insert(target);
 						assert!(inserted);
 
-						match &transition.kind {
-							SpontaneousTransitionKind::Positive(
-								tag @ (CaptureTag::StartCapture(sub_rule) | CaptureTag::StopCapture(sub_rule)),
-							) => {
-								if sub_rule.is_leaf() {
-									path.push(PathEdge::Capture {
-										sub_rule_id: sub_rule.id,
-										qualified_name: sub_rule.qualified_name.clone(),
-										is_start: matches!(tag, CaptureTag::StartCapture(_)),
-									});
-									stack.push((&self[transition.target], path, seen));
-									continue;
-								}
-							},
-							SpontaneousTransitionKind::Negative(_) => (),
-							SpontaneousTransitionKind::Epsilon => (),
-						}
-						stack.push((&self[transition.target], path, seen));
+						stack.push((&self[target], path, seen));
 					}
+				},
+				Transitions::Tagged { tag, positive, target } => {
+					assert!(tarjan.vertices[target.0].scc >= tarjan.vertices[entry.idx.0].scc);
+
+					if tarjan.vertices[target.0].scc != tarjan.vertices[entry.idx.0].scc {
+						let partials: Vec<(NfaIdx, PartialPath, RuleIdx)> =
+							self.compute_paths_internal(&self[*target], prefix, seen_prefix, tarjan, cache, finished);
+						for (end, mut remaining, rule) in partials.into_iter() {
+							remaining.push(PathEdge::PatternWildcard);
+							remaining.extend(path.iter().rev().cloned());
+							scc_finished.push((end, remaining, rule));
+						}
+						continue;
+					}
+
+					if seen.contains(&target) {
+						continue;
+					}
+
+					let mut path: PartialPath = path;
+					let mut seen: BTreeSet<NfaIdx> = seen;
+
+					let inserted: bool = seen.insert(*target);
+					assert!(inserted);
+
+					if *positive {
+						let sub_rule: &SubRule = tag.sub_rule();
+						if sub_rule.is_leaf() {
+							path.push(PathEdge::Capture {
+								sub_rule_id: sub_rule.id,
+								qualified_name: sub_rule.qualified_name.clone(),
+								is_start: matches!(tag, CaptureTag::StartCapture(_)),
+							});
+							stack.push((&self[*target], path, seen));
+							continue;
+						}
+					}
+					stack.push((&self[*target], path, seen));
 				},
 			}
 		}

@@ -1,6 +1,5 @@
 use crate::nfa::CaptureTag;
 use crate::nfa::NfaState;
-use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tnfa;
 use crate::nfa::Transitions;
 use crate::utils::TarjanSccs;
@@ -66,30 +65,35 @@ impl Tnfa {
 					}
 				},
 				Transitions::Spontaneous(transitions) => {
-					for transition in transitions.iter() {
-						lines.push_str(&format!("\t{} -> {} [label=\"", state.idx, transition.target));
-						match &transition.kind {
-							SpontaneousTransitionKind::Epsilon => {
-								lines.push('\u{03b5}');
-							},
-							SpontaneousTransitionKind::Positive(CaptureTag::StartCapture(sub_rule)) => {
-								lines.push_str(&format!("start({})", sub_rule.qualified_name));
-							},
-							SpontaneousTransitionKind::Positive(CaptureTag::StopCapture(sub_rule)) => {
-								lines.push_str(&format!("stop({})", sub_rule.qualified_name));
-							},
-							SpontaneousTransitionKind::Negative(
-								CaptureTag::StartCapture(sub_rule) | CaptureTag::StopCapture(sub_rule),
-							) => {
-								lines.push('-');
-								lines.push_str(&sub_rule.qualified_name);
-							},
-						}
+					for &target in transitions.iter() {
 						let src_scc: usize = tarjan.vertices[state.idx.0].scc;
-						let dst_scc: usize = tarjan.vertices[transition.target.0].scc;
+						let dst_scc: usize = tarjan.vertices[target.0].scc;
 						let colour: &str = if src_scc == dst_scc { " [color=\"red\"]" } else { "" };
-						lines.push_str(&format!("\"]{colour};\n"));
+						lines.push_str(&format!(
+							"\t{} -> {} [label=\"\u{03b5}\"]{colour};\n",
+							state.idx, target
+						));
 					}
+				},
+				Transitions::Tagged { tag, positive, target } => {
+					let src_scc: usize = tarjan.vertices[state.idx.0].scc;
+					let dst_scc: usize = tarjan.vertices[target.0].scc;
+					let colour: &str = if src_scc == dst_scc { " [color=\"red\"]" } else { "" };
+					let mut capture: String = match tag {
+						CaptureTag::StartCapture(sub_rule) => {
+							format!("start({})", sub_rule.qualified_name)
+						},
+						CaptureTag::StopCapture(sub_rule) => {
+							format!("stop({})", sub_rule.qualified_name)
+						},
+					};
+					if !positive {
+						capture = format!("-{capture}");
+					}
+					lines.push_str(&format!(
+						"\t{} -> {} [label=\"{capture}\"]{colour}\n",
+						state.idx, target
+					));
 				},
 			}
 			lines.push('\n');

@@ -24,7 +24,6 @@ use crate::interval_tree::PolicyFunction;
 use crate::nfa::CaptureTag;
 use crate::nfa::NfaIdx;
 use crate::nfa::NfaState;
-use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tnfa;
 use crate::nfa::Transitions;
 use crate::parsing_spec::RootRule;
@@ -684,35 +683,47 @@ impl Tdfa {
 			closure.push((config.clone(), inherited.clone()));
 
 			// Remark: Accepting states have no outgoing transitions.
-			let Transitions::Spontaneous(transitions): &Transitions = &nfa[config.nfa_state].transitions else {
-				continue;
-			};
-			for transition in transitions.iter().rev() {
-				if nfa_states_on_stack.contains(&transition.target) {
+			match &nfa[config.nfa_state].transitions {
+				Transitions::Interval(_) => {
 					continue;
-				}
+				},
+				Transitions::Spontaneous(transitions) => {
+					for &target in transitions.iter().rev() {
+						if nfa_states_on_stack.contains(&target) {
+							continue;
+						}
 
-				let mut new_config: Configuration = Configuration {
-					nfa_state: transition.target,
-					..config.clone()
-				};
+						let mut new_config: Configuration = Configuration {
+							nfa_state: target,
+							..config.clone()
+						};
 
-				match &transition.kind {
-					SpontaneousTransitionKind::Positive(tag) => {
-						new_config
-							.tag_path_in_closure
-							.push((tag.clone(), SymbolicPosition::Current));
-					},
-					SpontaneousTransitionKind::Negative(tag) => {
-						new_config
-							.tag_path_in_closure
-							.push((tag.clone(), SymbolicPosition::Nil));
-					},
-					SpontaneousTransitionKind::Epsilon => (),
-				}
+						nfa_states_on_stack.insert(new_config.nfa_state);
+						stack.push((new_config, inherited.clone()));
+					}
+				},
+				Transitions::Tagged { tag, positive, target } => {
+					if nfa_states_on_stack.contains(target) {
+						continue;
+					}
 
-				nfa_states_on_stack.insert(new_config.nfa_state);
-				stack.push((new_config, inherited.clone()));
+					let mut new_config: Configuration = Configuration {
+						nfa_state: *target,
+						..config.clone()
+					};
+
+					new_config.tag_path_in_closure.push((
+						tag.clone(),
+						if *positive {
+							SymbolicPosition::Current
+						} else {
+							SymbolicPosition::Nil
+						},
+					));
+
+					nfa_states_on_stack.insert(new_config.nfa_state);
+					stack.push((new_config, inherited.clone()));
+				},
 			}
 		}
 

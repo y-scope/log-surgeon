@@ -42,20 +42,13 @@ pub struct NfaIdx(usize);
 #[derive(Debug, Clone)]
 pub enum Transitions {
 	Interval(IntervalTree<u32, NfaIdx>),
-	Spontaneous(Vec<SpontaneousTransition>),
-}
-
-#[derive(Debug, Clone)]
-pub struct SpontaneousTransition {
-	pub kind: SpontaneousTransitionKind,
-	pub target: NfaIdx,
-}
-
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub enum SpontaneousTransitionKind {
-	Epsilon,
-	Positive(CaptureTag),
-	Negative(CaptureTag),
+	/// Untagged epsilon transitions.
+	Spontaneous(Vec<NfaIdx>),
+	Tagged {
+		tag: CaptureTag,
+		positive: bool,
+		target: NfaIdx,
+	},
 }
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
@@ -137,13 +130,15 @@ impl Transitions {
 		match self {
 			Self::Interval(transitions) => transitions.len(),
 			Self::Spontaneous(transitions) => transitions.len(),
+			Self::Tagged { .. } => 1,
 		}
 	}
 
 	fn successors(&self) -> Box<dyn Iterator<Item = NfaIdx> + '_> {
 		match self {
 			Self::Interval(transitions) => Box::new(transitions.iter().map(|(_interval, target)| *target)),
-			Self::Spontaneous(transitions) => Box::new(transitions.iter().map(|transition| transition.target)),
+			Self::Spontaneous(transitions) => Box::new(transitions.iter().copied()),
+			Self::Tagged { target, .. } => Box::new(std::iter::once(*target)),
 		}
 	}
 }

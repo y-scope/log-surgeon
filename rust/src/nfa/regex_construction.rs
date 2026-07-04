@@ -5,8 +5,6 @@ use crate::interval_tree::IntervalTree;
 use crate::interval_tree::PolicyUnique;
 use crate::nfa::CaptureTag;
 use crate::nfa::NfaIdx;
-use crate::nfa::SpontaneousTransition;
-use crate::nfa::SpontaneousTransitionKind;
 use crate::nfa::Tnfa;
 use crate::nfa::Transitions;
 use crate::parsing_spec::RootRule;
@@ -46,7 +44,7 @@ impl Tnfa {
 
 		let mut tags: BTreeSet<CaptureTag> = BTreeSet::new();
 
-		let mut spontaneous: Vec<SpontaneousTransition> = Vec::new();
+		let mut spontaneous: Vec<NfaIdx> = Vec::new();
 
 		for rule in rules.into_iter() {
 			let anchored_rule_start: NfaIdx = nfa.new_state(format!(
@@ -62,10 +60,7 @@ impl Tnfa {
 			let rule_start: NfaIdx = nfa.new_state(format!("rule '{}' start", rule.name));
 			let rule_end: NfaIdx = nfa.new_state(format!("rule '{}' end", rule.name));
 
-			spontaneous.push(SpontaneousTransition {
-				kind: SpontaneousTransitionKind::Epsilon,
-				target: anchored_rule_start,
-			});
+			spontaneous.push(anchored_rule_start);
 
 			if rule.regex.anchor_before {
 				nfa[anchored_rule_start].transitions = Transitions::Interval(IntervalTree::from_iter(
@@ -166,36 +161,15 @@ impl Tnfa {
 				let item_end: NfaIdx = self.new_state(format!("kleene item end ({item})"));
 				let item_skip: NfaIdx = self.new_state(format!("kleene item skip ({item})"));
 
-				self[current].transitions = Transitions::Spontaneous(vec![
-					SpontaneousTransition {
-						kind: SpontaneousTransitionKind::Epsilon,
-						target: item_start,
-					},
-					SpontaneousTransition {
-						kind: SpontaneousTransitionKind::Epsilon,
-						target: item_skip,
-					},
-				]);
+				self[current].transitions = Transitions::Spontaneous(vec![item_start, item_skip]);
 
 				let tags: BTreeSet<CaptureTag> =
 					self.build_regex_nfa::<WITH_CAPTURES>(rule_idx, item, item_start, item_end);
 
-				self[item_end].transitions = Transitions::Spontaneous(vec![
-					SpontaneousTransition {
-						kind: SpontaneousTransitionKind::Epsilon,
-						target: item_start,
-					},
-					SpontaneousTransition {
-						kind: SpontaneousTransitionKind::Epsilon,
-						target,
-					},
-				]);
+				self[item_end].transitions = Transitions::Spontaneous(vec![item_start, target]);
 
 				let after_negative_tags: NfaIdx = self.negative_tags(tags.iter().cloned(), item_skip);
-				self[after_negative_tags].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
-					kind: SpontaneousTransitionKind::Epsilon,
-					target,
-				}]);
+				self[after_negative_tags].transitions = Transitions::Spontaneous(vec![target]);
 
 				tags
 			},
@@ -216,16 +190,7 @@ impl Tnfa {
 					current = sub_target;
 				}
 
-				self[current].transitions = Transitions::Spontaneous(vec![
-					SpontaneousTransition {
-						kind: SpontaneousTransitionKind::Epsilon,
-						target: middle,
-					},
-					SpontaneousTransition {
-						kind: SpontaneousTransitionKind::Epsilon,
-						target,
-					},
-				]);
+				self[current].transitions = Transitions::Spontaneous(vec![middle, target]);
 
 				current = middle;
 				for i in *min..*max {
@@ -233,40 +198,22 @@ impl Tnfa {
 					let sub_have: NfaIdx = self.new_state(format!("bounded {i} of {min}..={max} continue ({item})"));
 					let sub_target: NfaIdx = self.new_state(format!("bounded {i} of {min}..={max} success ({item})"));
 
-					self[current].transitions = Transitions::Spontaneous(vec![
-						SpontaneousTransition {
-							kind: SpontaneousTransitionKind::Epsilon,
-							target: sub_skip,
-						},
-						SpontaneousTransition {
-							kind: SpontaneousTransitionKind::Epsilon,
-							target: sub_have,
-						},
-					]);
+					self[current].transitions = Transitions::Spontaneous(vec![sub_skip, sub_have]);
 
-					self[sub_skip].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
-						kind: SpontaneousTransitionKind::Epsilon,
-						target,
-					}]);
+					self[sub_skip].transitions = Transitions::Spontaneous(vec![target]);
 
 					tags.append(&mut self.build_regex_nfa::<WITH_CAPTURES>(rule_idx, item, sub_have, sub_target));
 					current = sub_target;
 				}
 
-				self[current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
-					kind: SpontaneousTransitionKind::Epsilon,
-					target,
-				}]);
+				self[current].transitions = Transitions::Spontaneous(vec![target]);
 				tags
 			},
 			Regex::Sequence(items) => {
 				let mut tags: BTreeSet<CaptureTag> = BTreeSet::new();
 				// TODO this is for search... handle it better?
 				if items.is_empty() {
-					self[current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
-						kind: SpontaneousTransitionKind::Epsilon,
-						target,
-					}]);
+					self[current].transitions = Transitions::Spontaneous(vec![target]);
 				}
 				for (i, sub_item) in items.iter().enumerate() {
 					let sub_target: NfaIdx = if i + 1 < items.len() {
@@ -291,17 +238,19 @@ impl Tnfa {
 		let sub_start: NfaIdx = self.new_state(format!("capture {} started", sub_rule.name.escape_default()));
 		let sub_end: NfaIdx = self.new_state(format!("capture {} ended", sub_rule.name.escape_default()));
 
-		self[current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
-			kind: SpontaneousTransitionKind::Positive(start_tag.clone()),
+		self[current].transitions = Transitions::Tagged {
+			tag: start_tag.clone(),
+			positive: true,
 			target: sub_start,
-		}]);
+		};
 
 		let mut tags: BTreeSet<CaptureTag> = self.build_regex_nfa::<true>(rule, &sub_rule.regex, sub_start, sub_end);
 
-		self[sub_end].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
-			kind: SpontaneousTransitionKind::Positive(end_tag.clone()),
+		self[sub_end].transitions = Transitions::Tagged {
+			tag: end_tag.clone(),
+			positive: true,
 			target,
-		}]);
+		};
 
 		tags.insert(start_tag);
 		tags.insert(end_tag);
@@ -319,15 +268,12 @@ impl Tnfa {
 		let mut tags: BTreeSet<CaptureTag> = BTreeSet::new();
 		let mut intermediate_states: Vec<(NfaIdx, BTreeSet<CaptureTag>)> = Vec::new();
 
-		let mut starts: Vec<SpontaneousTransition> = Vec::new();
+		let mut starts: Vec<NfaIdx> = Vec::new();
 		for sub_item in items.iter() {
 			let sub_start: NfaIdx = self.new_state("alternate sub start (of {sub_item})");
 			let sub_target: NfaIdx = self.new_state("alternate sub target (of {sub_item})");
 
-			starts.push(SpontaneousTransition {
-				kind: SpontaneousTransitionKind::Epsilon,
-				target: sub_start,
-			});
+			starts.push(sub_start);
 
 			intermediate_states.push((
 				sub_target,
@@ -346,10 +292,7 @@ impl Tnfa {
 				sub_current = self.negative_tags(other_tags.iter().cloned(), sub_current);
 			}
 
-			self[sub_current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
-				kind: SpontaneousTransitionKind::Epsilon,
-				target,
-			}]);
+			self[sub_current].transitions = Transitions::Spontaneous(vec![target]);
 
 			// `&BTreeSet<_>` implements `BitOr`, `BTreeSet<_>` does not.
 			// `sub_tags` from the loop is already a `&BTreeSet<_>`.
@@ -362,10 +305,11 @@ impl Tnfa {
 	fn negative_tags(&mut self, tags: impl IntoIterator<Item = CaptureTag>, mut current: NfaIdx) -> NfaIdx {
 		for t in tags {
 			let next: NfaIdx = self.new_state("negative tag ({t:?})");
-			self[current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
-				kind: SpontaneousTransitionKind::Negative(t),
+			self[current].transitions = Transitions::Tagged {
+				tag: t,
+				positive: false,
 				target: next,
-			}]);
+			};
 			current = next;
 		}
 		current
