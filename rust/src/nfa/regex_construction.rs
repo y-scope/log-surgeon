@@ -285,31 +285,31 @@ impl Tnfa {
 	}
 
 	fn capture(&mut self, rule: RuleIdx, sub_rule: &SubRule, current: NfaIdx, target: NfaIdx) -> BTreeSet<CaptureTag> {
-		let start_capture: CaptureTag = CaptureTag::StartCapture(sub_rule.clone());
-		let end_capture: CaptureTag = CaptureTag::StopCapture(sub_rule.clone());
+		let start_tag: CaptureTag = CaptureTag::StartCapture(sub_rule.clone());
+		let end_tag: CaptureTag = CaptureTag::StopCapture(sub_rule.clone());
 
 		let sub_start: NfaIdx = self.new_state(format!("capture {} started", sub_rule.name.escape_default()));
 		let sub_end: NfaIdx = self.new_state(format!("capture {} ended", sub_rule.name.escape_default()));
 
 		self[current].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
-			kind: SpontaneousTransitionKind::Positive(start_capture.clone()),
+			kind: SpontaneousTransitionKind::Positive(start_tag.clone()),
 			target: sub_start,
 		}]);
 
 		let mut tags: BTreeSet<CaptureTag> = self.build_regex_nfa::<true>(rule, &sub_rule.regex, sub_start, sub_end);
 
 		self[sub_end].transitions = Transitions::Spontaneous(vec![SpontaneousTransition {
-			kind: SpontaneousTransitionKind::Positive(end_capture.clone()),
+			kind: SpontaneousTransitionKind::Positive(end_tag.clone()),
 			target,
 		}]);
 
-		tags.insert(start_capture);
-		tags.insert(end_capture);
+		tags.insert(start_tag);
+		tags.insert(end_tag);
 
 		tags
 	}
 
-	fn alternate<const CAPTURE: bool>(
+	fn alternate<const WITH_CAPTURE: bool>(
 		&mut self,
 		rule_idx: RuleIdx,
 		items: &[Regex],
@@ -331,7 +331,7 @@ impl Tnfa {
 
 			intermediate_states.push((
 				sub_target,
-				self.build_regex_nfa::<CAPTURE>(rule_idx, sub_item, sub_start, sub_target),
+				self.build_regex_nfa::<WITH_CAPTURE>(rule_idx, sub_item, sub_start, sub_target),
 			));
 		}
 		self[current].transitions = Transitions::Spontaneous(starts);

@@ -71,6 +71,8 @@ rule4: "(?<greeting>hello)+"
 - Leading and trailing whitespace on a line are ignored.
 - Empty lines are ignored.
 - A line starting with a hashtag `#` (ignoring whitespace) is a comment and ignored.
+- While a double quote `"` is not special in regex syntax,
+	when writing a pattern in a parsing specification file, they must be escaped as `\"`.
 
 ### Regex Pattern Syntax
 Regexes are ("regular") expressions composed of terms and operators.

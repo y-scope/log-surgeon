@@ -39,7 +39,7 @@ pub struct Tdfa {
 	kernels: BTreeMap<Kernel, usize>,
 	#[serde(skip)]
 	pub tags: Vec<CaptureTag>,
-	/// Bijection between corresponding starting and ending tags.
+	/// Bijection between indices of start/end capture pair tags.
 	#[serde(skip)]
 	tag_pairs: Vec<usize>,
 	/// During construction, this is the "current" count;
