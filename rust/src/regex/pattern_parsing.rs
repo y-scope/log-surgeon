@@ -15,6 +15,7 @@ use crate::regex::AnchoredRegex;
 use crate::regex::Regex;
 use crate::regex::SPECIAL_CHARACTERS;
 use crate::regex::SPECIAL_CHARACTERS_IN_BRACKETED_EXPRESSIONS;
+use crate::utils::NomUtils;
 
 pub trait RegexPlaceholderLookup {
 	fn lookup(&mut self, name: &str) -> Option<Regex>;
@@ -136,6 +137,13 @@ impl<'a> ParseError<&'a str> for RegexParsingError<'a> {
 
 	fn append(_input: &'a str, _kind: NomErrorKind, other: Self) -> Self {
 		other
+	}
+
+	fn from_char(input: &'a str, ch: char) -> Self {
+		Self {
+			input,
+			kind: RegexErrorKind::ExpectedChar(ch),
+		}
 	}
 }
 
@@ -698,7 +706,7 @@ fn parse_escaped_character(original_input: &str) -> ParsingResult<'_, Literal> {
 	use nom::branch::alt;
 	use nom::combinator::cut;
 
-	let (input, _): (&str, char) = parse_char::<'\\'>(original_input)?;
+	let (input, _): (&str, char) = NomUtils::parse_char::<'\\', RegexParsingError<'_>>(original_input)?;
 
 	// Cut: If we parsed a '\\', we necessarily are looking for an escape character.
 	cut(alt((
@@ -795,20 +803,6 @@ fn parse_standard_escape(input: &str) -> ParsingResult<'_, Literal> {
 	}
 }
 
-fn parse_char<const CHAR: char>(input: &str) -> ParsingResult<'_, char> {
-	let mut chars: Chars<'_> = input.chars();
-
-	if let Some(ch) = chars.next() {
-		if ch == CHAR {
-			return Ok((chars.as_str(), ch));
-		} else {
-			return Err(RegexErrorKind::ExpectedChar(CHAR).error(input));
-		}
-	}
-
-	Err(RegexErrorKind::ExpectedChar(CHAR).error(input))
-}
-
 // =======================================
 
 fn parse_capture_name(original_input: &str) -> ParsingResult<'_, &str> {
@@ -849,51 +843,17 @@ fn parse_digits(input: &str) -> ParsingResult<'_, u32> {
 
 // ==================================
 
-/// Parse `inside` between `OPEN` and `CLOSE` characters;
-/// "cut" (commit to this parse) after seeing the opening character;
-/// i.e. transform [`NomErr::Error`] to [`NomErr::Failure`].
-///
-/// See also:
-/// - [`nom::combinator::cut`].
+fn parse_char<const CHAR: char>(input: &str) -> ParsingResult<'_, char> {
+	NomUtils::parse_char::<CHAR, RegexParsingError<'_>>(input)
+}
+
 fn surrounded_cut<'a, const OPEN: char, const CLOSE: char, O, F>(
-	mut inside: F,
+	inside: F,
 ) -> impl Parser<&'a str, Output = O, Error = RegexParsingError<'a>>
 where
 	F: Parser<&'a str, Output = O, Error = RegexParsingError<'a>>,
 {
-	use nom::combinator::cut;
-
-	move |input| {
-		let (input, _): (&str, char) = parse_char::<OPEN>(input)?;
-
-		// At this point, we've seen/parsed the opening character.
-		// "Cut" (require) `inside` to parse necessarily,
-		// as well as the closing character.
-
-		// TODO this doesn't work because this `inside` is moved into `cut`,
-		// making this closure only `FnOnce` instead of `FnMut`,
-		// and the closure must be `FnMut` for the generic implementation of `Parser`.
-		// Is there a cleaner way to write this (avoiding re-implementing `cut`)?
-		// let (input, output): (&str, O) = cut(inside).parse(input)?;
-		let (input, output): (&str, O) = match inside.parse(input) {
-			Ok(ok) => ok,
-			Err(err @ NomErr::Incomplete(_)) => {
-				// Propagate the "not enough input", although this shouldn't be relevant for us.
-				return Err(err);
-			},
-			Err(NomErr::Error(err) | NomErr::Failure(err)) => {
-				// Since we already matched the opening character, we require the inside to match too;
-				// fold `Error` (meaning "something else may match") to a `Failure` ("input is malformed"),
-				// and propagate the inside's error message.
-				return Err(NomErr::Failure(err));
-			},
-		};
-
-		let (input, _): (&str, char) =
-			cut(parse_char::<CLOSE>.or(RegexErrorKind::ExpectedClose(OPEN, CLOSE).diagnostic())).parse(input)?;
-
-		Ok((input, output))
-	}
+	NomUtils::surrounded_cut::<OPEN, CLOSE, _, _, _, _>(inside, RegexErrorKind::ExpectedClose(OPEN, CLOSE).diagnostic())
 }
 
 #[cfg(test)]

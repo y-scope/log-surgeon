@@ -2,6 +2,7 @@ use nom::Err as NomErr;
 use nom::IResult;
 use nom::Parser;
 use nom::error::Error as NomError;
+use nom::error::ParseError;
 
 use crate::parsing_spec::ParsingSpec;
 use crate::parsing_spec::ParsingSpecBuilder;
@@ -9,6 +10,7 @@ use crate::regex::AnchoredRegex;
 use crate::regex::Regex;
 use crate::regex::RegexError;
 use crate::utils::Escaped;
+use crate::utils::NomUtils;
 
 #[derive(Debug)]
 pub struct ParsingSpecFileError {
@@ -188,12 +190,12 @@ fn parse_name(input: &str) -> IResult<&str, &str> {
 }
 
 fn parse_priority(input: &str) -> IResult<&str, i32> {
-	use nom::character::complete::char as char_parser;
 	use nom::character::complete::i32 as i32_parser;
-	use nom::combinator::cut;
-	use nom::sequence::delimited;
 
-	delimited(char_parser('('), cut(i32_parser), cut(char_parser(')'))).parse(input)
+	NomUtils::surrounded_cut::<'(', ')', _, _, _, _>(i32_parser, |input| {
+		Err(NomErr::Error(NomError::from_char(input, ')')))
+	})
+	.parse(input)
 }
 
 fn parse_delimiters(mut input: &str) -> Result<String, NomErr<NomError<&str>>> {
