@@ -58,7 +58,7 @@ pub enum Regex {
 
 impl std::fmt::Debug for Regex {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		self.to_pattern().escape_default().fmt(fmt)
+		std::fmt::Display::fmt(&self.to_pattern().escape_default(), fmt)
 	}
 }
 

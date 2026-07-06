@@ -931,6 +931,17 @@ mod test {
 	#[test]
 	fn hex_code_points() {
 		{
+			const POINTS: &[char] = &['\u{20}', '\u{D7FF}', '\u{10FFFF}'];
+
+			for &p in POINTS.iter() {
+				assert_eq!(
+					Regex::from_pattern(&format!("\\u{{{:x}}}", u32::from(p)))
+						.unwrap()
+						.regex,
+					Regex::Literal(p)
+				);
+			}
+
 			Regex::from_pattern(r"\u{20}").unwrap();
 			Regex::from_pattern(r"\u{D7FF}").unwrap();
 			Regex::from_pattern(r"\u{d7ff}").unwrap();
@@ -1024,6 +1035,12 @@ mod test {
 			assert_eq!(e.kind, RegexErrorKind::InvalidTerm);
 			assert_eq!(e.consumed, "a*");
 			assert_eq!(e.remaining, "*");
+		}
+		{
+			let e: RegexError = Regex::from_pattern(r"{3}").unwrap_err();
+			assert_eq!(e.kind, RegexErrorKind::InvalidTerm);
+			assert_eq!(e.consumed, r"");
+			assert_eq!(e.remaining, r"{3}");
 		}
 	}
 
@@ -1167,6 +1184,16 @@ mod test {
 	fn repetition_bounds() {
 		{
 			Regex::from_pattern("abc{3}").unwrap();
+
+			std::assert_matches!(
+				Regex::from_pattern("(abc){3}").unwrap().regex,
+				Regex::BoundedRepetition { min: 3, max: 3, .. }
+			);
+
+			std::assert_matches!(
+				Regex::from_pattern("(abc){6,7}").unwrap().regex,
+				Regex::BoundedRepetition { min: 6, max: 7, .. }
+			);
 		}
 		{
 			let e: RegexError = Regex::from_pattern(r"a{2,1}").unwrap_err();
@@ -1234,6 +1261,32 @@ mod test {
 			assert_eq!(
 				e.kind,
 				RegexErrorKind::NullableExpression(Box::new(Regex::KleeneClosure(Box::new(Regex::Literal('b')),)))
+			);
+		}
+	}
+
+	#[test]
+	fn standard_escape_classes() {
+		const CLASSES: &[(&str, &[(char, char)])] = &[
+			(r"\d", &[('0', '9')]),
+			(r"\w", &[('0', '9'), ('a', 'z'), ('A', 'Z')]),
+			(r"\s", &[(' ', ' '), ('\t', '\t'), ('\r', '\r'), ('\n', '\n')]),
+		];
+
+		for (pattern, items) in CLASSES.iter() {
+			assert_eq!(
+				Regex::from_pattern(pattern).unwrap().regex,
+				Regex::BracketedRanges {
+					negated: false,
+					items: items.to_vec(),
+				}
+			);
+			assert_eq!(
+				Regex::from_pattern(&pattern.to_ascii_uppercase()).unwrap().regex,
+				Regex::BracketedRanges {
+					negated: true,
+					items: items.to_vec(),
+				}
 			);
 		}
 	}

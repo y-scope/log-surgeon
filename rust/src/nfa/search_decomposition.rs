@@ -634,7 +634,7 @@ impl Tnfa {
 
 					let sub_rule: &SubRule = tag.sub_rule();
 					if *positive && sub_rule.is_leaf() {
-						let is_start: bool = matches!(tag, CaptureTag::StartCapture(_));
+						let is_start: bool = matches!(tag, CaptureTag::Start(_));
 						let mut prefix: PartialPath = prefix.clone();
 						let edge: PathEdge = PathEdge::Capture {
 							sub_rule_id: sub_rule.id,
@@ -769,7 +769,7 @@ impl Tnfa {
 							path.push(PathEdge::Capture {
 								sub_rule_id: sub_rule.id,
 								qualified_name: sub_rule.qualified_name.clone(),
-								is_start: matches!(tag, CaptureTag::StartCapture(_)),
+								is_start: matches!(tag, CaptureTag::Start(_)),
 							});
 							stack.push((&self[*target], path, seen));
 							continue;

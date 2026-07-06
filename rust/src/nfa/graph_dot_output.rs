@@ -80,10 +80,10 @@ impl Tnfa {
 					let dst_scc: usize = tarjan.vertices[target.0].scc;
 					let colour: &str = if src_scc == dst_scc { " [color=\"red\"]" } else { "" };
 					let mut capture: String = match tag {
-						CaptureTag::StartCapture(sub_rule) => {
+						CaptureTag::Start(sub_rule) => {
 							format!("start({})", sub_rule.qualified_name)
 						},
-						CaptureTag::StopCapture(sub_rule) => {
+						CaptureTag::Stop(sub_rule) => {
 							format!("stop({})", sub_rule.qualified_name)
 						},
 					};

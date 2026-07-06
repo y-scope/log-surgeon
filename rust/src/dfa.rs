@@ -111,8 +111,8 @@ struct DfaState {
 /// Conceptually, a kernel may more accurately be represented using `BTreeMap<NfaIdx, Configuration>`;
 /// an NFA state should not show up more than once in a kernel, since:
 ///
-/// 1. by construction, distinct NFA states have distinct "next states",
-///    so [`Tdfa::step_on_interval`] always "lands on" a list of distinct NFA states, and
+/// 1. by construction, distinct NFA states have distinct "next states" on non-epsilon transitions,
+///    so [`Kernel::step_on_intervals`] always "lands on" a list of distinct NFA states, and
 /// 2. the [`Tdfa::epsilon_closure`] procedure (using a depth-first search)
 ///    only saves the first path of NFA states reachable through epsilon transitions.
 ///
@@ -129,7 +129,7 @@ struct Configuration {
 	/// A mapping "tag (by ID/index) -> register"; answers "which register holds this tag?".
 	#[serde(skip)]
 	register_for_tag: Vec<usize>,
-	/// Sequence of tags accumulated to reach this state during [`Dfa::epsilon_closure`]
+	/// Sequence of tags accumulated to reach this state during [`Tdfa::epsilon_closure`]
 	/// (corresponding to the execution of positive/negative tags during NFA simulation).
 	#[serde(skip)]
 	tag_path_in_closure: Vec<(CaptureTag, SymbolicPosition)>,

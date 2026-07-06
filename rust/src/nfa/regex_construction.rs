@@ -181,28 +181,35 @@ impl Tnfa {
 				assert!(*max > 0);
 				assert!(min <= max);
 
-				let middle: NfaIdx = self.new_state(format!("bounded middle {min}..={max} ({item})"));
-
+				// `tags` gets appended to (potentially) multiple times,
+				// each time with the same values,
+				// instead of explicitly handling
+				// `{0,n}` (no first loop), `{m,n}` (both loops), and `{n,n}` (no second loop)
+				// cases separately.
 				let mut tags: BTreeSet<CaptureTag> = BTreeSet::new();
+
 				for i in 0..*min {
 					let sub_target: NfaIdx = self.new_state(format!("bounded {i} of {min}..={max} ({item})"));
+
 					tags.append(&mut self.build_regex_nfa::<WITH_CAPTURES>(rule_idx, item, current, sub_target));
+
 					current = sub_target;
 				}
 
-				self[current].transitions = Transitions::Spontaneous(vec![middle, target]);
-
-				current = middle;
 				for i in *min..*max {
-					let sub_skip: NfaIdx = self.new_state(format!("bounded {i} of {min}..={max} break ({item})"));
+					let mut sub_skip: NfaIdx = self.new_state(format!("bounded {i} of {min}..={max} break ({item})"));
 					let sub_have: NfaIdx = self.new_state(format!("bounded {i} of {min}..={max} continue ({item})"));
 					let sub_target: NfaIdx = self.new_state(format!("bounded {i} of {min}..={max} success ({item})"));
 
-					self[current].transitions = Transitions::Spontaneous(vec![sub_skip, sub_have]);
-
-					self[sub_skip].transitions = Transitions::Spontaneous(vec![target]);
+					self[current].transitions = Transitions::Spontaneous(vec![sub_have, sub_skip]);
 
 					tags.append(&mut self.build_regex_nfa::<WITH_CAPTURES>(rule_idx, item, sub_have, sub_target));
+
+					if i == 0 {
+						sub_skip = self.negative_tags(tags.iter().cloned(), sub_skip)
+					}
+					self[sub_skip].transitions = Transitions::Spontaneous(vec![target]);
+
 					current = sub_target;
 				}
 
@@ -232,8 +239,8 @@ impl Tnfa {
 	}
 
 	fn capture(&mut self, rule: RuleIdx, sub_rule: &SubRule, current: NfaIdx, target: NfaIdx) -> BTreeSet<CaptureTag> {
-		let start_tag: CaptureTag = CaptureTag::StartCapture(sub_rule.clone());
-		let end_tag: CaptureTag = CaptureTag::StopCapture(sub_rule.clone());
+		let start_tag: CaptureTag = CaptureTag::Start(sub_rule.clone());
+		let end_tag: CaptureTag = CaptureTag::Stop(sub_rule.clone());
 
 		let sub_start: NfaIdx = self.new_state(format!("capture {} started", sub_rule.name.escape_default()));
 		let sub_end: NfaIdx = self.new_state(format!("capture {} ended", sub_rule.name.escape_default()));

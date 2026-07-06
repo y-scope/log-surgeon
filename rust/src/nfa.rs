@@ -31,6 +31,7 @@ pub struct NfaState {
 	/// symbol transitions or priority-ordered spontaneous transitions.
 	pub transitions: Transitions,
 	pub maybe_accepts_for_rule: Option<RuleIdx>,
+	/// Not strictly needed, but useful for debugging (including DOT output).
 	pub name: Cow<'static, str>,
 }
 
@@ -53,8 +54,8 @@ pub enum Transitions {
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum CaptureTag {
-	StartCapture(SubRule),
-	StopCapture(SubRule),
+	Start(SubRule),
+	Stop(SubRule),
 }
 
 impl Tnfa {
@@ -145,7 +146,7 @@ impl Transitions {
 
 impl CaptureTag {
 	pub fn sub_rule(&self) -> &SubRule {
-		let (Self::StartCapture(sub_rule) | Self::StopCapture(sub_rule)) = self;
+		let (Self::Start(sub_rule) | Self::Stop(sub_rule)) = self;
 		sub_rule
 	}
 }
