@@ -1,0 +1,23 @@
+# Rust
+/target
+Cargo.lock
+
+# Python
+__pycache__/
+*.pyc
+
+# Miscellaneous
+*.vim
+.gdb_history
+
+# Examples
+/examples/**/*.o
+
+# Maturin
+/dist/
+/python/log_surgeon/*.so
+
+# Local tests
+/tests/local_*.rs
+# Rust doesn't support discovering tests in nested folders...
+#/tests/local/
