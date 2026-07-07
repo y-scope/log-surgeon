@@ -1,0 +1,73 @@
+[package]
+name = "log-surgeon"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = [
+	"lib",
+	"staticlib",
+	"cdylib"
+]
+
+[profile.test]
+opt-level = 2
+
+[profile.release]
+debug = true
+overflow-checks = true
+
+[features]
+# This crate produces two types of output:
+# 1. A C library (staticlib) — used by C/C++ code, built with `cargo build`
+# 2. A Python extension (.so) — used by Python, built with `maturin build`
+#
+# These two outputs need incompatible linker settings, so we can't enable both
+# at once. We leave "default" empty here, and let each build tool enable only
+# what it needs: maturin automatically enables the "python" feature (configured
+# in pyproject.toml).
+default = [
+	"jit",
+]
+jit = []
+python = [
+	"dep:pyo3",
+	"pyo3/extension-module",
+	"pyo3/macros",
+]
+
+[build-dependencies]
+cbindgen = "0.29"
+
+[dependencies]
+nom = "8"
+tracing = "0.1"
+# Note: `tracing-log` feature is default, but be explicit.
+tracing-subscriber = { version = "0.3", features = ["tracing-log", "env-filter"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+cranelift = "0.132"
+cranelift-module = "0.132"
+cranelift-native = "0.132"
+cranelift-jit = "0.132"
+
+[dependencies.pyo3]
+version = "0.27"
+default-features = false
+optional = true
+
+[lints.rust]
+
+[lints.clippy]
+single_match = "allow"
+
+new_without_default = "allow"
+mem_replace_with_default = "allow"
+unwrap_or_default = "allow"
+
+type_complexity = "allow"
+too_many_arguments = "allow"
+
+# https://github.com/rust-lang/cargo/issues/5418#issuecomment-384999528
+[workspace]
