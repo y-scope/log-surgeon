@@ -3,7 +3,7 @@ mod pattern_parsing;
 use std::num::NonZero;
 use std::sync::Arc;
 
-pub use pattern_parsing::RegexError;
+use nom::error::ErrorKind as NomErrorKind;
 pub use pattern_parsing::RegexPlaceholderLookup;
 
 use crate::parsing_spec::SubRule;
@@ -62,6 +62,74 @@ impl std::fmt::Debug for Regex {
 	}
 }
 
+// These fields are not currently explicitly used,
+// but are relevant in the `Debug` implementation
+// and would be needed to provide better (more specific)
+// error messages in the future.
+#[derive(Debug)]
+pub struct RegexError {
+	pub consumed: String,
+	pub remaining: String,
+	pub kind: RegexErrorKind,
+}
+
+/// Note: Most errors are parsing/syntax errors, but not all.
+/// Strictly speaking, we could separate them, but would probably be excessive right now.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum RegexErrorKind {
+	/// Expected a certain character, e.g. '<' after '?' in a capture.
+	ExpectedChar(char),
+	/// Missing the closing delimiter for the following pair.
+	ExpectedClose(char, char),
+	/// "General" error kind, e.g. an isolated repetition suffix operator (e.g. the pattern "*").
+	InvalidTerm,
+	/// Expected a literal character in a bracketed expression.
+	ExpectedLiteralInBracketedExpression,
+	/// An empty bracketed expression "[]";
+	/// not meaningful since it corresponds to an empty set of characters.
+	/// Note that "[^]" is allowed, being equivalent to the wildcard ".".
+	EmptyBrackets,
+	/// Bracket range `min > max` (semantic error).
+	InvalidBracketRange(char, char),
+	/// Invalid escape character.
+	InvalidEscape,
+	/// Invalid repetition bound; `min > max` or `max == 0` (semantic error, like `InvalidBracketRange`).
+	InvalidRepetitionBound(u32, u32),
+	/// Too large of a repetition bound
+	/// (~implementation detail/restriction; repetition bounds are stored as `u32`).
+	NumberTooBig,
+	/// Expected decimal digits (for repetition bound) (syntax error).
+	ExpectedDecimalDigits,
+	/// Expected hex digits (for unicode escape) (syntax error).
+	ExpectedHexDigits,
+	/// Invalid code point in unicode escape (semantic error).
+	InvalidCodePoint(u32),
+	/// Invalid capture name; only letters, numbers, and underscores allowed.
+	InvalidCaptureName,
+	/// Too many captures (implementation detail/restriction).
+	TooManyCaptures,
+	/// An escape class (e.g. "\\d") was used as the start/end point of a bracket range.
+	EscapeClassInBracketRange,
+	/// An inverted escape class (e.g. "\\D") was used inside a bracketed expression.
+	InvertedEscapeClassInBrackets,
+	/// Used for parsing a non-special character (`negate == true`)
+	/// and for parsing an escaped special character (`negate == false`).
+	/// This shouldn't actually bubble up publicly;
+	/// it'll either get consumed by/turned into `ExpectedLiteralInBracketedExpression` or `InvalidTerm`,
+	/// but exists because 1. it models "what's happening", and 2. it's useful for debugging.
+	ExpectedOneOf { characters: &'static str, negate: bool },
+	/// No definition for placeholder.
+	UndefinedPlaceholder(String),
+	/// A (sub)expression of a regex can match an empty string,
+	/// which isn't meaningful for parsing.
+	/// See [`Regex::is_nullable`].
+	NullableExpression(Box<Regex>),
+	/// An error from nom; should be caught/never bubble up,
+	/// but used to implement the trait [`nom::error::ParseError`],
+	/// and useful for debugging/failing gracefully.
+	Nom(NomErrorKind),
+}
+
 impl std::fmt::Display for Regex {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		self.to_pattern().escape_default().fmt(fmt)
@@ -72,7 +140,7 @@ impl LocalTryInto<AnchoredRegex> for &str {
 	type Error = RegexError;
 
 	fn try_into(self) -> Result<AnchoredRegex, Self::Error> {
-		Regex::from_pattern(self)
+		AnchoredRegex::from_pattern_with_placeholders(self, &mut ())
 	}
 }
 
@@ -222,12 +290,24 @@ impl Regex {
 	}
 
 	/// Whether this regex accepts an empty string;
-	/// return the first (minimal) child that does (for diagnostics).
+	/// if so, return the first (minimal) child that is nullable,
+	/// for diagnostics/reporting.
 	///
-	/// An empty sequence should be not-parsable,
-	/// but repetition suffixes allow for empty matches,
-	/// e.g. `a*` or `a{0,3}`.
-	fn is_nullable(&self) -> Option<&Self> {
+	/// An empty should not be parsable,
+	/// but repetition suffixes allow for empty matches.
+	///
+	/// ```rust
+	/// use log_surgeon::regex::RegexErrorKind;
+	/// use log_surgeon::regex::Regex;
+	///
+	/// assert_eq!(Regex::from_pattern("").unwrap_err().kind, RegexErrorKind::InvalidTerm);
+	///
+	/// std::assert_matches!(Regex::from_pattern("a*").unwrap_err().kind, RegexErrorKind::NullableExpression(_));
+	/// std::assert_matches!(Regex::from_pattern("a{0,3}").unwrap_err().kind, RegexErrorKind::NullableExpression(_));
+	///
+	/// assert_eq!(Regex::from_pattern("a").unwrap().is_nullable(), None);
+	/// ```
+	pub fn is_nullable(&self) -> Option<&Self> {
 		match self {
 			Self::AnyChar | Self::Literal(..) | Self::BracketedRanges { .. } => None,
 			Self::Capture(sub_rule) => sub_rule.regex.is_nullable(),

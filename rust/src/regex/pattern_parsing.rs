@@ -13,10 +13,13 @@ use nom::error::ParseError;
 use crate::parsing_spec::SubRule;
 use crate::regex::AnchoredRegex;
 use crate::regex::Regex;
+use crate::regex::RegexError;
+use crate::regex::RegexErrorKind;
 use crate::regex::SPECIAL_CHARACTERS;
 use crate::regex::SPECIAL_CHARACTERS_IN_BRACKETED_EXPRESSIONS;
 use crate::utils::NomUtils;
 
+/// A helper trait for filling in placeholders when parsing regex patterns.
 pub trait RegexPlaceholderLookup {
 	fn lookup(&mut self, name: &str) -> Option<Regex>;
 }
@@ -42,78 +45,7 @@ impl RegexPlaceholderLookup for () {
 	}
 }
 
-// These fields are not currently explicitly used,
-// but are relevant in the `Debug` implementation
-// and would be needed to provide better (more specific)
-// error messages in the future.
-#[derive(Debug)]
-pub struct RegexError {
-	#[allow(unused)]
-	consumed: String,
-	#[allow(unused)]
-	remaining: String,
-	#[allow(unused)]
-	kind: RegexErrorKind,
-}
-
 type ParsingResult<'a, T> = IResult<&'a str, T, RegexParsingError<'a>>;
-
-/// Note: Most errors are parsing/syntax errors, but not all.
-/// Strictly speaking, we could separate them, but would probably be excessive right now.
-#[derive(Debug, Clone, Eq, PartialEq)]
-enum RegexErrorKind {
-	/// Expected a certain character, e.g. '<' after '?' in a capture.
-	ExpectedChar(char),
-	/// Missing the closing delimiter for the following pair.
-	ExpectedClose(char, char),
-	/// "General" error kind, e.g. an isolated repetition suffix operator (e.g. the pattern "*").
-	InvalidTerm,
-	/// Expected a literal character in a bracketed expression.
-	ExpectedLiteralInBracketedExpression,
-	/// An empty bracketed expression "[]";
-	/// not meaningful since it corresponds to an empty set of characters.
-	/// Note that "[^]" is allowed, being equivalent to the wildcard ".".
-	EmptyBrackets,
-	/// Bracket range `min > max` (semantic error).
-	InvalidBracketRange(char, char),
-	/// Invalid escape character.
-	InvalidEscape,
-	/// Invalid repetition bound; `min > max` or `max == 0` (semantic error, like `InvalidBracketRange`).
-	InvalidRepetitionBound(u32, u32),
-	/// Too large of a repetition bound
-	/// (~implementation detail/restriction; repetition bounds are stored as `u32`).
-	NumberTooBig,
-	/// Expected decimal digits (for repetition bound) (syntax error).
-	ExpectedDecimalDigits,
-	/// Expected hex digits (for unicode escape) (syntax error).
-	ExpectedHexDigits,
-	/// Invalid code point in unicode escape (semantic error).
-	InvalidCodePoint(u32),
-	/// Invalid capture name; only letters, numbers, and underscores allowed.
-	InvalidCaptureName,
-	/// Too many captures (implementation detail/restriction).
-	TooManyCaptures,
-	/// An escape class (e.g. "\\d") was used as the start/end point of a bracket range.
-	EscapeClassInBracketRange,
-	/// An inverted escape class (e.g. "\\D") was used inside a bracketed expression.
-	InvertedEscapeClassInBrackets,
-	/// Used for parsing a non-special character (`negate == true`)
-	/// and for parsing an escaped special character (`negate == false`).
-	/// This shouldn't actually bubble up publicly;
-	/// it'll either get consumed by/turned into `ExpectedLiteralInBracketedExpression` or `InvalidTerm`,
-	/// but exists because 1. it models "what's happening", and 2. it's useful for debugging.
-	ExpectedOneOf { characters: &'static str, negate: bool },
-	/// No definition for placeholder.
-	UndefinedPlaceholder(String),
-	/// A (sub)expression of a regex can match an empty string,
-	/// which isn't meaningful for parsing.
-	/// See [`Regex::is_nullable`].
-	NullableExpression(Box<Regex>),
-	/// An error from nom; should be caught/never bubble up,
-	/// but used to implement the trait [`nom::error::ParseError`],
-	/// and useful for debugging/failing gracefully.
-	Nom(NomErrorKind),
-}
 
 #[derive(Debug)]
 struct RegexParsingError<'a> {
@@ -122,7 +54,7 @@ struct RegexParsingError<'a> {
 }
 
 #[derive(Debug, Clone)]
-enum Literal {
+enum Term {
 	Char(char),
 	Bracketed { negated: bool, items: Vec<(char, char)> },
 }
@@ -159,15 +91,59 @@ impl<'a> RegexParsingError<'a> {
 	}
 }
 
+impl AnchoredRegex {
+	pub fn from_pattern_with_placeholders<T>(mut pattern: &str, lookup: &mut T) -> Result<Self, RegexError>
+	where
+		T: RegexPlaceholderLookup,
+	{
+		let mut anchor_before: bool = false;
+		let mut anchor_after: bool = false;
+
+		if let Some(suffix) = pattern.strip_prefix('^') {
+			anchor_before = true;
+			pattern = suffix;
+		}
+
+		if let Some(prefix) = pattern.strip_suffix('$') {
+			anchor_after = true;
+			pattern = prefix;
+		}
+
+		let mut regex: Regex = Regex::from_pattern_with_placeholders::<false, _>(pattern, lookup)?;
+
+		let mut total_captures: NonZero<u16> = NonZero::<u16>::MIN;
+
+		regex
+			.initialize_captures(&mut total_captures, &mut Vec::new())
+			.ok_or(RegexError {
+				consumed: pattern.to_owned(),
+				remaining: String::new(),
+				kind: RegexErrorKind::TooManyCaptures,
+			})?;
+
+		Ok(Self {
+			anchor_before,
+			anchor_after,
+			regex,
+			total_captures,
+		})
+	}
+}
+
 impl Regex {
-	pub fn from_pattern(pattern: &str) -> Result<AnchoredRegex, RegexError> {
+	pub fn from_pattern(pattern: &str) -> Result<Self, RegexError> {
 		Self::from_pattern_with_placeholders::<false, _>(pattern, &mut ())
 	}
 
+	/// Parse an unanchored regex pattern.
+	/// Replaces placeholders with their subexpressions,
+	/// but does not call [`Regex::initialize_captures`],
+	/// since the ID numbering is per-root rule/pattern
+	/// (i.e. it is done at the [`AnchoredRegex`] level).
 	pub fn from_pattern_with_placeholders<const ALLOW_NULLABLE: bool, T>(
 		pattern: &str,
 		lookup: &mut T,
-	) -> Result<AnchoredRegex, RegexError>
+	) -> Result<Self, RegexError>
 	where
 		T: RegexPlaceholderLookup,
 	{
@@ -175,26 +151,14 @@ impl Regex {
 			Ok((remaining, mut regex)) => {
 				assert_eq!(remaining, "");
 
-				regex
-					.regex
-					.replace_with_placeholders(lookup)
-					.map_err(|kind| RegexError {
-						consumed: pattern.to_owned(),
-						remaining: remaining.to_owned(),
-						kind,
-					})?;
-
-				regex
-					.regex
-					.number_captures(&mut regex.total_captures, &mut Vec::new())
-					.ok_or(RegexError {
-						consumed: pattern.to_owned(),
-						remaining: String::new(),
-						kind: RegexErrorKind::TooManyCaptures,
-					})?;
+				regex.replace_with_placeholders(lookup).map_err(|kind| RegexError {
+					consumed: pattern.to_owned(),
+					remaining: remaining.to_owned(),
+					kind,
+				})?;
 
 				if !ALLOW_NULLABLE {
-					if let Some(item) = regex.regex.is_nullable() {
+					if let Some(item) = regex.is_nullable() {
 						return Err(RegexError {
 							consumed: pattern.to_owned(),
 							remaining: String::new(),
@@ -248,12 +212,21 @@ impl Regex {
 		}
 	}
 
-	/// [`RegexCapture::id`] defaults to [`NonZero::<u16>::MAX`];
-	/// if we actually reach this, `next_id` will overflow,
-	/// so it naturally works as a placeholder/invalid value.
+	/// Initializes sub-rule data for capture expressions.
+	/// Should be called with `next_id == NonZero::<u16>::MAX`.
+	/// Returns 1 plus the number of sub-rules; i.e. the root rule plus sub-rules.
+	///
+	/// [`SubRule::id`] defaults to [`NonZero::<u16>::MAX`];
+	/// this max value isn't otherwise a valid value ID
+	/// since if we were to assign a sub-rule ID with the max value here,
+	/// `next_id` would overflow (and we would return `None`).
 	///
 	/// Invariant: `parent_id < id`.
-	fn number_captures(&mut self, id: &mut NonZero<u16>, stack: &mut Vec<(NonZero<u16>, Arc<str>)>) -> Option<usize> {
+	fn initialize_captures(
+		&mut self,
+		next_id: &mut NonZero<u16>,
+		stack: &mut Vec<(NonZero<u16>, Arc<str>)>,
+	) -> Option<usize> {
 		let mut bread: usize = 0;
 		match self {
 			Self::AnyChar | Self::Literal(..) | Self::BracketedRanges { .. } => (),
@@ -261,7 +234,7 @@ impl Regex {
 				let sub_rule: &mut SubRule = Arc::get_mut(sub_rule).unwrap();
 				let maybe_parent: Option<&(NonZero<u16>, Arc<str>)> = stack.last();
 				sub_rule.parent_id = maybe_parent.map(|(id, _)| *id);
-				sub_rule.id = *id;
+				sub_rule.id = *next_id;
 				sub_rule.qualified_name = Arc::from(format!(
 					"{}.{}",
 					maybe_parent.map_or("", |(_, name)| name),
@@ -269,8 +242,8 @@ impl Regex {
 				));
 				stack.push((sub_rule.id, sub_rule.qualified_name.clone()));
 				// `id` is `u16`.
-				*id = id.checked_add(1)?;
-				sub_rule.descendents = sub_rule.regex.number_captures(id, stack)?;
+				*next_id = next_id.checked_add(1)?;
+				sub_rule.descendents = sub_rule.regex.initialize_captures(next_id, stack)?;
 				// `bread` is `usize`.
 				bread = 1 + sub_rule.descendents;
 				stack.pop();
@@ -279,11 +252,11 @@ impl Regex {
 			| Self::KleenePlus(item)
 			| Self::BoundedRepetition { item, .. }
 			| Self::Placeholder { item, .. } => {
-				bread += item.number_captures(id, stack)?;
+				bread += item.initialize_captures(next_id, stack)?;
 			},
 			Self::Sequence(items) | Self::Alternation(items) => {
 				for sub_item in items.iter_mut() {
-					bread += sub_item.number_captures(id, stack)?;
+					bread += sub_item.initialize_captures(next_id, stack)?;
 				}
 			},
 		}
@@ -311,13 +284,7 @@ impl RegexErrorKind {
 	}
 }
 
-fn parse_to_end(input: &str) -> ParsingResult<'_, AnchoredRegex> {
-	use nom::combinator::opt;
-
-	let (input, anchor_before): (&str, bool) = opt(parse_char::<'^'>)
-		.map(|maybe_anchor| maybe_anchor.is_some())
-		.parse(input)?;
-
+fn parse_to_end(input: &str) -> ParsingResult<'_, Regex> {
 	// `parse_sequence` (and consequently `parse_alternation`) may swallow errors from
 	// `parse_suffixed`, since the former two are "lists" that simply terminate when
 	// no more elements (suffixed terms) can be parsed.
@@ -328,23 +295,11 @@ fn parse_to_end(input: &str) -> ParsingResult<'_, AnchoredRegex> {
 	// otherwise "reproduce" the invalid term error.
 	let (input, regex): (&str, Regex) = parse_alternation(input)?;
 
-	let (input, anchor_after): (&str, bool) = opt(parse_char::<'$'>)
-		.map(|maybe_anchor| maybe_anchor.is_some())
-		.parse(input)?;
-
 	if !input.is_empty() {
 		return Err(RegexErrorKind::InvalidTerm.error(input));
 	}
 
-	Ok((
-		input,
-		AnchoredRegex {
-			anchor_before,
-			anchor_after,
-			regex,
-			total_captures: NonZero::<u16>::MIN,
-		},
-	))
+	Ok((input, regex))
 }
 
 fn parse_alternation(input: &str) -> ParsingResult<'_, Regex> {
@@ -508,8 +463,8 @@ fn parse_term(input: &str) -> ParsingResult<'_, Regex> {
 	alt((
 		parse_char::<'.'>.map(|_| Regex::AnyChar),
 		parse_literal_character.map(|literal| match literal {
-			Literal::Char(ch) => Regex::Literal(ch),
-			Literal::Bracketed { negated, items } => Regex::BracketedRanges { negated, items },
+			Term::Char(ch) => Regex::Literal(ch),
+			Term::Bracketed { negated, items } => Regex::BracketedRanges { negated, items },
 		}),
 		parse_parenthesized,
 		parse_bracketed_expression,
@@ -559,7 +514,7 @@ fn parse_capture(input: &str) -> ParsingResult<'_, Regex> {
 			Regex::Capture(Arc::new(SubRule {
 				name: name.to_owned(),
 				regex,
-				// [`Regex::number_captures`], called after the AST is parsed, sets these next 4 values;
+				// [`Regex::initialize_captures`], called after the AST is parsed, sets these next 4 values;
 				// see also its comment on why this `MAX` is a valid temporary value.
 				id: NonZero::<u16>::MAX,
 				parent_id: None,
@@ -628,9 +583,9 @@ fn parse_bracketed_inside(input: &str) -> ParsingResult<'_, (bool, Vec<(char, ch
 fn parse_bracketed_item(original_input: &str) -> ParsingResult<'_, Vec<(char, char)>> {
 	use nom::combinator::opt;
 
-	let (input, maybe_start): (&str, Option<Literal>) = parse_literal_char_in_bracketed_expression(original_input)?;
+	let (input, maybe_start): (&str, Option<Term>) = parse_literal_char_in_bracketed_expression(original_input)?;
 
-	let Some(start): Option<Literal> = maybe_start else {
+	let Some(start): Option<Term> = maybe_start else {
 		return Ok((input, Vec::new()));
 	};
 
@@ -638,25 +593,25 @@ fn parse_bracketed_item(original_input: &str) -> ParsingResult<'_, Vec<(char, ch
 
 	if maybe_dash.is_some() {
 		match start {
-			Literal::Char(start) => {
-				let (input, maybe_end): (&str, Option<Literal>) =
+			Term::Char(start) => {
+				let (input, maybe_end): (&str, Option<Term>) =
 					parse_literal_char_in_bracketed_expression(input_after_dash)?;
 
-				let Some(end): Option<Literal> = maybe_end else {
+				let Some(end): Option<Term> = maybe_end else {
 					return Ok((input, vec![(start, start), ('-', '-')]));
 				};
 
 				match end {
-					Literal::Char(end) => {
+					Term::Char(end) => {
 						if start > end {
 							return Err(RegexErrorKind::InvalidBracketRange(start, end).fail(input_after_dash));
 						}
 						Ok((input, vec![(start, end)]))
 					},
-					Literal::Bracketed { .. } => Err(RegexErrorKind::EscapeClassInBracketRange.fail(input_after_dash)),
+					Term::Bracketed { .. } => Err(RegexErrorKind::EscapeClassInBracketRange.fail(input_after_dash)),
 				}
 			},
-			Literal::Bracketed { negated, mut items } => {
+			Term::Bracketed { negated, mut items } => {
 				if negated {
 					return Err(RegexErrorKind::InvertedEscapeClassInBrackets.fail(original_input));
 				}
@@ -679,8 +634,8 @@ fn parse_bracketed_item(original_input: &str) -> ParsingResult<'_, Vec<(char, ch
 		}
 	} else {
 		match start {
-			Literal::Char(ch) => Ok((input, vec![(ch, ch)])),
-			Literal::Bracketed { negated, items } => {
+			Term::Char(ch) => Ok((input, vec![(ch, ch)])),
+			Term::Bracketed { negated, items } => {
 				if negated {
 					return Err(RegexErrorKind::InvertedEscapeClassInBrackets.fail(original_input));
 				}
@@ -692,17 +647,17 @@ fn parse_bracketed_item(original_input: &str) -> ParsingResult<'_, Vec<(char, ch
 
 // ========================================
 
-fn parse_literal_character(input: &str) -> ParsingResult<'_, Literal> {
+fn parse_literal_character(input: &str) -> ParsingResult<'_, Term> {
 	use nom::branch::alt;
 
 	alt((
 		parse_escaped_character,
-		parse_one_char_of::<true>(SPECIAL_CHARACTERS).map(Literal::Char),
+		parse_one_char_of::<true>(SPECIAL_CHARACTERS).map(Term::Char),
 	))
 	.parse(input)
 }
 
-fn parse_escaped_character(original_input: &str) -> ParsingResult<'_, Literal> {
+fn parse_escaped_character(original_input: &str) -> ParsingResult<'_, Term> {
 	use nom::branch::alt;
 	use nom::combinator::cut;
 
@@ -710,9 +665,9 @@ fn parse_escaped_character(original_input: &str) -> ParsingResult<'_, Literal> {
 
 	// Cut: If we parsed a '\\', we necessarily are looking for an escape character.
 	cut(alt((
-		parse_one_char_of::<false>(SPECIAL_CHARACTERS).map(Literal::Char),
+		parse_one_char_of::<false>(SPECIAL_CHARACTERS).map(Term::Char),
 		// TODO: deprecate allowing this outside bracketed expressions.
-		parse_char::<'-'>.map(Literal::Char),
+		parse_char::<'-'>.map(Term::Char),
 		parse_standard_escape,
 	))
 	// Outside of the `alt` since the error starts at the original input, still inside the `cut`.
@@ -720,7 +675,7 @@ fn parse_escaped_character(original_input: &str) -> ParsingResult<'_, Literal> {
 	.parse(input)
 }
 
-fn parse_literal_char_in_bracketed_expression(input: &str) -> ParsingResult<'_, Option<Literal>> {
+fn parse_literal_char_in_bracketed_expression(input: &str) -> ParsingResult<'_, Option<Term>> {
 	use nom::branch::alt;
 	use nom::combinator::eof;
 	use nom::combinator::peek;
@@ -728,7 +683,7 @@ fn parse_literal_char_in_bracketed_expression(input: &str) -> ParsingResult<'_, 
 
 	alt((
 		parse_one_char_of::<true>(SPECIAL_CHARACTERS_IN_BRACKETED_EXPRESSIONS)
-			.map(Literal::Char)
+			.map(Term::Char)
 			.map(Some),
 		parse_escaped_character.map(Some),
 		value(None, peek(parse_char::<']'>)),
@@ -766,7 +721,7 @@ fn parse_one_char_of<'a, const NEGATE: bool>(
 	}
 }
 
-fn parse_standard_escape(input: &str) -> ParsingResult<'_, Literal> {
+fn parse_standard_escape(input: &str) -> ParsingResult<'_, Term> {
 	use crate::utils::Escaped;
 	use crate::utils::InvalidEscape;
 
@@ -780,7 +735,7 @@ fn parse_standard_escape(input: &str) -> ParsingResult<'_, Literal> {
 		let ch_lowercase: char = ch.to_ascii_lowercase();
 		return Ok((
 			chars.as_str(),
-			Literal::Bracketed {
+			Term::Bracketed {
 				negated: ch != ch_lowercase,
 				items: match ch_lowercase {
 					'd' => vec![('0', '9')],
@@ -795,7 +750,7 @@ fn parse_standard_escape(input: &str) -> ParsingResult<'_, Literal> {
 		));
 	}
 	match Escaped::unescape(input) {
-		Ok((input, ch)) => Ok((input, Literal::Char(ch))),
+		Ok((input, ch)) => Ok((input, Term::Char(ch))),
 		Err(InvalidEscape::Eof) => Err(RegexErrorKind::InvalidEscape.error(input)),
 		Err(InvalidEscape::Malformed) => Err(RegexErrorKind::ExpectedHexDigits.fail(input)),
 		Err(InvalidEscape::BadCodePoint(x)) => Err(RegexErrorKind::InvalidCodePoint(x).fail(input)),
@@ -877,13 +832,13 @@ mod test {
 		Regex::from_pattern(r"a\-b").unwrap();
 
 		{
-			let a: Regex = Regex::from_pattern(r"(((abc)))").unwrap().regex;
-			let b: Regex = Regex::from_pattern(r"abc").unwrap().regex;
+			let a: Regex = Regex::from_pattern(r"(((abc)))").unwrap();
+			let b: Regex = Regex::from_pattern(r"abc").unwrap();
 			assert_eq!(a, b);
 		}
 		{
-			let a: Regex = Regex::from_pattern(r"([abc])").unwrap().regex;
-			let b: Regex = Regex::from_pattern(r"[abc]").unwrap().regex;
+			let a: Regex = Regex::from_pattern(r"([abc])").unwrap();
+			let b: Regex = Regex::from_pattern(r"[abc]").unwrap();
 			assert_eq!(a, b);
 		}
 	}
@@ -895,9 +850,7 @@ mod test {
 
 			for &p in POINTS.iter() {
 				assert_eq!(
-					Regex::from_pattern(&format!("\\u{{{:x}}}", u32::from(p)))
-						.unwrap()
-						.regex,
+					Regex::from_pattern(&format!("\\u{{{:x}}}", u32::from(p))).unwrap(),
 					Regex::Literal(p)
 				);
 			}
@@ -1146,12 +1099,12 @@ mod test {
 			Regex::from_pattern("abc{3}").unwrap();
 
 			std::assert_matches!(
-				Regex::from_pattern("(abc){3}").unwrap().regex,
+				Regex::from_pattern("(abc){3}").unwrap(),
 				Regex::BoundedRepetition { min: 3, max: 3, .. }
 			);
 
 			std::assert_matches!(
-				Regex::from_pattern("(abc){6,7}").unwrap().regex,
+				Regex::from_pattern("(abc){6,7}").unwrap(),
 				Regex::BoundedRepetition { min: 6, max: 7, .. }
 			);
 		}
@@ -1235,14 +1188,14 @@ mod test {
 
 		for (pattern, items) in CLASSES.iter() {
 			assert_eq!(
-				Regex::from_pattern(pattern).unwrap().regex,
+				Regex::from_pattern(pattern).unwrap(),
 				Regex::BracketedRanges {
 					negated: false,
 					items: items.to_vec(),
 				}
 			);
 			assert_eq!(
-				Regex::from_pattern(&pattern.to_ascii_uppercase()).unwrap().regex,
+				Regex::from_pattern(&pattern.to_ascii_uppercase()).unwrap(),
 				Regex::BracketedRanges {
 					negated: true,
 					items: items.to_vec(),
