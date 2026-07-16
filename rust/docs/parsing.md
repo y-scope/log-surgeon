@@ -140,7 +140,7 @@ and the tagged DFA to determine the sub-rule matches as before.
 For the next root match, we continue at the first starting position after our previous match ends.
 
 The downsides of this approach are:
-- This approach necessarily requires reading from the end of the file.
+- Requires scanning from the end of the file.
 - Reading in reverse is suboptimal compared to only reading forwards.
 - Fully determinizing a DFA for a `.*`-prefixed regex is costly, though this can be worked around by lazy construction.
 - Storing all starting positions is not necessarily prohibitive (e.g. using a bitmap), but not trivial either.
