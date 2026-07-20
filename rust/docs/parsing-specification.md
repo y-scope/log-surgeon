@@ -1,5 +1,5 @@
 ## Parsing Specification
-A parsing specification is a list of rules used to determine non-static text in logs.
+A parsing specification is a list of regex rules used to determine semantically meaningful text in logs.
 It can be defined programmatically using the C++ or Python API,
 or using a Parsing Specification File.
 

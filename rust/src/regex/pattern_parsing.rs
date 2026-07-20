@@ -142,7 +142,7 @@ impl AnchoredRegex {
 /// - alternation ([`parse_alternation`]).
 ///
 /// TODO after merge: update link
-/// [parsing-spec-file]: https://github.com/y-scope/log-surgeon/tree/log-mechanic/rust/docs/parsing-spec-file.md
+/// [parsing-spec-file]: https://github.com/y-scope/log-surgeon/tree/log-mechanic/rust/docs/parsing-specification.md
 impl Regex {
 	pub fn from_pattern(pattern: &str) -> Result<Self, RegexError> {
 		Self::from_pattern_with_placeholders::<false, _>(pattern, &mut ())

@@ -4,14 +4,19 @@ Rust implementation of [log-surgeon](https://github.com/y-scope/log-surgeon),
 a high-performance log parsing library, replacing the C++ implementation.
 This crate provides the core parsing engine and exposes it through C/C++ and Python bindings.
 
-**Still a work in progress!**
-
-## Components
 - Regex, (tagged) NFA/DFA inspired by [re2c][re2c].
-- Schema-driven log parser.
+- [Parsing Specification][parsing-spec]-driven log parser.
+- Search query decomposition based on the parsing specification.
 - C/C++ bindings (`/cxx`).
-- CPython extension module through [PyO3][pyo3] and [Maturin][maturin] (`src/python_interface.rs`, `/python`).
-	- See the [Python README](python/README.md) for more details.
+- CPython bindings (extension module) through [PyO3][pyo3] and [Maturin][maturin] (`src/python_interface.rs`, `/python`).
+	- See the [Python README][python-readme] for more details.
+
+## Table of Contents
+The rest of this document is a quickstart development guide.
+
+- [Prerequisites](#prerequisites)
+- [Building](#building)
+- [Debugging](#debugging)
 
 ## Prerequisites
 - Stable rust toolchain; 1.97.1+ as of 2026 July 16.
@@ -41,7 +46,7 @@ maturin develop --release
 python3 -m unittest discover tests/python [-k test_name]
 ```
 
-## Development
+## Debugging
 
 ### Enable Tracing
 ```
@@ -67,6 +72,8 @@ export LOG_SURGEON_LOG=log_surgeon=trace
 In this crate, `#[tracing::instrument]` spans are set to level `trace` or `debug`;
 i.e. running with `LOG_SURGEON_LOG=log_surgeon=info` or higher should not include instrumentation logs.
 
+[parsing-spec]: parsing-specification.md
+[python-readme]: python/README.md
 [re2c]: https://re2c.org/
 [pyo3]: https://pyo3.rs/
 [maturin]: https://www.maturin.rs/

@@ -1,16 +1,28 @@
 ## Parsing in Log Surgeon
-An overview of the title.
-See also: [Parsing Specification File][parsing-spec].
+Log Surgeon parses log data using a [Parsing Specification][parsing-spec].
+The parsing specification includes:
+
+- How root rules are matched.
+- How subrules are extracted.
+- How log events are separated.
+
+Parsing consists of two main stages:
+
+1. A parser that advances through the input and builds structured log events.
+2. A lexer that identifies matches in the input according to the parsing specification.
 
 ### Matching Root Rules
-A lexer processes input left to right and reports root rule matches.
+The lexer identifies occurrences of root rules defined in the parsing specification.
+A root rule match represents a piece of semantically meaningful text identified by the user.
 
-At each step, if possible, the lexer takes the longest possible match of any root rule.
-If multiple root rules match with the same length, the highest-priority (earliest) rule is returned.
+The lexer processes input left to right. At each step, it attempts to match root rules according to the following:
+
+- The longest possible match.
+- If multiple root rules match with the same length, the highest-priority (earliest) rule in the spec is selected.
 
 If no root rules match at the current position,
 the parser seeks to the first delimiter character after the current position,
-and repeats attempting to match a root rule _after_ the delimiter.
+and the lexer repeats attempting to match a root rule _after_ the delimiter.
 
 WIP: We hope to generalize root rule matching to find the earliest possible occurrence of a root rule at each step.
 
@@ -20,8 +32,8 @@ Log Surgeon builds an [automaton][dfa] for the combination of all root rule patt
 an automaton is just a state machine with transitions based on an input character.
 Specifically, Log Surgeon implements the classical regex -> NFA -> DFA construction.
 
-DFAs simulate matching multiple patterns/rules at once with just a single pass through the input.
-"Executing" the DFA is just a loop that traverses the states:
+DFAs simulate matching multiple patterns/rules at once performing only a single pass through the input.
+"Executing" the DFA is a loop that traverses the states:
 
 ```rust
 let mut current_state: usize = 0;
@@ -163,7 +175,7 @@ Explain:
 - anchors
 - leaf ambiguity
 
-[parsing-spec]: parsing-spec-file.md
+[parsing-spec]: parsing-specification.md
 [python-regex]: https://docs.python.org/3/howto/regex.html
 [dfa]: https://en.wikipedia.org/wiki/Deterministic_finite_automaton
 [tagged-dfa]: https://arxiv.org/abs/2206.01398
