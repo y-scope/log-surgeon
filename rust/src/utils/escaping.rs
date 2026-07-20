@@ -34,7 +34,7 @@ impl Escaped {
 	/// - ` ` for a literal space (for usages that need to avoid ambiguity).
 	/// - a (second) backslash for a literal backslash.
 	/// - `'` for a literal single quote.
-	/// - `"'` for a literal double quote.
+	/// - `"` for a literal double quote.
 	/// - `t`, `r`, `n`: tab, carriage return, and newline respectively.
 	/// - `u{xx}`, `u{xxyy}`, `u{xxyyzz}` for a Unicode code point in hexadecimal representation.
 	///   - Hex digits may be upper or lower case, and must come in pairs.

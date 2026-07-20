@@ -164,7 +164,6 @@ Explain:
 - leaf ambiguity
 
 [parsing-spec]: parsing-spec-file.md
-[ebnf]: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
 [python-regex]: https://docs.python.org/3/howto/regex.html
 [dfa]: https://en.wikipedia.org/wiki/Deterministic_finite_automaton
 [tagged-dfa]: https://arxiv.org/abs/2206.01398

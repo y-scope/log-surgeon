@@ -130,6 +130,19 @@ impl AnchoredRegex {
 	}
 }
 
+/// See the [Parsing Specification File document][parsing-spec-file]
+/// for more details on regex syntax and semantics.
+///
+/// In summary, a regular expression is composed of terms ([`parse_term`] and [`parse_parenthesized`])
+/// and operators to recursively combine subexpressions;
+/// from highest to lowest precedence:
+///
+/// - suffixed repetition operators ([`parse_suffixed`]),
+/// - concatenation ([`parse_sequence`]), and
+/// - alternation ([`parse_alternation`]).
+///
+/// TODO after merge: update link
+/// [parsing-spec-file]: https://github.com/y-scope/log-surgeon/tree/log-mechanic/rust/docs/parsing-spec-file.md
 impl Regex {
 	pub fn from_pattern(pattern: &str) -> Result<Self, RegexError> {
 		Self::from_pattern_with_placeholders::<false, _>(pattern, &mut ())
@@ -284,15 +297,9 @@ impl RegexErrorKind {
 	}
 }
 
+/// See comment on [`parse_alternation`] and [`parse_sequence`] on swallowed errors;
+/// reproduce [`RegexErrorKind::InvalidTerm`] errors if not at end of input.
 fn parse_to_end(input: &str) -> ParsingResult<'_, Regex> {
-	// `parse_sequence` (and consequently `parse_alternation`) may swallow errors from
-	// `parse_suffixed`, since the former two are "lists" that simply terminate when
-	// no more elements (suffixed terms) can be parsed.
-	// `parse_alternation` is called at the top level (here), or inside parentheses (possibly a capture).
-	// Inside parentheses, after failing to parse a term (i.e. reaching the end of the list),
-	// we look for the closing parenthesis.
-	// Here, after reaching the end of the list, we ensure we're at the end of input,
-	// otherwise "reproduce" the invalid term error.
 	let (input, regex): (&str, Regex) = parse_alternation(input)?;
 
 	if !input.is_empty() {
@@ -302,6 +309,14 @@ fn parse_to_end(input: &str) -> ParsingResult<'_, Regex> {
 	Ok((input, regex))
 }
 
+/// A non-empty "list" of [`parse_sequence`]s, separated by bar `|`s.
+/// Note that the first sequence is required (by non-emptiness),
+/// and if a bar `|` is encountered, another sequence is necessarily expected.
+///
+/// `parse_alternation` is called at the top level by [`parse_to_end`],
+/// and inside parentheses by [`parse_parenthesized`].
+/// The former (re)produces [RegexErrorKind::InvalidTerm`] swallowed inside [`parse_sequence`] if not at end of input,
+/// and the latter will produce a [`RegexErrorKind::ExpectedClose`] if not terminated properly.
 fn parse_alternation(mut input: &str) -> ParsingResult<'_, Regex> {
 	use nom::combinator::cut;
 	use nom::combinator::opt;
@@ -333,6 +348,15 @@ fn parse_alternation(mut input: &str) -> ParsingResult<'_, Regex> {
 	}
 }
 
+/// A non-empty "list" of [`parse_suffixed`]s;
+/// unlike [`parse_alternation`], there's no explicit separator/joining character,
+/// so beyond the first `parse_suffixed`,
+/// the list is terminated once `parse_suffixed` fails,
+/// and the error is swallowed.
+///
+/// Note that we can't "peek" to check if we're at the end of input,
+/// since we don't know if we're inside a parenthesized expression (followed by a closing parentheses)
+/// or at the top level (followed by end of input).
 fn parse_sequence(input: &str) -> ParsingResult<'_, Regex> {
 	use nom::combinator::cut;
 
@@ -468,6 +492,7 @@ fn parse_term(input: &str) -> ParsingResult<'_, Regex> {
 	.parse(input)
 }
 
+/// See also: [`parse_alternation`] for details on error propagation.
 fn parse_parenthesized(input: &str) -> ParsingResult<'_, Regex> {
 	use nom::branch::alt;
 

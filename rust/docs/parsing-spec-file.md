@@ -47,8 +47,11 @@ timestamp: "\d{2}-\d{2}-\d{4} \d{2}:\d{2}:\d{2}(\.\d{3})?"
 timestamp: "\d{2}\\[A-Z][a-z]{2}\\\d{4}:\d{2}\d{2}:\d{2}"
 ```
 
-A parsing specification also contains a set of delimiter characters,
-which are additionally used to identify matches.
+A parsing specification must also contain a `delimiter: "..."` definition,
+which is a set of characters additionally used to identify matches;
+see [Parsing][parsing] for more details.
+Newlines (`\n`) must be part of the delimiter set,
+since they already delimit the start and end of log events.
 
 ### Example Parsing Specification File
 Again, a parsing specification file primarily consists of a priority-ordered list `name: "pattern"` rules,
@@ -195,6 +198,8 @@ but follows common regex syntax conventions:
 	they may not be used with negation or as a range endpoint, to avoid potential ambiguity.
 	For example, `[\w_-]` is equivalent to `[a-zA-Z0-9_-]`.
 
+[parsing]: parsing.md
 [regex-pattern-syntax]: #regex-pattern-syntax
 [escape-characters]: #escape-characters
 [bracketed-ranges]: #bracketed-ranges
+[ebnf]: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
