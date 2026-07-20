@@ -210,7 +210,7 @@ impl Regex {
 				let Some(placeholder): Option<Regex> = placeholder_lookup.lookup(name) else {
 					return Err(RegexErrorKind::UndefinedPlaceholder(name.clone()));
 				};
-				**item = placeholder;
+				**item = placeholder.deep_clone();
 				Ok(())
 			},
 			Self::KleeneClosure(item) | Self::KleenePlus(item) | Self::BoundedRepetition { item, .. } => {
@@ -458,21 +458,17 @@ fn parse_repetition_bounds(original_input: &str) -> ParsingResult<'_, (u32, u32)
 	if have_comma {
 		// Cut: After seeing a ',', we necessarily are expecting an upper bound.
 		let (input, y): (&str, u32) = cut(parse_digits).parse(input_after_comma)?;
-		if y > 0 {
-			if x <= y {
-				Ok((input, (x, y)))
-			} else {
-				Err(RegexErrorKind::InvalidRepetitionBound(x, y).error(input_after_comma))
-			}
-		} else {
-			Err(RegexErrorKind::InvalidRepetitionBound(x, y).error(input_after_comma))
+		if (x > y) || (y == 0) {
+			// For a suffix `{min,max}`, `min == max` is allowed, except if `max == 0`.
+			return Err(RegexErrorKind::InvalidRepetitionBound(x, y).error(input_after_comma));
 		}
+		Ok((input, (x, y)))
 	} else {
-		if x > 0 {
-			Ok((input, (x, x)))
-		} else {
-			Err(RegexErrorKind::InvalidRepetitionBound(x, x).error(original_input))
+		if x == 0 {
+			// Suffix `{0}` is equivalent to `{0,0}`, which is not allowed as above.
+			return Err(RegexErrorKind::InvalidRepetitionBound(x, x).error(original_input));
 		}
+		Ok((input, (x, x)))
 	}
 }
 
