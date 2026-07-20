@@ -1,0 +1,4 @@
+# https://clangd.llvm.org/design/compile-commands#where-do-compile-commands-come-from
+
+-std=c++20
+-Icxx
