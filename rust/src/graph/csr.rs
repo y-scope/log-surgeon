@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod test;
+
 /// Compressed Sparse Row.
 #[derive(Debug, Clone)]
 pub struct Csr<T> {

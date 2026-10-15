@@ -1,6 +1,9 @@
 //! Tarjan's SCC algorithm.
 //! See <https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm>.
 
+#[cfg(test)]
+mod test;
+
 use crate::graph::DfsIndex;
 
 /// Results of Tarjan's SCC algorithm.
