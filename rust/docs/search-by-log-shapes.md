@@ -456,8 +456,10 @@ this is `symbolic_value_of`'s `padding` parameter:
     The merge is sound but **not exact**: the merged glob can be strictly looser than
     the group (`L('*aa*')` holds `baab`, which neither member admits),
     since a union of globs is not in general one glob.
-    It keeps what a user acts on -- which parts the text lands in, and in what order --
-    and the differential tests cannot see the looseness, as they strip wildcards.
+    It keeps what a user acts on -- which parts the text lands in, and in what order.
+    The differential test does not fail on the looseness, since its structural comparison
+    strips wildcards, but it does count it among the pairs where the engine is tighter
+    (see [Known Limitations](#known-limitations)).
 
     This is the opposite of the intuition that "static text must match verbatim,
     so it is never padded".

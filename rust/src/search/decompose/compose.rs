@@ -811,8 +811,9 @@ fn build_composition(model: &ShapeModel, table: &PlacementTable, choices: &[usiz
 /// What the merge preserves is what the user can act on --
 /// which parts the query text lands in, and in what order --
 /// and it keeps one decomposition from being reported once per offset.
-/// The differential tests do not observe the difference, because they compare a normal form
-/// that strips wildcards.
+/// The differential test does not fail on it -- its structural comparison strips wildcards --
+/// but does count it: it is where the engine's values are still strictly tighter
+/// (`*aa*` against `aaa`; see "Known Limitations" in `docs/search-by-log-shapes.md`).
 /// Reporting the group unmerged would be exact but multiplies results; that trade-off is
 /// recorded in `REVIEW-deferred.md` (item 1) if still present.
 fn merge_by_padding(compositions: Vec<Composition>) -> Vec<Composition> {
