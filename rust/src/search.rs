@@ -110,14 +110,7 @@ impl SearchString {
 		automata: &Tnfa,
 		dropped: &[decompose::ShapePart],
 	) -> Vec<Interpretation> {
-		self.interpretations_for_shape(
-			spec,
-			&TruncatedShape {
-				// TODO: avoid this clone by borrowing the automaton instead.
-				automata: automata.clone(),
-				dropped: Tail::of_parts(dropped),
-			},
-		)
+		self.interpretations_for_shape(spec, automata, Tail::of_parts(dropped))
 	}
 
 	/// Builds the automaton for shape parts `0..=end`, round-tripping through the model's
@@ -195,7 +188,8 @@ impl SearchString {
 		// which is what decides how much of the shape has to be built;
 		// see [`Self::truncated_automata`].
 		let truncated: TruncatedShape = self.truncated_automata(spec, model, query, &maybe_table);
-		let interpretations: Vec<Interpretation> = self.interpretations_for_shape(spec, &truncated);
+		let interpretations: Vec<Interpretation> =
+			self.interpretations_for_shape(spec, &truncated.automata, truncated.dropped);
 		now!(t1);
 		debug!("- took {} ms", millis!(t0, t1));
 		interpretations
@@ -310,8 +304,9 @@ impl SearchString {
 			interpretations.extend(potential_interpretations.into_iter());
 		}
 
-		interpretations.sort();
-		interpretations.dedup();
+		// Each row is deduplicated by covering on its own; rows of one name can still
+		// produce interpretations that cover each other, so do it once more across rows.
+		Interpretation::dedup_covered_interpretations(&mut interpretations);
 
 		interpretations
 	}
@@ -331,12 +326,15 @@ impl SearchString {
 	/// deciding *how much shape matters* belongs to placement,
 	/// which knows where the query's text can sit, not to the intersection,
 	/// which would otherwise have to guess by stopping early.
+	///
+	/// `dropped` is what is missing from the end of `shape_nfa`, if it was truncated;
+	/// see [`TruncatedShape`].
 	fn interpretations_for_shape(
 		&self,
 		spec: &ParsingSpec,
-		shape: &TruncatedShape,
+		shape_nfa: &Tnfa,
+		dropped: Tail,
 	) -> Vec<Interpretation> {
-		let shape_nfa: &Tnfa = &shape.automata;
 		let anchored_end: bool = self.anchored_end();
 
 		let mut interpretations: Vec<Interpretation> = Vec::new();
@@ -368,7 +366,7 @@ impl SearchString {
 				let trimmed: Tail = Self::truncate_to_last_constrained(&mut leaf_queries);
 				// What was trimmed, together with what truncation dropped from the
 				// shape's automaton, is the tail the rendering must still account for.
-				(trimmed.or(shape.dropped)).finish_unanchored(&mut leaf_queries);
+				(trimmed.or(dropped)).finish_unanchored(&mut leaf_queries);
 			}
 
 			interpretations.push(Interpretation { leaf_queries });
