@@ -188,10 +188,9 @@ impl Composition {
 	) -> Interpretation {
 		let rendered: Vec<RenderedPart> = self.rendered_parts(model, query);
 
-		// Nothing is constrained, so a *runless* query is satisfied without
-		// attributing text anywhere: `*` (unanchored) reports a bare `'*'`,
-		// while the empty query (anchored at both ends) falls through below --
-		// every part must be an empty capture, which the anchored-end tail adds.
+		// Nothing is constrained and nothing is pinned: `*` reports a bare `'*'`.
+		// (An end-anchored query renders every part, so it never gets here;
+		// for the empty query that is a row of empty captures.)
 		if rendered.is_empty() && !query.anchored_end {
 			return Interpretation {
 				leaf_queries: vec![LeafQuery::new_static_text(vec![SymbolicChar::GlobStar])],
@@ -220,48 +219,17 @@ impl Composition {
 			}
 		}
 
-		if query.anchored_end {
-			// The tail past the last constrained part is pinned to the empty string:
-			// placement already guarantees every part there can vanish
-			// (`can_end_at` admits only those, and `can_be_empty` lets no static
-			// text through), so each is an empty capture -- the engine's own
-			// spelling of "pinned to producing nothing".
-			for part in self.tail_start(model)..model.parts.len() {
-				let ShapePart::Variable(variable) = &model.parts[part] else {
-					unreachable!("an end-anchored tail cannot contain static text");
-				};
-				debug_assert!(variable.can_match_empty);
-				// As above: the name is the same for every alternative.
-				// `can_match_empty` is a disjunction, so the first alternative need not be
-				// the nullable one; only the reported name is meaningful here.
-				if let Some(capture) = variable.alternatives.first() {
-					leaf_queries.push(LeafQuery::new_rule(
-						capture.fully_qualified_name.clone(),
-						Vec::new(),
-					));
-				}
-			}
-		} else if let Some(last_constrained) = self.last_constrained() {
+		// An unanchored query's trailing wildcard absorbs the parts after the last constrained
+		// one, which `rendered_parts` therefore left out; the tail rule accounts for them.
+		// An end-anchored query has them rendered, each pinned to the empty string.
+		if !query.anchored_end
+			&& let Some(last_constrained) = self.last_constrained()
+		{
 			crate::search::Tail::of_parts(&model.parts[(last_constrained + 1)..])
 				.finish_unanchored(&mut leaf_queries);
 		}
 
 		Interpretation { leaf_queries }
-	}
-
-	/// Index of the first part *not* rendered, if any; for the empty composition
-	/// (the empty query) that is the start of the shape, so every part is the tail.
-	///
-	/// Placement already guarantees (`Straddle::complete`, and `extend`'s
-	/// end-anchored branches) that every part after the last constrained one can
-	/// emit nothing: `can_end_at` admits only those, and `can_be_empty` lets no
-	/// static text through.
-	fn tail_start(&self, model: &ShapeModel) -> usize {
-		if self.captures.is_empty() && self.literals.is_empty() {
-			return 0;
-		}
-		self.last_constrained()
-			.map_or(model.parts.len(), |part| part + 1)
 	}
 
 	/// The last part any run puts text in. `None` on an empty composition.
@@ -279,15 +247,24 @@ impl Composition {
 
 	/// The shape parts that contribute a sub-query, with their rendered values.
 	///
-	/// Only parts up to `last_constrained` are rendered:
+	/// For an unanchored query, only parts up to `last_constrained` are rendered:
 	/// variables past that are unconstrained and omitted,
 	/// and static text past that is what the caller's tail rule stands for --
 	/// see [`crate::search::Tail`].
+	/// An end-anchored query renders *every* part:
+	/// the ones past the last constrained part must emit nothing,
+	/// which `symbolic_value_of` reports as empty captures.
+	/// That includes the empty query, whose composition has no pieces at all.
 	///
 	/// Factored out so that rendering and multi-piece verification agree by construction:
 	/// the value checked against a rule is the very one that will be reported.
 	fn rendered_parts(&self, model: &ShapeModel, query: &Query<'_>) -> Vec<RenderedPart> {
-		let Some(last_constrained) = self.last_constrained() else {
+		let window: Option<usize> = if query.anchored_end {
+			model.parts.len().checked_sub(1)
+		} else {
+			self.last_constrained()
+		};
+		let Some(window_end) = window else {
 			return Vec::new();
 		};
 
@@ -295,7 +272,7 @@ impl Composition {
 			.map(|part| (part, self.pieces_for(part)))
 			.collect();
 
-		let emitted: Vec<usize> = (0..=last_constrained).collect();
+		let emitted: Vec<usize> = (0..=window_end).collect();
 
 		// The run touching the character just before each emitted part,
 		// and the one just after: from one forward pass and one reverse pass respectively.
@@ -333,15 +310,24 @@ impl Composition {
 				ShapePart::Variable(_) => Padding::Rule,
 			};
 
+			let value: Vec<SymbolicChar> = symbolic_value_of(
+				pieces_by_part[&part],
+				query,
+				preceding[index],
+				following[index],
+				padding,
+			);
+			// Pinned to the empty string with no text attributed: placement admitted the
+			// composition only if every part an anchor pins this way can vanish
+			// (`can_start_at` / `can_end_at`); see `symbolic_value_of`.
+			debug_assert!(
+				!(value.is_empty() && pieces_by_part[&part].is_empty())
+					|| model.parts[part].can_be_empty(),
+				"part {part} pinned to empty but cannot vanish"
+			);
 			rendered.push(RenderedPart {
 				part,
-				value: symbolic_value_of(
-					pieces_by_part[&part],
-					query,
-					preceding[index],
-					following[index],
-					padding,
-				),
+				value,
 				piece_count: pieces_by_part[&part].len(),
 			});
 		}
@@ -507,9 +493,21 @@ fn symbolic_value_of(
 	following_run: Option<usize>,
 	padding: Padding,
 ) -> Vec<SymbolicChar> {
-	// A part with no attributed text is a bare `*`, present only to mark its position.
+	// A part with no attributed text marks its position. It is a bare `*` -- anything --
+	// unless an anchor leaves it no room: a rule before every run of a start-anchored query,
+	// or after every run of an end-anchored one, must emit nothing for the message to begin
+	// (or end) with the query's text. That is the same reasoning that suppresses a rule's
+	// padding at an anchored end below, applied to a rule with no pieces;
+	// the engine spells it as an empty capture.
 	if pieces.is_empty() {
-		return vec![SymbolicChar::GlobStar];
+		let pinned: bool = matches!(padding, Padding::Rule)
+			&& ((preceding_run.is_none() && query.anchored_start)
+				|| (following_run.is_none() && query.anchored_end));
+		return if pinned {
+			Vec::new()
+		} else {
+			vec![SymbolicChar::GlobStar]
+		};
 	}
 
 	let first: &PieceRef = pieces.first().expect("non-empty");

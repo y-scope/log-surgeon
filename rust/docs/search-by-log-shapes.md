@@ -107,9 +107,10 @@ the engine, the prefilter, and composition all see the symbols exactly as parsed
 The predicates are consulted only where a decision genuinely depends on them:
 
 - `truncated_automata` -- an end-anchored query must reach the shape's end, so nothing may be cut;
-- `compose` -- an end-anchored query pins trailing nullable parts to the empty string,
+- `compose` -- an anchored query pins the nullable parts before its first run (start)
+    or after its last run (end) to the empty string,
     which rendering emits as *empty captures*
-    (the predicate comes from the `Query`, not from its runs:
+    (the predicates come from the `Query`, not from its runs:
     the empty query has no runs at all, yet is anchored);
 - the unanchored-tail rule -- only an unanchored query leaves the tail unconstrained;
 - `is_obviously_not_ruled_out` -- an end-anchored query must be able to *finish* at the variable.
@@ -153,8 +154,20 @@ Note that the spec builder *rejects a whole rule that can match empty*
 (`RegexErrorKind::NullableExpression`),
 so this arises from nullable **captures inside** a rule, not from nullable root rules.
 
+Composition reports them on both sides, by one rule in `symbolic_value_of`:
+a rule with no query text that sits before every run of a start-anchored query,
+or after every run of an end-anchored one, must emit nothing,
+so it is rendered as an empty capture rather than as the vacuous `*`.
+`INFO*` against `%optional.pad%%word%` is `optional.pad=` then `word=INFO*`.
+That is the same reasoning that drops a constrained rule's padding at an anchored end,
+applied to a rule with no pieces;
+placement admitted the composition only if those rules can vanish
+(`can_start_at` / `can_end_at`), which rendering asserts.
+A vacuous rule *between* two runs is not pinned: the runs constrain the message, not it.
+
 For an end-anchored query,
-extra care must be taken to avoid losing this information in light of shape truncation.
+extra care must be taken to avoid losing this information in light of shape truncation;
+`rendered_parts` renders every part of the shape for such a query, so none is lost.
 Start-anchored queries do not have this issue as simulation always begins from the very start;
 there is no prefix-truncation.
 
@@ -480,12 +493,12 @@ What sits past the last constrained part is rendered by the **tail rule**
 > When the query is end-anchored those trailing references are *not* unconstrained
 > but pinned to the empty string.
 > Composition renders exactly that, as one empty capture per trailing variable --
-> the same thing the engine reports.
+> the same thing the engine reports; see [Empty captures](#empty-captures).
 
-The rendering deliberately does **not** reproduce the engine's wildcard *placement* inside a value
-(the engine may write `INFO*` where composition writes `*INFO*`).
-Both describe the same decomposition;
-the differential test compares a normal form that strips wildcards, so this stays pinned.
+With capture tightening and empty captures, composition's values match the engine's
+except for static text (see [Known Limitations](#known-limitations)).
+The differential test still compares a normal form that strips wildcards,
+and separately asserts composition is never tighter than the engine.
 A trailing `*` is emitted only when something actually follows the last constrained part --
 the engine obeys the same rule for the parts its automaton was truncated past,
 so neither path appends it unconditionally.
@@ -764,14 +777,13 @@ With `Q` = query length, `R` = number of runs, `P` = shape parts, `L` = shape li
 - **Padding merges are looser than the group they replace.**
     See [Rendering](#rendering); sound, but a merged static value can admit strings
     that no single placement does.
-- **Some values stay looser than the engine's.**
-    After capture tightening, the differential sweep still finds 33 of 10488 pairs
-    where the engine is strictly tighter, in two classes:
-    a nullable rule an anchored query forces to emit nothing
-    (`INFO*` against `%optional.pad%%word%`: the engine reports `optional.pad=`,
-    composition the vacuous `*`), 30 pairs;
-    and static text, where the padding merge and interior wildcards make composition
-    looser (`*aa*` against `aaa`: `'*aa*'` versus `'*aa'`, `'aa*'`), 3 pairs.
+- **Some static values stay looser than the engine's.**
+    The differential sweep finds 3 of 10488 pairs where the engine is strictly tighter,
+    all in static text:
+    the padding merge (`*aa*` against `aaa`: `'*aa*'` versus `'*aa'`, `'aa*'`; see
+    [Rendering](#rendering)),
+    and a run boundary that falls between two adjacent characters of the text
+    (`*a*e*r*` against `plain literal text`: `'*a*e*r*'` versus `'*a*er*'`).
     Both are sound.
 - **An ambiguous variable name is attributed to its first alternative.**
     The reported name is right, but which rule accepted the value is not recorded;

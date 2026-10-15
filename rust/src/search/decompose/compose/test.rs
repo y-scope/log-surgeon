@@ -683,3 +683,33 @@ fn capture_padding_is_tightened_to_the_rule() {
 		interpretations_of(&spec, "%alt%", "*a*")
 	);
 }
+
+/// A start-anchored query pins every rule before its first run to the empty string,
+/// the mirror image of [`end_anchored_tail_is_empty_captures`].
+#[test]
+fn start_anchored_head_is_empty_captures() {
+	let spec: ParsingSpec = spec_with_rules(&[("word", "[a-z]+"), ("optional", "<(?<pad>[!?]*)>")]);
+
+	// `hello` must begin the message, so the nullable `pad` before it emits nothing.
+	assert_eq!(
+		vec![String::from("<optional.pad=> <word=hello*>")],
+		interpretations_of(&spec, "%optional.pad%%word%", "hello*")
+	);
+	// Both ends at once: nothing may surround `hello`.
+	assert_eq!(
+		vec![String::from("<optional.pad=> <word=hello> <optional.pad=>")],
+		interpretations_of(&spec, "%optional.pad%%word%%optional.pad%", "hello")
+	);
+	// Unanchored, the same rule really can be anything: it stays `*`.
+	assert_eq!(
+		vec![String::from("<optional.pad=*> <word=*hello*>")],
+		interpretations_of(&spec, "%optional.pad%%word%", "*hello*")
+	);
+	// An *interior* vacuous rule is left alone even when the query is anchored at both ends:
+	// a run on each side of it constrains the message, not the rule.
+	// (Each `word` may still continue inward, toward the query's wildcard.)
+	assert_eq!(
+		vec![String::from("<word=a*> <optional.pad=*> <word=*b>")],
+		interpretations_of(&spec, "%word%%optional.pad%%word%", "a*b")
+	);
+}
