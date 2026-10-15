@@ -1,5 +1,6 @@
 use super::*;
 use crate::parsing_spec::ParsingSpecBuilder;
+use crate::search::SymbolicChar;
 
 fn spec_with_rules(rules: &[(&str, &str)]) -> ParsingSpec {
 	let mut builder: ParsingSpecBuilder = ParsingSpecBuilder::new();
@@ -240,4 +241,46 @@ fn cache_clone_shares_entries() {
 	assert_eq!(1, cloned.len());
 	// The clone holds the same answer rather than recomputing it.
 	assert!(cloned.matches_piece(&spec, "digits", "123", unpinned));
+}
+
+fn literal(text: &str) -> Vec<SymbolicChar> {
+	Vec::from_iter(text.chars().map(|c| match c {
+		'*' => SymbolicChar::GlobStar,
+		_ => SymbolicChar::Literal(c),
+	}))
+}
+
+/// The rule's own answer to "can it emit text beside the value?", per side.
+#[test]
+fn slack_is_what_the_rule_can_emit_beside_the_value() {
+	let spec: ParsingSpec = spec_with_rules(&[
+		("level", "INFO|WARN|ERROR"),
+		("digits", "[0-9]+"),
+		("hex", "0x[0-9a-f]+"),
+		("alt", "a|ba"),
+	]);
+	let cache: RunFitCache = RunFitCache::new();
+
+	// An alternation of whole words has no slack around one of them.
+	assert!(!cache.has_slack(&spec, "level", &literal("INFO"), Side::Before));
+	assert!(!cache.has_slack(&spec, "level", &literal("INFO"), Side::After));
+	// Nor between pieces of one word, e.g. `IN*O`: no level is `?IN*O` or `IN*O?`.
+	assert!(!cache.has_slack(&spec, "level", &literal("IN*O"), Side::Before));
+	assert!(!cache.has_slack(&spec, "level", &literal("IN*O"), Side::After));
+
+	// A repetition has slack on both sides.
+	assert!(cache.has_slack(&spec, "digits", &literal("12"), Side::Before));
+	assert!(cache.has_slack(&spec, "digits", &literal("12"), Side::After));
+
+	// A fixed prefix removes slack on one side only.
+	assert!(!cache.has_slack(&spec, "hex", &literal("0xff"), Side::Before));
+	assert!(cache.has_slack(&spec, "hex", &literal("0xff"), Side::After));
+
+	// The case a glob query cannot decide: `a*` is satisfiable (by `a`),
+	// yet `ba` is a match with text before `a`, so the leading `*` of `*a` is used.
+	assert!(cache.has_slack(&spec, "alt", &literal("a"), Side::Before));
+	assert!(!cache.has_slack(&spec, "alt", &literal("a"), Side::After));
+
+	// An unknown rule keeps its padding.
+	assert!(cache.has_slack(&spec, "missing", &literal("a"), Side::Before));
 }

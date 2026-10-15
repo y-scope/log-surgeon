@@ -273,11 +273,10 @@ impl SearchString {
 			Composed::Impossible => Some(Vec::new()),
 			Composed::Unknown => None,
 			Composed::Compositions(compositions) => {
-				let mut interpretations: Vec<Interpretation> = Vec::from_iter(
-					compositions
-						.iter()
-						.map(|composition| composition.to_interpretation(model, query)),
-				);
+				let mut interpretations: Vec<Interpretation> =
+					Vec::from_iter(compositions.iter().map(|composition| {
+						composition.to_interpretation(spec, model, query, fits)
+					}));
 				// The engine's callers expect a canonical, duplicate-free set;
 				// distinct compositions can render identically once positions collapse
 				// to the same sub-queries.

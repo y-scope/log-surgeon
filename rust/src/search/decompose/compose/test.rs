@@ -263,7 +263,12 @@ fn interpretations_of(spec: &ParsingSpec, shape: &str, query: &str) -> Vec<Strin
 	let mut out: Vec<String> = compositions
 		.iter()
 		.map(|composition| {
-			render_interpretation(&composition.to_interpretation(&model, &decomposed))
+			render_interpretation(&composition.to_interpretation(
+				spec,
+				&model,
+				&decomposed,
+				&RunFitCache::new(),
+			))
 		})
 		.collect::<Vec<_>>();
 	out.sort();
@@ -328,7 +333,8 @@ fn every_literal_character_survives_rendering() {
 				.collect::<Vec<_>>();
 
 			for composition in compositions.iter() {
-				let interpretation = composition.to_interpretation(&model, &decomposed);
+				let interpretation =
+					composition.to_interpretation(&spec, &model, &decomposed, &RunFitCache::new());
 				assert_eq!(
 					expected,
 					runs_accounted_for(&interpretation),
@@ -639,4 +645,41 @@ fn adjacent_static_parts_are_merged() {
 			"adjacent static parts not merged: {rendered:?}"
 		);
 	}
+}
+
+/// A capture's padding is tightened to what the rule can emit, matching the engine.
+#[test]
+fn capture_padding_is_tightened_to_the_rule() {
+	let spec: ParsingSpec = spec_with_rules(&[
+		("level", "INFO|WARN|ERROR"),
+		("digits", "[0-9]+"),
+		("hex", "0x[0-9a-f]+"),
+		("alt", "a|ba"),
+	]);
+
+	// No level has text around `INFO`, so neither `*` survives.
+	assert_eq!(
+		vec![String::from("<level=INFO>")],
+		interpretations_of(&spec, "%level%", "*INFO*")
+	);
+	// Interior wildcards are run boundaries the query demands; only the ends go.
+	assert_eq!(
+		vec![String::from("<level=IN*O>")],
+		interpretations_of(&spec, "%level%", "*IN*O*")
+	);
+	// One side only: a hex number starts with `0x` but can continue.
+	assert_eq!(
+		vec![String::from("<hex=0xff*>")],
+		interpretations_of(&spec, "%hex%", "*0xff*")
+	);
+	// A repetition keeps both.
+	assert_eq!(
+		vec![String::from("<digits=*12*>")],
+		interpretations_of(&spec, "%digits%", "*12*")
+	);
+	// `ba` uses the leading slack of `*a`, so it must stay, though `a*` alone is satisfiable.
+	assert_eq!(
+		vec![String::from("<alt=*a>")],
+		interpretations_of(&spec, "%alt%", "*a*")
+	);
 }

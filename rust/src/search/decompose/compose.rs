@@ -62,6 +62,7 @@ use crate::search::decompose::RunFitCache;
 use crate::search::decompose::ShapeModel;
 use crate::search::decompose::ShapePart;
 use crate::search::decompose::placement::Reachability;
+use crate::search::decompose::run_fit::Side;
 
 /// One complete way the query's literal text maps onto a shape.
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -174,8 +175,17 @@ impl Composition {
 	/// Runs and end-anchoring are read from `query` rather than passed separately,
 	/// since the runs alone cannot tell the empty query (anchored at both ends,
 	/// with no runs at all) from `*` (anchored nowhere).
+	///
+	/// A capture's padding is then **tightened** to what the rule can use;
+	/// see `tighten_capture`. That is why `spec` and `fits` are needed.
 	#[must_use]
-	pub fn to_interpretation(&self, model: &ShapeModel, query: &Query<'_>) -> Interpretation {
+	pub fn to_interpretation(
+		&self,
+		spec: &ParsingSpec,
+		model: &ShapeModel,
+		query: &Query<'_>,
+		fits: &RunFitCache,
+	) -> Interpretation {
 		let rendered: Vec<RenderedPart> = self.rendered_parts(model, query);
 
 		// Nothing is constrained, so a *runless* query is satisfied without
@@ -202,7 +212,7 @@ impl Composition {
 					if let Some(capture) = variable.alternatives.first() {
 						leaf_queries.push(LeafQuery::new_rule(
 							capture.fully_qualified_name.clone(),
-							part.value,
+							tighten_capture(spec, fits, &variable.name, part.value),
 						));
 					}
 				},
@@ -407,6 +417,49 @@ impl Composition {
 		}
 		&[]
 	}
+}
+
+/// Drops the padding wildcards of a rule capture's `value` that the rule cannot use.
+///
+/// Rendering pads a capture wherever the *query* permits (see [`symbolic_value_of`]),
+/// so `*INFO*` against a `level` rule renders as `*INFO*`,
+/// although no level has text before or after `INFO`.
+/// The engine reports `INFO`, because its path runs through the rule's automaton.
+/// This closes that gap with the rule's own answer,
+/// [`RunFitCache::has_slack`], one side at a time:
+/// a leading `*` goes when no match of the rule is `rest` with text in front,
+/// and then a trailing `*` by the mirror image, on what is left.
+///
+/// Sound because each step preserves `L(rule) & L(value)`, the set of capture texts
+/// the reported value can select: dropping the `*` of `*v` is exact when `L(rule)` misses
+/// `L(.+ v)`. Only the *ends* are touched. An interior `*` marks a run boundary,
+/// which the query itself demands, and the ends of a value are always padding --
+/// `symbolic_value_of` never puts a run boundary first or last.
+///
+/// A vacuous capture (`*` alone) marks a position and is left as it is:
+/// reducing it would claim the rule produced nothing, which is a different statement.
+/// An empty value (a capture pinned to nothing) has no padding to drop.
+fn tighten_capture(
+	spec: &ParsingSpec,
+	fits: &RunFitCache,
+	name: &str,
+	mut value: Vec<SymbolicChar>,
+) -> Vec<SymbolicChar> {
+	if value.len() < 2 {
+		return value;
+	}
+	if value.first().is_some_and(SymbolicChar::is_wildcard)
+		&& !fits.has_slack(spec, name, &value[1..], Side::Before)
+	{
+		value.remove(0);
+	}
+	if (2 <= value.len())
+		&& value.last().is_some_and(SymbolicChar::is_wildcard)
+		&& !fits.has_slack(spec, name, &value[..(value.len() - 1)], Side::After)
+	{
+		value.pop();
+	}
+	value
 }
 
 /// Concatenates values, collapsing the `**` that adjoining wildcards would otherwise produce.

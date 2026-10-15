@@ -23,8 +23,11 @@
 #[cfg(test)]
 mod test;
 
+use crate::nfa::Tnfa;
 use crate::parsing_spec::ParsingSpec;
+use crate::regex::Regex;
 use crate::search::SearchString;
+use crate::search::SymbolicChar;
 use crate::search::decompose::memo::Memo;
 
 /// Which ends of the rule's match the piece pins.
@@ -69,6 +72,15 @@ impl Pinned {
 	}
 }
 
+/// Which side of a rendered value a padding wildcard sits on; see [`RunFitCache::has_slack`].
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum Side {
+	/// Text the rule emits before the value.
+	Before,
+	/// Text the rule emits after the value.
+	After,
+}
+
 /// A memoized answer for one `(name, query)` pair, on the same cache as [`matches_piece`].
 ///
 /// The query string is the cache key: escaped literals and wildcard-bearing
@@ -76,6 +88,8 @@ impl Pinned {
 #[derive(Clone, Debug, Default)]
 pub struct RunFitCache {
 	matched: Memo<(Box<str>, Box<str>), bool>,
+	/// [`RunFitCache::has_slack`], keyed by `(name, value as rendered, side)`.
+	slack: Memo<(Box<str>, Box<str>, Side), bool>,
 }
 
 impl RunFitCache {
@@ -111,6 +125,62 @@ impl RunFitCache {
 		self.get(spec, name, &pinned.wrap(piece))
 	}
 
+	/// Whether some match of the rule(s) named `name` is `value` with at least one more
+	/// character on `side`: i.e. whether `L(rule)` meets `L(.+ value)` (or `L(value .+)`).
+	///
+	/// This decides whether a padding `*` on that side of a reported capture can be dropped.
+	/// `L(*v) = L(v) | L(.+ v)`, so if the rule has no match in `L(.+ v)`,
+	/// then `L(rule) & L(*v) = L(rule) & L(v)`, and reporting `v` loses nothing.
+	/// The converse need not hold -- a match in `L(.+ v)` may also lie in `L(v)`
+	/// (rule `aa`, `v = a*`) -- so a `true` keeps a `*` that was not strictly needed:
+	/// conservative, never unsound.
+	///
+	/// It cannot be asked as a glob query through [`Self::matches_query`]:
+	/// that decides only whether `L(rule) & L(*v)` is non-empty,
+	/// which says nothing about whether the `*` is used.
+	/// With rule `a|ba` and `v = a*`, `a*` is satisfiable, yet `ba` is a match `a*` would drop.
+	/// So it is a direct intersection of the rule's automaton with `.+ v`,
+	/// built from the same primitives the engine uses.
+	///
+	/// An unresolved name is answered `true`, keeping the padding.
+	#[must_use]
+	pub fn has_slack(
+		&self,
+		spec: &ParsingSpec,
+		name: &str,
+		value: &[SymbolicChar],
+		side: Side,
+	) -> bool {
+		let rendered: String = String::from_iter(value.iter().map(ToString::to_string));
+		let key: (Box<str>, Box<str>, Side) = (Box::from(name), Box::from(rendered), side);
+		self.slack.get_or_insert_with(&key, || {
+			let rows = spec.rules_for_name(name);
+			if rows.is_empty() {
+				return true;
+			}
+
+			let more: [Regex; 2] = [
+				Regex::AnyChar,
+				Regex::KleeneClosure(Box::new(Regex::AnyChar)),
+			];
+			let mut items: Vec<Regex> = Vec::with_capacity(value.len() + 2);
+			if Side::Before == side {
+				items.extend(more.iter().cloned());
+			}
+			items.extend(value.iter().map(SymbolicChar::to_regex));
+			if Side::After == side {
+				items.extend(more.iter().cloned());
+			}
+			let pattern: Tnfa = Tnfa::for_regex(&Regex::Sequence(items));
+
+			rows.iter().any(|&(info, regex)| {
+				Tnfa::for_single_rule(info.root_idx, regex, &[])
+					.intersect::<false>(&pattern)
+					.can_accept()
+			})
+		})
+	}
+
 	/// The memoized answer for `(name, query)`, computing on a miss.
 	fn get(&self, spec: &ParsingSpec, name: &str, query: &str) -> bool {
 		let key: (Box<str>, Box<str>) = (Box::from(name), Box::from(query));
@@ -129,10 +199,11 @@ impl RunFitCache {
 
 	#[must_use]
 	pub fn is_empty(&self) -> bool {
-		self.matched.is_empty()
+		self.matched.is_empty() && self.slack.is_empty()
 	}
 
 	pub fn clear(&self) {
 		self.matched.clear();
+		self.slack.clear();
 	}
 }

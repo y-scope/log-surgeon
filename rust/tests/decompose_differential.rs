@@ -9,6 +9,9 @@
 //!   so filtering can never drop a real result.
 //!   This is the property the search path depends on.
 //! - **Transparency**: the public entry point must return exactly what the engine alone would.
+//! - **No tighter than the engine**: where both report the same decomposition,
+//!   every capture value composition reports must glob-contain the engine's,
+//!   so tightening a capture's padding never drops a match.
 //! - **Satisfiability**: a static sub-query's value must actually be matchable by the shape's
 //!   static text.
 //!   This is checked separately because the structural comparison strips wildcards,
@@ -196,8 +199,9 @@ fn fixed_text(value: &str) -> String {
 /// Renders an interpretation as its *structure*: which rules are constrained, by which characters.
 ///
 /// Wildcards are stripped from every value,
-/// so a capture the engine tightens to `INFO*` and one composition leaves as `*INFO*`
-/// compare equal.
+/// so a value the engine reports more tightly than composition does
+/// (e.g. a nullable rule the engine pins to empty, which composition leaves as `*`)
+/// compares equal.
 /// Both describe the same decomposition --
 /// the same rule instance holding the same characters --
 /// and differ only in how precisely the value's interior is pinned down.
@@ -315,6 +319,36 @@ fn decompose_never_drops_a_match() {
 				differing += 1;
 			}
 
+			// Never *tighter* than the engine: composition tightens a capture's padding
+			// to what the rule can use, and over-tightening would silently drop matches.
+			// So wherever the two agree on structure, each capture value composition reports
+			// must cover (glob-contain) the engine's.
+			for engine in expected.iter() {
+				for composed in actual.iter() {
+					if structure_of(engine) != structure_of(composed) {
+						continue;
+					}
+					let engine_captures = engine
+						.leaf_queries
+						.iter()
+						.filter(|leaf_query| !leaf_query.is_static_text());
+					let composed_captures = composed
+						.leaf_queries
+						.iter()
+						.filter(|leaf_query| !leaf_query.is_static_text());
+					for (theirs, ours) in std::iter::zip(engine_captures, composed_captures) {
+						assert!(
+							glob_contains(&ours.string_value, &theirs.string_value),
+							"composition is tighter than the engine: shape={shape:?} \
+							 query={query_text:?} capture {} engine={:?} composed={:?}",
+							ours.fully_qualified_name,
+							theirs.string_value,
+							ours.string_value
+						);
+					}
+				}
+			}
+
 			// Soundness of the prefilter: rejecting must never discard a real match.
 			let model: ShapeModel = ShapeModel::new(&spec, shape);
 			if can_match(&model, query.as_slice()) {
@@ -344,6 +378,21 @@ fn decompose_never_drops_a_match() {
 		0 < engine_matched,
 		"expected some (query, shape) pair to match"
 	);
+}
+
+/// Whether every string the glob `specific` matches is also matched by `general`.
+///
+/// Containment for `*`-only globs: `general` must match `specific` with each `*` of
+/// `specific` read as one fresh symbol that only a `*` of `general` can consume.
+/// Values here contain no escapes (the test alphabet has no `*` or `\\` literals).
+fn glob_contains(general: &str, specific: &str) -> bool {
+	const FRESH: char = '\u{0}';
+	let pattern: Vec<char> = general.chars().collect::<Vec<_>>();
+	let text: Vec<char> = specific
+		.chars()
+		.map(|c| if '*' == c { FRESH } else { c })
+		.collect::<Vec<_>>();
+	glob_matches(&pattern, &text)
 }
 
 /// Whether the glob `pattern` (in which `*` matches any run of characters) matches `text` entirely.

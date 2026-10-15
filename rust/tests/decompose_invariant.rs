@@ -104,7 +104,8 @@ fn invariant_holds_on_corpus() {
 				shapes_with_output += 1;
 			}
 			for composition in compositions.iter() {
-				let interpretation = composition.to_interpretation(&model, &decomposed);
+				let interpretation =
+					composition.to_interpretation(&spec, &model, &decomposed, &fits);
 				assert_eq!(
 					expected,
 					runs_accounted_for(&interpretation),

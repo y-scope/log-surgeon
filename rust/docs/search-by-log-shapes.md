@@ -415,6 +415,17 @@ this is `symbolic_value_of`'s `padding` parameter:
     so it is padded wherever the query permits:
     suppressed where the run continues into a neighbouring part,
     and where the query anchors the run to that end of the message.
+    The padding is then **tightened** to what the rule can use (`tighten_capture`):
+    a leading `*` on `*v` is dropped when no match of the rule is `v` with text in front,
+    decided by `RunFitCache::has_slack` as an automaton intersection of the rule with
+    `.+ v`; the trailing `*` likewise, with `v .+`.
+    So `*INFO*` against `INFO|WARN|ERROR` reports `INFO`, and against `0x[0-9a-f]+`,
+    `*0xff*` reports `0xff*`, as the engine does.
+    This cannot be asked as a glob query (`matches_query`): that only tests whether
+    `L(rule)` meets `L(v*)`, not whether the `*` of `*v` is used --
+    rule `a|ba` has `a*` satisfiable, yet `ba` needs the leading `*` of `*a`.
+    Only the ends of a value are tightened; interior wildcards are run boundaries
+    the query demands, and a vacuous capture (`*` alone) is left marking its position.
 - **Static text** is reproduced verbatim,
     so its value must glob-match the part's text *exactly*.
     Padding is decided by the piece offsets recorded in `Placement` --
@@ -690,6 +701,12 @@ The properties the implementation must preserve, and where they are pinned:
     Pinned by `static_leaf_query_values_are_satisfiable` --
     the structural comparison cannot see this,
     because stripping wildcards is blind to where they sit.
+- **Never tighter than the engine.**
+    Tightening a capture's padding must not drop a match:
+    wherever composition and the engine report the same decomposition,
+    every capture value composition reports must glob-contain the engine's.
+    Pinned in `decompose_never_drops_a_match`;
+    removing `tighten_capture`'s slack check makes it fail at once.
 - **Support.**
     A shape either is supported -- every variable defined and leaf --
     or the call fails up front.
@@ -747,6 +764,15 @@ With `Q` = query length, `R` = number of runs, `P` = shape parts, `L` = shape li
 - **Padding merges are looser than the group they replace.**
     See [Rendering](#rendering); sound, but a merged static value can admit strings
     that no single placement does.
+- **Some values stay looser than the engine's.**
+    After capture tightening, the differential sweep still finds 33 of 10488 pairs
+    where the engine is strictly tighter, in two classes:
+    a nullable rule an anchored query forces to emit nothing
+    (`INFO*` against `%optional.pad%%word%`: the engine reports `optional.pad=`,
+    composition the vacuous `*`), 30 pairs;
+    and static text, where the padding merge and interior wildcards make composition
+    looser (`*aa*` against `aaa`: `'*aa*'` versus `'*aa'`, `'aa*'`), 3 pairs.
+    Both are sound.
 - **An ambiguous variable name is attributed to its first alternative.**
     The reported name is right, but which rule accepted the value is not recorded;
     see [Ambiguous Names](#ambiguous-names).
