@@ -22,11 +22,19 @@ users should see the [parsing specification][parsing-spec] for user-facing conce
 ### Index
 - Public API
 - Query Semantics
+    - Anchoring
+    - Empty captures
 - Architecture
 - Shape Models
     - Ambiguous Names
+    - Supported Shapes
+    - Rule matching
 - Tier 1: Rejection
 - Tier 2: Composition
+    - Placement
+    - Composition
+    - Rendering
+    - Budgets
 - Tier 3: The Engine
     - Covering
 - Shape Truncation

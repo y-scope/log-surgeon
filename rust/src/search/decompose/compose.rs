@@ -254,8 +254,11 @@ impl Composition {
 			.map_or(model.parts.len(), |part| part + 1)
 	}
 
-	/// The last part a run *lands in*, for rendering: straddling runs
-	/// attribute text there. `None` on an empty composition.
+	/// The last part any run puts text in. `None` on an empty composition.
+	///
+	/// This includes where a straddling run *ends*: [`build_composition`] records a
+	/// capture or literal for every part a placement has a piece in,
+	/// so the parts here are exactly the parts with pieces.
 	fn last_constrained(&self) -> Option<usize> {
 		self.captures
 			.iter()
@@ -264,26 +267,9 @@ impl Composition {
 			.max()
 	}
 
-	/// The last part holding *pieces*, which a straddling run can put past
-	/// `last_constrained`: it names where the run ends, which must not be dropped.
-	fn last_attributed(&self) -> Option<usize> {
-		self.captures
-			.iter()
-			.filter(|capture| !capture.pieces.is_empty())
-			.map(|capture| capture.part)
-			.chain(
-				self.literals
-					.iter()
-					.filter(|literal| !literal.pieces.is_empty())
-					.map(|literal| literal.part),
-			)
-			.max()
-	}
-
 	/// The shape parts that contribute a sub-query, with their rendered values.
 	///
-	/// Only parts up to the last *straddled* one are rendered
-	/// (`last_attributed`, which a straddling run can put past `last_constrained`):
+	/// Only parts up to `last_constrained` are rendered:
 	/// variables past that are unconstrained and omitted,
 	/// and static text past that is what the caller's tail rule stands for --
 	/// see [`crate::search::Tail`].
@@ -294,17 +280,12 @@ impl Composition {
 		let Some(last_constrained) = self.last_constrained() else {
 			return Vec::new();
 		};
-		// A run *lands in* the last part it touches; `last_constrained` is the part
-		// past which nothing is still constrained. A straddling run can put the last
-		// part with *text* past it,
-		// so the window runs up to either.
-		let window_end: usize = last_constrained.max(self.last_attributed().expect("constrained"));
 
 		let pieces_by_part: BTreeMap<usize, &[PieceRef]> = (0..model.parts.len())
 			.map(|part| (part, self.pieces_for(part)))
 			.collect();
 
-		let emitted: Vec<usize> = (0..=window_end).collect();
+		let emitted: Vec<usize> = (0..=last_constrained).collect();
 
 		// The run touching the character just before each emitted part,
 		// and the one just after: from one forward pass and one reverse pass respectively.
@@ -567,9 +548,9 @@ pub enum Composed {
 /// admits each run separately need not admit them together. Verification lives here,
 /// rather than in the caller, so that an infeasible composition cannot escape.
 ///
-/// `anchored_end` is [`crate::search::SearchString::anchored_end`] for the query the runs
-/// came from. It is passed separately because the runs alone cannot tell the empty query,
-/// which is anchored, from `*`, which is not: neither has any runs.
+/// End-anchoring is read from `query` rather than from the runs,
+/// because the runs alone cannot tell the empty query, which is anchored,
+/// from `*`, which is not: neither has any runs.
 #[must_use]
 pub fn compose(
 	spec: &ParsingSpec,
