@@ -35,7 +35,11 @@ pub struct Parser {
 	pub spec: Arc<ParsingSpec>,
 	lexer: Lexer,
 	current_log: WorkingLogEvent,
-	maybe_pending_header: Option<WorkingLogEvent>,
+
+	// We don't use an `Option<WorkingLogEvent>` since
+	// we want to reuse the underlying memory of `pending_header` through resets.
+	seen_header: bool,
+	pending_header: WorkingLogEvent,
 	dfa_execution: TdfaExecution,
 }
 
@@ -68,7 +72,8 @@ impl Parser {
 			spec,
 			lexer,
 			current_log: WorkingLogEvent::new(),
-			maybe_pending_header: None,
+			seen_header: false,
+			pending_header: WorkingLogEvent::new(),
 			dfa_execution,
 		}
 	}
@@ -88,13 +93,8 @@ impl Parser {
 
 		let pos_after_header: usize = *pos;
 
-		self.current_log.clear();
-
-		let mut have_header: bool = false;
-		if let Some(header) = &mut self.maybe_pending_header {
-			std::mem::swap(header, &mut self.current_log);
-			have_header = true;
-		}
+		std::mem::swap(&mut self.current_log, &mut self.pending_header);
+		self.pending_header.clear();
 
 		let header_len: usize = self.current_log.message.len();
 
@@ -158,15 +158,12 @@ impl Parser {
 					}
 
 					if &*rule.name == "header" && previous_was_newline {
-						if have_header {
-							let pending_header: &mut WorkingLogEvent = self
-								.maybe_pending_header
-								.get_or_insert_with(WorkingLogEvent::new);
-							assert_eq!(pending_header.message.len(), 0);
-							assert_eq!(pending_header.all_matches.len(), 0);
-							assert_eq!(pending_header.root_indices.len(), 0);
-							assert_eq!(pending_header.leaf_indices.len(), 0);
-							pending_header.message.push_str(lexeme);
+						if self.seen_header {
+							assert_eq!(self.pending_header.message.len(), 0);
+							assert_eq!(self.pending_header.all_matches.len(), 0);
+							assert_eq!(self.pending_header.root_indices.len(), 0);
+							assert_eq!(self.pending_header.leaf_indices.len(), 0);
+							self.pending_header.message.push_str(lexeme);
 							for mut capture in self
 								.current_log
 								.all_matches
@@ -175,7 +172,7 @@ impl Parser {
 								capture.range.start -= token_start;
 								capture.range.end -= token_start;
 								capture.parent_index -= token_starting_capture_count;
-								pending_header.all_matches.push(capture);
+								self.pending_header.all_matches.push(capture);
 							}
 							for mut index in self
 								.current_log
@@ -183,18 +180,18 @@ impl Parser {
 								.drain(token_starting_leaf_indices..)
 							{
 								index -= token_starting_capture_count;
-								pending_header.leaf_indices.push(index);
+								self.pending_header.leaf_indices.push(index);
 							}
 							self.current_log.root_indices.pop().unwrap();
-							pending_header.root_indices.push(0);
+							self.pending_header.root_indices.push(0);
 							break pos_before_token;
 						} else if token_start == 0 {
-							have_header = true;
+							self.seen_header = true;
 						}
 					}
 				},
 				Token::Newline => {
-					if !have_header {
+					if !self.seen_header {
 						break *pos;
 					}
 					previous_was_newline = true;
@@ -247,9 +244,8 @@ impl Parser {
 	/// used when "refilling" the input buffer.
 	pub fn reset(&mut self) {
 		self.current_log.clear();
-		if let Some(pending_header) = &mut self.maybe_pending_header {
-			pending_header.clear();
-		}
+		self.seen_header = false;
+		self.pending_header.clear();
 	}
 }
 
