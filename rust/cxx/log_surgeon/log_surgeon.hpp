@@ -223,8 +223,8 @@ public:
      * Get the next log event, as a handle.
      * Conceptually, `pos` is the current position/offset to parse the next event;
      * specifically, it's passed as a pointer so log surgeon advances it before returning.
-	 *
-	 * The data of the current log event is invalidated after the next call to `next_event()`.
+     *
+     * The data of the current log event is invalidated after the next call to `next_event()`.
      *
      * @param input A view of the entire input text.
      * @param pos Pointer to an offset value in the text.

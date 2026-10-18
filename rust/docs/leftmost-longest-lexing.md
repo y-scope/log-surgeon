@@ -16,6 +16,7 @@ the plan for implementing it, and the results.
 - Chosen Design
 - Plan
 - Implementation Results
+- Design B: Split DFAs with Prefilters
 - Open Decisions
 - Appendix: Running the Probes Safely
 
@@ -304,12 +305,125 @@ A toy spec showed the same effect at small table sizes
 at spec4's 845 KB transition table the per-byte lookups cost more.
 spec3 has many unanchored rules with wide first sets, and averages ~3 live threads.
 
-Options for closing the gap, not yet attempted:
+Options for closing the gap:
 
 - Design B (split anchored/unanchored DFAs), with a prefilter for the unanchored part,
     e.g. a SIMD byte-set scan for the first characters of the unanchored rules.
+    Planned in detail below.
 - For fully anchored specs, a SIMD scan to the next delimiter in the gap loop.
+    Subsumed by B (its delimiter scan runs regardless).
 - Anchoring rules in the spec itself (D), which also fixes precision.
+
+### Design B: Split DFAs with Prefilters
+Status: design, not implemented. Target: the spec4 regression (2.71 s vs. 1.71 s).
+
+The semantics are unchanged: earliest start, then longest, then priority.
+Only the way candidates are found changes.
+The combined-DFA `execute_leftmost` from design A stays as the reference implementation
+and as the fallback.
+
+#### Observation
+A root rule either begins with `^` (start-anchored) or not.
+A start-anchored rule can only begin at a *boundary*:
+`pos` itself when `char_before` is a delimiter, or the position right after a delimiter.
+Finding boundaries is a byte scan over the delimiter set, which SIMD does 16-32 bytes at a time.
+An unanchored rule can begin anywhere, but only at a byte in its *first-byte set*
+(the first byte of every character its first transition accepts).
+For spec4 that set is `{'@'}`; finding the next `@` is again a SIMD byte scan.
+So in a typical gap neither DFA needs to run at all until a scan stops.
+
+#### Split
+`ParsingSpec` builds two `FlattenedDfa`s instead of one, from two subsets of `rules`:
+
+- `anchored_dfa`: rules with `anchor_before`.
+- `unanchored_dfa`: the rest (possibly empty; then nothing below applies to it).
+
+Both are built with `Tdfa::for_rules` on the subset and keep the original `RuleIdx`
+(the index is stored in the NFA accepting data, so a subset is fine).
+Both are cached in the spec file; the combined DFA is no longer stored.
+`spec3.cached.txt`/`spec4.cached.txt` must be regenerated (see the appendix).
+
+Derived at spec build time, per spec:
+
+- `delimiter_bytes`: the ASCII delimiters plus the lead bytes of non-ASCII delimiters.
+    A boundary scan stops at these; a lead-byte stop is confirmed by decoding.
+- `unanchored_first_bytes`: for the unanchored DFA, every byte `b` with `row0[b] != 0`
+    in the ASCII table, plus the lead bytes of any non-ASCII first characters.
+    The implied `\n` start matters only for rules beginning with `\n` and is covered,
+    since `\n` is then in the set.
+- `unanchored_scan: Option<ByteSet>`: `Some` when the set is small
+    (threshold to be measured; a 16-entry nibble table handles any set, so "small" is about
+    how often the scan stops rather than how many bytes it holds).
+    `None` means "run the general algorithm from `pos`" (step 3 below).
+
+#### Search (one `next_token` step)
+Given `pos` and `char_before`, within the newline-bounded window `[pos, nl + 1]`
+(`nl` the first `'\n'` at or after `pos`, or end of input):
+
+1. **Boundary scan.** Find `d`, the first delimiter at or after `pos`.
+    The first boundary is `pos` if `char_before` is a delimiter, else `d + width(d)`.
+2. **Unanchored candidate.** If `unanchored_scan` is `Some`, scan `[pos, first boundary]`
+    for a byte in `unanchored_first_bytes`.
+    Each hit `s` is a start for the unanchored DFA, which runs single-threaded from `s`
+    with `execute(input[s..], char_before(s))` (the plain longest-match loop, no threads).
+    The first `s` that accepts is the unanchored candidate; stop scanning.
+    If `unanchored_scan` is `None`, run `execute_leftmost` on the unanchored DFA
+    from `pos`, bounded as today, to get the candidate (or none).
+3. **Anchored candidate.** At the first boundary `b` (if `b <= nl + 1`),
+    run the anchored DFA single-threaded from `b`.
+4. **Reconcile.** Earlier start wins; same start: longer, then smaller `RuleIdx`.
+    If neither matched, advance: the next boundary is after the next delimiter,
+    and step 2 scans the next segment `(b, next boundary]`.
+    The anchored DFA never needs to run twice from the same position.
+5. Nothing in the window: the rest of the line is static text, as today.
+
+Step 2 must scan each segment *before* step 3 commits to a later anchored start,
+and must include the boundary position itself (an unanchored rule may also start there).
+The unanchored candidate found in step 2 may begin before the boundary,
+in which case step 3 is skipped for that boundary.
+
+The unanchored DFA started at a scan hit `s` is a single-threaded `execute`:
+leftmost is guaranteed by scanning in order and stopping at the first hit that accepts,
+longest and priority by `execute` itself.
+A hit that does not accept costs one failed `execute` (usually a few bytes);
+`@` in spec4 is rare enough that this is negligible,
+but a wide set with frequent non-accepting hits is exactly the case for the `None` fallback.
+
+#### SIMD byte-set scan
+With the `wide` crate (`u8x16`/`u8x32`, portable, no `unsafe`):
+
+- Load 16/32 bytes; for a set of up to ~4 bytes OR together `simd_eq(splat(b))` per byte.
+- For larger sets, the nibble-table method:
+    `lo = shuffle_zeroing(table_lo, input & 0x0F)`, `hi = shuffle_zeroing(table_hi, input >> 4)`,
+    `hit = (lo & hi) != 0`, where each 16-entry table holds bitmasks such that
+    a byte is in the set iff its low-nibble and high-nibble entries share a bit.
+    This supports any set, using 8 "classes" of high nibbles; for byte sets that need more
+    (rare; e.g. an arbitrary scatter across all 16 high nibbles) use two table pairs.
+- `to_bitmask()` then `trailing_zeros()` gives the first hit's offset.
+- Tail of fewer than 16 bytes: scalar loop (or copy into a zeroed buffer).
+
+The delimiter scan and the `\n` lookup use the same routine (with `\n` in the delimiter set,
+the first scan hit tells us both `d` and whether it is the newline).
+
+#### Expected effect
+spec4: `@` occurs in a small fraction of events;
+the anchored DFA runs once per boundary as in the old engine;
+the two scans touch each byte once or twice with 16-32 bytes per instruction.
+Expected to land near the old 1.71 s.
+spec3: many unanchored rules with wide first sets will take the `None` fallback,
+so the unanchored DFA runs `execute_leftmost` as today, but on a smaller table,
+and the anchored rules no longer spawn threads. A modest gain at best;
+not the target.
+
+#### Plan
+1. Byte-set scan utility (`src/simd.rs` or similar) with scalar reference and tests.
+2. Rule partition and two DFAs in `ParsingSpecBuilder::build`; cache format;
+    regenerate `spec4.cached.txt` (then `spec3.cached.txt`), one at a time under a cap.
+3. `Lexer`: the search loop above; keep the gap/pending/newline chunking.
+4. Tests: differential against `execute_leftmost` on the combined DFA
+    (built in the test from the same rules) over random inputs;
+    `tests/local_spec4` must remain byte-identical.
+5. Perf on spec4; tune the `None` threshold with a toy spec.
 
 ### Open Decisions
 - **Default anchoring (D).**
