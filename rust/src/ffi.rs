@@ -40,6 +40,9 @@ impl<T: PartialOrd> PartialOrd for CArray<'_, T> {
 	}
 }
 
+/// A C char/byte array.
+/// In C, signedness of `char` is not guaranteed (but on x86 systems often signed),
+/// and as a byte array is not necessarily valid UTF-8.
 pub type CCharArray<'lifetime> = CArray<'lifetime, c_char>;
 
 /// A rust `&str` accessible in FFI;
@@ -97,7 +100,9 @@ unsafe impl<T> Send for UncheckedCArray<T> {}
 unsafe impl<T> Sync for UncheckedCArray<T> {}
 
 impl<'lifetime, T> CArray<'lifetime, T> {
-	pub const fn null() -> Self {
+	/// A "dangling", empty array.
+	/// As a Rust slice, the pointer must be non-null.
+	pub const fn dangling() -> Self {
 		Self {
 			pointer: NonNull::dangling().as_ptr(),
 			length: 0,
@@ -155,7 +160,7 @@ impl<'lifetime> CCharArray<'lifetime> {
 }
 
 impl<T> UncheckedCArray<T> {
-	pub const NULL: Self = Self {
+	pub const EMPTY: Self = Self {
 		pointer: NonNull::dangling().as_ptr(),
 		length: 0,
 	};
@@ -180,7 +185,8 @@ impl UncheckedCArray<c_char> {
 }
 
 impl<'lifetime> CUtf8<'lifetime> {
-	pub const NULL: Self = Self {
+	/// See [`CArray::dangling`].
+	pub const EMPTY: Self = Self {
 		pointer: NonNull::dangling().as_ptr(),
 		length: 0,
 		_lifetime: PhantomData,

@@ -126,13 +126,13 @@ impl<'parser> LogEvent<'parser> {
 	/// Blank `LogEvent`; default value required for C FFI.
 	pub const BLANK: Self = Self {
 		spec: &crate::parsing_spec::BLANK,
-		message: CUtf8::NULL,
-		all_matches: CArray::null(),
-		leaf_indices: CArray::null(),
-		root_indices: CArray::null(),
+		message: CUtf8::EMPTY,
+		all_matches: CArray::dangling(),
+		leaf_indices: CArray::dangling(),
+		root_indices: CArray::dangling(),
 	};
 
-	/// Check the ordering for [`LogEvent::all_matches`].
+	/// See the ordering for [`LogEvent::all_matches`].
 	pub fn check_invariants(&self) {
 		assert!(self.all_matches.is_sorted_by(|lhs, rhs| {
 			lhs.range
@@ -178,8 +178,8 @@ impl Match {
 impl MatchFfiPointers {
 	pub const NULL: Self = Self {
 		parent: std::ptr::null(),
-		lexeme: UncheckedCArray::NULL,
-		rule_name: UncheckedCArray::NULL,
-		fully_qualified_name: UncheckedCArray::NULL,
+		lexeme: UncheckedCArray::EMPTY,
+		rule_name: UncheckedCArray::EMPTY,
+		fully_qualified_name: UncheckedCArray::EMPTY,
 	};
 }

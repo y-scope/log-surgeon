@@ -274,11 +274,7 @@ mod search {
 
 	#[unsafe(no_mangle)]
 	extern "C" fn log_surgeon_search_leaf_query_get_name(leaf_query: &LeafQuery) -> CCharArray<'_> {
-		if !leaf_query.fully_qualified_name.is_empty() {
-			CCharArray::from_utf8(&leaf_query.fully_qualified_name)
-		} else {
-			CCharArray::null()
-		}
+		CCharArray::from_utf8(&leaf_query.fully_qualified_name)
 	}
 
 	#[unsafe(no_mangle)]
