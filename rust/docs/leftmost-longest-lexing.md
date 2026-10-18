@@ -393,7 +393,65 @@ Bug found and fixed along the way: a delimiter byte that is also an unanchored
 first byte must probe both the position after it and the position itself
 (caught by `tests/local_spec4`: `ServletHandler@<hex>` lost its `javaHash` match).
 
-### Open Decisions### Open Decisions
+#### Measured byte sets and counts
+(spec4/spec3 over 98 rules each, 31 ASCII delimiters,
+`hadoop-reservoir-700k-seed42.log`, 194 MB, 1.3M newlines, 700k events;
+scan-set sizes here count bytes, non-ASCII via lead bytes.)
+
+| | spec4 | spec3 |
+|---|---|---|
+| rules without `^` | 1 (`javaHash`) | 82 |
+| unanchored first-byte set | `{'@'}` | 69 bytes: `-./0-9<@A-Z[_a-z` |
+| scan path | fused (exact) | fallback (`execute_leftmost`) |
+| delimiter hits | 14,658,814 | n/a |
+| non-delimiter first-byte hits | 0 (every `@` is itself a delimiter) | n/a |
+| multi-byte lead-byte hits | 0 | n/a |
+| `execute` probes | 16,134,766 (= 14.7M boundaries + pos probes + at-hit probes) | n/a |
+| accepts | 6,502,869 | n/a |
+
+Two observations:
+
+- `@` occurs somewhere in only 642 of 700k events, so the first-byte side of the
+    fused scan never fires on its own; every `javaHash` match comes through the
+    delimiter-hit arm, via the dual-probe fix below.
+- spec3's unanchored rules start on nearly half of all bytes;
+    the prefilter would stop at most positions, so it falls back instead.
+    The `<= 64` cut-off is what puts spec3 on the fallback path.
+
+#### Walkthrough: a delimiter byte that is also an unanchored first byte
+A real `local_spec4` failure, from the 2026-10-18 design-B draft.
+The event text contains `Container ServletHandler@456d6c1e + safety as filter`.
+Relevant spec4 rules (priority order):
+
+- `objectHash (0)`: a long `^[hex]{2,}$`-style rule (hex words at a boundary);
+- `javaHash (0)`: `@(?<javaHash>[0-9a-fA-F]+)$` (unanchored: starts on `@` itself);
+- `@` is one of the 31 delimiters.
+
+Leftmost-longest for this stretch expects `ServletHandler@456d6c1e` to match
+`javaHash` starting *at* the `@` (start position `p`), not `objectHash` at `p + 1`:
+equal priority, so earliest start wins, and the `@` start is earlier.
+
+Correct algorithm at that scan:
+
+1. Scan from the current position. The `@` is a scan hit (it is in both sets).
+2. Hit classification asks first: ASCII delimiter? Yes.
+    Because `unanchored_scan.contains('@')` too, **probe `p` itself**:
+    `execute(&input[p..], 'r')` -- the lookbehind `r` is not a delimiter,
+    so `^`-anchored rules die at once, javaHash's unanchored lookbehind passes,
+    and the DFA consumes `@456d6c1e`, then `$` lookahead sees the space.
+    Match: `(p, p + 9, javaHash)`. This is the answer; return it.
+3. (If step 2 had failed, the algorithm would probe the boundary `p + 1`
+    next -- where `objectHash` would have matched `456d6c1e` --
+    and only then continue scanning.)
+
+The buggy draft skipped step 2:
+it classified the hit as a delimiter, probed only `p + 1`,
+and returned `objectHash` starting one byte later.
+Any rule whose first byte is a delimiter byte hits this case;
+in specs like spec4 (where `@` is both) it is the *only* way `javaHash` can match,
+since the fused scan otherwise never reports a non-delimiter first-byte hit.
+
+### Open Decisions
 - **Default anchoring (D).**
     With leftmost-longest, an unanchored rule means "find anywhere", which is rarely wanted
     and is the only source of extra cost.

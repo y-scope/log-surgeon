@@ -18,8 +18,6 @@ mod test;
 
 use wide::u8x16;
 
-/// The number of high-nibble classes (bits per table entry) in [`ByteSet::Nibbles`].
-pub const NUM_CLASSES: usize = 8;
 /// The largest number of bytes compared individually in [`ByteSet::Eq`].
 const MAX_EQ_VALUES: usize = 4;
 
