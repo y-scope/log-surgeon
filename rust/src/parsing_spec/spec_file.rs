@@ -67,9 +67,9 @@ impl ParsingSpec {
 			format!("{} ({}): \"{pattern}\"", rule.name, rule.priority)
 		}))
 		.chain(std::iter::once(String::new()))
-		.chain(std::iter::once(format!("===")))
+		.chain(std::iter::once(String::from("===")))
 		.chain(std::iter::once(
-			serde_json::to_string_pretty(&self.dfa_for_parsing).unwrap(),
+			serde_json::to_string_pretty(&self.combined_dfa).unwrap(),
 		))
 		.fold(String::new(), |mut accumulated, line| {
 			accumulated.push_str(&line);

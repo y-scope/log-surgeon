@@ -7,6 +7,7 @@ extern crate serde;
 #[macro_use]
 pub mod utils;
 
+pub mod byte_scan;
 pub mod dfa;
 pub mod ffi;
 pub mod graph;

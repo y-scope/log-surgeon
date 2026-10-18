@@ -40,7 +40,7 @@ pub enum Token<'spec, 'input> {
 
 impl Lexer {
 	pub fn new(spec: Arc<ParsingSpec>) -> Self {
-		let scratch: LeftmostScratch = spec.dfa_for_parsing.leftmost_scratch();
+		let scratch: LeftmostScratch = spec.combined_dfa.leftmost_scratch();
 		Self {
 			spec,
 			scratch,
@@ -90,12 +90,7 @@ impl Lexer {
 		let char_before: u32 =
 			u32::from(Utf8Chars::new(&input[..start]).next_back().unwrap_or('\n'));
 
-		match self.spec.dfa_for_parsing.execute_leftmost(
-			input,
-			start,
-			char_before,
-			&mut self.scratch,
-		) {
+		match self.search(input, start, char_before) {
 			None => Self::static_text_token(input, pos, input.len()),
 			Some(m) if m.start == start => self.variable_token(input, pos, m, dfa_execution),
 			Some(m) => {
@@ -103,6 +98,117 @@ impl Lexer {
 				self.pending = Some(m);
 				Self::static_text_token(input, pos, m.start)
 			},
+		}
+	}
+
+	/// Leftmost-longest search for the next match at or after `pos`
+	/// (see `docs/leftmost-longest-lexing.md`, design B): one fused scan.
+	///
+	/// [`ParsingSpec::scan`] finds delimiters and (when
+	/// [`ParsingSpec::unanchored_scan`] is `Some`) first bytes of unanchored rules.
+	/// Start-anchored rules are attempted at boundaries only
+	/// (`pos` when `char_before` is a delimiter, else the position after each delimiter);
+	/// candidates are probed in ascending order with single-threaded `execute`,
+	/// which resolves longest match and priority per position.
+	/// With unanchored rules whose first-byte set is dense or inexact,
+	/// everything falls back to `execute_leftmost` over the combined DFA.
+	///
+	/// As in [`crate::dfa::FlattenedDfa::execute_leftmost`],
+	/// no match may start past the position just after the first `'\n'` at or after `pos`;
+	/// no match may start at end of input.
+	/// A match may still *span* newlines (the searches do not cut it off).
+	fn search(&mut self, input: &[u8], pos: usize, char_before: u32) -> Option<LeftmostMatch> {
+		let spec: &ParsingSpec = &self.spec;
+		if spec.unanchored_scan.is_none() && spec.has_unanchored_rules {
+			return spec
+				.combined_dfa
+				.execute_leftmost(input, pos, char_before, &mut self.scratch);
+		}
+
+		let attempt = |s: usize, before: u32| -> Option<LeftmostMatch> {
+			spec.combined_dfa
+				.execute(&input[s..], before)
+				.map(|m| LeftmostMatch {
+					rule_idx: m.rule_idx,
+					maybe_encoding_idx: m.maybe_encoding_idx,
+					start: s,
+					end: s + m.lexeme.len(),
+				})
+		};
+
+		// Boundary probe at `pos` itself.
+		if spec
+			.delimiters
+			.contains(char::from_u32(char_before).unwrap_or('\0'))
+			&& let Some(m) = attempt(pos, char_before)
+		{
+			return Some(m);
+		}
+
+		let mut last_probed: usize = pos; // boundary probes must not repeat a position
+		let mut i: usize = pos;
+		loop {
+			let hit: usize = spec.scan.find_in(&input[i..]).map(|rel| i + rel)?;
+			let byte: u8 = input[hit];
+
+			// Delimiter? Then the position after it is a boundary and is probed;
+			// a newline also ends the search window (nothing may start past it).
+			let maybe_delimiter_len: Option<usize> = if byte < 0x80 {
+				spec.is_ascii_delimiter[usize::from(byte)].then_some(1)
+			} else {
+				// Maybe the lead byte of a multi-byte delimiter.
+				let (ch, len) = crate::utils::utf8::decode_scalar(&input[hit..]);
+				spec.delimiters.contains(ch).then_some(len)
+			};
+
+			match maybe_delimiter_len {
+				Some(len) => {
+					// A delimiter byte may also start an unanchored rule (e.g. `@...`);
+					// probe the delimiter position first (it starts earlier).
+					if spec
+						.unanchored_scan
+						.as_ref()
+						.is_some_and(|scan| scan.contains(byte))
+					{
+						let before: u32 =
+							u32::from(Utf8Chars::new(&input[..hit]).next_back().unwrap_or('\n'));
+						if let Some(m) = attempt(hit, before) {
+							return Some(m);
+						}
+					}
+					let boundary: usize = hit + len;
+					if boundary < input.len() && boundary != last_probed {
+						last_probed = boundary;
+						// The position after the delimiter is a boundary
+						// (the delimiter is the lookbehind).
+						let before: u32 = if len == 1 {
+							u32::from(byte)
+						} else {
+							crate::utils::utf8::decode_scalar(&input[hit..]).0 as u32
+						};
+						if let Some(m) = attempt(boundary, before) {
+							return Some(m);
+						}
+					}
+					if byte == b'\n' {
+						return None;
+					}
+				},
+				// A non-delimiter hit is a first byte of an unanchored rule.
+				None => {
+					debug_assert!(
+						spec.unanchored_scan
+							.as_ref()
+							.is_none_or(|s| s.contains(byte))
+					);
+					let before: u32 =
+						u32::from(Utf8Chars::new(&input[..hit]).next_back().unwrap_or('\n'));
+					if let Some(m) = attempt(hit, before) {
+						return Some(m);
+					}
+				},
+			}
+			i = hit + 1;
 		}
 	}
 

@@ -32,7 +32,7 @@ pub struct ParsingSpecBuilder {
 	placeholders: BTreeMap<String, Regex>,
 	encodings: Vec<Arc<Encoding>>,
 
-	/// Cached (canonicalized) DFA for [`ParsingSpec::dfa_for_parsing`].
+	/// Cached (canonicalized) DFA for [`ParsingSpec::combined_dfa`].
 	maybe_cached_dfa: Option<FlattenedDfa>,
 
 	delimiters: String,
@@ -56,7 +56,22 @@ pub struct ParsingSpec {
 	/// DFA used for lexing/parsing:
 	/// determine which root rule matched, without executing tags for matching sub-rules.
 	/// Should be constructed and executed with anchor/lookaround characters.
-	pub dfa_for_parsing: FlattenedDfa,
+	pub combined_dfa: FlattenedDfa,
+
+	/// Whether any rule lacks `^`.
+	pub has_unanchored_rules: bool,
+
+	/// Whether the byte is an ASCII delimiter (a delimiter character < 0x80).
+	pub is_ascii_delimiter: [bool; 0x80],
+
+	/// What the lexer scans for: ASCII delimiters, lead bytes of non-ASCII delimiters,
+	/// and (when exact, see [`unanchored_scan`]) the first bytes of unanchored rules.
+	pub scan: crate::byte_scan::ByteSet,
+	/// First-byte scan over the startable byte set of the *unanchored* rules
+	/// (the post-lookbehind states for a non-delimiter probe; see design B).
+	/// `None` (run [`FlattenedDfa::execute_leftmost`] over everything) when there are
+	/// unanchored rules but their set is inexact or too dense to be worthwhile.
+	pub unanchored_scan: Option<crate::byte_scan::ByteSet>,
 
 	/// Prefilter models for log-shape search, built on demand and shared across
 	/// [`Parser`]s created from this spec.
@@ -239,7 +254,6 @@ impl ParsingSpecBuilder {
 	}
 
 	pub fn set_cached_dfa(&mut self, cached: FlattenedDfa) -> &mut Self {
-		// cached.initialize_ascii_cache();
 		self.maybe_cached_dfa = Some(cached);
 		self
 	}
@@ -262,7 +276,9 @@ impl ParsingSpecBuilder {
 			}
 		}
 
-		let dfa_for_parsing: FlattenedDfa = self.maybe_cached_dfa.unwrap_or_else(|| {
+		let has_unanchored_rules: bool = rules.iter().any(|r| !r.regex.anchor_before);
+
+		let combined_dfa: FlattenedDfa = self.maybe_cached_dfa.unwrap_or_else(|| {
 			debug!("[dfa] determinizing main dfa for parsing...");
 			now!(t0);
 			let main_dfa: Tdfa = Tdfa::for_rules(&rules, &self.delimiters, &self.encodings);
@@ -284,12 +300,57 @@ impl ParsingSpecBuilder {
 			dfa_for_parsing
 		});
 
+		// The unanchored scan covers the bytes an unanchored rule may start with:
+		// the startable byte set after a *non-delimiter* lookbehind
+		// (`^`-anchored rules die on that lookbehind, so the set excludes them).
+		// It is only used if the nibble construction is exact and the set sparse
+		// (a scan stopping at most bytes loses to the general engine; 64 is a guess,
+		// to be tuned).
+		let probe: Option<u32> =
+			(0..0x80).find(|&b: &u32| !self.delimiters.contains(char::from_u32(b).unwrap()));
+		let unanchored_bytes: Option<Vec<u8>> = probe
+			.filter(|_| has_unanchored_rules)
+			.map(|probe| combined_dfa.initial_bytes(probe))
+			.filter(|bytes: &Vec<u8>| !bytes.is_empty() && bytes.len() <= 64);
+		let unanchored_scan: Option<crate::byte_scan::ByteSet> = unanchored_bytes
+			.map(crate::byte_scan::ByteSet::from_bytes)
+			.filter(crate::byte_scan::ByteSet::is_exact);
+		// ASCII delimiters directly; non-ASCII delimiters via their lead byte,
+		// with membership confirmed at scan-hit time (a superset is fine).
+		let mut is_ascii_delimiter: [bool; 0x80] = [false; 0x80];
+		for &byte in self.delimiters.as_bytes() {
+			if byte < 0x80 {
+				is_ascii_delimiter[usize::from(byte)] = true;
+			}
+		}
+		let unanchored_bytes: Vec<u8> = if unanchored_scan.is_some() {
+			combined_dfa.initial_bytes(probe.unwrap())
+		} else {
+			Vec::new()
+		};
+		let scan: crate::byte_scan::ByteSet = crate::byte_scan::ByteSet::from_bytes(
+			self.delimiters
+				.chars()
+				.map(|ch| {
+					if ch.is_ascii() {
+						ch as u8
+					} else {
+						crate::dfa::lead_byte_of(ch as u32, ch.len_utf8())
+					}
+				})
+				.chain(unanchored_bytes),
+		);
+
 		ParsingSpec {
 			rules,
 			placeholders: self.placeholders,
 			delimiters: self.delimiters,
 			encodings: self.encodings,
-			dfa_for_parsing,
+			combined_dfa,
+			has_unanchored_rules,
+			is_ascii_delimiter,
+			scan,
+			unanchored_scan,
 			shape_models: ShapeModelCache::new(),
 		}
 	}
@@ -310,7 +371,11 @@ pub static BLANK: ParsingSpec = ParsingSpec {
 	placeholders: BTreeMap::new(),
 	delimiters: String::new(),
 	encodings: Vec::new(),
-	dfa_for_parsing: FlattenedDfa::BLANK,
+	combined_dfa: FlattenedDfa::BLANK,
+	has_unanchored_rules: false,
+	is_ascii_delimiter: [false; 0x80],
+	scan: crate::byte_scan::ByteSet::Empty,
+	unanchored_scan: None,
 	shape_models: ShapeModelCache::new(),
 };
 

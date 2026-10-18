@@ -18,11 +18,14 @@ fn tokens_of(spec: &ParsingSpec, input: &str) -> Vec<String> {
 	loop {
 		match lexer.next_token(input.as_bytes(), &mut pos, &mut execution) {
 			Token::Variable { rule, lexeme, .. } => {
-				let rule_name: &str = rule.name.as_ref();
-				out.push(format!("V({rule_name}:{lexeme})"));
+				out.push(format!(
+					"V({}:{})",
+					rule.name.escape_default(),
+					lexeme.escape_default()
+				));
 			},
 			Token::Newline => out.push("NL".to_owned()),
-			Token::StaticText(text) => out.push(format!("S({text})")),
+			Token::StaticText(text) => out.push(format!("S({})", text.escape_default())),
 			Token::EndOfInput => {
 				out.push("END".to_owned());
 				break;
@@ -122,7 +125,7 @@ fn match_spanning_newline() {
 	};
 	assert_eq!(
 		tokens_of(&spec, "za\nbcd"),
-		vec!["S(z)", "V(t:a\nbcd)", "END"]
+		vec!["S(z)", "V(t:a\\nbcd)", "END"]
 	);
 }
 
@@ -138,10 +141,10 @@ fn utf8_gap_and_lookbehind() {
 	};
 	assert_eq!(
 		tokens_of(&spec, "\u{e9} \u{4e16}1"),
-		vec!["S(\u{e9} \u{4e16})", "V(n:1)", "END"]
+		vec!["S(\\u{e9} \\u{4e16})", "V(n:1)", "END"]
 	);
 	// `^x` may not match after a non-delimiter, even a multi-byte one.
-	assert_eq!(tokens_of(&spec, "\u{e9}x"), vec!["S(\u{e9}x)", "END"]);
+	assert_eq!(tokens_of(&spec, "\u{e9}x"), vec!["S(\\u{e9}x)", "END"]);
 }
 
 /// A spec with no rules lexes everything as static text.
@@ -152,4 +155,133 @@ fn empty_spec() {
 		tokens_of(&spec, "ab\ncd"),
 		vec!["S(ab)", "NL", "S(cd)", "END"]
 	);
+}
+
+/// Reference token stream: the pre-split engine, i.e. [`Lexer`] behaviour as if
+/// `ParsingSpec::unanchored_scan` were always `None` (the combined-DFA leftmost engine).
+fn reference_tokens_of(spec: &ParsingSpec, input: &str) -> Vec<String> {
+	let bytes: &[u8] = input.as_bytes();
+	let mut scratch: crate::dfa::LeftmostScratch = spec.combined_dfa.leftmost_scratch();
+	let mut pending: Option<crate::dfa::LeftmostMatch> = None;
+	let mut out: Vec<String> = Vec::new();
+	let mut pos: usize = 0;
+
+	let static_chunk =
+		|out: &mut Vec<String>, pos: &mut usize, end: usize| match input[*pos..end].find('\n') {
+			Some(0) => {
+				out.push("NL".to_owned());
+				*pos += 1;
+			},
+			Some(k) => {
+				out.push(format!("S({})", input[*pos..*pos + k].escape_default()));
+				*pos += k;
+			},
+			None => {
+				out.push(format!("S({})", input[*pos..end].escape_default()));
+				*pos = end;
+			},
+		};
+
+	loop {
+		if let Some(m) = pending {
+			if pos == m.start {
+				pending = None;
+				let rule: &RootRule = &spec[m.rule_idx];
+				out.push(format!(
+					"V({}:{})",
+					rule.name.escape_default(),
+					input[m.start..m.end].escape_default()
+				));
+				pos = m.end;
+			} else {
+				static_chunk(&mut out, &mut pos, m.start);
+			}
+			continue;
+		}
+		if pos == bytes.len() {
+			out.push("END".to_owned());
+			break;
+		}
+		if bytes[pos] == b'\n' {
+			out.push("NL".to_owned());
+			pos += 1;
+			continue;
+		}
+		let char_before: u32 = u32::from(
+			crate::utils::utf8::Utf8Chars::new(&bytes[..pos])
+				.next_back()
+				.unwrap_or('\n'),
+		);
+		match spec
+			.combined_dfa
+			.execute_leftmost(bytes, pos, char_before, &mut scratch)
+		{
+			None => {
+				assert!(pos < bytes.len());
+				// One chunk only; the newline (if any) is emitted next,
+				// and the search restarts after it.
+				static_chunk(&mut out, &mut pos, bytes.len());
+			},
+			Some(m) if m.start == pos => {
+				let rule: &RootRule = &spec[m.rule_idx];
+				out.push(format!(
+					"V({}:{})",
+					rule.name.escape_default(),
+					input[m.start..m.end].escape_default()
+				));
+				pos = m.end;
+			},
+			Some(m) => {
+				pending = Some(m);
+			},
+		}
+	}
+	out
+}
+
+/// The split engine (delimiter/first-byte scans + per-DFA single-threaded `execute`)
+/// must produce the same token stream as the combined-DFA reference.
+#[test]
+fn split_engine_differential() {
+	const SPECS: &[&str] = &[
+		// Unanchored rule with a rare first byte (spec4's `javaHash` shape).
+		"word: \"^[a-z]+$\"\nhash: \"@[0-9a-f]+\"",
+		// Anchored and unanchored rules competing for the same positions.
+		"a: \"^[0-9]+$\"\nb: \"[0-9]+\"\nc: \"^x[0-9]*$\"",
+		// The unanchored first-byte set is dense/inexact:
+		// the spec falls back to the combined-DFA engine, so both sides agree trivially.
+		"a: \"^foo$\"\nb: \"[^ ab0-9].\"",
+		// A rule spanning a newline (first byte `a`), plus an anchored rule.
+		"t: \"a(\\nbc)+d\"\nn: \"^[0-9]+$\"",
+		// Non-ASCII first bytes and lookbehinds.
+		"e: \"\u{e9}\u{e9}\"\nu: \"^\u{4e16}$\"",
+	];
+	let mut state: u64 = 0x243F6A8885A308D3;
+	let mut next = move || {
+		state ^= state << 13;
+		state ^= state >> 7;
+		state ^= state << 17;
+		state
+	};
+	let alphabet: &[char] = &[
+		'a', 'b', 'c', 'd', 'e', 'f', 'o', 'x', 'z', '@', '0', '1', '9', ' ', '\t', '\n', '.',
+		'\u{e9}', '\u{4e16}',
+	];
+	for definition in SPECS {
+		let spec: ParsingSpec = crate::spec! { definition };
+		assert!(
+			spec.unanchored_scan.is_some() || definition.contains("[^ ab0-9]"),
+			"expected the split path for {definition:?}",
+		);
+		for _ in 0..300 {
+			let len: usize = (next() % 50) as usize;
+			let input: String =
+				String::from_iter((0..len).map(|_| alphabet[(next() as usize) % alphabet.len()]));
+			assert_eq!(
+				tokens_of(&spec, &input),
+				reference_tokens_of(&spec, &input),
+				"definition={definition:?} input={input:?}",
+			);
+		}
+	}
 }

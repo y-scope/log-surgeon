@@ -77,11 +77,17 @@ and confirming the longest possible match for rules in a parsing specification
 rarely require consuming much extra input.
 
 To search for the leftmost-longest match rather than attempt a single position,
-the same DFA is simulated "like an NFA":
+the lexer first scans for candidate starts:
+delimiter characters (after which anchored rules may start) and,
+when the unanchored rules have a sparse first-byte set, those bytes.
+Each candidate position is then attempted with a single-threaded run of the same DFA.
+When the unanchored rules' first-byte set is dense,
+the lexer falls back to simulating the DFA "like an NFA":
 an execution thread is started at every position (until a match is found),
 threads in the same state are merged (keeping the earliest start),
 and once a match is found, threads with a later start are discarded.
-See [`FlattenedDfa::execute_leftmost`][execute-leftmost].
+See [`Lexer::search`][lexer-search] and
+[`FlattenedDfa::execute_leftmost`][execute-leftmost].
 
 Notice that each iteration of the loop
 requires looking up the transition for the current state and input character.
@@ -145,6 +151,7 @@ Explain:
 [anchors]: parsing-specification.md#regex-pattern-syntax
 [leftmost-longest]: leftmost-longest-lexing.md
 [execute-leftmost]: ../src/dfa/flattened.rs
+[lexer-search]: ../src/lexer.rs
 [create-parser]: ../src/parsing_spec.rs
 [search-by-log-shapes]: search-by-log-shapes.md
 [python-regex]: https://docs.python.org/3/howto/regex.html

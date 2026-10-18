@@ -131,6 +131,47 @@ impl Tdfa {
 }
 
 impl FlattenedDfa {
+	/// All bytes that can start a match when the lookbehind character is `lookbehind`
+	/// (the "startable" byte set for the prefilters of design B; exact).
+	///
+	/// State 0's transitions are *lookbehind* transitions
+	/// (`^` = delimiter-only, else any char): `lookbehind` selects the post-anchor
+	/// state, so a non-delimiter `lookbehind` selects exactly the unanchored rules.
+	/// A byte is startable if that state has a transition on it;
+	/// non-ASCII chars are reported via their UTF-8 lead bytes
+	/// (lead bytes of same-length scalars advance monotonically,
+	/// so each fixed-length interval sub-range contributes a contiguous range).
+	pub fn initial_bytes(&self, lookbehind: u32) -> Vec<u8> {
+		let Some(encoded) = self.lookup_next_state(0, lookbehind) else {
+			return Vec::new();
+		};
+		let state: usize = usize::from(encoded & STATE_MASK);
+
+		let mut out: Vec<u8> = Vec::new();
+		let base: usize = state * 0x80;
+		for byte in 0..0x80usize {
+			if self.ascii_transitions[base + byte] != 0 {
+				out.push(u8::try_from(byte).unwrap());
+			}
+		}
+		let intervals_per_state: usize = self.all_intervals.len();
+		let row_start: usize = state * intervals_per_state;
+		if intervals_per_state > 0
+			&& self.non_ascii_transitions[row_start..row_start + intervals_per_state]
+				.iter()
+				.any(|&target| target != 0)
+		{
+			for interval in self.all_intervals.iter() {
+				for (lo, hi, len) in split_at_utf8_lengths(interval.start(), interval.end()) {
+					out.extend(lead_byte_of(lo, len)..=lead_byte_of(hi, len));
+				}
+			}
+		}
+		out.sort_unstable();
+		out.dedup();
+		out
+	}
+
 	pub const BLANK: Self = Self {
 		all_intervals: Vec::new(),
 		accepts_for_rule: Vec::new(),
@@ -544,4 +585,41 @@ impl FlattenedDfa {
 	pub fn leftmost_scratch(&self) -> LeftmostScratch {
 		LeftmostScratch::new(self.ascii_transitions.len() / 0x80)
 	}
+}
+
+/// The lead byte of the UTF-8 encoding of `ch` (ASCII included).
+pub(crate) fn lead_byte_of(ch: u32, utf8_len: usize) -> u8 {
+	match utf8_len {
+		1 => u8::try_from(ch).unwrap(),
+		2 => 0xC0 | u8::try_from(ch >> 6).unwrap(),
+		3 => 0xE0 | u8::try_from(ch >> 12).unwrap(),
+		_ => 0xF0 | u8::try_from(ch >> 18).unwrap(),
+	}
+}
+
+/// Split the scalar range `[lo, hi]` into `(lo, hi, utf8_len)` sub-ranges
+/// of uniform UTF-8 length, skipping the surrogate range 0xD800..=0xDFFF.
+/// Lead-byte ranges stay contiguous across that gap
+/// (0xD7FF and 0xE000 have adjacent lead bytes).
+fn split_at_utf8_lengths(lo: u32, hi: u32) -> Vec<(u32, u32, usize)> {
+	// `(surrogate start, end of class, length)` for the 3-byte classes.
+	const THREE_BYTE: [(u32, u32, usize); 2] = [(0x800, 0xD7FF, 3), (0xE000, 0xFFFF, 3)];
+	let mut out: Vec<(u32, u32, usize)> = Vec::new();
+	let add = |out: &mut Vec<(u32, u32, usize)>, lo: u32, hi: u32, len: usize| {
+		if lo <= hi && lo <= 0x10FFFF {
+			out.push((lo, hi.min(0x10FFFF), len));
+		}
+	};
+	if lo < 0x800 {
+		add(&mut out, lo, hi.min(0x7FF), 2);
+	}
+	for &(start, end, len) in THREE_BYTE.iter() {
+		if lo <= end && hi >= start {
+			add(&mut out, lo.max(start), hi.min(end), len);
+		}
+	}
+	if hi >= 0x10000 {
+		add(&mut out, lo.max(0x10000), hi, 4);
+	}
+	out
 }
