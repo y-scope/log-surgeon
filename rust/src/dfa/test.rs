@@ -354,6 +354,201 @@ fn compressed_for_pattern(pattern: &str) -> FlattenedDfa {
 	builder.build().dfa_for_parsing
 }
 
+/// Build a spec from its file-definition text, without round-tripping.
+#[track_caller]
+fn spec_of(definition: &str) -> crate::parsing_spec::ParsingSpec {
+	crate::parsing_spec::ParsingSpecBuilder::from_parsing_spec_definition(definition)
+		.unwrap()
+		.build()
+}
+
+/// Brute-force leftmost-longest reference for [`FlattenedDfa::execute_leftmost`]:
+/// try every viable start position in order with the (unflattened) parsing TDFA,
+/// which itself implements longest match and priority per attempt.
+///
+/// Viable starts are the character boundaries in `[pos..]` up to and including
+/// the position just after the first `'\n'` at or after `pos` (excluding end of input:
+/// no rule may match the empty string).
+fn brute_force_leftmost(
+	tdfa: &Tdfa,
+	input: &str,
+	pos: usize,
+	char_before: u32,
+) -> Option<LeftmostMatch> {
+	let limit: usize = input[pos..]
+		.find('\n')
+		.map(|i| pos + i + 1)
+		.unwrap_or(input.len());
+
+	let mut cb: u32 = char_before;
+	let mut starts: Vec<usize> = Vec::from_iter(
+		input
+			.char_indices()
+			.map(|(i, _)| i)
+			.chain(std::iter::once(input.len())),
+	);
+	starts.retain(|&s| (pos..=limit).contains(&s) && s != input.len());
+	starts.dedup();
+
+	for s in starts {
+		if let Some(m) = tdfa.execute_without_captures(&input[s..], cb) {
+			return Some(LeftmostMatch {
+				rule_idx: m.rule_idx,
+				maybe_encoding_idx: m.maybe_encoding_idx,
+				start: s,
+				end: s + m.lexeme.len(),
+			});
+		}
+		cb = u32::from(input.as_bytes()[s] as char);
+	}
+	None
+}
+
+/// Assert [`FlattenedDfa::execute_leftmost`] agrees with [`brute_force_leftmost`]
+/// over `input` at every character boundary, in both directions of lookahead history.
+#[track_caller]
+fn assert_leftmost_everywhere(spec: &crate::parsing_spec::ParsingSpec, input: &str) {
+	let tdfa: Tdfa = Tdfa::for_rules(&spec.rules, &spec.delimiters, &spec.encodings);
+	let dfa: &FlattenedDfa = &spec.dfa_for_parsing;
+	let mut scratch: LeftmostScratch = dfa.leftmost_scratch();
+
+	for (pos, _) in input
+		.char_indices()
+		.chain(std::iter::once((input.len(), ' ')))
+	{
+		let char_before: u32 = input[..pos]
+			.chars()
+			.next_back()
+			.map_or(u32::from('\n'), u32::from);
+
+		let expected: Option<LeftmostMatch> = brute_force_leftmost(&tdfa, input, pos, char_before);
+		let actual: Option<LeftmostMatch> =
+			dfa.execute_leftmost(input.as_bytes(), pos, char_before, &mut scratch);
+		assert_eq!(actual, expected, "input={input:?} pos={pos}");
+	}
+}
+
+#[test]
+fn leftmost_basic_cases() {
+	let spec: crate::parsing_spec::ParsingSpec = spec_of(
+		r#"
+		delimiters: " \t\r\n,;"
+
+		int: "^[0-9]+"
+		word: "^[a-z]+"
+		hex: "0x[0-9a-f]+"
+		"#,
+	);
+
+	// Unanchored `hex` matches mid-token where an anchored attempt would never start.
+	assert_leftmost_everywhere(&spec, "see 0xff and 0xg");
+	// Anchored rules only fire at boundaries.
+	assert_leftmost_everywhere(&spec, "abc 123 abc123 123abc");
+	assert_leftmost_everywhere(&spec, "12 0x9f\n34 0x10");
+	assert_leftmost_everywhere(&spec, "");
+	assert_leftmost_everywhere(&spec, "  , ; ");
+}
+
+/// Same start, different lengths: longest wins, even over higher priority.
+/// Same start and length: earliest rule in the spec wins.
+#[test]
+fn leftmost_tie_breaks() {
+	let spec: crate::parsing_spec::ParsingSpec = spec_of(
+		r#"
+		short: "ab"
+		pair: "^a[bcd]$"
+		long: "a."
+		"#,
+	);
+	assert_leftmost_everywhere(&spec, "ab abc abd xab");
+
+	let spec2: crate::parsing_spec::ParsingSpec = spec_of(
+		r#"
+		a: "^[ab]+$"
+		b: "^(?<x>ab)$"
+		"#,
+	);
+	// Same end: `a` (earlier in the file) wins; longer still trumps.
+	assert_leftmost_everywhere(&spec2, "ab aba aba");
+}
+
+/// Priorities (integer values) select the rule order
+/// that leftmost-longest falls back to last.
+#[test]
+fn leftmost_priority() {
+	let spec: crate::parsing_spec::ParsingSpec = spec_of(
+		r#"
+		a (5): "x[yz]"
+		b (-1): "xy"
+		c: "x[ay]"
+		"#,
+	);
+	assert_leftmost_everywhere(&spec, "xy xa xyz");
+}
+
+/// End-of-input lookahead and UTF-8 lookbehind/transitions.
+#[test]
+fn leftmost_boundaries() {
+	let spec: crate::parsing_spec::ParsingSpec = spec_of(
+		r#"
+		int: "^[0-9]+$"
+		any2: "^\..$"
+		"#,
+	);
+	assert_leftmost_everywhere(&spec, "abc 12 \u{e9}4 \u{4e16}5 67");
+}
+
+/// A rule may span newlines; only its start position is window-bounded.
+#[test]
+fn leftmost_match_spanning_newline() {
+	let spec: crate::parsing_spec::ParsingSpec = spec_of(
+		r#"
+		trace: "a(\nbc)+d"
+		int: "^[0-9]+$"
+		"#,
+	);
+	assert_leftmost_everywhere(&spec, "za\nbc\nbcd1 9");
+}
+
+/// Exhaustive fuzz: many small specs over a small alphabet, comparing against
+/// brute force at every position of random inputs.
+#[test]
+fn leftmost_differential_fuzz() {
+	const SPECS: &[&str] = &[
+		"a: \"a+\"",
+		"a: \"a+\"\nb: \"ab+\"",
+		"a: \"^a+$\"\nb: \"ab\"",
+		"a: \"ab\"\nb: \"b+\"",
+		"a: \"a|bc\"\nb: \"^abc$\"",
+		"num: \"[0-9]+\"\nword: \"[a-z]+\"\nsym: \"[^ a-z0-9\\n]+\"",
+		"a: \"^a\"\nb: \"b$\"\nc: \"^c$\"",
+		// Wide first sets keep multiple threads alive.
+		"x: \"[a-c]+x\"\ny: \"[b-d]+y\"\nz: \"w?z\"",
+	];
+
+	let mut state: u64 = 0x9E3779B97F4A7C15;
+	let mut next = move || {
+		state ^= state << 13;
+		state ^= state >> 7;
+		state ^= state << 17;
+		state
+	};
+
+	let alphabet: &[char] = &[
+		'a', 'b', 'c', 'd', 'w', 'x', 'y', 'z', '0', '1', ' ', '\n', '\u{e9}',
+	];
+
+	for definition in SPECS {
+		let spec: crate::parsing_spec::ParsingSpec = spec_of(definition);
+		for _ in 0..200 {
+			let len: usize = (next() % 40) as usize;
+			let input: String =
+				String::from_iter((0..len).map(|_| alphabet[(next() as usize) % alphabet.len()]));
+			assert_leftmost_everywhere(&spec, &input);
+		}
+	}
+}
+
 /// The compressed DFA must decode non-ASCII scalars
 /// identically to the char iterator it replaced:
 /// both must consume a whole multi-byte scalar

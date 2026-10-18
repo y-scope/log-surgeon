@@ -17,6 +17,8 @@ use std::range::Range;
 use std::sync::Arc;
 
 pub use flattened::FlattenedDfa;
+pub use flattened::LeftmostMatch;
+pub use flattened::LeftmostScratch;
 
 use crate::graph::Csr;
 use crate::interval_tree::Interval;

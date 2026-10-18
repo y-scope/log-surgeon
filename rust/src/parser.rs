@@ -243,6 +243,7 @@ impl Parser {
 	/// Reset the internal state of the parser;
 	/// used when "refilling" the input buffer.
 	pub fn reset(&mut self) {
+		self.lexer.reset();
 		self.current_log.clear();
 		self.seen_header = false;
 		self.pending_header.clear();

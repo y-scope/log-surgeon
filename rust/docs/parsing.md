@@ -22,21 +22,26 @@ The lexer identifies occurrences of root rules defined in the parsing specificat
 A root rule match represents a piece of semantically meaningful text identified by the user.
 
 The lexer processes input left to right.
-At each step, it attempts to match root rules according to the following:
+At each step, it searches for the next root rule match ("grep semantics", leftmost-longest):
 
-- The longest possible match.
-- If multiple root rules match with the same length,
-  the highest-priority (earliest) rule in the spec is selected.
+1. The earliest starting position.
+2. Among matches from that position, the longest match.
+3. Among matches of that length, the highest-priority (earliest) rule in the spec.
 
-If no root rules match at the current position,
-the parser seeks to the first delimiter character after the current position,
-and the lexer repeats attempting to match a root rule _after_ the delimiter.
+The text before the match is static text.
+A match may start anywhere up to and including the position just after the next newline;
+matches beginning later are found by subsequent searches.
+A match may itself span newlines.
 
-WIP: We hope to generalize root rule matching
-to find the earliest possible occurrence of a root rule at each step.
+Anchors (`^`, `$`) restrict where a rule may start or end (next to a delimiter);
+see [anchors][anchors].
+Anchoring is also the main performance lever:
+an anchored rule is only attempted after a delimiter,
+whereas an unanchored rule is attempted at every position.
+See [Leftmost-Longest Lexing][leftmost-longest] for the design and measurements.
 
 #### Implementation Details
-To determine if/what rule matches from an input position,
+To determine if/what rule matches from a single input position,
 Log Surgeon builds an [automaton][dfa]
 for the combination of all root rule patterns in the parsing specification;
 an automaton is just a state machine with transitions based on an input character.
@@ -70,6 +75,13 @@ even if the extra input does not result in a match.
 In practice, the non-static text of logs is small compared to the static text,
 and confirming the longest possible match for rules in a parsing specification
 rarely require consuming much extra input.
+
+To search for the leftmost-longest match rather than attempt a single position,
+the same DFA is simulated "like an NFA":
+an execution thread is started at every position (until a match is found),
+threads in the same state are merged (keeping the earliest start),
+and once a match is found, threads with a later start are discarded.
+See [`FlattenedDfa::execute_leftmost`][execute-leftmost].
 
 Notice that each iteration of the loop
 requires looking up the transition for the current state and input character.
@@ -130,6 +142,9 @@ Explain:
 - leaf ambiguity
 
 [parsing-spec]: parsing-specification.md
+[anchors]: parsing-specification.md#regex-pattern-syntax
+[leftmost-longest]: leftmost-longest-lexing.md
+[execute-leftmost]: ../src/dfa/flattened.rs
 [create-parser]: ../src/parsing_spec.rs
 [search-by-log-shapes]: search-by-log-shapes.md
 [python-regex]: https://docs.python.org/3/howto/regex.html

@@ -58,10 +58,6 @@ pub struct ParsingSpec {
 	/// Should be constructed and executed with anchor/lookaround characters.
 	pub dfa_for_parsing: FlattenedDfa,
 
-	/// Derived from `delimiters`.
-	pub ascii_delimiters: [bool; 0x80],
-	pub non_ascii_delimiters: String,
-
 	/// Prefilter models for log-shape search, built on demand and shared across
 	/// [`Parser`]s created from this spec.
 	///
@@ -288,26 +284,12 @@ impl ParsingSpecBuilder {
 			dfa_for_parsing
 		});
 
-		let mut ascii_delimiters: [bool; 0x80] = [false; 0x80];
-		let mut non_ascii_delimiters: String = String::new();
-		for ch in self.delimiters.chars() {
-			if let Ok(i) = u8::try_from(ch)
-				&& let Some(entry) = ascii_delimiters.get_mut(usize::from(i))
-			{
-				*entry = true;
-			} else {
-				non_ascii_delimiters.push(ch);
-			}
-		}
-
 		ParsingSpec {
 			rules,
 			placeholders: self.placeholders,
 			delimiters: self.delimiters,
 			encodings: self.encodings,
 			dfa_for_parsing,
-			ascii_delimiters,
-			non_ascii_delimiters,
 			shape_models: ShapeModelCache::new(),
 		}
 	}
@@ -329,8 +311,6 @@ pub static BLANK: ParsingSpec = ParsingSpec {
 	delimiters: String::new(),
 	encodings: Vec::new(),
 	dfa_for_parsing: FlattenedDfa::BLANK,
-	ascii_delimiters: [false; 0x80],
-	non_ascii_delimiters: String::new(),
 	shape_models: ShapeModelCache::new(),
 };
 

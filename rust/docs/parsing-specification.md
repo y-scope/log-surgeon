@@ -10,7 +10,7 @@ Log Surgeon supports most common regex syntax/semantics, detailed [below][regex-
 (the outside double-quotes are not part of the pattern).
 For example, a rule `int: "[0-9]+"` may be used to identify numbers.
 
-Parsing first considers longest match,
+Parsing finds the earliest match in the input, then the longest match from that position,
 and priority is used as a tie-breaker
 when multiple rules match with the same length (from the same starting position).
 There are two levels to priority.
@@ -134,6 +134,16 @@ meaning the match must be preceded/followed
 by one of the delimiter characters or the very start/end of input.
 Note that this differs from common regex usage,
 where `^` and `$` anchor only to the very start/end of input.
+
+Since matches are searched for anywhere in the input,
+an unanchored rule also matches inside words, e.g. `node` in `Datanode`.
+Most rules should therefore be anchored at both ends.
+Use a partial anchor when a match is commonly followed (or preceded) by a non-delimiter,
+e.g. omit `$` for a number that may end a sentence (`Wrote 166 bytes.`),
+or omit `^` for a suffix such as Java's `Class@1a2b3c`.
+Anchoring also matters for performance:
+an unanchored rule is attempted at every position in the input,
+rather than only after delimiters.
 
 More explicitly, pattern syntax follows this [EBNF][ebnf] grammar.
 

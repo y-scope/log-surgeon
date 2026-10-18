@@ -41,6 +41,34 @@ pub struct FlattenedDfa {
 	non_ascii_transitions: Vec<u16>,
 }
 
+/// A leftmost-longest match over all rules, as returned by
+/// [`FlattenedDfa::execute_leftmost`].
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct LeftmostMatch {
+	pub rule_idx: RuleIdx,
+	pub maybe_encoding_idx: Option<EncodingIdx>,
+	/// Byte offset where the match starts.
+	pub start: usize,
+	/// Byte offset one past the matched text.
+	pub end: usize,
+}
+
+/// Cached memory for [`FlattenedDfa::execute_leftmost`].
+#[derive(Debug, Clone)]
+pub struct LeftmostScratch {
+	/// Live `(start position, state)` threads, sorted by ascending start position.
+	threads: Vec<(usize, u16)>,
+	/// `stamps[s] == next_mark - 1` iff a live thread occupies state `s` at the current
+	/// position. Two threads in the same state at the same position are equivalent,
+	/// so only the earliest-start one is kept (earliest start wins).
+	///
+	/// `next_mark` only ever increases,
+	/// so stale entries (from earlier positions or earlier calls) never collide
+	/// with the current position's mark.
+	stamps: Vec<usize>,
+	next_mark: usize,
+}
+
 impl Tdfa {
 	/// Panics if the number of states is greater than [`STATE_MASK`]
 	/// (`2 ** 15` or approximately 32k states as of 2026-10-06).
@@ -206,6 +234,271 @@ impl FlattenedDfa {
 		})
 	}
 
+	/// Leftmost-longest (grep semantics) search for a match starting at or after `pos`,
+	/// simulated "like an NFA" over this DFA; see `docs/leftmost-longest-lexing.md`.
+	///
+	/// Threads (start position, DFA state) are spawned at every position from `pos`
+	/// up to and including the position just after the first `'\n'` at or after `pos`;
+	/// the lexer does not look for matches beginning past the current line.
+	/// (Live threads are not cut off by the spawn window:
+	/// a match starting inside it may span newlines.)
+	/// The spawn state is the start state's transition on the lookbehind character,
+	/// so `^`-anchored threads die immediately at any non-boundary position.
+	///
+	/// Threads in the same state at the same position are merged, keeping the earliest
+	/// start, so the live set never exceeds the number of states.
+	/// As soon as a match is found, all threads with a later start are killed;
+	/// the surviving earliest-start threads run on,
+	/// so the result is (earliest start, longest end, first rule in spec order).
+	///
+	/// `char_before` is the character just before `pos`, or `'\n'` when `pos == 0`.
+	///
+	/// Returns `None` when no rule matches anywhere in the window.
+	pub fn execute_leftmost(
+		&self,
+		input: &[u8],
+		pos: usize,
+		char_before: u32,
+		scratch: &mut LeftmostScratch,
+	) -> Option<LeftmostMatch> {
+		debug_assert!(pos <= input.len());
+		if self.ascii_transitions.is_empty() {
+			return None;
+		}
+		debug_assert_eq!(scratch.stamps.len(), self.ascii_transitions.len() / 0x80);
+
+		let threads: &mut Vec<(usize, u16)> = &mut scratch.threads;
+		threads.clear();
+		let stamps: &mut [usize] = &mut scratch.stamps;
+
+		let mut maybe_match: Option<LeftmostMatch> = None;
+
+		// The position just after the first newline is the last viable start.
+		// `pos` itself is always viable, even at the start of a line
+		// (where the lookbehind is `'\n'`).
+		let mut spawning_done: bool = false;
+
+		// The character just before the current scanning position,
+		// decoded once per position regardless of how many threads are live.
+		let mut prev: u32 = char_before;
+
+		const NEWLINE: u32 = 0xA; // u32::from('\n')
+
+		let mut i: usize = pos;
+		loop {
+			// Gap scanning: nothing alive, so a spawn attempt and its first step can
+			// share one iteration; instantly-dying spawns never touch the thread list.
+			while threads.is_empty() {
+				if maybe_match.is_some() || i == input.len() || spawning_done {
+					// Nothing alive or spawnable can change the answer anymore.
+					return maybe_match;
+				}
+				let b: u8 = input[i];
+				let (ch, advance): (u32, usize) = if b < 0x80 {
+					(u32::from(b), 1)
+				} else {
+					let (ch, len): (char, usize) = crate::utils::utf8::decode_scalar(&input[i..]);
+					(u32::from(ch), len)
+				};
+				if let Some(encoded0) = self.lookup_next_state(0, prev) {
+					// The fresh spawn's first step happens here, on the same character.
+					if let Some(encoded) = self.lookup_next_state(encoded0 & STATE_MASK, ch) {
+						self.record_accept(&mut maybe_match, i, encoded, i);
+						threads.push((i, encoded & STATE_MASK));
+						if i > pos && prev == NEWLINE {
+							spawning_done = true;
+						}
+						i += advance;
+						prev = ch;
+						break;
+					}
+				}
+				if i > pos && prev == NEWLINE {
+					// The position just past the first newline is the last viable start.
+					spawning_done = true;
+				}
+				i += advance;
+				prev = ch;
+			}
+
+			// Stepping: advance every live thread on the same character.
+			//
+			// A fresh spawn is handled in the stepping paths below; `fresh` always has
+			// the latest start, so merging keeps the earlier-start thread.
+			while !threads.is_empty() {
+				let mut fresh: Option<(usize, u16)> = None;
+				if maybe_match.is_none() && !spawning_done && i < input.len() {
+					if let Some(encoded) = self.lookup_next_state(0, prev) {
+						// The spawn is dominated (an equal-or-earlier-start thread is
+						// already in this state) iff a live thread holds the same state:
+						// live threads at this position have start <= `i`,
+						// and only one spawn happens per position.
+						let spawned: u16 = encoded & STATE_MASK;
+						if !threads.iter().any(|&(_, state)| state == spawned) {
+							fresh = Some((i, spawned));
+						}
+					}
+					if i > pos && prev == NEWLINE {
+						spawning_done = true;
+					}
+				}
+
+				if i == input.len() {
+					// End-of-input lookahead, matching [`FlattenedDfa::execute`]:
+					// a trailing `'\n'` lets end-anchored rules accept.
+					for &(start, state) in threads.iter().chain(&fresh) {
+						let Some(encoded) = self.lookup_next_state(state, NEWLINE) else {
+							continue;
+						};
+						self.record_accept(&mut maybe_match, start, encoded, input.len());
+					}
+					return maybe_match;
+				}
+
+				let b: u8 = input[i];
+				let (ch, advance): (u32, usize) = if b < 0x80 {
+					(u32::from(b), 1)
+				} else {
+					let (ch, len): (char, usize) = crate::utils::utf8::decode_scalar(&input[i..]);
+					(u32::from(ch), len)
+				};
+
+				match (threads.len(), fresh) {
+					(1, None) => {
+						// Fast path: with a single live thread there is nothing to merge,
+						// so the position stamps are not touched.
+						let (start, state): (usize, u16) = threads[0];
+						if maybe_match.is_some_and(|m| start > m.start) {
+							threads.clear();
+						} else if let Some(encoded) = self.lookup_next_state(state, ch) {
+							self.record_accept(&mut maybe_match, start, encoded, i);
+							threads[0].1 = encoded & STATE_MASK;
+						} else {
+							threads.clear();
+						}
+					},
+					(1, Some(_)) | (2, None) => {
+						// Two total threads (counting `fresh`, always the latest start):
+						// merge with a direct target comparison instead of the stamps.
+						let (start0, state0): (usize, u16) = threads[0];
+						let second: Option<(usize, u16)> = match fresh {
+							Some(f) => Some(f),
+							None => Some(threads[1]),
+						};
+						let kill0: bool = maybe_match.is_some_and(|m| start0 > m.start);
+						let encoded0: Option<u16> = match kill0 {
+							true => None,
+							false => self.lookup_next_state(state0, ch),
+						};
+						let encoded1: Option<u16> = match second {
+							Some((_, state1)) => self.lookup_next_state(state1, ch),
+							None => None,
+						};
+						threads.clear();
+						// A merged (equal-target) thread need not record its acceptance:
+						// the kept thread is in the same accepting state with the same end
+						// and a smaller-or-equal start, which always wins.
+						if let Some(encoded0) = encoded0 {
+							self.record_accept(&mut maybe_match, start0, encoded0, i);
+							threads.push((start0, encoded0 & STATE_MASK));
+						}
+						if let (Some((start1, _)), Some(encoded1)) = (second, encoded1)
+							&& threads
+								.first()
+								.is_none_or(|&(_, target)| (encoded1 & STATE_MASK) != target)
+						{
+							self.record_accept(&mut maybe_match, start1, encoded1, i);
+							threads.push((start1, encoded1 & STATE_MASK));
+						}
+					},
+					_ => {
+						// Three or more live threads: stamp-marked merge.
+						if let Some(f) = fresh {
+							// `fresh` has the latest start, so appending keeps
+							// `threads` sorted.
+							threads.push(f);
+						}
+						let mark: usize = scratch.next_mark;
+						scratch.next_mark = mark.wrapping_add(1);
+						let mut w: usize = 0;
+						for r in 0..threads.len() {
+							let (start, state) = threads[r];
+							if maybe_match.is_some_and(|m| start > m.start) {
+								// Killed by the accepted match: earliest start wins.
+								continue;
+							}
+							let Some(encoded) = self.lookup_next_state(state, ch) else {
+								continue;
+							};
+							let next: usize = usize::from(encoded & STATE_MASK);
+							let stamp: &mut usize = &mut stamps[next];
+							if *stamp == mark {
+								// Merged into an equivalent earlier-start thread.
+								continue;
+							}
+							*stamp = mark;
+							// See the note on merged threads above.
+							self.record_accept(&mut maybe_match, start, encoded, i);
+							threads[w] = (start, encoded & STATE_MASK);
+							w += 1;
+						}
+						threads.truncate(w);
+					},
+				}
+
+				i += advance;
+				prev = ch;
+			}
+		}
+	}
+
+	/// Record an acceptance triggered by the lookahead character at byte position `end`,
+	/// if the transition `encoded` lands on an accepting state.
+	/// (The lexeme ends just before the lookahead, matching [`FlattenedDfa::execute`].)
+	#[inline(always)]
+	fn record_accept(
+		&self,
+		best: &mut Option<LeftmostMatch>,
+		start: usize,
+		encoded: u16,
+		end: usize,
+	) {
+		if encoded & ACCEPTING_BIT == 0 {
+			return;
+		}
+		let (rule_idx, maybe_encoding_idx) =
+			self.accepts_for_rule[usize::from(encoded & STATE_MASK)].unwrap();
+		Self::consider(
+			best,
+			LeftmostMatch {
+				rule_idx,
+				maybe_encoding_idx,
+				start,
+				end,
+			},
+		);
+	}
+
+	/// Fold `candidate` into `best` under leftmost-longest priority:
+	/// earliest start, then longest match, then smallest [`RuleIdx`]
+	/// (which is highest spec priority; see [`crate::parsing_spec::ParsingSpecBuilder::build`]).
+	#[inline(always)]
+	fn consider(best: &mut Option<LeftmostMatch>, candidate: LeftmostMatch) {
+		let replace: bool = match best {
+			None => true,
+			Some(m) => {
+				candidate.start < m.start
+					|| (candidate.start == m.start
+						&& (candidate.end > m.end
+							|| (candidate.end == m.end
+								&& u16::from(candidate.rule_idx) < u16::from(m.rule_idx))))
+			},
+		};
+		if replace {
+			*best = Some(candidate);
+		}
+	}
+
 	#[inline(always)]
 	fn lookup_next_state(&self, current_state: u16, ch: u32) -> Option<u16> {
 		let current_state: usize = usize::from(current_state);
@@ -233,5 +526,22 @@ impl FlattenedDfa {
 			}
 		}
 		usize::MAX
+	}
+}
+
+impl LeftmostScratch {
+	fn new(states: usize) -> Self {
+		Self {
+			threads: Vec::new(),
+			stamps: vec![usize::MAX; states],
+			next_mark: 0,
+		}
+	}
+}
+
+impl FlattenedDfa {
+	/// A reusable scratch for [`FlattenedDfa::execute_leftmost`], sized to this DFA.
+	pub fn leftmost_scratch(&self) -> LeftmostScratch {
+		LeftmostScratch::new(self.ascii_transitions.len() / 0x80)
 	}
 }
