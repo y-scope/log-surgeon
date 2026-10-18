@@ -351,7 +351,7 @@ fn captures_of(rule: &RootRule, input: &str) -> Vec<(u16, usize, usize)> {
 fn compressed_for_pattern(pattern: &str) -> FlattenedDfa {
 	let mut builder: ParsingSpecBuilder = ParsingSpecBuilder::new();
 	builder.add_rule("rule", pattern).unwrap();
-	builder.build().dfa_for_parsing
+	builder.build().combined_dfa
 }
 
 /// Build a spec from its file-definition text, without round-tripping.
@@ -409,7 +409,7 @@ fn brute_force_leftmost(
 #[track_caller]
 fn assert_leftmost_everywhere(spec: &crate::parsing_spec::ParsingSpec, input: &str) {
 	let tdfa: Tdfa = Tdfa::for_rules(&spec.rules, &spec.delimiters, &spec.encodings);
-	let dfa: &FlattenedDfa = &spec.dfa_for_parsing;
+	let dfa: &FlattenedDfa = &spec.combined_dfa;
 	let mut scratch: LeftmostScratch = dfa.leftmost_scratch();
 
 	for (pos, _) in input
