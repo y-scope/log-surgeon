@@ -19,6 +19,7 @@ the plan for implementing it, and the results.
 - Implementation Results
 - Design B: Prefilters over One Combined DFA
 - Open Decisions
+- Future Improvements
 - Appendix: Running the Probes Safely
 
 ### Motivation and Target Semantics
@@ -463,8 +464,47 @@ since the fused scan otherwise never reports a non-delimiter first-byte hit.
     a smarter `$` ("followed by a delimiter, or punctuation then a delimiter")
     would be a spec-language change and is not proposed here.
 
+### Future Improvements
+- **Store each determinization kernel once.**
+    An uncached spec build peaks at 3.1 GB (spec4) / 3.5 GB (spec3),
+    nearly all of it kernels: the NFA configuration sets behind the raw DFA states
+    (7,611 states and 353k configurations for spec4).
+    `Tdfa::lookup_or_add_state` (`src/dfa.rs`) clones each new kernel twice:
+    into the state (`DfaState::kernel`) and as the key of the lookup map (`Tdfa::kernels`).
+    Sharing one allocation between the two (e.g. `Rc<Kernel>`,
+    or an index into the states with the map keyed by the state's kernel)
+    should roughly halve the peak.
+    The map is also scanned linearly for register bijections on every miss,
+    so a change here may be a chance to revisit that lookup too.
+    Verify with `tests/local_uncached.rs` (`env SPEC=spec4.txt CACHED=spec4.cached.txt`):
+    the rebuilt DFA must stay byte-identical to the cache.
+- **Tune the unanchored prefilter cut-off.**
+    The 64-byte limit on the unanchored first-byte set (`ParsingSpecBuilder::build`)
+    is a guess; spec3's 69-byte set falls just past it.
+    Measuring a few specs' hit rates around the cut-off would place it properly.
+- **Per-hit overhead in `Lexer::search`.**
+    spec4 is still about 10 % behind the pre-leftmost engine
+    (1.96 s vs. 1.78 s): per-hit classification plus one `execute` call per delimiter.
+- **Bound search time.**
+    Memory is already bounded (live threads never exceed the DFA state count),
+    but a thread may run arbitrarily far past the newline window;
+    a rule like `a.*` matching across lines would make a search scan to the end of input.
+    A cap on match length would bound time,
+    at the cost of truncating or missing matches longer than the cap.
+
 ### Appendix: Running the Probes Safely
-Building the main DFA for spec3/spec4 from source takes ~27 s and peaks between 3 and 6 GB.
+Building the main DFA for spec3/spec4 from source takes ~24 s
+and peaks at 3.1 GB (spec4) / 3.5 GB (spec3) resident.
+Nearly all of it is determinization's kernels
+(the NFA configuration sets behind each raw DFA state: 7,611 states and
+353k configurations for spec4, stored in the states and again as lookup keys).
+Minimization (`partition_states`) itself adds about 8 MB.
+`Tdfa::canonicalize` used to also merge every kernel into the minimized states
+and re-index them while the raw DFA was alive,
+which pushed spec4 past 4 GB (and was what OOM-killed earlier builds);
+it now leaves the minimized DFA's kernels empty, since nothing reads them afterwards.
+Storing each raw kernel once would roughly halve the remaining peak;
+see Future Improvements.
 Running two builds concurrently (e.g. `cargo test` with two probe tests in one binary)
 OOM-killed the machine repeatedly.
 A plain `cargo test` also runs every local test binary concurrently

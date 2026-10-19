@@ -881,6 +881,9 @@ impl Tdfa {
 	/// Compute the canonical (minimal) DFA.
 	///
 	/// This should not be used with a TDFA (DFA with tagged transitions).
+	///
+	/// The result has no kernels (and no kernel lookup table),
+	/// so it cannot be extended by further determinization.
 	#[tracing::instrument(skip_all, level = "trace")]
 	pub fn canonicalize(&self) -> Tdfa {
 		let partitions: Vec<Vec<usize>> = self.partition_states();
@@ -895,11 +898,9 @@ impl Tdfa {
 		let mut new_states: Vec<DfaState> = Vec::with_capacity(partitions.len());
 
 		for x in partitions.iter() {
-			let mut kernel: Kernel = Kernel(Vec::new());
 			let mut maybe_transitions: Option<IntervalTree<u32, Transition>> = None;
 			for &s in x.iter() {
 				let state: &DfaState = &self.states[s];
-				kernel.0.extend_from_slice(&state.kernel.0);
 				if let Some(transitions) = &maybe_transitions {
 					for (interval, transition) in transitions.iter() {
 						assert_eq!(
@@ -926,7 +927,10 @@ impl Tdfa {
 			}
 			let representative: &DfaState = &self.states[*x.first().unwrap()];
 			new_states.push(DfaState {
-				kernel,
+				// Kernels only serve determinization (state lookup);
+				// merging and re-indexing them here was the peak memory of an uncached
+				// spec build (several copies of every configuration), for no later use.
+				kernel: Kernel(Vec::new()),
 				transitions: maybe_transitions.unwrap(),
 				accepting_rule: representative.accepting_rule,
 				final_operations: Vec::new(),
@@ -935,16 +939,9 @@ impl Tdfa {
 			});
 		}
 
-		let kernels: BTreeMap<Kernel, usize> = BTreeMap::from_iter(
-			new_states
-				.iter()
-				.enumerate()
-				.map(|(i, state)| (state.kernel.clone(), i)),
-		);
-
 		let mut canonical: Self = Self {
 			states: new_states,
-			kernels,
+			kernels: BTreeMap::new(),
 			tags: Vec::new(),
 			tag_pairs: Vec::new(),
 			number_of_registers: 0,
