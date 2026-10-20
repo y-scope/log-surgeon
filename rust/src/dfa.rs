@@ -20,6 +20,8 @@ pub use flattened::FlattenedDfa;
 pub use flattened::LeftmostMatch;
 pub use flattened::LeftmostScratch;
 pub(crate) use flattened::lead_byte_of;
+use rustc_hash::FxBuildHasher;
+use rustc_hash::FxHashMap;
 
 use crate::graph::Csr;
 use crate::interval_tree::Interval;
@@ -40,7 +42,13 @@ use crate::regex::Regex;
 #[derive(Debug, Clone)]
 pub struct Tdfa {
 	states: Vec<DfaState>,
-	kernels: BTreeMap<Kernel, usize>,
+	kernels: FxHashMap<Kernel, usize>,
+	/// Kernels indexed by the sorted set of NFA states they contain.
+	///
+	/// A kernel can only match another up to register renaming if the two contain the same NFA
+	/// states, so [`Tdfa::lookup_or_add_state`] only needs to run the (linear per kernel)
+	/// register bijection check against the candidates in the matching bucket.
+	kernels_by_states: FxHashMap<Vec<NfaIdx>, Vec<usize>>,
 	pub tags: Vec<CaptureTag>,
 	/// Bijection between indices of start/end capture pair tags.
 	tag_pairs: Vec<usize>,
@@ -119,11 +127,11 @@ struct DfaState {
 ///
 /// However, both of the aforementioned procedures operate more naturally on a list
 /// of `Configuration`s, and `Vec<Configuration>` naturally has better memory locality.
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct Kernel(Vec<Configuration>);
 
 /// A "configuration" is essentially an augmented NFA state (as documented per field).
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct Configuration {
 	nfa_state: NfaIdx,
 	/// A mapping "tag (by ID/index) -> register";
@@ -168,7 +176,7 @@ enum RegisterAction {
 	},
 }
 
-#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 enum SymbolicPosition {
 	Current,
 	Nil,
@@ -195,7 +203,8 @@ struct BackupState {
 impl Tdfa {
 	pub const BLANK: Self = Self {
 		states: Vec::new(),
-		kernels: BTreeMap::new(),
+		kernels: FxHashMap::with_hasher(FxBuildHasher),
+		kernels_by_states: FxHashMap::with_hasher(FxBuildHasher),
 		tags: Vec::new(),
 		tag_pairs: Vec::new(),
 		number_of_registers: 0,
@@ -486,7 +495,8 @@ impl Tdfa {
 
 		let mut dfa: Self = Self {
 			states: Vec::new(),
-			kernels: BTreeMap::new(),
+			kernels: FxHashMap::with_hasher(FxBuildHasher),
+			kernels_by_states: FxHashMap::with_hasher(FxBuildHasher),
 			tags,
 			tag_pairs,
 			number_of_registers: 2 * nfa.tags().len(),
@@ -571,13 +581,23 @@ impl Tdfa {
 			return idx;
 		}
 
-		for (other, &idx) in self.kernels.iter() {
-			let Some(bijection) = kernel.try_register_bijection(&other) else {
-				continue;
-			};
-			if let Some(new_ops) = Self::map_operations_through_bijection(ops.clone(), bijection) {
-				*ops = new_ops;
-				return idx;
+		let mut kernel_states: Vec<NfaIdx> = Vec::with_capacity(kernel.0.len());
+		kernel_states.extend(kernel.0.iter().map(|config| config.nfa_state));
+		// Sorting makes the index key independent of the order the closure happened to produce.
+		kernel_states.sort_unstable();
+
+		if let Some(candidates) = self.kernels_by_states.get(&kernel_states) {
+			for &idx in candidates {
+				let other: &Kernel = &self.states[idx].kernel;
+				let Some(bijection) = kernel.try_register_bijection(other) else {
+					continue;
+				};
+				if let Some(new_ops) =
+					Self::map_operations_through_bijection(ops.clone(), bijection)
+				{
+					*ops = new_ops;
+					return idx;
+				}
 			}
 		}
 
@@ -612,6 +632,10 @@ impl Tdfa {
 			ascii_cache: DfaState::default_ascii_cache(),
 		});
 		self.kernels.insert(kernel, idx);
+		self.kernels_by_states
+			.entry(kernel_states)
+			.or_default()
+			.push(idx);
 		idx
 	}
 
@@ -945,7 +969,8 @@ impl Tdfa {
 
 		let mut canonical: Self = Self {
 			states: new_states,
-			kernels: BTreeMap::new(),
+			kernels: FxHashMap::with_hasher(FxBuildHasher),
+			kernels_by_states: FxHashMap::with_hasher(FxBuildHasher),
 			tags: Vec::new(),
 			tag_pairs: Vec::new(),
 			number_of_registers: 0,

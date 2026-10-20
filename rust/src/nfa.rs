@@ -73,7 +73,7 @@ pub enum Transitions {
 	},
 }
 
-#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct CaptureTag {
 	/// The root rule this capture belongs to; a capture ID is local to its rule.
 	pub rule_idx: RuleIdx,
