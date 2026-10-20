@@ -468,7 +468,11 @@ impl Tdfa {
 
 	/// Algorithm 3 in the [paper][tdfa].
 	pub fn determinization<const WITH_TAGS: bool>(nfa: &Tnfa) -> Self {
-		let tags: Vec<CaptureTag> = nfa.tags().iter().cloned().collect::<Vec<_>>();
+		let tags: Vec<CaptureTag> = if WITH_TAGS {
+			nfa.tags().iter().cloned().collect::<Vec<_>>()
+		} else {
+			Vec::new()
+		};
 		assert_eq!(tags.len() % 2, 0);
 		let mut tag_pairs: Vec<usize> = Vec::with_capacity(tags.len());
 		// XXX: use array_chunks when stable.
