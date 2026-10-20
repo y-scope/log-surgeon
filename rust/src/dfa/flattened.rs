@@ -4,6 +4,7 @@ use crate::dfa::Tdfa;
 use crate::interval_tree::Interval;
 use crate::parsing_spec::EncodingIdx;
 use crate::parsing_spec::RuleIdx;
+use crate::utils::utf8::lead_byte_of;
 
 /// Transition target states are stored as 16-bit values;
 /// if the MSB is set, the target state is accepting
@@ -584,16 +585,6 @@ impl FlattenedDfa {
 	/// A reusable scratch for [`FlattenedDfa::execute_leftmost`], sized to this DFA.
 	pub fn leftmost_scratch(&self) -> LeftmostScratch {
 		LeftmostScratch::new(self.ascii_transitions.len() / 0x80)
-	}
-}
-
-/// The lead byte of the UTF-8 encoding of `ch` (ASCII included).
-pub(crate) fn lead_byte_of(ch: u32, utf8_len: usize) -> u8 {
-	match utf8_len {
-		1 => u8::try_from(ch).unwrap(),
-		2 => 0xC0 | u8::try_from(ch >> 6).unwrap(),
-		3 => 0xE0 | u8::try_from(ch >> 12).unwrap(),
-		_ => 0xF0 | u8::try_from(ch >> 18).unwrap(),
 	}
 }
 

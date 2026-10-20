@@ -19,7 +19,6 @@ use std::sync::Arc;
 pub use flattened::FlattenedDfa;
 pub use flattened::LeftmostMatch;
 pub use flattened::LeftmostScratch;
-pub(crate) use flattened::lead_byte_of;
 use rustc_hash::FxBuildHasher;
 use rustc_hash::FxHashMap;
 

@@ -74,6 +74,19 @@ fn decode_scalar_non_ascii(bytes: &[u8]) -> (char, usize) {
 	(ch, ch.len_utf8())
 }
 
+/// The lead byte of the UTF-8 encoding of `ch` (ASCII included).
+///
+/// `utf8_len` must be `ch.len_utf8()`, i.e. the width of the encoding `ch` takes in
+/// [`str`]; it selects which of the (at most four) encoding bytes is the lead.
+pub(crate) fn lead_byte_of(ch: u32, utf8_len: usize) -> u8 {
+	match utf8_len {
+		1 => u8::try_from(ch).unwrap(),
+		2 => 0xC0 | u8::try_from(ch >> 6).unwrap(),
+		3 => 0xE0 | u8::try_from(ch >> 12).unwrap(),
+		_ => 0xF0 | u8::try_from(ch >> 18).unwrap(),
+	}
+}
+
 /// A lazy iterator over the UTF-8 scalars of a byte slice, panicking on invalid UTF-8.
 ///
 /// Unlike [`Chars`](core::str::Chars), this accepts a raw `&[u8]`.

@@ -25,6 +25,7 @@ use crate::regex::Regex;
 use crate::regex::RegexError;
 use crate::regex::RegexPlaceholderLookup;
 use crate::search::decompose::ShapeModelCache;
+use crate::utils::utf8::lead_byte_of;
 
 #[derive(Debug, Clone)]
 pub struct ParsingSpecBuilder {
@@ -335,7 +336,7 @@ impl ParsingSpecBuilder {
 					if ch.is_ascii() {
 						ch as u8
 					} else {
-						crate::dfa::lead_byte_of(ch as u32, ch.len_utf8())
+						lead_byte_of(ch as u32, ch.len_utf8())
 					}
 				})
 				.chain(unanchored_bytes),
