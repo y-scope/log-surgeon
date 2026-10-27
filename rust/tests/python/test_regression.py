@@ -117,3 +117,6 @@ class TestRegression(unittest.TestCase):
 		self.assertEqual(e.root_matches[0].text, "abc")
 		self.assertEqual(e.root_matches[1].text, "123")
 		self.assertEqual(e.root_matches[2].text, "def")
+
+if __name__ == "__main__":
+	unittest.main()

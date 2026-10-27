@@ -116,7 +116,7 @@ class TestSimple(unittest.TestCase):
 		e4 = p.next_log_event()
 		# self.assertEqual(str(e4.log_type), "%2.0:var2.%\n")
 
-	def test_variable_offsets(self):
+	def test_variable_text(self):
 		p = Parser(debug=True)
 
 		p.set_delimiters(" ")
@@ -131,14 +131,9 @@ class TestSimple(unittest.TestCase):
 
 		self.assertEqual(e.message, text)
 		self.assertEqual(len(e.leaf_matches), 3)
+		self.assertEqual([cap.text for cap in e.leaf_matches], ["0", "234", "789"])
 
-		self.assertEqual(e.leaf_matches[2].offsets.start, 7)
-		self.assertEqual(e.leaf_matches[2].offsets.stop, 10)
-
-		for cap in e.leaf_matches:
-			self.assertEqual(cap.text, e.message[cap.offsets])
-
-	def test_variable_offsets_non_ascii(self):
+	def test_variable_text_non_ascii(self):
 		p = Parser(debug=True)
 
 		p.set_delimiters(" ")
@@ -155,15 +150,7 @@ class TestSimple(unittest.TestCase):
 
 		self.assertEqual(e.message, text)
 		self.assertEqual(len(e.leaf_matches), 2)
-
-		self.assertEqual(e.leaf_matches[0].offsets.start, 2)
-		self.assertEqual(e.leaf_matches[0].offsets.stop, 5)
-
-		self.assertEqual(e.leaf_matches[1].offsets.start, 9)
-		self.assertEqual(e.leaf_matches[1].offsets.stop, 12)
-
-		for cap in e.leaf_matches:
-			self.assertEqual(cap.text, e.message[cap.offsets])
+		self.assertEqual([cap.text for cap in e.leaf_matches], ["234", "789"])
 
 	def test_nested_captures(self):
 		p = Parser(debug=True)
@@ -183,17 +170,13 @@ class TestSimple(unittest.TestCase):
 
 			self.assertEqual(e.message, line)
 			self.assertEqual(len(e.leaf_matches), 1)
-			self.assertEqual(e.leaf_matches[0].offsets, slice(len(":abc"), len(line) - 1, 1))
 			self.assertEqual(e.leaf_matches[0].text, "123")
 
 			self.assertEqual(len(e.non_leaf_matches), 2)
-			self.assertEqual(e.non_leaf_matches[0].offsets, slice(0, len(line) - 1, 1))
 			self.assertEqual(e.non_leaf_matches[0].text, ":abc123")
-			self.assertEqual(e.non_leaf_matches[1].offsets, slice(len(":"), len(line) - 1, 1))
 			self.assertEqual(e.non_leaf_matches[1].text, "abc123")
 
 			self.assertEqual(len(e.root_matches), 1)
-			self.assertEqual(e.root_matches[0].offsets, slice(0, len(line) - 1, 1))
 			self.assertEqual(e.root_matches[0].fully_qualified_name, "wordint")
 			self.assertEqual(e.root_matches[0].text, ":abc123")
 
@@ -259,3 +242,6 @@ class TestSimple(unittest.TestCase):
 		self.assertEqual(leaf.parent.parent.parent.text, "0123")
 
 		self.assertIsNone(leaf.parent.parent.parent.parent)
+
+if __name__ == "__main__":
+	unittest.main()

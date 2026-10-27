@@ -1,18 +1,17 @@
 use std::num::NonZero;
+use std::range::Range;
 use std::sync::Arc;
 
 use pyo3::buffer::PyBuffer;
-// use pyo3::exceptions::PyIndexError;
-// use pyo3::exceptions::PyKeyError;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::exceptions::PyUnicodeDecodeError;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3::sync::PyOnceLock;
 use pyo3::types::PyBytes;
 use pyo3::types::PyInt;
 use pyo3::types::PyList;
 use pyo3::types::PyListMethods;
-use pyo3::types::PySlice;
 use pyo3::types::PyString;
 
 use crate::log_event::LogEvent;
@@ -36,10 +35,12 @@ struct PyParser {
 }
 
 #[pyclass(name = "LogEvent", frozen)]
-#[derive(Debug)]
 struct PyLogEvent {
-	#[pyo3(get)]
-	message: Py<PyString>,
+	/// Shared with each contained [`PyMatch`] so both can lazily synthesize
+	/// their Python strings without copying the full message per match.
+	message: Arc<str>,
+	/// The lazily synthesized message as a Python string.
+	message_cached: PyOnceLock<Py<PyString>>,
 	#[pyo3(get)]
 	leaf_matches: Py<PyList>,
 	#[pyo3(get)]
@@ -51,7 +52,6 @@ struct PyLogEvent {
 }
 
 #[pyclass(name = "Match", frozen)]
-#[derive(Debug)]
 struct PyMatch {
 	#[pyo3(get)]
 	root_rule_id: Py<PyInt>,
@@ -63,10 +63,13 @@ struct PyMatch {
 	#[pyo3(get, name = "parent")]
 	maybe_parent: Option<Py<PyMatch>>,
 
-	/// Slice indexing into [`PyLogEvent::message`], in code points (not bytes),
-	/// so that `match.text == event.message[match.offsets]`.
-	#[pyo3(get)]
-	offsets: Py<PySlice>,
+	/// Byte range of this match within [`Self::message`].
+	range: Range<usize>,
+	/// Shared with the owning [`PyLogEvent`] so both can lazily synthesize
+	/// their Python strings without copying the full message per match.
+	message: Arc<str>,
+	/// The lazily synthesized match text as a Python string.
+	text_cached: PyOnceLock<Py<PyString>>,
 
 	/// Non-qualified name of this match.
 	#[pyo3(get)]
@@ -75,8 +78,8 @@ struct PyMatch {
 	#[pyo3(get)]
 	fully_qualified_name: Py<PyString>,
 
-	#[pyo3(get, name = "text")]
-	lexeme: Py<PyString>,
+	#[pyo3(get)]
+	is_leaf: bool,
 }
 
 #[pymethods]
@@ -92,6 +95,36 @@ impl PyParser {
 			pos: 0,
 			debug,
 		}
+	}
+
+	#[staticmethod]
+	#[pyo3(signature = (definition, *, debug = false))]
+	fn from_parsing_spec_definition(definition: &str, debug: bool) -> PyResult<Self> {
+		match ParsingSpecBuilder::from_parsing_spec_definition(definition) {
+			Ok(builder) => {
+				let spec: ParsingSpec = builder.build();
+				Ok(Self {
+					input: Python::attach(|py| py.None()),
+					spec_builder: ParsingSpecBuilder::new(),
+					maybe_parser: Some(Arc::new(spec).create_parser()),
+					buffer: String::new(),
+					pos: 0,
+					debug,
+				})
+			},
+			Err(err) => Err(PyValueError::new_err(format!(
+				"invalid parsing spec definition on line {}",
+				err.line_offset + 1
+			))),
+		}
+	}
+
+	fn generate_parsing_spec_definition(&self) -> PyResult<String> {
+		let Some(parser): Option<&Parser> = self.maybe_parser.as_ref() else {
+			return Err(PyValueError::new_err("parser has not been compiled"));
+		};
+
+		Ok(parser.spec.to_parsing_spec_definition())
 	}
 
 	/// Raises an exception if `name` is empty, or `"delimiters"`
@@ -153,8 +186,8 @@ impl PyParser {
 		let root_matches: Bound<'_, PyList> = PyList::empty(py);
 		let mut all_matches: Vec<Bound<'_, PyMatch>> = Vec::new();
 
+		let message: Arc<str> = Arc::from(event.message.as_str());
 		let spec: &ParsingSpec = event.spec;
-		let offsets: CodePointOffsets = CodePointOffsets::new(event.message.as_str());
 
 		for (i, mat) in event.all_matches.iter().enumerate() {
 			let rule: &RootRule = &spec[mat.rule_idx];
@@ -173,16 +206,13 @@ impl PyParser {
 				root_rule_id: PyInt::new(py, u16::from(mat.rule_idx)).unbind(),
 				sub_rule_id: PyInt::new(py, mat.sub_rule_id.map_or(0, NonZero::get)).unbind(),
 				maybe_parent,
-				offsets: PySlice::new(
-					py,
-					offsets.at(mat.range.start) as isize,
-					offsets.at(mat.range.end) as isize,
-					1,
-				)
-				.unbind(),
+				// <https://doc.rust-lang.org/nightly/std/range/index.html>
+				range: Range::from(mat.range.start..mat.range.end),
+				message: Arc::clone(&message),
+				text_cached: PyOnceLock::new(),
 				name: PyString::new(py, name).unbind(),
 				fully_qualified_name: PyString::new(py, &rule_info.fully_qualified_name).unbind(),
-				lexeme: PyString::new(py, &event.message[mat.range.start..mat.range.end]).unbind(),
+				is_leaf: mat.is_leaf,
 			}
 			.into_pyobject(py)?;
 			if mat.sub_rule_id.is_none() {
@@ -198,7 +228,8 @@ impl PyParser {
 		let all_matches: Bound<'_, PyList> = PyList::new(py, all_matches)?;
 
 		Ok(Some(PyLogEvent {
-			message: PyString::new(py, event.message.as_str()).unbind(),
+			message,
+			message_cached: PyOnceLock::new(),
 			leaf_matches: leaf_matches.unbind(),
 			non_leaf_matches: non_leaf_matches.unbind(),
 			root_matches: root_matches.unbind(),
@@ -210,78 +241,56 @@ impl PyParser {
 		self.pos == self.buffer.len()
 	}
 
-	fn generate_parsing_spec_definition(&self) -> PyResult<String> {
-		let Some(parser): Option<&Parser> = self.maybe_parser.as_ref() else {
+	fn reset(&mut self) -> PyResult<()> {
+		let Some(parser): Option<&mut Parser> = self.maybe_parser.as_mut() else {
 			return Err(LogSurgeonException::new_err("parser has not been compiled"));
 		};
 
-		Ok(parser.spec.to_parsing_spec_definition())
-	}
-
-	#[staticmethod]
-	#[pyo3(signature = (definition, *, debug = false))]
-	fn from_parsing_spec_definition(definition: &str, debug: bool) -> PyResult<Self> {
-		match ParsingSpecBuilder::from_parsing_spec_definition(definition) {
-			Ok(builder) => {
-				let spec: ParsingSpec = builder.build();
-				Ok(Self {
-					input: Python::attach(|py| py.None()),
-					spec_builder: ParsingSpecBuilder::new(),
-					maybe_parser: Some(Arc::new(spec).create_parser()),
-					buffer: String::new(),
-					pos: 0,
-					debug,
-				})
-			},
-			Err(err) => Err(LogSurgeonException::new_err(format!(
-				"invalid parsing spec definition on line {}",
-				err.line_offset + 1
-			))),
-		}
+		parser.reset();
+		Ok(())
 	}
 }
 
 #[pymethods]
 impl PyLogEvent {
-	// #[pyo3(name = "__len__")]
-	// fn len(&self) -> usize {
-	// 	self.tokens.len()
-	// }
-
-	// #[pyo3(name = "__getitem__")]
-	// fn get_item(&self, i: usize) -> PyResult<PyToken> {
-	// 	if let Some(token) = self.tokens.get(i) {
-	// 		Ok(token.clone())
-	// 	} else {
-	// 		Err(PyIndexError::new_err(format!(
-	// 			"event token index {} is out of range 0..{}",
-	// 			i,
-	// 			self.tokens.len()
-	// 		)))
-	// 	}
-	// }
+	#[getter]
+	fn message(&self, py: Python<'_>) -> Py<PyString> {
+		self.message_string(py)
+	}
 
 	#[pyo3(name = "__str__")]
 	fn to_string<'py>(this: PyRef<'py, Self>) -> Py<PyString> {
-		this.message.clone_ref(this.py())
+		this.message_string(this.py())
+	}
+}
+
+impl PyLogEvent {
+	fn message_string(&self, py: Python<'_>) -> Py<PyString> {
+		self.message_cached
+			.get_or_init(py, || PyString::new(py, self.message.as_ref()).unbind())
+			.clone_ref(py)
+	}
+}
+
+impl std::fmt::Debug for PyLogEvent {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		// Don't need [`self.message_cached`].
+		f.debug_struct("PyLogEvent")
+			.field("message", &&self.message)
+			.field("leaf_matches", &self.leaf_matches)
+			.field("non_leaf_matches", &self.non_leaf_matches)
+			.field("root_matches", &self.root_matches)
+			.field("all_matches", &self.all_matches)
+			.finish()
 	}
 }
 
 #[pymethods]
 impl PyMatch {
-	// #[pyo3(name = "__getitem__")]
-	// fn get_item(&self, key: &str) -> PyResult<Vec<String>> {
-	// 	if let Some(captures) = self.captures.get(key) {
-	// 		Ok(captures.clone())
-	// 	} else {
-	// 		Err(PyKeyError::new_err(format!("token has no capture {}", key)))
-	// 	}
-	// }
-
-	// #[pyo3(name = "__contains__")]
-	// fn contains(&self, key: &str) -> bool {
-	// 	self.captures.contains_key(key)
-	// }
+	#[getter]
+	fn text(&self, py: Python<'_>) -> Py<PyString> {
+		self.text_string(py)
+	}
 
 	#[getter]
 	fn root<'py>(this: &Bound<'py, Self>) -> Bound<'py, Self> {
@@ -298,45 +307,25 @@ impl PyMatch {
 	}
 }
 
-/// Maps byte offsets into a [`str`] to Python code-point offsets
-/// into the corresponding [`PyString`].
-///
-/// Python strings are indexed by code point, but the parser reports byte offsets
-/// into the UTF-8 buffer; the two agree iff the message is ASCII.
-enum CodePointOffsets {
-	/// The message is ASCII, so byte offset == code-point offset.
-	Identity,
-	/// `byte_to_code_point[i]` is the code-point offset of byte offset `i`;
-	/// has one extra entry for the end-of-string offset.
-	Table { byte_to_code_point: Vec<u32> },
+impl PyMatch {
+	fn text_string(&self, py: Python<'_>) -> Py<PyString> {
+		self.text_cached
+			.get_or_init(py, || PyString::new(py, &self.message[self.range]).unbind())
+			.clone_ref(py)
+	}
 }
 
-impl CodePointOffsets {
-	fn new(message: &str) -> Self {
-		if message.is_ascii() {
-			return Self::Identity;
-		}
-
-		let mut byte_to_code_point: Vec<u32> = Vec::with_capacity(message.len() + 1);
-		let mut code_point: u32 = 0;
-		for &byte in message.as_bytes() {
-			byte_to_code_point.push(code_point);
-			// Continuation bytes (`0b10xx_xxxx`) do not start a new code point.
-			if (byte as i8) >= -0x40 {
-				code_point += 1;
-			}
-		}
-		byte_to_code_point.push(code_point);
-
-		Self::Table { byte_to_code_point }
-	}
-
-	/// Panics if `byte_offset` is out of range.
-	fn at(&self, byte_offset: usize) -> u32 {
-		match self {
-			Self::Identity => byte_offset as u32,
-			Self::Table { byte_to_code_point } => byte_to_code_point[byte_offset],
-		}
+impl std::fmt::Debug for PyMatch {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("PyMatch")
+			.field("root_rule_id", &self.root_rule_id)
+			.field("sub_rule_id", &self.sub_rule_id)
+			.field("maybe_parent", &self.maybe_parent)
+			.field("text", &&self.message[self.range])
+			.field("name", &self.name)
+			.field("fully_qualified_name", &self.fully_qualified_name)
+			.field("is_leaf", &self.is_leaf)
+			.finish()
 	}
 }
 
@@ -388,7 +377,9 @@ fn python_unicode_or_bytes_as_str<'a>(input: &'a Bound<'_, PyAny>) -> PyResult<O
 	} else if let Ok(bytes) = input.cast::<PyBytes>() {
 		match str::from_utf8(bytes.as_bytes()) {
 			Ok(utf8) => Ok(Some(utf8)),
-			Err(err) => Err(PyUnicodeDecodeError::new_err(err)),
+			Err(err) => {
+				Err(PyUnicodeDecodeError::new_utf8(input.py(), bytes.as_bytes(), err)?.into())
+			},
 		}
 	} else {
 		Ok(None)

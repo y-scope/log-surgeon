@@ -30,3 +30,6 @@ class TestParsingSpecDefinition(unittest.TestCase):
 		definition2 = p2.generate_parsing_spec_definition()
 
 		self.assertEqual(definition1, definition2)
+
+if __name__ == "__main__":
+	unittest.main()

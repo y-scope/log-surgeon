@@ -5,14 +5,14 @@ mod query;
 #[cfg(test)]
 mod test;
 
+use std::sync::Arc;
+
 pub use interpretation::Interpretation;
 pub use interpretation::LeafQuery;
 pub(crate) use interpretation::Tail;
 pub use query::SearchString;
 pub use query::SearchStringError;
 pub use query::SymbolicChar;
-
-use std::sync::Arc;
 
 use crate::nfa::Path;
 use crate::nfa::PathComponent;
