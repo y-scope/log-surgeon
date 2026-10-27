@@ -80,6 +80,23 @@ impl ParsingSpec {
 }
 
 impl ParsingSpecBuilder {
+	/// Parse a parsing specification file (see `docs/parsing-specification.md`).
+	///
+	/// Everything after a line starting with `===` is a cached, serialized
+	/// [`ParsingSpec::combined_dfa`] (as written by [`ParsingSpec::to_parsing_spec_definition`]);
+	/// [`ParsingSpecBuilder::build`] then uses it as-is instead of determinizing.
+	/// A cache that fails to deserialize is reported on stderr and ignored.
+	///
+	/// Gotchas:
+	///
+	/// - The cache is never checked against the rules, and the builder's mutators
+	///   (`add_rule*`, `add_placeholder`, `add_encoding`, `set_delimiters`) do not clear it.
+	///   Mutating a builder loaded from a definition with a cache therefore builds a spec
+	///   whose DFA silently ignores the change (e.g. an added rule never matches).
+	///   Strip the `===` section, or build from a definition without one, before mutating.
+	/// - Line parsing is lenient: anything after a rule's closing quote is ignored
+	///   (e.g. `foo: "a" junk` and `foo: "a""` are accepted as `foo: "a"`),
+	///   and a repeated `delimiters` line silently replaces the earlier one.
 	pub fn from_parsing_spec_definition(contents: &str) -> Result<Self, ParsingSpecFileError> {
 		let mut builder: Self = Self::new();
 
