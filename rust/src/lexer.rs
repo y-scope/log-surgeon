@@ -9,6 +9,7 @@ use crate::dfa::TdfaExecution;
 use crate::parsing_spec::EncodingIdx;
 use crate::parsing_spec::ParsingSpec;
 use crate::parsing_spec::RootRule;
+use crate::parsing_spec::RuleIdx;
 use crate::utils::utf8::Utf8Chars;
 
 #[derive(Debug, Clone)]
@@ -51,6 +52,26 @@ impl Lexer {
 	/// Drop any pending match; used when the parser's input buffer is refilled.
 	pub fn reset(&mut self) {
 		self.pending = None;
+	}
+
+	/// Un-read the [`Token::Variable`] just returned for `[start..end]`:
+	/// the caller rewinds its position to `start`,
+	/// and the next call to [`Lexer::next_token`] from `start` returns the same token
+	/// without searching again.
+	pub fn unread(
+		&mut self,
+		rule_idx: RuleIdx,
+		maybe_encoding_idx: Option<EncodingIdx>,
+		start: usize,
+		end: usize,
+	) {
+		debug_assert!(self.pending.is_none());
+		self.pending = Some(LeftmostMatch {
+			rule_idx,
+			maybe_encoding_idx,
+			start,
+			end,
+		});
 	}
 
 	/// Return the next [`Token`] from `input` starting from `*pos`,

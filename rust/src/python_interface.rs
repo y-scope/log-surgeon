@@ -155,7 +155,13 @@ impl PyParser {
 		Ok(())
 	}
 
+	/// Also resets the parser (if compiled),
+	/// so nothing from the previous input carries over
+	/// (e.g. the next event's header, which the parser holds once found).
 	fn set_input_stream(&mut self, input: &Bound<'_, PyAny>) -> PyResult<()> {
+		if let Some(parser) = self.maybe_parser.as_mut() {
+			parser.reset();
+		}
 		self.input = input.clone().unbind();
 		self.pos = 0;
 		self.buffer.clear();

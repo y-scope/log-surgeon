@@ -25,7 +25,7 @@ struct LeafQuery;
 /// Newtype wrapper around a `usize` index.
 struct NfaIdx;
 
-/// A parser is almost stateless aside from 2/3 fields:
+/// A parser is almost stateless aside from:
 ///
 /// - An owned copy of the substring of the input text
 ///   for the "current" (most recently returned) log event.
@@ -33,7 +33,8 @@ struct NfaIdx;
 ///     since the parser doesn't own a whole copy of the input text.
 ///   - Most calls to [`Parser::next_event`] won't require allocation;
 ///     the memory is bounded by the max log event size.
-/// - An owned copy of the text and matches for the header of the next log event.
+/// - Whether a separating `header` has been seen (header mode vs newline mode).
+/// - The lexer's pending match, i.e. the header of the next log event.
 /// - (Optional/implementation detail) [`TdfaExecution`] cache.
 ///
 struct Parser;

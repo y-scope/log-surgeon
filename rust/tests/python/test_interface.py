@@ -102,6 +102,24 @@ class TestParserInterface(unittest.TestCase):
 		p.reset()
 		self.assertIsNone(p.next_log_event())
 
+	def test_trailing_header(self):
+		p = self.make_parser(("header", r"^[0-9]+$"), ("word", r"^[a-z]+$"), delimiters=" \n")
+		events = self.read_events(p, "1 a\n22")
+
+		self.assertEqual([e.message for e in events], ["1 a\n", "22"])
+		self.assertEqual([m.text for m in events[1].root_matches], ["22"])
+
+	def test_new_input_stream_discards_pending_header(self):
+		p = self.make_parser(("header", r"^[0-9]+$"), ("word", r"^[a-z]+$"), delimiters=" \n")
+
+		# Stop after the first event: the parser has already found the second header.
+		p.set_input_stream("1 a\n22 b")
+		self.assertEqual(p.next_log_event().message, "1 a\n")
+
+		events = self.read_events(p, "x y")
+		self.assertEqual([e.message for e in events], ["x y"])
+		self.assertEqual([m.text for m in events[0].root_matches], ["x", "y"])
+
 	def test_parsing_spec_definition_round_trip(self):
 		p = self.make_parser(("word", r"[a-z]+"), ("num", r"[0-9]+"))
 

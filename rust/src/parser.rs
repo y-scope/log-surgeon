@@ -15,9 +15,10 @@ use crate::log_event::LogEvent;
 use crate::log_event::Match;
 use crate::log_event::MatchFfiPointers;
 use crate::parsing_spec::ParsingSpec;
+use crate::parsing_spec::RuleIdx;
 use crate::parsing_spec::RuleInfo;
 
-/// A parser is almost stateless aside from 2/3 fields:
+/// A parser is almost stateless aside from:
 ///
 /// - An owned copy of the substring of the input text
 ///   for the "current" (most recently returned) log event.
@@ -25,7 +26,8 @@ use crate::parsing_spec::RuleInfo;
 ///     since the parser doesn't own a whole copy of the input text.
 ///   - Most calls to [`Parser::next_event`] won't require allocation;
 ///     the memory is bounded by the max log event size.
-/// - An owned copy of the text and matches for the header of the next log event.
+/// - Whether a separating `header` has been seen (header mode vs newline mode).
+/// - The lexer's pending match, i.e. the header of the next log event.
 /// - (Optional/implementation detail) [`TdfaExecution`] cache.
 ///
 #[derive(Debug, Clone)]
@@ -36,21 +38,15 @@ pub struct Parser {
 	lexer: Lexer,
 	current_log: WorkingLogEvent,
 
-	// We don't use an `Option<WorkingLogEvent>` since
-	// we want to reuse the underlying memory of `pending_header` through resets.
 	seen_header: bool,
-	pending_header: WorkingLogEvent,
 	dfa_execution: TdfaExecution,
 }
 
-/// Owned data for a [`LogEvent`].
-/// A parser has one for the current (most recently returned) log event,
-/// and one for the header of the next log event,
-/// so that the memory can be re-used.
+/// Owned data for the current (most recently returned) [`LogEvent`],
+/// kept in the parser so that the memory can be re-used.
 #[derive(Debug, Clone)]
 struct WorkingLogEvent {
-	/// The full text/substring of the input of the log event
-	/// (or of the header matched so far).
+	/// The full text/substring of the input of the log event.
 	message: String,
 	all_matches: Vec<Match>,
 	root_indices: Vec<usize>,
@@ -73,14 +69,28 @@ impl Parser {
 			lexer,
 			current_log: WorkingLogEvent::new(),
 			seen_header: false,
-			pending_header: WorkingLogEvent::new(),
 			dfa_execution,
 		}
 	}
 
 	/// Return the next log event;
-	/// update `*pos` to the position after the returned event.
+	/// update `*pos` to the position after the returned event,
+	/// which is also the start of the next event.
 	/// Returns `None` iff `*pos == input.len()`.
+	///
+	/// A separating `header` ends the event *before* it.
+	/// It is not part of the returned event; the lexer keeps it pending (see [`Lexer::unread`]),
+	/// so the next call returns it without searching again.
+	/// After [`Parser::reset`], resuming from `*pos` re-lexes it instead.
+	///
+	/// # Panics
+	///
+	/// The pending header is held as offsets into `input`,
+	/// so consecutive calls must pass the same input (and `*pos` as returned).
+	/// Call [`Parser::reset`] before switching to a different input
+	/// (or after refilling or moving the contents of the same buffer);
+	/// otherwise this may panic (offsets out of range),
+	/// or silently return a header that is not in the new input.
 	pub fn next_event<AsBytes>(&mut self, input: &AsBytes, pos: &mut usize) -> Option<LogEvent<'_>>
 	where
 		AsBytes: AsRef<[u8]> + ?Sized,
@@ -91,20 +101,15 @@ impl Parser {
 			return None;
 		}
 
-		let pos_after_header: usize = *pos;
-
-		std::mem::swap(&mut self.current_log, &mut self.pending_header);
-		self.pending_header.clear();
-
-		let header_len: usize = self.current_log.message.len();
+		let event_start: usize = *pos;
+		self.current_log.clear();
 
 		let mut previous_was_newline: bool = true;
 
 		let pos_end: usize = loop {
 			let pos_before_token: usize = *pos;
-			let token_start: usize = pos_before_token - pos_after_header + header_len;
+			let token_start: usize = pos_before_token - event_start;
 			let token_starting_capture_count: usize = self.current_log.all_matches.len();
-			let token_starting_leaf_indices: usize = self.current_log.leaf_indices.len();
 			match self.lexer.next_token(input, pos, &mut self.dfa_execution) {
 				Token::Variable {
 					rule,
@@ -112,6 +117,21 @@ impl Parser {
 					lexeme,
 					has_captures,
 				} => {
+					// A separating header ends this event *before* it:
+					// rewind so the next call re-lexes it as the start of the next event.
+					// The lexer holds no pending match after returning one, so this is safe.
+					if &*rule.name == "header" && previous_was_newline {
+						if token_start == 0 {
+							self.seen_header = true;
+						} else if self.seen_header {
+							let (rule_idx, end): (RuleIdx, usize) = (rule.idx, *pos);
+							self.lexer
+								.unread(rule_idx, maybe_encoding_idx, pos_before_token, end);
+							*pos = pos_before_token;
+							break pos_before_token;
+						}
+					}
+
 					let variable_is_implicit_capture: bool = !has_captures;
 
 					let variable_capture: Match = Match {
@@ -156,39 +176,6 @@ impl Parser {
 							self.current_log.leaf_indices.push(capture_index);
 						}
 					}
-
-					if &*rule.name == "header" && previous_was_newline {
-						if self.seen_header {
-							assert_eq!(self.pending_header.message.len(), 0);
-							assert_eq!(self.pending_header.all_matches.len(), 0);
-							assert_eq!(self.pending_header.root_indices.len(), 0);
-							assert_eq!(self.pending_header.leaf_indices.len(), 0);
-							self.pending_header.message.push_str(lexeme);
-							for mut capture in self
-								.current_log
-								.all_matches
-								.drain(token_starting_capture_count..)
-							{
-								capture.range.start -= token_start;
-								capture.range.end -= token_start;
-								capture.parent_index -= token_starting_capture_count;
-								self.pending_header.all_matches.push(capture);
-							}
-							for mut index in self
-								.current_log
-								.leaf_indices
-								.drain(token_starting_leaf_indices..)
-							{
-								index -= token_starting_capture_count;
-								self.pending_header.leaf_indices.push(index);
-							}
-							self.current_log.root_indices.pop().unwrap();
-							self.pending_header.root_indices.push(0);
-							break pos_before_token;
-						} else if token_start == 0 {
-							self.seen_header = true;
-						}
-					}
 				},
 				Token::Newline => {
 					if !self.seen_header {
@@ -210,7 +197,7 @@ impl Parser {
 
 		self.current_log.message.push_str(unsafe {
 			// SAFETY: validated by the lexer.
-			std::str::from_utf8_unchecked(&input[pos_after_header..pos_end])
+			std::str::from_utf8_unchecked(&input[event_start..pos_end])
 		});
 
 		let matches_base: *const Match = self.current_log.all_matches.as_ptr();
@@ -241,12 +228,15 @@ impl Parser {
 	}
 
 	/// Reset the internal state of the parser;
-	/// used when "refilling" the input buffer.
+	/// used when "refilling" the input buffer, or switching to a new input.
+	///
+	/// Parsing may resume from the last `*pos` returned by [`Parser::next_event`]
+	/// (adjusted for the refill).
+	/// Header mode is forgotten until a `header` is matched at the start of an event.
 	pub fn reset(&mut self) {
 		self.lexer.reset();
 		self.current_log.clear();
 		self.seen_header = false;
-		self.pending_header.clear();
 	}
 }
 
