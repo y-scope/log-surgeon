@@ -255,6 +255,14 @@ fn split_engine_differential() {
 		"t: \"a(\\nbc)+d\"\nn: \"^[0-9]+$\"",
 		// Non-ASCII first bytes and lookbehinds.
 		"e: \"\u{e9}\u{e9}\"\nu: \"^\u{4e16}$\"",
+		// A non-ASCII unanchored rule next to a wide ASCII one:
+		// only exact with an exact `initial_bytes` (27 bytes, not 78).
+		"x: \"[a-z]+\"\ne: \"\u{e9}+\"\nz: \"^[0-9]+$\"",
+		// Non-delimiters sharing the lead byte of a non-ASCII delimiter (`\u{3001}`),
+		// and an inexact `scan` (delimiters spanning more than 8 high nibbles).
+		INEXACT_SCAN,
+		// As above, with rules that can match at false-positive hits.
+		"delimiters: \" \\t\\n:@[`{\\u{e9}\\u{3000}\"\nh: \"#[0-9]+\"\nn: \"^[0-9\\u{03}]+$\"\nm: \"^\\u{9577}+\"",
 	];
 	let mut state: u64 = 0x243F6A8885A308D3;
 	let mut next = move || {
@@ -264,8 +272,9 @@ fn split_engine_differential() {
 		state
 	};
 	let alphabet: &[char] = &[
-		'a', 'b', 'c', 'd', 'e', 'f', 'o', 'x', 'z', '@', '0', '1', '9', ' ', '\t', '\n', '.',
-		'\u{e9}', '\u{4e16}',
+		'a', 'b', 'c', 'd', 'e', 'f', 'o', 'x', 'z', '@', '#', '0', '1', '9', ' ', '\t', '\n', '.',
+		':', '{', '\u{3}', '\u{e8}', '\u{e9}', '\u{3000}', '\u{3001}', '\u{4e16}', '\u{9577}',
+		'\u{1f600}',
 	];
 	for definition in SPECS {
 		let spec: ParsingSpec = crate::spec! { definition };
@@ -284,4 +293,39 @@ fn split_engine_differential() {
 			);
 		}
 	}
+}
+
+/// Delimiters spanning more than 8 high nibbles (`0`, `2`-`7`, `C`, `E`),
+/// so [`ParsingSpec::scan`] is not exact; with one sparse unanchored rule (`#...`),
+/// so the split engine is used.
+const INEXACT_SCAN: &str =
+	"delimiters: \" \\t\\n:@[`{\\u{e9}\\u{3000}\"\nh: \"#[0-9]+\"\nn: \"^[0-9]+$\"";
+
+/// Scan hits that are neither delimiters nor first bytes of an unanchored rule
+/// are skipped, not probed as such (this used to fail a `debug_assert!`):
+///
+/// - `\u{3001}` shares its lead byte `E3` with the delimiter `\u{3000}`;
+/// - `\u{3}` and `\u{9577}` (lead byte `E9`) are only hits because `scan` is not exact.
+#[test]
+fn false_positive_scan_hits() {
+	let spec: ParsingSpec = crate::spec! { INEXACT_SCAN };
+	assert!(spec.unanchored_scan.is_some());
+	assert!(!spec.scan.is_exact());
+	for byte in [0x03, 0xE3, 0xE9] {
+		assert!(spec.scan.contains(byte), "{byte:#04x} is a scan hit");
+	}
+
+	assert_eq!(
+		tokens_of(&spec, "a\u{3001}12\u{3001}#3"),
+		vec!["S(a\\u{3001}12\\u{3001})", "V(h:#3)", "END"]
+	);
+	assert_eq!(
+		tokens_of(&spec, "ab\u{3}cd 12"),
+		vec!["S(ab\\u{3}cd )", "V(n:12)", "END"]
+	);
+	// `\u{9577}` is not a delimiter, so `^[0-9]+$` cannot match right after it.
+	assert_eq!(
+		tokens_of(&spec, "\u{9577} 1 \u{9577}2#4"),
+		vec!["S(\\u{9577} )", "V(n:1)", "S( \\u{9577}2)", "V(h:#4)", "END"]
+	);
 }

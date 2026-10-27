@@ -16,6 +16,7 @@ pub use rule::RootRule;
 pub use rule::RuleIdx;
 pub use rule::RuleInfo;
 
+use crate::byte_scan::ByteSet;
 use crate::dfa::FlattenedDfa;
 use crate::dfa::Tdfa;
 use crate::nfa::Tnfa;
@@ -67,12 +68,23 @@ pub struct ParsingSpec {
 
 	/// What the lexer scans for: ASCII delimiters, lead bytes of non-ASCII delimiters,
 	/// and (when exact, see [`unanchored_scan`]) the first bytes of unanchored rules.
-	pub scan: crate::byte_scan::ByteSet,
+	///
+	/// May match more than these (a lead byte shared with a non-delimiter,
+	/// or [`ByteSet::is_exact`] being false);
+	/// the lexer re-checks every hit, so a false positive only costs a re-check.
+	///
+	/// WARNING: it must never match a UTF-8 continuation byte (`0x80..=0xBF`), even falsely,
+	/// so that every hit is the start of a scalar (the lexer decodes and probes hits).
+	/// This holds because no member is a continuation byte,
+	/// and a [`ByteSet`] only falsely matches bytes whose high nibble some member has
+	/// (`0x8`-`0xB` never do).
+	/// Checked by a `debug_assert!` in [`ParsingSpecBuilder::build`].
+	pub scan: ByteSet,
 	/// First-byte scan over the startable byte set of the *unanchored* rules
 	/// (the post-lookbehind states for a non-delimiter probe; see design B).
 	/// `None` (run [`FlattenedDfa::execute_leftmost`] over everything) when there are
 	/// unanchored rules but their set is inexact or too dense to be worthwhile.
-	pub unanchored_scan: Option<crate::byte_scan::ByteSet>,
+	pub unanchored_scan: Option<ByteSet>,
 
 	/// Prefilter models for log-shape search, built on demand and shared across
 	/// [`Parser`]s created from this spec.
@@ -301,45 +313,66 @@ impl ParsingSpecBuilder {
 			dfa_for_parsing
 		});
 
-		// The unanchored scan covers the bytes an unanchored rule may start with:
-		// the startable byte set after a *non-delimiter* lookbehind
-		// (`^`-anchored rules die on that lookbehind, so the set excludes them).
-		// It is only used if the nibble construction is exact and the set sparse
-		// (a scan stopping at most bytes loses to the general engine; 64 is a guess,
-		// to be tuned).
+		// `probe` is a representative non-delimiter lookbehind character.
+		// The combined DFA's first transition is on the lookbehind,
+		// and only distinguishes delimiters (which `^` rules require) from everything else
+		// (see `lookaround_transitions`), so every non-delimiter leads to the same state:
+		// the one where only unanchored rules are alive.
+		// The first ASCII non-delimiter (usually `'\0'`) is just a convenient choice.
+		// `None` only if every ASCII character is a delimiter;
+		// that just disables the unanchored scan (a non-ASCII probe would also do).
 		let probe: Option<u32> =
 			(0..0x80).find(|&b: &u32| !self.delimiters.contains(char::from_u32(b).unwrap()));
-		let unanchored_bytes: Option<Vec<u8>> = probe
-			.filter(|_| has_unanchored_rules)
-			.map(|probe| combined_dfa.initial_bytes(probe))
-			.filter(|bytes: &Vec<u8>| !bytes.is_empty() && bytes.len() <= 64);
-		let unanchored_scan: Option<crate::byte_scan::ByteSet> = unanchored_bytes
-			.map(crate::byte_scan::ByteSet::from_bytes)
-			.filter(crate::byte_scan::ByteSet::is_exact);
-		// ASCII delimiters directly; non-ASCII delimiters via their lead byte,
-		// with membership confirmed at scan-hit time (a superset is fine).
+
+		// The bytes an unanchored rule may start with: the startable bytes after `probe`.
+		// Empty if there are no unanchored rules (the lexer then only probes boundaries).
+		let unanchored_bytes: Vec<u8> = match probe {
+			Some(probe) if has_unanchored_rules => combined_dfa.initial_bytes(probe),
+			_ => Vec::new(),
+		};
+
+		// The unanchored scan, only if the set is non-empty, sparse, and exactly
+		// representable: the lexer relies on `contains` to classify hits.
+		// A scan stopping at most bytes loses to the general engine
+		// (`execute_leftmost`, used when this is `None` but there are unanchored rules);
+		// 64 is a guess, to be tuned.
+		let unanchored_scan: Option<ByteSet> =
+			if !unanchored_bytes.is_empty() && unanchored_bytes.len() <= 64 {
+				Some(ByteSet::from_bytes(unanchored_bytes.iter().copied()))
+					.filter(ByteSet::is_exact)
+			} else {
+				None
+			};
+
+		// Only ASCII delimiters: every byte of a multi-byte scalar is >= 0x80.
 		let mut is_ascii_delimiter: [bool; 0x80] = [false; 0x80];
 		for &byte in self.delimiters.as_bytes() {
 			if byte < 0x80 {
 				is_ascii_delimiter[usize::from(byte)] = true;
 			}
 		}
-		let unanchored_bytes: Vec<u8> = if unanchored_scan.is_some() {
-			combined_dfa.initial_bytes(probe.unwrap())
+
+		// ASCII delimiters directly; non-ASCII delimiters via their lead byte,
+		// with membership confirmed at scan-hit time (a superset is fine,
+		// but never a continuation byte; see the warning on `ParsingSpec::scan`).
+		// The unanchored first bytes only when the lexer uses the unanchored scan;
+		// otherwise it uses `execute_leftmost` (or has no unanchored rules)
+		// and they would only cause extra hits.
+		let delimiter_bytes = self.delimiters.chars().map(|ch: char| {
+			if ch.is_ascii() {
+				ch as u8
+			} else {
+				lead_byte_of(ch as u32, ch.len_utf8())
+			}
+		});
+		let scan: ByteSet = if unanchored_scan.is_some() {
+			ByteSet::from_bytes(delimiter_bytes.chain(unanchored_bytes))
 		} else {
-			Vec::new()
+			ByteSet::from_bytes(delimiter_bytes)
 		};
-		let scan: crate::byte_scan::ByteSet = crate::byte_scan::ByteSet::from_bytes(
-			self.delimiters
-				.chars()
-				.map(|ch| {
-					if ch.is_ascii() {
-						ch as u8
-					} else {
-						lead_byte_of(ch as u32, ch.len_utf8())
-					}
-				})
-				.chain(unanchored_bytes),
+		debug_assert!(
+			(0x80..0xC0).all(|byte: u8| !scan.contains(byte)),
+			"the lexer's scan must never match a UTF-8 continuation byte",
 		);
 
 		ParsingSpec {
@@ -375,7 +408,7 @@ pub static BLANK: ParsingSpec = ParsingSpec {
 	combined_dfa: FlattenedDfa::BLANK,
 	has_unanchored_rules: false,
 	is_ascii_delimiter: [false; 0x80],
-	scan: crate::byte_scan::ByteSet::Empty,
+	scan: ByteSet::Empty,
 	unanchored_scan: None,
 	shape_models: ShapeModelCache::new(),
 };

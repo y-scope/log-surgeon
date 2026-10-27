@@ -142,6 +142,13 @@ impl FlattenedDfa {
 	/// non-ASCII chars are reported via their UTF-8 lead bytes
 	/// (lead bytes of same-length scalars advance monotonically,
 	/// so each fixed-length interval sub-range contributes a contiguous range).
+	///
+	/// Exact as a set of lead bytes: a byte is reported iff some startable scalar starts
+	/// with it. Scalars sharing a lead byte are not distinguished;
+	/// the probe at a hit (running the DFA) does that.
+	///
+	/// WARNING: the result never contains a UTF-8 continuation byte (`0x80..=0xBF`);
+	/// the lexer's scan relies on this (see [`crate::parsing_spec::ParsingSpec::scan`]).
 	pub fn initial_bytes(&self, lookbehind: u32) -> Vec<u8> {
 		let Some(encoded) = self.lookup_next_state(0, lookbehind) else {
 			return Vec::new();
@@ -155,17 +162,18 @@ impl FlattenedDfa {
 				out.push(u8::try_from(byte).unwrap());
 			}
 		}
+		// Only the intervals this state has a transition on;
+		// `non_ascii_transitions` has one entry per interval, in `all_intervals` order.
+		// Never a continuation byte: `lead_byte_of` only yields lead bytes.
 		let intervals_per_state: usize = self.all_intervals.len();
 		let row_start: usize = state * intervals_per_state;
-		if intervals_per_state > 0
-			&& self.non_ascii_transitions[row_start..row_start + intervals_per_state]
-				.iter()
-				.any(|&target| target != 0)
-		{
-			for interval in self.all_intervals.iter() {
-				for (lo, hi, len) in split_at_utf8_lengths(interval.start(), interval.end()) {
-					out.extend(lead_byte_of(lo, len)..=lead_byte_of(hi, len));
-				}
+		let row: &[u16] = &self.non_ascii_transitions[row_start..row_start + intervals_per_state];
+		for (interval, &target) in self.all_intervals.iter().zip(row.iter()) {
+			if target == 0 {
+				continue;
+			}
+			for (lo, hi, len) in split_at_utf8_lengths(interval.start(), interval.end()) {
+				out.extend(lead_byte_of(lo, len)..=lead_byte_of(hi, len));
 			}
 		}
 		out.sort_unstable();

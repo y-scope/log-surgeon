@@ -169,6 +169,11 @@ impl Lexer {
 		let mut last_probed: usize = pos; // boundary probes must not repeat a position
 		let mut i: usize = pos;
 		loop {
+			// WARNING: every hit must be the start of a scalar,
+			// which relies on `scan` never matching a UTF-8 continuation byte, even falsely
+			// (see `ParsingSpec::scan`): a hit is decoded with `decode_scalar` and probed,
+			// and `i = hit + 1` below resumes *inside* a multi-byte scalar,
+			// relying on the scan to skip its continuation bytes.
 			let hit: usize = spec.scan.find_in(&input[i..]).map(|rel| i + rel)?;
 			let byte: u8 = input[hit];
 
@@ -215,13 +220,22 @@ impl Lexer {
 						return None;
 					}
 				},
-				// A non-delimiter hit is a first byte of an unanchored rule.
+				// A non-delimiter hit is a first byte of an unanchored rule, or a false positive:
+				// a non-delimiter sharing the lead byte of a non-ASCII delimiter,
+				// or a byte matched only because `scan` is not exact (see `ParsingSpec::scan`).
+				// `unanchored_scan` is exact, so it tells them apart;
+				// skipping a false positive cannot lose a match, since a match starting here
+				// would need a delimiter before it (probed as that delimiter's boundary)
+				// or a first byte in `unanchored_scan`.
 				None => {
-					debug_assert!(
-						spec.unanchored_scan
-							.as_ref()
-							.is_none_or(|s| s.contains(byte))
-					);
+					if !spec
+						.unanchored_scan
+						.as_ref()
+						.is_some_and(|scan| scan.contains(byte))
+					{
+						i = hit + 1;
+						continue;
+					}
 					let before: u32 =
 						u32::from(Utf8Chars::new(&input[..hit]).next_back().unwrap_or('\n'));
 					if let Some(m) = attempt(hit, before) {

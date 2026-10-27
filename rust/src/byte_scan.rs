@@ -79,6 +79,11 @@ impl ByteSet {
 	}
 
 	/// Whether `byte` matches the set (possibly a superset for `Nibbles`, see above).
+	///
+	/// WARNING: a false positive always shares its high nibble with some member
+	/// (`high[b >> 4]` is zero for any other high nibble).
+	/// The lexer relies on this so that its scan never matches a UTF-8 continuation byte
+	/// (see `ParsingSpec::scan`); keep it if the representation changes.
 	/// Callers use this only when they already know the set is exact
 	/// or when a superset is acceptable as a filter.
 	pub fn contains(&self, byte: u8) -> bool {

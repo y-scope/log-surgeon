@@ -614,3 +614,43 @@ fn compressed_execute_non_ascii_at_end() {
 	let result = std::panic::catch_unwind(|| compressed.execute(truncated, u32::from('\n')));
 	assert!(result.is_err());
 }
+
+/// [`FlattenedDfa::initial_bytes`] reports exactly the lead bytes of the scalars
+/// that can start an unanchored rule: only intervals the start state transitions on,
+/// not every non-ASCII interval of the DFA.
+#[test]
+fn initial_bytes_are_exact() {
+	let lookbehind: u32 = u32::from('a');
+	let initial_bytes = |definition: &str| -> Vec<u8> {
+		spec_of(definition).combined_dfa.initial_bytes(lookbehind)
+	};
+
+	assert_eq!(initial_bytes("x: \"[xy]+\"\nz: \"^[0-9]+$\""), b"xy");
+	// `\u{e9}` is `C3 A9`; the anchored rule contributes nothing.
+	assert_eq!(
+		initial_bytes("x: \"[xy]+\"\ne: \"\\u{e9}+\"\nz: \"^[0-9]+$\""),
+		vec![b'x', b'y', 0xC3],
+	);
+	// The `\u{4e16}` interval only appears *after* the first character of `e`.
+	assert_eq!(
+		initial_bytes("x: \"[xy]+\"\ne: \"\\u{e9}\\u{4e16}\"\nu: \"^\\u{01f600}$\""),
+		vec![b'x', b'y', 0xC3],
+	);
+	// A range spanning 2-, 3-, and 4-byte scalars.
+	assert_eq!(
+		initial_bytes("r: \"[\\u{0700}-\\u{010400}]\""),
+		Vec::from_iter((0xDC..=0xDF).chain(0xE0..=0xEF).chain(0xF0..=0xF0)),
+	);
+	// Anchored-only specs have no unanchored first bytes.
+	assert_eq!(initial_bytes("x: \"^[xy]+$\"\ne: \"^\\u{e9}+$\""), b"");
+}
+
+/// The wider ASCII set plus one exact non-ASCII lead byte stays under the density cut-off,
+/// so the lexer uses the split engine (it used to fall back).
+#[test]
+fn non_ascii_unanchored_rule_keeps_the_split_engine() {
+	let spec: crate::parsing_spec::ParsingSpec =
+		spec_of("x: \"[a-z]+\"\ne: \"\\u{e9}+\"\nz: \"^[0-9]+$\"");
+	assert_eq!(spec.combined_dfa.initial_bytes(u32::from('a')).len(), 27);
+	assert!(spec.unanchored_scan.is_some());
+}
