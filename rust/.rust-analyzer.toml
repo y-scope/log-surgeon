@@ -1,0 +1,6 @@
+# pls.. https://github.com/rust-lang/rust-analyzer/issues/13529
+
+[cargo]
+features = [
+	"all",
+]

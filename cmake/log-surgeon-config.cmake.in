@@ -1,0 +1,33 @@
+include(CMakeFindDependencyMacro)
+
+@PACKAGE_INIT@
+
+find_dependency(Threads)
+
+set_and_check(_log_surgeon_include_dir "@PACKAGE_LOG_SURGEON_INSTALL_INCLUDE_DIR@")
+
+set(_log_surgeon_rust_static_library
+    "@PACKAGE_LOG_SURGEON_INSTALL_LIBRARY_DIR@/@LOG_SURGEON_RUST_STATIC_LIBRARY_NAME@"
+)
+if(NOT EXISTS "${_log_surgeon_rust_static_library}")
+    message(
+        FATAL_ERROR
+        "log-surgeon: expected Rust static library at '${_log_surgeon_rust_static_library}'."
+    )
+endif()
+
+if(NOT TARGET log-surgeon::log-surgeon)
+    add_library(log-surgeon::log-surgeon STATIC IMPORTED GLOBAL)
+    set_target_properties(
+        log-surgeon::log-surgeon
+        PROPERTIES
+            IMPORTED_LOCATION
+                "${_log_surgeon_rust_static_library}"
+            INTERFACE_INCLUDE_DIRECTORIES
+                "${_log_surgeon_include_dir}"
+            INTERFACE_LINK_LIBRARIES
+                "Threads::Threads;${CMAKE_DL_LIBS}@LOG_SURGEON_RUST_EXTRA_SYSTEM_LIBS@"
+    )
+endif()
+
+check_required_components(log-surgeon)

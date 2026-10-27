@@ -1,0 +1,9 @@
+# https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file
+[toolchain]
+channel = "stable"
+components = [
+	"clippy",
+	"rustfmt",
+	"llvm-tools",
+	"rust-analyzer",
+]
