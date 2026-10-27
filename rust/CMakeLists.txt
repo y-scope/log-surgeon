@@ -49,7 +49,7 @@ add_custom_command(
     VERBATIM
 )
 
-add_custom_target(log_surgeon_rust_build DEPENDS "${LOG_SURGEON_RUST_STATIC_LIBRARY}")
+add_custom_target(log_surgeon_rust_build ALL DEPENDS "${LOG_SURGEON_RUST_STATIC_LIBRARY}")
 
 add_library(log_surgeon_rust STATIC IMPORTED GLOBAL)
 add_library(log_surgeon::rust ALIAS log_surgeon_rust)

@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.22.1)
 
 project(
-    log_surgeon
-    VERSION 0.0.1
+    log-surgeon
+    VERSION 0.1.0
     DESCRIPTION "log-surgeon: A performant log parsing library"
     HOMEPAGE_URL https://github.com/y-scope/log-surgeon
     LANGUAGES
@@ -32,190 +32,33 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
-if(log_surgeon_IS_TOP_LEVEL)
-    # Include dependency settings if the project isn't being included as a subproject.
-    # NOTE: We mark the file optional because if the user happens to have the dependencies
-    # installed, this file is not necessary.
-    include("${CMAKE_SOURCE_DIR}/build/deps/cmake-settings/all.cmake" OPTIONAL)
+add_subdirectory(rust)
 
-    # If previously undefined, `BUILD_TESTING` will be set to ON.
-    include(CTest)
+# The Rust CMake project uses underscore-separated target names.
+# CLP and the previous C++ implementation use `log-surgeon::log-surgeon`.
+add_library(log-surgeon::log-surgeon ALIAS log_surgeon)
+
+get_target_property(LOG_SURGEON_RUST_STATIC_LIBRARY log_surgeon_rust IMPORTED_LOCATION)
+get_filename_component(
+    LOG_SURGEON_RUST_STATIC_LIBRARY_NAME
+    "${LOG_SURGEON_RUST_STATIC_LIBRARY}"
+    NAME
+)
+
+set(LOG_SURGEON_INSTALL_CONFIG_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/log-surgeon")
+set(LOG_SURGEON_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}")
+set(LOG_SURGEON_INSTALL_LIBRARY_DIR "${CMAKE_INSTALL_LIBDIR}")
+
+set(LOG_SURGEON_RUST_EXTRA_SYSTEM_LIBS "")
+if(UNIX AND NOT APPLE)
+    set(LOG_SURGEON_RUST_EXTRA_SYSTEM_LIBS ";m")
 endif()
 
-if(BUILD_TESTING AND log_surgeon_BUILD_TESTING)
-    set(log_surgeon_ENABLE_TESTS ON)
-endif()
-
-find_package(fmt 11.2.0 REQUIRED)
-message(STATUS "Found fmt ${fmt_VERSION}.")
-
-find_package(Microsoft.GSL 4.0.0 REQUIRED)
-message(STATUS "Found Microsoft.GSL ${Microsoft.GSL_VERSION}.")
-
-find_package(ystdlib 0.1.0 REQUIRED)
-message(STATUS "Found ystdlib ${ystdlib_VERSION}.")
-
-if(log_surgeon_ENABLE_TESTS)
-    find_package(Catch2 3.8.1 REQUIRED)
-    message(STATUS "Found Catch2 ${Catch2_VERSION}.")
-    include(Catch)
-endif()
-
-set(SOURCE_FILES
-    src/log_surgeon/Buffer.hpp
-    src/log_surgeon/BufferParser.cpp
-    src/log_surgeon/BufferParser.hpp
-    src/log_surgeon/Constants.hpp
-    src/log_surgeon/FileReader.cpp
-    src/log_surgeon/FileReader.hpp
-    src/log_surgeon/finite_automata/Capture.hpp
-    src/log_surgeon/finite_automata/DeterminizationConfiguration.hpp
-    src/log_surgeon/finite_automata/Dfa.hpp
-    src/log_surgeon/finite_automata/DfaState.hpp
-    src/log_surgeon/finite_automata/DfaStatePair.hpp
-    src/log_surgeon/finite_automata/DfaTransition.hpp
-    src/log_surgeon/finite_automata/Nfa.hpp
-    src/log_surgeon/finite_automata/NfaSpontaneousTransition.hpp
-    src/log_surgeon/finite_automata/NfaState.hpp
-    src/log_surgeon/finite_automata/PrefixTree.cpp
-    src/log_surgeon/finite_automata/PrefixTree.hpp
-    src/log_surgeon/finite_automata/RegexAST.hpp
-    src/log_surgeon/finite_automata/RegisterHandler.hpp
-    src/log_surgeon/finite_automata/RegisterOperation.hpp
-    src/log_surgeon/finite_automata/StateType.hpp
-    src/log_surgeon/finite_automata/TagOperation.hpp
-    src/log_surgeon/finite_automata/UnicodeIntervalTree.hpp
-    src/log_surgeon/finite_automata/UnicodeIntervalTree.tpp
-    src/log_surgeon/wildcard_query_parser/Expression.cpp
-    src/log_surgeon/wildcard_query_parser/Expression.hpp
-    src/log_surgeon/wildcard_query_parser/ExpressionCharacter.hpp
-    src/log_surgeon/wildcard_query_parser/ExpressionView.cpp
-    src/log_surgeon/wildcard_query_parser/ExpressionView.hpp
-    src/log_surgeon/wildcard_query_parser/Query.cpp
-    src/log_surgeon/wildcard_query_parser/Query.hpp
-    src/log_surgeon/wildcard_query_parser/QueryInterpretation.cpp
-    src/log_surgeon/wildcard_query_parser/QueryInterpretation.hpp
-    src/log_surgeon/wildcard_query_parser/StaticQueryToken.hpp
-    src/log_surgeon/wildcard_query_parser/VariableQueryToken.cpp
-    src/log_surgeon/wildcard_query_parser/VariableQueryToken.hpp
-    src/log_surgeon/Lalr1Parser.hpp
-    src/log_surgeon/Lalr1Parser.tpp
-    src/log_surgeon/Lexer.hpp
-    src/log_surgeon/Lexer.tpp
-    src/log_surgeon/LexicalRule.hpp
-    src/log_surgeon/LogEvent.cpp
-    src/log_surgeon/LogEvent.hpp
-    src/log_surgeon/LogParser.cpp
-    src/log_surgeon/LogParser.hpp
-    src/log_surgeon/LogParserOutputBuffer.cpp
-    src/log_surgeon/LogParserOutputBuffer.hpp
-    src/log_surgeon/Parser.tpp
-    src/log_surgeon/Parser.hpp
-    src/log_surgeon/parser_types.hpp
-    src/log_surgeon/ParserAst.cpp
-    src/log_surgeon/ParserAst.hpp
-    src/log_surgeon/ParserInputBuffer.cpp
-    src/log_surgeon/ParserInputBuffer.hpp
-    src/log_surgeon/Reader.hpp
-    src/log_surgeon/ReaderParser.cpp
-    src/log_surgeon/ReaderParser.hpp
-    src/log_surgeon/Schema.cpp
-    src/log_surgeon/Schema.hpp
-    src/log_surgeon/SchemaParser.cpp
-    src/log_surgeon/SchemaParser.hpp
-    src/log_surgeon/Token.cpp
-    src/log_surgeon/Token.hpp
-    src/log_surgeon/types.hpp
-    src/log_surgeon/UniqueIdGenerator.hpp
-)
-
-set(LOG_SURGEON_INSTALL_CONFIG_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/log_surgeon)
-set(LOG_SURGEON_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
-
-add_library(log_surgeon ${SOURCE_FILES})
-add_library(log_surgeon::log_surgeon ALIAS log_surgeon)
-
-target_link_libraries(
-    log_surgeon
-    PUBLIC
-        fmt::fmt
-        Microsoft.GSL::GSL
-        ystdlib::error_handling
-)
-
-target_include_directories(
-    log_surgeon
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/rust/cxx>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-
-target_compile_features(log_surgeon PRIVATE cxx_std_20)
-
-target_compile_options(
-    log_surgeon
-    PRIVATE
-        $<$<CXX_COMPILER_ID:MSVC>:/W4
-        /WX>
-        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall
-        -Wextra
-        -Wpedantic
-        -Werror>
-)
-
-# Disable -Wstringop-overflow to avoid a false positive in the following compiler versions.
-# See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=117983
-if(
-    "GNU"
-        STREQUAL
-        "${CMAKE_CXX_COMPILER_ID}"
-    AND (
-        (
-            CMAKE_CXX_COMPILER_VERSION
-                VERSION_GREATER_EQUAL
-                12
-            AND CMAKE_CXX_COMPILER_VERSION
-                VERSION_LESS
-                12.5
-        )
-        OR (
-            CMAKE_CXX_COMPILER_VERSION
-                VERSION_GREATER_EQUAL
-                13
-            AND CMAKE_CXX_COMPILER_VERSION
-                VERSION_LESS
-                13.4
-        )
-        OR (
-            CMAKE_CXX_COMPILER_VERSION
-                VERSION_GREATER_EQUAL
-                14
-            AND CMAKE_CXX_COMPILER_VERSION
-                VERSION_LESS
-                14.3
-        )
-    )
-)
-    target_compile_options(log_surgeon PRIVATE "-Wno-stringop-overflow")
-endif()
-
-# Make off_t 64-bit
-target_compile_definitions(log_surgeon PRIVATE _FILE_OFFSET_BITS=64)
-
-install(TARGETS log_surgeon EXPORT log_surgeon-targets)
-
-install(
-    EXPORT log_surgeon-targets
-    NAMESPACE log_surgeon::
-    DESTINATION ${LOG_SURGEON_INSTALL_CONFIG_DIR}
-)
+install(FILES "${LOG_SURGEON_RUST_STATIC_LIBRARY}" DESTINATION "${LOG_SURGEON_INSTALL_LIBRARY_DIR}")
 
 install(
     DIRECTORY
-        "${PROJECT_SOURCE_DIR}/src/log_surgeon"
+        "${CMAKE_CURRENT_SOURCE_DIR}/rust/cxx/log_surgeon"
     DESTINATION "${LOG_SURGEON_INSTALL_INCLUDE_DIR}"
     FILES_MATCHING
     PATTERN "*.h"
@@ -224,25 +67,23 @@ install(
 )
 
 configure_package_config_file(
-    ${CMAKE_CURRENT_LIST_DIR}/cmake/log_surgeon-config.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/log_surgeon-config.cmake
-    INSTALL_DESTINATION ${LOG_SURGEON_INSTALL_CONFIG_DIR}
+    "${CMAKE_CURRENT_LIST_DIR}/cmake/log-surgeon-config.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/log-surgeon-config.cmake"
+    INSTALL_DESTINATION "${LOG_SURGEON_INSTALL_CONFIG_DIR}"
     PATH_VARS
         LOG_SURGEON_INSTALL_INCLUDE_DIR
+        LOG_SURGEON_INSTALL_LIBRARY_DIR
 )
 
 write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/log_surgeon-config-version.cmake
+    "${CMAKE_CURRENT_BINARY_DIR}/log-surgeon-config-version.cmake"
+    VERSION "${PROJECT_VERSION}"
     COMPATIBILITY SameMajorVersion
 )
 
 install(
     FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/log_surgeon-config.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/log_surgeon-config-version.cmake
-    DESTINATION ${LOG_SURGEON_INSTALL_CONFIG_DIR}
+        "${CMAKE_CURRENT_BINARY_DIR}/log-surgeon-config.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/log-surgeon-config-version.cmake"
+    DESTINATION "${LOG_SURGEON_INSTALL_CONFIG_DIR}"
 )
-
-if(log_surgeon_ENABLE_TESTS)
-    add_subdirectory(tests)
-endif()
